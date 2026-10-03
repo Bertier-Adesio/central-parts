@@ -50,6 +50,8 @@ Une seule fois, avant le premier déploiement :
 4. Supprimer la page par défaut d'OVH (`www/index.html` d'origine) si elle est encore là : le premier déploiement l'écrase de toute façon.
 5. Lancer le workflow à la main (**Actions > Déploiement site (OVH) > Run workflow**), puis ouvrir https://central.parts.
 
+Le déploiement ne supprime pas ce qui a disparu de `site/` : l'étape « Nettoie www/ » du workflow retire une liste explicite (`ui_kits/`, `components/`, `tokens/`, `guidelines/`, `*.dc.html`, `support.js`, `SKILL.md`, `assets/js/`, `assets/vendor/`). Ajouter à cette liste tout fichier retiré de `site/` qui ne doit plus être en ligne.
+
 `.htaccess` force le HTTPS, redirige `www.` vers le domaine nu et règle le cache des polices et scripts.
 
 ## À faire
