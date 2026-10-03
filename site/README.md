@@ -24,8 +24,6 @@ site/                           publié tel quel sur OVH
 
 Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lisible sans JavaScript, indexable, aperçus sociaux corrects). Un seul petit script vanilla en fin de page gère les exemples de recherche, le focus du champ de recherche, les onglets Acheteur / Distributeur et l'envoi du formulaire de contact. La FAQ utilise `<details>` et fonctionne sans JavaScript. Voir [ADR 0002](../docs/decisions/0002-landing-statique-generee.md).
 
-`assets/js/` et `assets/vendor/` (runtime de la maquette et React) ne sont plus chargés par les pages ; ils peuvent être supprimés.
-
 ## Modifier les textes
 
 1. Modifier l'objet `T` (clés `fr`, `en`, `zh`) en bas de `design/landing.dc.html`, dans les trois langues. Titres et descriptions des pages : objet `LANGS` de `tools/build-site.mjs`.
