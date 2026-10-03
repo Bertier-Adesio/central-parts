@@ -309,12 +309,26 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
+@media (max-width:640px){
+[data-hdr]{height:auto!important;flex-wrap:wrap;padding:10px 16px 0!important;gap:10px 12px!important}
+[data-hdr]>a:first-child{margin-right:auto}
+[data-nav]{order:3;flex:1 0 100%!important;gap:20px!important;padding:2px 0 12px}
+[data-search]>button{flex:1 1 100%}
+input,textarea,select{font-size:16px!important}
+}
+@media (max-width:400px){
+[data-hdr]{gap:10px 8px!important}
+[data-hdr]>a:last-child{padding:0 10px!important;font-size:13px!important}
+[data-hdr]>a:first-child{gap:8px!important}
+[data-hdr]>a:first-child>span{font-size:16px!important}
+}
 </style>
 </helmet>
 <div lang="{{ htmlLang }}" style="min-height: 100vh; background: #F4F2EE">
 
 <header style="position: sticky; top: 0; z-index: 10; background: #15171C; color: #F4F2EE">
-<div style="max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 28px">
+<div data-hdr="1" style="max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 28px">
 <a href="#top" style="display: inline-flex; align-items: center; gap: 10px; color: #F4F2EE; flex: none">
 <svg width="26" height="26" sc-camel-view-box="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#F4F2EE" stroke-width="48" stroke-linecap="round"></path><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#F4F2EE" stroke-width="48" stroke-linecap="round"></path><circle cx="240" cy="240" r="40" fill="#D7262E"></circle></svg>
 <span style="font-weight: 500; letter-spacing: -0.025em; font-size: 18px; white-space: nowrap">Central<span style="color: #D7262E">.</span>Parts</span>
@@ -341,7 +355,7 @@ input,textarea,select,button{font-family:inherit}
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">{{ t.heroTitle }}</h1>
 <p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">{{ t.heroSub }}</p>
-<form sc-camel-on-submit="{{ onSearch }}" style="display: flex; gap: 8px; max-width: 760px; flex-wrap: wrap">
+<form data-search="1" sc-camel-on-submit="{{ onSearch }}" style="display: flex; gap: 8px; max-width: 760px; flex-wrap: wrap">
 <label style="flex: 1 1 360px; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: #FFFFFF; border: 1px solid #C9C5BD; border-radius: 6px" style-focus="border-color: #15171C">
 <svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="#6B7079" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
 <input value="{{ q }}" sc-camel-on-change="{{ onQ }}" placeholder="{{ t.searchPh }}" aria-label="{{ t.searchPh }}" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #15171C">
