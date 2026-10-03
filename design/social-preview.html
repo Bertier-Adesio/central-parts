@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- Aperçu social 1200×630 (og:image). Rendu en PNG par tools/render-social.mjs : ?lang=fr ou ?lang=en. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: 'Space Grotesk'; src: url("/assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; }
+html, body { margin: 0; }
+body { width: 1200px; height: 630px; overflow: hidden; position: relative; background: #F4F2EE; color: #15171C; font-family: 'Space Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.mark-bg { position: absolute; left: 600px; top: 15px; width: 600px; height: 600px; }
+.brand { position: absolute; left: 75px; top: 79px; display: flex; align-items: center; }
+.brand svg { width: 112px; height: 112px; flex: none; }
+.word { margin-left: 45px; font-size: 71px; font-weight: 500; letter-spacing: -0.025em; line-height: 1; }
+.word span { color: #D7262E; }
+.sep { width: 1px; height: 90px; margin-left: 28px; background: #C9C5BD; }
+.sno { margin-left: 28px; font-family: 'IBM Plex Mono', monospace; font-size: 17px; line-height: 1.55; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57; }
+.rule { position: absolute; left: 75px; right: 75px; top: 343px; height: 1.5px; background: #15171C; }
+h1 { position: absolute; left: 75px; top: 370px; width: 900px; margin: 0; font-size: 33px; font-weight: 500; line-height: 1.22; letter-spacing: -0.01em; }
+.regions { position: absolute; left: 75px; top: 464px; font-family: 'IBM Plex Mono', monospace; font-size: 19px; color: #4A4E57; white-space: pre; }
+.url { position: absolute; left: 75px; top: 507px; font-size: 15px; }
+</style>
+</head>
+<body>
+<svg class="mark-bg" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#15171C" stroke-opacity="0.06" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#15171C" stroke-opacity="0.06" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" fill="#D7262E" fill-opacity="0.08"/></svg>
+<div class="brand">
+  <svg viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" fill="#D7262E"/></svg>
+  <div class="word">Central<span>.</span>Parts</div>
+  <div class="sep"></div>
+  <div class="sno">Supply<br>Network<br>Operator</div>
+</div>
+<div class="rule"></div>
+<h1 id="title"></h1>
+<div class="regions" id="regions"></div>
+<div class="url">central.parts</div>
+<script>
+// Mêmes textes que la landing (objet T de design/landing.dc.html : heroTitle, regionsTitle).
+var TXT = {
+  fr: { title: 'Composants électroniques qualifiés, sourcés auprès de distributeurs autorisés.', regions: 'Europe · Amériques · Chine' },
+  en: { title: 'Qualified electronic components, sourced from authorised distributors.', regions: 'Europe · Americas · China' }
+};
+var lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'fr';
+document.documentElement.lang = lang;
+document.getElementById('title').textContent = TXT[lang].title;
+document.getElementById('regions').textContent = ' ' + TXT[lang].regions;
+</script>
+</body>
+</html>
