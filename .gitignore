@@ -1,0 +1,33 @@
+# Système
+.DS_Store
+Thumbs.db
+*.swp
+
+# Éditeurs
+.idea/
+.vscode/
+
+# Dépendances et builds
+node_modules/
+dist/
+build/
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Données brutes et exports (ne jamais versionner)
+data/raw/
+data/exports/
+*.csv
+!data/samples/*.csv
+
+# Documents administratifs
+*.pdf

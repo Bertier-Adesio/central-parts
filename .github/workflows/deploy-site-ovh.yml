@@ -1,0 +1,35 @@
+# Publie site/ sur l'hébergement web OVH associé à central.parts.
+# Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
+#   OVH_FTP_USER      identifiant FTP principal de l'hébergement (ex. centryv)
+#   OVH_FTP_PASSWORD  mot de passe FTP
+name: Déploiement site (OVH)
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Envoi FTPS vers www/
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ftp.cluster129.hosting.ovh.net
+          protocol: ftps
+          username: ${{ secrets.OVH_FTP_USER }}
+          password: ${{ secrets.OVH_FTP_PASSWORD }}
+          local-dir: ./site/
+          server-dir: ./www/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            README.md
