@@ -5,20 +5,34 @@ Landing page publique, trilingue (FR / EN / 中文) : recherche de démonstratio
 ## Structure
 
 ```
-site/
-├── index.html                  page (contenu + traductions dans le bloc <script data-dc-script>)
+design/
+├── landing.dc.html             maquette source (gabarit + traductions, objet T)
+└── social-preview.html         aperçu social 1200×630
+tools/
+├── build-site.mjs              génère les pages statiques de site/ (Node, sans dépendance)
+└── render-social.mjs           génère site/social-preview-*.png (Playwright)
+site/                           publié tel quel sur OVH
+├── index.html                  FR (généré)
+├── en/index.html               EN (généré)
+├── zh/index.html               中文 (généré)
+├── social-preview-fr.png       og:image FR (généré)
+├── social-preview-en.png       og:image EN et 中文 (généré)
 └── assets/
     ├── favicon.svg
-    ├── fonts/                  Space Grotesk (variable), IBM Plex Mono 400/500/600
-    ├── js/dc-runtime.js        runtime de rendu (fichier généré, ne pas modifier)
-    └── vendor/                 React 18.3.1 et ReactDOM 18.3.1 (UMD, production)
+    └── fonts/                  Space Grotesk (variable), IBM Plex Mono 400/500/600
 ```
 
-La page provient d'un export « bundled » de Claude Design, dégroupé pour être servi tel quel par n'importe quel hébergement statique (OVH, GitHub Pages, Netlify…). `window.__resources` dans `<head>` redirige les URL unpkg de React vers `assets/vendor/`, donc aucune requête ne sort vers un CDN.
+Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lisible sans JavaScript, indexable, aperçus sociaux corrects). Un seul petit script vanilla en fin de page gère les exemples de recherche, le focus du champ de recherche, les onglets Acheteur / Distributeur et l'envoi du formulaire de contact. La FAQ utilise `<details>` et fonctionne sans JavaScript. Voir [ADR 0002](../docs/decisions/0002-landing-statique-generee.md).
+
+`assets/js/` et `assets/vendor/` (runtime de la maquette et React) ne sont plus chargés par les pages ; ils peuvent être supprimés.
 
 ## Modifier les textes
 
-Les textes des trois langues sont dans l'objet `T` (clés `fr`, `en`, `zh`) en bas de `index.html`. Modifier les trois langues ensemble.
+1. Modifier l'objet `T` (clés `fr`, `en`, `zh`) en bas de `design/landing.dc.html`, dans les trois langues. Titres et descriptions des pages : objet `LANGS` de `tools/build-site.mjs`.
+2. Régénérer : `node tools/build-site.mjs` (depuis la racine du dépôt).
+3. Si l'accroche change : `node tools/render-social.mjs` pour régénérer les aperçus sociaux.
+
+Ne jamais modifier `site/index.html`, `site/en/` ou `site/zh/` à la main : ils sont écrasés à chaque génération.
 
 ## Prévisualiser
 
@@ -42,7 +56,8 @@ Une seule fois, avant le premier déploiement :
 
 ## À faire
 
-- [ ] Brancher le formulaire de contact (aujourd'hui il affiche seulement « Demande envoyée »).
+- [ ] Brancher le formulaire de contact sur un vrai endpoint (aujourd'hui : `mailto:contact@central.parts`).
+- [ ] Lien « Ouvrir la plateforme » après la recherche : masqué tant que la plateforme n'est pas en production.
 - [ ] Remplacer les huit emplacements « Logo distributeur » par de vrais partenaires.
 - [ ] Recherche de démonstration → appel réel à l'API (`api/`).
 - [x] Mobile : en-tête sur deux lignes sous 640 px (iPhone 17, Pixel Pro), plus de débordement.

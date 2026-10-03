@@ -8,7 +8,8 @@ Central.Parts est un Supply Network Operator (SNO) de composants électroniques 
 
 ## Arborescence
 
-- `site/` : landing page statique trilingue (FR / EN / 中文), servie telle quelle, sans build.
+- `site/` : landing page statique trilingue (FR `/`, EN `/en/`, 中文 `/zh/`), publiée telle quelle. Les pages HTML sont **générées** par `node tools/build-site.mjs` depuis `design/landing.dc.html`.
+- `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
 - `api/`, `data/`, `legal/` : à concevoir, voir leur README.
 - `docs/decisions/` : ADR numérotés (`000N-titre.md`).
@@ -18,8 +19,9 @@ Central.Parts est un Supply Network Operator (SNO) de composants électroniques 
 
 - Écrire en français : code commenté, README, messages de commit (impératif : « Ajoute… », « Corrige… »).
 - **Le dépôt est public.** Ne jamais committer de secret, clé d'API, mot de passe, facture, document INPI, données client ou export brut. En cas de doute, demander.
-- `site/assets/js/dc-runtime.js` et `site/assets/vendor/` sont des fichiers générés ou tiers : ne pas les modifier.
-- Textes du site : objet `T` en bas de `site/index.html`. Toute modification se fait dans les trois langues (`fr`, `en`, `zh`).
+- Ne jamais éditer `site/index.html`, `site/en/`, `site/zh/` à la main : modifier `design/landing.dc.html` puis lancer `node tools/build-site.mjs`, et committer le résultat.
+- Textes du site : objet `T` en bas de `design/landing.dc.html`. Toute modification se fait dans les trois langues (`fr`, `en`, `zh`).
+- Les pages publiées n'utilisent aucun runtime ni framework : HTML statique, un seul `<script>` vanilla en fin de page, tout lisible sans JavaScript.
 - Couleurs et typos : utiliser les variables de `brand/tokens.css` (alias sémantiques `--bg-*`, `--fg-*`, `--accent`…), pas de valeurs en dur.
 - Aucune ressource chargée depuis un CDN : tout est auto-hébergé dans `site/assets/`.
 - Une branche par sujet (`site/…`, `api/…`, `data/…`, `docs/…`), puis pull request vers `main`. Ne pas pousser directement sur `main` sans accord, car cela déploie le site en production.
@@ -31,7 +33,7 @@ Central.Parts est un Supply Network Operator (SNO) de composants électroniques 
 cd site && python3 -m http.server 8000
 ```
 
-Contrôler la page à 1280 px et 390 px de large, dans les trois langues, sans erreur console ni requête externe.
+Contrôler `/`, `/en/` et `/zh/` à 1280 px et 390 px de large, avec et sans JavaScript, sans erreur console ni requête externe, et sans aucun `{{` dans le HTML (`grep -c '{{' site/index.html site/*/index.html`).
 
 ## Déploiement
 

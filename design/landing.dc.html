@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="fr"><head><script>window.__resources = {"https://unpkg.com/react@18.3.1/umd/react.production.min.js": "assets/vendor/react-18.3.1.production.min.js", "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js": "assets/vendor/react-dom-18.3.1.production.min.js"};</script>
+<title>Central.Parts — Composants électroniques, distributeurs autorisés</title>
+<meta name="description" content="Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>@font-face { font-family: 'Space Grotesk'; src: url("assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-500.woff2") format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-600.woff2") format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+
+/* Central Parts — colour. Consume the semantic aliases (bg-*, fg-*, border-*, accent, status-*), not the scale. */
+:root {
+  --cp-ink: #15171c;
+  --cp-paper: #f4f2ee;
+  --cp-line: #d9d5cd;
+  --cp-grid: #9aa0aa;
+  --cp-red: #d7262e;
+  --cp-red-hot: #e8442a;
+  --cp-red-deep: #b3122e;
+  --n-0: #ffffff;
+  --n-25: #fbfaf8;
+  --n-50: #f4f2ee;
+  --n-100: #ece9e3;
+  --n-200: #d9d5cd;
+  --n-300: #bdb8af;
+  --n-400: #9aa0aa;
+  --n-500: #6b7079;
+  --n-600: #4a4e57;
+  --n-700: #2a2e36;
+  --n-800: #1e2128;
+  --n-900: #15171c;
+  --green-600: oklch(0.52 0.11 155);
+  --green-50: oklch(0.95 0.03 155);
+  --amber-600: oklch(0.56 0.12 65);
+  --amber-50: oklch(0.95 0.04 75);
+  --blue-600: oklch(0.52 0.12 250);
+  --blue-50: oklch(0.95 0.025 250);
+  --red-600: var(--cp-red-deep);
+  --red-50: oklch(0.95 0.03 22);
+  --bg-page: var(--n-50);
+  --bg-surface: var(--n-25);
+  --bg-raised: var(--n-0);
+  --bg-sunken: var(--n-100);
+  --bg-inverse: var(--n-900);
+  --bg-inverse-raised: var(--n-800);
+  --fg-1: var(--n-900);
+  --fg-2: var(--n-600);
+  --fg-3: var(--n-500);
+  --fg-inverse: var(--n-50);
+  --fg-inverse-2: var(--n-300);
+  --border-1: var(--n-200);
+  --border-2: var(--n-300);
+  --border-strong: var(--n-900);
+  --accent: var(--cp-red);
+  --accent-hover: var(--cp-red-deep);
+  --accent-fg: #ffffff;
+  --status-success: var(--green-600);
+  --status-success-bg: var(--green-50);
+  --status-warning: var(--amber-600);
+  --status-warning-bg: var(--amber-50);
+  --status-info: var(--blue-600);
+  --status-info-bg: var(--blue-50);
+  --status-danger: var(--red-600);
+  --status-danger-bg: var(--red-50);
+  --stock-in: var(--status-success);
+  --stock-low: var(--status-warning);
+  --stock-out: var(--n-500);
+  --price-change: var(--fg-1);
+}
+
+/* Central Parts — typography */
+:root {
+  --font-sans: 'Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Noto Sans SC', ui-monospace, 'SFMono-Regular', monospace;
+  --font-cjk: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+  --text-2xl: 34px;
+  --text-3xl: 48px;
+  --text-4xl: 72px;
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-body: 1.5;
+  --leading-cjk: 1.7;
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-caps: 0.08em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+
+/* Central Parts — spacing (4px grid) and sizes */
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --content-max: 1280px;
+  --border-width: 1px;
+}
+
+/* Central Parts — radius and shadow */
+:root {
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --shadow-0: none;
+  --shadow-1: 0 1px 0 rgba(21, 23, 28, 0.06);
+  --shadow-2: 0 1px 2px rgba(21, 23, 28, 0.06), 0 4px 12px -4px rgba(21, 23, 28, 0.10);
+  --shadow-pop: 0 12px 32px -12px rgba(21, 23, 28, 0.32), 0 0 0 1px rgba(21, 23, 28, 0.06);
+  --focus-ring: 0 0 0 2px #fbfaf8, 0 0 0 4px #d7262e;
+}
+
+/* Central Parts — global rules and motion (the parts tokens.json cannot carry). */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+@keyframes cp-pop { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes cp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+body { margin: 0; font-family: var(--font-sans); color: var(--fg-1); background: var(--bg-page); -webkit-font-smoothing: antialiased; }
+:lang(zh) { line-height: var(--leading-cjk); letter-spacing: 0; }
+a { color: var(--fg-1); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--accent); }
+button:focus-visible, [role="tab"]:focus-visible, select:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); }
+
+</style>
+<script src="assets/js/dc-runtime.js"></script>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>@font-face { font-family: 'Space Grotesk'; src: url("assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-500.woff2") format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("assets/fonts/ibm-plex-mono-600.woff2") format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+
+/* Central Parts — colour. Consume the semantic aliases (bg-*, fg-*, border-*, accent, status-*), not the scale. */
+:root {
+  --cp-ink: #15171c;
+  --cp-paper: #f4f2ee;
+  --cp-line: #d9d5cd;
+  --cp-grid: #9aa0aa;
+  --cp-red: #d7262e;
+  --cp-red-hot: #e8442a;
+  --cp-red-deep: #b3122e;
+  --n-0: #ffffff;
+  --n-25: #fbfaf8;
+  --n-50: #f4f2ee;
+  --n-100: #ece9e3;
+  --n-200: #d9d5cd;
+  --n-300: #bdb8af;
+  --n-400: #9aa0aa;
+  --n-500: #6b7079;
+  --n-600: #4a4e57;
+  --n-700: #2a2e36;
+  --n-800: #1e2128;
+  --n-900: #15171c;
+  --green-600: oklch(0.52 0.11 155);
+  --green-50: oklch(0.95 0.03 155);
+  --amber-600: oklch(0.56 0.12 65);
+  --amber-50: oklch(0.95 0.04 75);
+  --blue-600: oklch(0.52 0.12 250);
+  --blue-50: oklch(0.95 0.025 250);
+  --red-600: var(--cp-red-deep);
+  --red-50: oklch(0.95 0.03 22);
+  --bg-page: var(--n-50);
+  --bg-surface: var(--n-25);
+  --bg-raised: var(--n-0);
+  --bg-sunken: var(--n-100);
+  --bg-inverse: var(--n-900);
+  --bg-inverse-raised: var(--n-800);
+  --fg-1: var(--n-900);
+  --fg-2: var(--n-600);
+  --fg-3: var(--n-500);
+  --fg-inverse: var(--n-50);
+  --fg-inverse-2: var(--n-300);
+  --border-1: var(--n-200);
+  --border-2: var(--n-300);
+  --border-strong: var(--n-900);
+  --accent: var(--cp-red);
+  --accent-hover: var(--cp-red-deep);
+  --accent-fg: #ffffff;
+  --status-success: var(--green-600);
+  --status-success-bg: var(--green-50);
+  --status-warning: var(--amber-600);
+  --status-warning-bg: var(--amber-50);
+  --status-info: var(--blue-600);
+  --status-info-bg: var(--blue-50);
+  --status-danger: var(--red-600);
+  --status-danger-bg: var(--red-50);
+  --stock-in: var(--status-success);
+  --stock-low: var(--status-warning);
+  --stock-out: var(--n-500);
+  --price-change: var(--fg-1);
+}
+
+/* Central Parts — typography */
+:root {
+  --font-sans: 'Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Noto Sans SC', ui-monospace, 'SFMono-Regular', monospace;
+  --font-cjk: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+  --text-2xl: 34px;
+  --text-3xl: 48px;
+  --text-4xl: 72px;
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-body: 1.5;
+  --leading-cjk: 1.7;
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-caps: 0.08em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+
+/* Central Parts — spacing (4px grid) and sizes */
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --content-max: 1280px;
+  --border-width: 1px;
+}
+
+/* Central Parts — radius and shadow */
+:root {
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --shadow-0: none;
+  --shadow-1: 0 1px 0 rgba(21, 23, 28, 0.06);
+  --shadow-2: 0 1px 2px rgba(21, 23, 28, 0.06), 0 4px 12px -4px rgba(21, 23, 28, 0.10);
+  --shadow-pop: 0 12px 32px -12px rgba(21, 23, 28, 0.32), 0 0 0 1px rgba(21, 23, 28, 0.06);
+  --focus-ring: 0 0 0 2px #fbfaf8, 0 0 0 4px #d7262e;
+}
+
+/* Central Parts — global rules and motion (the parts tokens.json cannot carry). */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+@keyframes cp-pop { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes cp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+body { margin: 0; font-family: var(--font-sans); color: var(--fg-1); background: var(--bg-page); -webkit-font-smoothing: antialiased; }
+:lang(zh) { line-height: var(--leading-cjk); letter-spacing: 0; }
+a { color: var(--fg-1); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--accent); }
+button:focus-visible, [role="tab"]:focus-visible, select:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); }
+
+</style>
+<style>
+body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
+input,textarea,select,button{font-family:inherit}
+[data-nav]::-webkit-scrollbar{display:none}
+/* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
+@media (max-width:640px){
+[data-hdr]{height:auto!important;flex-wrap:wrap;padding:10px 16px 0!important;gap:10px 12px!important}
+[data-hdr]>a:first-child{margin-right:auto}
+[data-nav]{order:3;flex:1 0 100%!important;gap:20px!important;padding:2px 0 12px}
+[data-search]>button{flex:1 1 100%}
+input,textarea,select{font-size:16px!important}
+}
+@media (max-width:400px){
+[data-hdr]{gap:10px 8px!important}
+[data-hdr]>a:last-child{padding:0 10px!important;font-size:13px!important}
+[data-hdr]>a:first-child{gap:8px!important}
+[data-hdr]>a:first-child>span{font-size:16px!important}
+}
+</style>
+</helmet>
+<div lang="{{ htmlLang }}" style="min-height: 100vh; background: #F4F2EE">
+
+<header style="position: sticky; top: 0; z-index: 10; background: #15171C; color: #F4F2EE">
+<div data-hdr="1" style="max-width: 1280px; margin: 0 auto; padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 28px">
+<a href="#top" style="display: inline-flex; align-items: center; gap: 10px; color: #F4F2EE; flex: none">
+<svg width="26" height="26" sc-camel-view-box="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#F4F2EE" stroke-width="48" stroke-linecap="round"></path><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#F4F2EE" stroke-width="48" stroke-linecap="round"></path><circle cx="240" cy="240" r="40" fill="#D7262E"></circle></svg>
+<span style="font-weight: 500; letter-spacing: -0.025em; font-size: 18px; white-space: nowrap">Central<span style="color: #D7262E">.</span>Parts</span>
+</a>
+<nav data-nav="1" style="display: flex; gap: 22px; font-size: 14px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; white-space: nowrap">
+<a href="#parcours" style="color: #C9C5BD">{{ t.navPaths }}</a>
+<a href="#fonctionnement" style="color: #C9C5BD">{{ t.navHow }}</a>
+<a href="#distributeurs" style="color: #C9C5BD">{{ t.navDist }}</a>
+<a href="#api" style="color: #C9C5BD">API</a>
+<a href="#faq" style="color: #C9C5BD">FAQ</a>
+</nav>
+<div style="display: flex; gap: 2px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; flex: none">
+<sc-for list="{{ langs }}" as="l" hint-placeholder-count="3">
+<button sc-camel-on-click="{{ l.pick }}" style="{{ l.style }}">{{ l.label }}</button>
+</sc-for>
+</div>
+<a href="#contact" style="flex: none; height: 36px; padding: 0 14px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #4A4E57; color: #F4F2EE; font-size: 14px; font-weight: 500" style-hover="border-color: #F4F2EE; color: #F4F2EE">{{ t.navContact }}</a>
+</div>
+</header>
+
+<section id="top" style="position: relative; overflow: hidden; border-bottom: 1px solid #D9D5CD">
+<svg width="760" height="760" sc-camel-view-box="24 24 432 432" aria-hidden="true" style="position: absolute; right: -200px; top: 50%; margin-top: -380px; opacity: 0.06"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><circle cx="240" cy="240" r="40" fill="#15171C"></circle></svg>
+<div style="position: relative; max-width: 1280px; margin: 0 auto; padding: clamp(64px, 10vw, 128px) 24px clamp(56px, 8vw, 104px); display: flex; flex-direction: column; gap: 28px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
+<h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">{{ t.heroTitle }}</h1>
+<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">{{ t.heroSub }}</p>
+<form data-search="1" sc-camel-on-submit="{{ onSearch }}" style="display: flex; gap: 8px; max-width: 760px; flex-wrap: wrap">
+<label style="flex: 1 1 360px; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: #FFFFFF; border: 1px solid #C9C5BD; border-radius: 6px" style-focus="border-color: #15171C">
+<svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="#6B7079" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input value="{{ q }}" sc-camel-on-change="{{ onQ }}" placeholder="{{ t.searchPh }}" aria-label="{{ t.searchPh }}" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #15171C">
+</label>
+<button type="submit" style="height: 52px; padding: 0 22px; border: 0; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 16px; font-weight: 500; cursor: pointer" style-hover="background: #B3122E">{{ t.searchBtn }}</button>
+</form>
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 13px; color: #6B7079">{{ t.tryLabel }}</span>
+<sc-for list="{{ examples }}" as="ex" hint-placeholder-count="4">
+<button sc-camel-on-click="{{ ex.pick }}" style="height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid #D9D5CD; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #15171C; cursor: pointer" style-hover="border-color: #15171C">{{ ex.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ searched }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 14px; color: #4A4E57">{{ t.searchNote }} <a href="ui_kits/platform/index.html" style="color: #15171C; border-bottom: 1px solid #15171C">{{ t.openPlatform }}</a></p>
+</sc-if>
+</div>
+</section>
+
+<section id="parcours" style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: flex; flex-direction: column; gap: 40px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.pathsTitle }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px">
+<div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7079">{{ t.buyerTag }}</span>
+<h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">{{ t.buyerTitle }}</h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57">{{ t.buyerText }}</p>
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<sc-for list="{{ t.buyerList }}" as="b" hint-placeholder-count="3"><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>{{ b }}</span></sc-for>
+</div>
+<a href="#top" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" style-hover="background: #33363D; color: #F4F2EE">{{ t.buyerCta }}</a>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7079">{{ t.distTag }}</span>
+<h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">{{ t.distTitle }}</h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57">{{ t.distText }}</p>
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<sc-for list="{{ t.distList }}" as="b" hint-placeholder-count="3"><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>{{ b }}</span></sc-for>
+</div>
+<a href="#contact" sc-camel-on-click="{{ toDist }}" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 15px; font-weight: 500" style-hover="border-color: #15171C; color: #15171C">{{ t.distCta }}</a>
+</div>
+</div>
+</section>
+
+<section id="fonctionnement" style="border-top: 1px solid #D9D5CD; border-bottom: 1px solid #D9D5CD; background: #ECE9E3">
+<div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: flex; flex-direction: column; gap: 48px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.howTitle }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 40px">
+<sc-for list="{{ t.steps }}" as="s" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid #15171C; padding-top: 20px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7079">0{{ s.n }}</span>
+<h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">{{ s.title }}</h3>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ s.text }}</p>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section id="distributeurs" style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: flex; flex-direction: column; gap: 40px">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 32px; align-items: end">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.distSecTitle }}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.distSecText }}</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1px; background: #D9D5CD; border: 1px solid #D9D5CD; border-radius: 10px; overflow: hidden">
+<sc-for list="{{ partners }}" as="p" hint-placeholder-count="8">
+<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">{{ p }}</div>
+</sc-for>
+</div>
+</section>
+
+<section style="border-top: 1px solid #D9D5CD">
+<div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: flex; flex-direction: column; gap: 40px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.regionsTitle }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px">
+<sc-for list="{{ t.regions }}" as="r" hint-placeholder-count="3">
+<div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
+<h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">{{ r.name }}</h3>
+<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; font-size: 14px">
+<span style="color: #6B7079">{{ t.currencyLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace">{{ r.cur }}</span>
+<span style="color: #6B7079">{{ t.langLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace">{{ r.lang }}</span>
+<span style="color: #6B7079">{{ t.formatLabel }}</span><span style="font-family: 'IBM Plex Mono', monospace">{{ r.fmt }}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section id="api" style="background: #15171C; color: #F4F2EE">
+<div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 48px; align-items: center">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #9A9EA6">API · ERP</span>
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.apiTitle }}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #C9C5BD; text-wrap: pretty">{{ t.apiText }}</p>
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+<sc-for list="{{ t.apiList }}" as="b" hint-placeholder-count="3"><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #F4F2EE; flex: none; transform: translateY(-2px)"></span>{{ b }}</span></sc-for>
+</div>
+<a href="#contact" style="align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #4A4E57; color: #F4F2EE; font-size: 15px; font-weight: 500" style-hover="border-color: #F4F2EE; color: #F4F2EE">{{ t.apiCta }}</a>
+</div>
+<pre style="margin: 0; padding: 24px; background: #23262D; border: 1px solid #33363D; border-radius: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.7; color: #C9C5BD; overflow-x: auto"><span style="color: #9A9EA6">GET</span> /v1/parts?mpn=STM32F103C8T6&amp;qty=1000
+
+{
+  "mpn": "STM32F103C8T6",
+  "manufacturer": "STMicroelectronics",
+  "offers": [
+    {
+      "distributor": "…",
+      "authorised": true,
+      "stock": 12400,
+      "currency": "EUR",
+      "breaks": [[1000, 1.84]]
+    }
+  ]
+}</pre>
+</div>
+</section>
+
+<section style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: flex; flex-direction: column; gap: 40px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.guarTitle }}</h2>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 32px">
+<sc-for list="{{ t.guar }}" as="g" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 12px">
+<svg width="20" height="20" sc-camel-view-box="0 0 24 24" fill="none" stroke="#2F7D4F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
+<h3 style="margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">{{ g.title }}</h3>
+<p style="margin: 0; font-size: 14px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ g.text }}</p>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section id="faq" style="border-top: 1px solid #D9D5CD">
+<div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 48px; align-items: start">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.faqTitle }}</h2>
+<div style="display: flex; flex-direction: column; border-top: 1px solid #D9D5CD; grid-column: span 1; min-width: 0">
+<sc-for list="{{ faq }}" as="f" hint-placeholder-count="5">
+<div style="border-bottom: 1px solid #D9D5CD">
+<button sc-camel-on-click="{{ f.toggle }}" aria-expanded="{{ f.open }}" style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; border: 0; background: transparent; text-align: left; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none">{{ f.sign }}</span></button>
+<sc-if value="{{ f.open }}" hint-placeholder-val="{{ false }}"><p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ f.a }}</p></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section id="contact" style="background: #ECE9E3; border-top: 1px solid #D9D5CD">
+<div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 48px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
+</div>
+<form sc-camel-on-submit="{{ onSend }}" style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; gap: 24px; border-bottom: 1px solid #D9D5CD">
+<sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="2">
+<button type="button" sc-camel-on-click="{{ tb.pick }}" style="{{ tb.style }}">{{ tb.label }}</button>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57">{{ t.fName }}<input required="" style="height: 36px; padding: 0 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; color: #15171C; background: #FFFFFF" style-focus="border-color: #15171C; outline: none"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57">{{ t.fCompany }}<input required="" style="height: 36px; padding: 0 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; color: #15171C; background: #FFFFFF" style-focus="border-color: #15171C; outline: none"></label>
+</div>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57">{{ t.fEmail }}<input type="email" required="" style="height: 36px; padding: 0 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; color: #15171C; background: #FFFFFF" style-focus="border-color: #15171C; outline: none"></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57">{{ msgLabel }}<textarea rows="4" style="padding: 10px 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #15171C; background: #FFFFFF; resize: vertical" style-focus="border-color: #15171C; outline: none"></textarea></label>
+<button type="submit" style="align-self: flex-start; height: 44px; padding: 0 20px; border: 0; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500; cursor: pointer" style-hover="background: #33363D">{{ t.fSend }}</button>
+<sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 6px; background: #15171C; color: #F4F2EE">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: #D7262E; flex: none; margin-top: 5px"></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500; font-size: 14px">{{ t.sentTitle }}</span><span style="font-size: 13px; color: #C9C5BD">{{ t.sentText }}</span></span>
+</div>
+</sc-if>
+</form>
+</div>
+</section>
+
+<footer style="background: #15171C; color: #C9C5BD">
+<div style="max-width: 1280px; margin: 0 auto; padding: 40px 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between">
+<span style="display: inline-flex; align-items: center; gap: 16px">
+<span style="font-weight: 500; letter-spacing: -0.025em; font-size: 18px; color: #F4F2EE">Central<span style="color: #D7262E">.</span>Parts</span>
+<span style="width: 1px; align-self: stretch; background: #4A4E57"></span>
+<span style="display: flex; flex-direction: column; gap: 2px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; line-height: 1.2; letter-spacing: 0.22em; text-transform: uppercase"><span>Supply</span><span>Network</span><span>Operator</span></span>
+</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">© 2026 Central.Parts · central.parts</span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="">
+const T = {
+fr: {
+  navPaths: 'Acheteurs · Distributeurs', navHow: 'Fonctionnement', navDist: 'Distributeurs autorisés', navContact: 'Contact',
+  heroTitle: 'Composants électroniques qualifiés, sourcés auprès de distributeurs autorisés.',
+  heroSub: 'Recherche, cotation et achat en un seul endroit. Europe, Amériques, Chine.',
+  searchPh: 'Référence fabricant, ex. STM32F103C8T6', searchBtn: 'Rechercher', tryLabel: 'Essayer :',
+  searchNote: 'Recherche de démonstration.', openPlatform: 'Ouvrir la plateforme',
+  pathsTitle: 'Deux parcours, un même réseau',
+  buyerTag: 'Acheteurs', buyerTitle: 'Trouver, comparer, acheter',
+  buyerText: 'Pour les équipes achats et supply chain qui cherchent une référence, comparent les offres et passent commande sans multiplier les interlocuteurs.',
+  buyerList: ['Stock et prix par distributeur, au même endroit', 'Cotation pour les quantités et délais spécifiques', 'Une commande, une facture, une traçabilité'],
+  buyerCta: 'Rechercher une référence',
+  distTag: 'Distributeurs', distTitle: 'Rejoindre le réseau',
+  distText: 'Pour les distributeurs autorisés qui veulent rendre leur stock visible auprès d’acheteurs qualifiés en Europe, aux Amériques et en Chine.',
+  distList: ['Publication du stock par flux ou API', 'Demandes de cotation qualifiées', 'Paiement et logistique encadrés'],
+  distCta: 'Devenir distributeur partenaire',
+  howTitle: 'Comment ça marche',
+  steps: [
+    { n: 1, title: 'Rechercher', text: 'Saisissez une référence fabricant. Les offres des distributeurs autorisés s’affichent avec stock, paliers de prix et délais.' },
+    { n: 2, title: 'Coter', text: 'Pour une quantité ou une date précise, envoyez une demande de cotation. La réponse arrive avec une référence de suivi.' },
+    { n: 3, title: 'Acheter', text: 'Validez l’offre retenue. La commande est passée auprès du distributeur et suivie jusqu’à la livraison.' }],
+  distSecTitle: 'Uniquement des distributeurs autorisés',
+  distSecText: 'Chaque offre provient d’un distributeur autorisé par le fabricant. Les pièces sont neuves, tracées et livrées avec leurs documents.',
+  regionsTitle: 'Europe · Amériques · Chine',
+  currencyLabel: 'Devise', langLabel: 'Langue', formatLabel: 'Format',
+  regions: [
+    { name: 'Europe', cur: 'EUR', lang: 'Français, English', fmt: '1 000+ · 1,84 €' },
+    { name: 'Amériques', cur: 'USD', lang: 'English', fmt: '1,000+ · $1.99' },
+    { name: 'Chine', cur: 'CNY', lang: '中文', fmt: '1,000+ · ¥14.30' }],
+  apiTitle: 'Branchez Central.Parts à votre ERP',
+  apiText: 'L’API expose la recherche, les offres et les demandes de cotation. Vos outils d’achat interrogent le réseau directement.',
+  apiList: ['Recherche par référence et par nomenclature', 'Offres, stock et paliers de prix', 'Demandes de cotation et suivi de commande'],
+  apiCta: 'Demander un accès API',
+  guarTitle: 'Garanties',
+  guar: [
+    { title: 'Distributeurs autorisés', text: 'Aucun courtier, aucune source grise. Chaque distributeur est autorisé par les fabricants qu’il représente.' },
+    { title: 'Traçabilité', text: 'Lot, date code et origine sont conservés pour chaque pièce, de l’entrepôt du distributeur à votre réception.' },
+    { title: 'Conformité', text: 'Certificats de conformité, données RoHS et REACH disponibles avec chaque référence.' },
+    { title: 'Prix affichés', text: 'Les prix indiqués sont ceux du distributeur, par palier de quantité, dans votre devise.' }],
+  faqTitle: 'Questions fréquentes',
+  faq: [
+    { q: 'Qui vend les composants ?', a: 'Les distributeurs autorisés du réseau. Central.Parts opère la recherche, la cotation et la commande.' },
+    { q: 'Comment fonctionne une demande de cotation ?', a: 'Vous indiquez référence, quantité et date souhaitée. La demande est transmise aux distributeurs concernés et vous recevez une réponse avec une référence de suivi.' },
+    { q: 'Dans quelles régions livrez-vous ?', a: 'Europe, Amériques et Chine, avec des prix dans la devise locale.' },
+    { q: 'Puis-je intégrer Central.Parts à mon ERP ?', a: 'Oui, via l’API. Demandez un accès depuis le formulaire de contact.' },
+    { q: 'Comment devenir distributeur partenaire ?', a: 'Remplissez le formulaire en choisissant « Distributeur ». Nous vérifions vos agréments fabricants avant l’ouverture du compte.' }],
+  contactTitle: 'Parlons de vos besoins',
+  contactText: 'Acheteur ou distributeur, laissez-nous vos coordonnées. Nous revenons vers vous rapidement.',
+  tabBuyer: 'Acheteur', tabDist: 'Distributeur',
+  fName: 'Nom', fCompany: 'Société', fEmail: 'E-mail professionnel', fMsgBuyer: 'Références ou besoin', fMsgDist: 'Fabricants représentés', fSend: 'Envoyer',
+  sentTitle: 'Demande envoyée', sentText: 'Nous vous répondons par e-mail.'
+},
+en: {
+  navPaths: 'Buyers · Distributors', navHow: 'How it works', navDist: 'Authorised distributors', navContact: 'Contact',
+  heroTitle: 'Qualified electronic components, sourced from authorised distributors.',
+  heroSub: 'Search, quote and buy in one place. Europe, the Americas, China.',
+  searchPh: 'Manufacturer part number, e.g. STM32F103C8T6', searchBtn: 'Search', tryLabel: 'Try:',
+  searchNote: 'Demo search.', openPlatform: 'Open the platform',
+  pathsTitle: 'Two paths, one network',
+  buyerTag: 'Buyers', buyerTitle: 'Find, compare, buy',
+  buyerText: 'For purchasing and supply chain teams who look up a part, compare offers and order without juggling suppliers.',
+  buyerList: ['Stock and price per distributor, in one place', 'Quotes for specific quantities and lead times', 'One order, one invoice, full traceability'],
+  buyerCta: 'Search a part number',
+  distTag: 'Distributors', distTitle: 'Join the network',
+  distText: 'For authorised distributors who want their stock visible to qualified buyers in Europe, the Americas and China.',
+  distList: ['Stock published by feed or API', 'Qualified quote requests', 'Managed payment and logistics'],
+  distCta: 'Become a partner distributor',
+  howTitle: 'How it works',
+  steps: [
+    { n: 1, title: 'Search', text: 'Enter a manufacturer part number. Offers from authorised distributors appear with stock, price breaks and lead times.' },
+    { n: 2, title: 'Quote', text: 'For a specific quantity or date, send a quote request. The answer comes back with a tracking reference.' },
+    { n: 3, title: 'Buy', text: 'Confirm the offer you choose. The order is placed with the distributor and tracked through delivery.' }],
+  distSecTitle: 'Authorised distributors only',
+  distSecText: 'Every offer comes from a distributor authorised by the manufacturer. Parts are new, traceable and shipped with their documents.',
+  regionsTitle: 'Europe · Americas · China',
+  currencyLabel: 'Currency', langLabel: 'Language', formatLabel: 'Format',
+  regions: [
+    { name: 'Europe', cur: 'EUR', lang: 'Français, English', fmt: '1 000+ · 1,84 €' },
+    { name: 'Americas', cur: 'USD', lang: 'English', fmt: '1,000+ · $1.99' },
+    { name: 'China', cur: 'CNY', lang: '中文', fmt: '1,000+ · ¥14.30' }],
+  apiTitle: 'Connect Central.Parts to your ERP',
+  apiText: 'The API exposes search, offers and quote requests. Your purchasing tools query the network directly.',
+  apiList: ['Search by part number and by BOM', 'Offers, stock and price breaks', 'Quote requests and order tracking'],
+  apiCta: 'Request API access',
+  guarTitle: 'Guarantees',
+  guar: [
+    { title: 'Authorised distributors', text: 'No brokers, no grey market. Every distributor is authorised by the manufacturers it represents.' },
+    { title: 'Traceability', text: 'Lot, date code and origin are kept for every part, from the distributor’s warehouse to your goods-in.' },
+    { title: 'Compliance', text: 'Certificates of conformity, RoHS and REACH data available with every part.' },
+    { title: 'Listed prices', text: 'Prices shown are the distributor’s, per quantity break, in your currency.' }],
+  faqTitle: 'Frequently asked questions',
+  faq: [
+    { q: 'Who sells the components?', a: 'The authorised distributors in the network. Central.Parts operates search, quoting and ordering.' },
+    { q: 'How does a quote request work?', a: 'You give part number, quantity and target date. The request goes to the relevant distributors and you get an answer with a tracking reference.' },
+    { q: 'Which regions do you serve?', a: 'Europe, the Americas and China, with prices in local currency.' },
+    { q: 'Can I connect Central.Parts to my ERP?', a: 'Yes, through the API. Request access from the contact form.' },
+    { q: 'How do I become a partner distributor?', a: 'Fill in the form and choose “Distributor”. We check your manufacturer authorisations before opening the account.' }],
+  contactTitle: 'Tell us what you need',
+  contactText: 'Buyer or distributor, leave your details. We will get back to you shortly.',
+  tabBuyer: 'Buyer', tabDist: 'Distributor',
+  fName: 'Name', fCompany: 'Company', fEmail: 'Work e-mail', fMsgBuyer: 'Part numbers or need', fMsgDist: 'Manufacturers represented', fSend: 'Send',
+  sentTitle: 'Request sent', sentText: 'We will reply by e-mail.'
+},
+zh: {
+  navPaths: '采购方 · 分销商', navHow: '使用流程', navDist: '授权分销商', navContact: '联系我们',
+  heroTitle: '合格电子元器件，均来自授权分销商。',
+  heroSub: '一站式搜索、报价与采购。覆盖欧洲、美洲与中国。',
+  searchPh: '制造商料号，例如 STM32F103C8T6', searchBtn: '搜索', tryLabel: '试试：',
+  searchNote: '演示搜索。', openPlatform: '打开平台',
+  pathsTitle: '两种角色，同一网络',
+  buyerTag: '采购方', buyerTitle: '查找、比较、采购',
+  buyerText: '面向采购与供应链团队：查找料号、比较报价、下单，无需对接多个供应商。',
+  buyerList: ['各分销商的库存与价格集中呈现', '针对特定数量与交期发起询价', '一个订单、一张发票、全程可追溯'],
+  buyerCta: '搜索料号',
+  distTag: '分销商', distTitle: '加入网络',
+  distText: '面向授权分销商：让您的库存触达欧洲、美洲与中国的合格采购方。',
+  distList: ['通过数据源或 API 发布库存', '合格的询价请求', '规范的付款与物流'],
+  distCta: '成为合作分销商',
+  howTitle: '使用流程',
+  steps: [
+    { n: 1, title: '搜索', text: '输入制造商料号，即可查看授权分销商的库存、阶梯价格与交期。' },
+    { n: 2, title: '询价', text: '针对特定数量或日期提交询价，回复附带跟踪编号。' },
+    { n: 3, title: '采购', text: '确认所选报价，订单交由分销商处理并全程跟踪至交付。' }],
+  distSecTitle: '仅限授权分销商',
+  distSecText: '每一条报价均来自制造商授权的分销商。元器件全新、可追溯，并随附相关文件。',
+  regionsTitle: '欧洲 · 美洲 · 中国',
+  currencyLabel: '币种', langLabel: '语言', formatLabel: '格式',
+  regions: [
+    { name: '欧洲', cur: 'EUR', lang: 'Français, English', fmt: '1 000+ · 1,84 €' },
+    { name: '美洲', cur: 'USD', lang: 'English', fmt: '1,000+ · $1.99' },
+    { name: '中国', cur: 'CNY', lang: '中文', fmt: '1,000+ · ¥14.30' }],
+  apiTitle: '将 Central.Parts 接入您的 ERP',
+  apiText: 'API 提供搜索、报价与询价功能，您的采购系统可直接查询网络。',
+  apiList: ['按料号及 BOM 搜索', '报价、库存与阶梯价格', '询价与订单跟踪'],
+  apiCta: '申请 API 权限',
+  guarTitle: '保障',
+  guar: [
+    { title: '授权分销商', text: '无中间商，无灰色渠道。每家分销商均获其所代理制造商的授权。' },
+    { title: '可追溯', text: '每个元器件均保留批次、日期代码与原产地信息，从分销商仓库到您收货。' },
+    { title: '合规', text: '每个料号均提供合格证书及 RoHS、REACH 数据。' },
+    { title: '明码标价', text: '所示价格为分销商按数量阶梯提供的价格，以您的币种显示。' }],
+  faqTitle: '常见问题',
+  faq: [
+    { q: '元器件由谁销售？', a: '由网络中的授权分销商销售。Central.Parts 负责搜索、询价与下单。' },
+    { q: '询价如何进行？', a: '填写料号、数量与期望日期，请求将发送给相关分销商，您将收到附带跟踪编号的回复。' },
+    { q: '服务哪些地区？', a: '欧洲、美洲与中国，价格以当地币种显示。' },
+    { q: '能否接入我的 ERP？', a: '可以，通过 API 接入。请在联系表单中申请权限。' },
+    { q: '如何成为合作分销商？', a: '填写表单并选择“分销商”。开通账户前我们将核实您的制造商授权。' }],
+  contactTitle: '告诉我们您的需求',
+  contactText: '无论您是采购方还是分销商，请留下联系方式，我们会尽快与您联系。',
+  tabBuyer: '采购方', tabDist: '分销商',
+  fName: '姓名', fCompany: '公司', fEmail: '工作邮箱', fMsgBuyer: '料号或需求', fMsgDist: '代理的制造商', fSend: '发送',
+  sentTitle: '请求已发送', sentText: '我们将通过邮件回复您。'
+}};
+
+class Component extends DCLogic {
+  state = { lang: (() => { try { return localStorage.getItem('cp-landing-lang') || 'fr'; } catch (e) { return 'fr'; } })(), q: '', searched: false, open: 0, tab: 'buyer', sent: false };
+  setLang(lang) { try { localStorage.setItem('cp-landing-lang', lang); } catch (e) {} this.setState({ lang }); }
+  renderVals() {
+    const { lang, q, searched, open, tab, sent } = this.state;
+    const t = T[lang];
+    const pill = (on) => ({ height: 28, padding: '0 8px', border: 0, borderRadius: 4, cursor: 'pointer', fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: on ? '#F4F2EE' : 'transparent', color: on ? '#15171C' : '#9A9EA6' });
+    const tabStyle = (on) => ({ height: 40, padding: 0, border: 0, background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: 500, color: on ? '#15171C' : '#6B7079', borderBottom: on ? '2px solid #15171C' : '2px solid transparent', marginBottom: -1 });
+    return {
+      t, q, searched, sent,
+      htmlLang: lang === 'zh' ? 'zh-CN' : lang,
+      langs: [['fr', 'FR'], ['en', 'EN'], ['zh', '中文']].map(([k, label]) => ({ label, style: pill(k === lang), pick: () => this.setLang(k) })),
+      examples: ['STM32F103C8T6', 'LM358DR', 'ATMEGA328P-AU', 'GRM188R71H104KA93D'].map((label) => ({ label, pick: () => this.setState({ q: label, searched: false }) })),
+      onQ: (e) => this.setState({ q: e.target.value, searched: false }),
+      onSearch: (e) => { e.preventDefault(); if (this.state.q.trim()) this.setState({ searched: true }); },
+      partners: Array.from({ length: 8 }, (_, i) => (lang === 'zh' ? '分销商标志 ' : lang === 'en' ? 'Distributor logo ' : 'Logo distributeur ') + String(i + 1).padStart(2, '0')),
+      faq: t.faq.map((f, i) => ({ ...f, open: open === i, sign: open === i ? '−' : '+', toggle: () => this.setState({ open: open === i ? -1 : i }) })),
+      tabs: [['buyer', t.tabBuyer], ['dist', t.tabDist]].map(([k, label]) => ({ label, style: tabStyle(k === tab), pick: () => this.setState({ tab: k, sent: false }) })),
+      msgLabel: tab === 'buyer' ? t.fMsgBuyer : t.fMsgDist,
+      toDist: () => this.setState({ tab: 'dist', sent: false }),
+      onSend: (e) => { e.preventDefault(); this.setState({ sent: true }); }
+    };
+  }
+}
+</script>
+
+
+</body></html>

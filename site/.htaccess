@@ -28,3 +28,6 @@ RewriteRule ^ https://central.parts%{REQUEST_URI} [L,R=301]
 </IfModule>
 
 AddType font/woff2 .woff2
+
+# Pages statiques : /, /en/, /zh/
+DirectoryIndex index.html
