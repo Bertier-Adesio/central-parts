@@ -309,6 +309,8 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* Navigation qui défile : fondu sur le bord droit tant qu'il reste des liens à droite */
+[data-nav][data-more]{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent)}
 /* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
 @media (max-width:640px){
 [data-hdr]{height:auto!important;flex-wrap:wrap;padding:10px 16px 0!important;gap:10px 12px!important}

@@ -160,6 +160,13 @@ const SCRIPT = `<script>
   var q = document.getElementById('q');
   var note = document.getElementById('search-note');
   var search = document.querySelector('[data-search]');
+
+  // Navigation : fondu à droite seulement si des liens restent masqués à droite.
+  var nav = document.querySelector('[data-nav]');
+  function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
+  nav.addEventListener('scroll', navFade, { passive: true });
+  addEventListener('resize', navFade);
+  navFade();
   function focusSearch() { q.focus(); q.scrollIntoView({ block: 'center' }); }
   // Recherche de démonstration : pas encore de plateforme en production.
   search.addEventListener('submit', function (e) { e.preventDefault(); note.hidden = !q.value.trim(); });
