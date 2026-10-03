@@ -45,6 +45,6 @@ Une seule fois, avant le premier déploiement :
 - [ ] Brancher le formulaire de contact (aujourd'hui il affiche seulement « Demande envoyée »).
 - [ ] Remplacer les huit emplacements « Logo distributeur » par de vrais partenaires.
 - [ ] Recherche de démonstration → appel réel à l'API (`api/`).
-- [ ] Mobile : le bouton « Contact » de l'en-tête déborde à 390 px de large.
+- [x] Mobile : en-tête sur deux lignes sous 640 px (iPhone 17, Pixel Pro), plus de débordement.
 - [ ] Mentions légales, politique de confidentialité, bandeau cookies si mesure d'audience.
 - [ ] Premier déploiement OVH (étapes ci-dessus).
