@@ -1,7 +1,10 @@
-# Publie site/ sur l'hébergement web OVH associé à central.parts.
+# Publie site/ sur l'hébergement web OVH associé à central.parts, en SFTP.
+# Le serveur FTP d'OVH n'accepte pas le FTPS (« 500 This security scheme is
+# not implemented ») : on passe par SSH, qui chiffre identifiants et fichiers.
+# Prérequis : SSH activé pour l'utilisateur principal (Hébergements > centryv > FTP-SSH).
 # Secrets à créer dans GitHub (Settings > Secrets and variables > Actions) :
-#   OVH_FTP_USER      identifiant FTP principal de l'hébergement (ex. centryv)
-#   OVH_FTP_PASSWORD  mot de passe FTP
+#   OVH_FTP_USER      identifiant FTP-SSH principal de l'hébergement (ex. centryv)
+#   OVH_FTP_PASSWORD  mot de passe de cet identifiant
 name: Déploiement site (OVH)
 
 on:
@@ -20,16 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Envoi FTPS vers www/
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ftp.cluster129.hosting.ovh.net
-          protocol: ftps
-          username: ${{ secrets.OVH_FTP_USER }}
-          password: ${{ secrets.OVH_FTP_PASSWORD }}
-          local-dir: ./site/
-          server-dir: ./www/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            README.md
+      - name: Installe lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      - name: Envoi SFTP vers www/
+        env:
+          OVH_HOST: ssh.cluster129.hosting.ovh.net
+          OVH_FTP_USER: ${{ secrets.OVH_FTP_USER }}
+          # lftp lit le mot de passe dans LFTP_PASSWORD (option --env-password) :
+          # il n'apparaît ni dans la ligne de commande ni dans les logs.
+          LFTP_PASSWORD: ${{ secrets.OVH_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+            set cmd:fail-exit yes;
+            set net:max-retries 2;
+            set net:timeout 20;
+            set sftp:auto-confirm yes;
+            open --env-password -u \"$OVH_FTP_USER\" sftp://$OVH_HOST;
+            mirror --reverse --verbose --parallel=4 \
+              --exclude-glob .git* --exclude-glob README.md \
+              ./site/ www/
+          "
