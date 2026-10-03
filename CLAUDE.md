@@ -13,7 +13,7 @@ Central.Parts est un Supply Network Operator (SNO) de composants électroniques 
 - `brand/` : logo et design tokens (`tokens.css`).
 - `api/`, `data/`, `legal/` : à concevoir, voir leur README.
 - `docs/decisions/` : ADR numérotés (`000N-titre.md`).
-- `.github/workflows/deploy-site-ovh.yml` : publie `site/` sur l'hébergement OVH à chaque push sur `main` qui touche `site/`.
+- `.github/workflows/deploy-site-ovh.yml` : publie `site/` sur l'hébergement OVH à chaque push sur `main` qui touche `site/` ou le workflow, puis retire de `www/` une liste explicite de fichiers qui ne doivent plus être publiés (design system, ancien runtime).
 
 ## Règles
 

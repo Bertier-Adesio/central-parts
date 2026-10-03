@@ -10,7 +10,7 @@ name: Déploiement site (OVH)
 on:
   push:
     branches: [main]
-    paths: ["site/**"]
+    paths: ["site/**", ".github/workflows/deploy-site-ovh.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -43,4 +43,35 @@ jobs:
             mirror --reverse --verbose --parallel=4 \
               --exclude-glob .git* --exclude-glob README.md \
               ./site/ www/
+          "
+
+      # Le mirror ne supprime rien sur le serveur. On retire donc ici, par une
+      # liste explicite, ce qui ne doit plus être publié : fichiers du design
+      # system envoyés à la main avant le premier déploiement, et runtime de la
+      # maquette retiré du dépôt (ADR 0002). Un élément absent n'est pas une erreur.
+      - name: Nettoie www/
+        env:
+          OVH_HOST: ssh.cluster129.hosting.ovh.net
+          OVH_FTP_USER: ${{ secrets.OVH_FTP_USER }}
+          LFTP_PASSWORD: ${{ secrets.OVH_FTP_PASSWORD }}
+        run: |
+          lftp -c "
+            set cmd:fail-exit yes;
+            set net:max-retries 2;
+            set net:timeout 20;
+            set sftp:auto-confirm yes;
+            open --env-password -u \"$OVH_FTP_USER\" sftp://$OVH_HOST;
+            cd www;
+            # Seulement une fois dans www/ : les suppressions manquantes sont tolérées.
+            set cmd:fail-exit no;
+            rm -r ui_kits;
+            rm -r components;
+            rm -r tokens;
+            rm -r guidelines;
+            rm -r assets/js;
+            rm -r assets/vendor;
+            glob -a rm -f *.dc.html;
+            rm -f support.js;
+            rm -f SKILL.md;
+            echo Nettoyage terminé.
           "
