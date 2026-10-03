@@ -96,7 +96,7 @@ rewrite('<a href="#contact" sc-camel-on-click="{{ toDist }}" style=', '<a href="
 body = body.replace(/<sc-for list="\{\{ faq \}\}"[\s\S]*?<\/sc-for>/, () =>
   `<sc-for list="{{ faq }}" as="f">
 <details data-open="{{ f.open }}" style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ f.a }}</p>
 </details>
 </sc-for>`);
@@ -214,6 +214,8 @@ function page(lang) {
     t, htmlLang: L.htmlLang,
     langs: Object.entries(LANGS).map(([k, o]) => ({ label: { fr: 'FR', en: 'EN', zh: '中文' }[k], href: o.path, hreflang: o.hreflang, current: k === lang ? 'page' : 'false', style: pill(k === lang) })),
     examples: ['STM32F103C8T6', 'LM358DR', 'ATMEGA328P-AU', 'GRM188R71H104KA93D'].map((label) => ({ label })),
+    // Grille « Logo distributeur » masquée tant qu'il n'y a pas de vrais partenaires.
+    showPartners: false,
     partners: Array.from({ length: 8 }, (_, i) => L.partner + String(i + 1).padStart(2, '0')),
     faq: t.faq.map((f, i) => ({ ...f, open: i === 0 ? 'open' : '' })),
     tabs: [['buyer', t.tabBuyer], ['dist', t.tabDist]].map(([key, label]) => ({ key, label, on: String(key === 'buyer'), style: tabStyle(key === 'buyer'), styleOn: tabStyle(true), styleOff: tabStyle(false) })),
