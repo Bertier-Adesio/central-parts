@@ -28,11 +28,11 @@ python3 -m http.server 8000   # depuis ce dossier
 
 ## Mise en ligne sur OVH
 
-Le domaine central.parts est associé à l'hébergement web OVH `centryv.cluster129.hosting.ovh.net` (DNSSEC et protection contre le transfert actifs). Le workflow [`.github/workflows/deploy-site-ovh.yml`](../.github/workflows/deploy-site-ovh.yml) envoie le contenu de `site/` dans `www/` à chaque modification poussée sur `main`.
+Le domaine central.parts est associé à l'hébergement web OVH `centryv.cluster129.hosting.ovh.net` (DNSSEC et protection contre le transfert actifs). Le workflow [`.github/workflows/deploy-site-ovh.yml`](../.github/workflows/deploy-site-ovh.yml) envoie en SFTP (`ssh.cluster129.hosting.ovh.net`) le contenu de `site/` dans `www/` à chaque modification poussée sur `main`.
 
 Une seule fois, avant le premier déploiement :
 
-1. **Espace client OVH > Hébergements > centryv > FTP-SSH** : relever l'identifiant FTP principal et, si besoin, redéfinir son mot de passe.
+1. **Espace client OVH > Hébergements > centryv > FTP-SSH** : relever l'identifiant principal, vérifier que **SSH est activé** pour lui (le déploiement passe en SFTP, le FTPS étant refusé par OVH) et, si besoin, redéfinir son mot de passe.
 2. **GitHub > Settings > Secrets and variables > Actions** : créer `OVH_FTP_USER` et `OVH_FTP_PASSWORD`.
 3. **Hébergements > centryv > Multisite** : vérifier que `central.parts` et `www.central.parts` pointent vers le dossier `www`, puis activer le **certificat SSL** (Let's Encrypt, gratuit) sur les deux.
 4. Supprimer la page par défaut d'OVH (`www/index.html` d'origine) si elle est encore là : le premier déploiement l'écrase de toute façon.
