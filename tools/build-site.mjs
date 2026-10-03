@@ -19,19 +19,19 @@ const CONTACT_EMAIL = 'contact@central.parts';
 const LANGS = {
   fr: {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
-    title: 'Central.Parts — Composants électroniques, distributeurs autorisés',
+    headline: 'Composants électroniques, distributeurs autorisés',
     description: 'Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.',
     partner: 'Logo distributeur ', mailSubject: 'Demande de contact', mailProfile: 'Profil',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
-    title: 'Central.Parts — Electronic components, authorised distributors',
+    headline: 'Electronic components, authorised distributors',
     description: 'Search, quote and buy electronic components from authorised distributors. Europe, the Americas, China.',
     partner: 'Distributor logo ', mailSubject: 'Contact request', mailProfile: 'Profile',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-en.png',
-    title: 'Central.Parts — 电子元器件，授权分销商',
+    headline: '电子元器件，授权分销商',
     description: '从授权分销商搜索、询价并采购电子元器件。覆盖欧洲、美洲与中国。',
     partner: '分销商标志 ', mailSubject: '联系请求', mailProfile: '身份',
   },
@@ -221,16 +221,20 @@ function page(lang) {
     if (html.includes(bad)) throw new Error(`« ${bad} » reste dans la page ${lang}`);
   }
 
+  // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
+  // il coupe la marque). Les aperçus sociaux n'affichent que l'accroche :
+  // la marque y figure déjà via og:site_name, et le titre reste sous 60 caractères.
+  const title = `${L.headline} — Central.Parts`;
   const url = ORIGIN + L.path;
   const alt = Object.values(LANGS).map((o) => `<link rel="alternate" hreflang="${o.hreflang}" href="${ORIGIN + o.path}">`).join('\n')
     + `\n<link rel="alternate" hreflang="x-default" href="${ORIGIN}/">`;
   const img = `${ORIGIN}/${L.ogImage}`;
   const og = [
-    ['og:type', 'website'], ['og:site_name', 'Central.Parts'], ['og:url', url], ['og:title', L.title], ['og:description', L.description],
-    ['og:image', img], ['og:image:width', '1200'], ['og:image:height', '630'], ['og:image:alt', L.title], ['og:locale', L.ogLocale],
+    ['og:type', 'website'], ['og:site_name', 'Central.Parts'], ['og:url', url], ['og:title', L.headline], ['og:description', L.description],
+    ['og:image', img], ['og:image:width', '1200'], ['og:image:height', '630'], ['og:image:alt', title], ['og:locale', L.ogLocale],
     ...Object.entries(LANGS).filter(([k]) => k !== lang).map(([, o]) => ['og:locale:alternate', o.ogLocale]),
   ].map(([p, c]) => `<meta property="${p}" content="${esc(c)}">`).join('\n');
-  const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.title], ['twitter:description', L.description], ['twitter:image', img]]
+  const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.headline], ['twitter:description', L.description], ['twitter:image', img]]
     .map(([n, c]) => `<meta name="${n}" content="${esc(c)}">`).join('\n');
   const mail = JSON.stringify({ subject: L.mailSubject, profile: L.mailProfile });
 
@@ -240,7 +244,7 @@ function page(lang) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(L.title)}</title>
+<title>${esc(title)}</title>
 <meta name="description" content="${esc(L.description)}">
 <link rel="canonical" href="${url}">
 ${alt}
