@@ -19,19 +19,19 @@ const CONTACT_EMAIL = 'contact@central.parts';
 const LANGS = {
   fr: {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
-    title: 'Central.Parts — Composants électroniques, distributeurs autorisés',
+    headline: 'Composants électroniques, distributeurs autorisés',
     description: 'Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.',
     partner: 'Logo distributeur ', mailSubject: 'Demande de contact', mailProfile: 'Profil',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
-    title: 'Central.Parts — Electronic components, authorised distributors',
+    headline: 'Electronic components, authorised distributors',
     description: 'Search, quote and buy electronic components from authorised distributors. Europe, the Americas, China.',
     partner: 'Distributor logo ', mailSubject: 'Contact request', mailProfile: 'Profile',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-en.png',
-    title: 'Central.Parts — 电子元器件，授权分销商',
+    headline: '电子元器件，授权分销商',
     description: '从授权分销商搜索、询价并采购电子元器件。覆盖欧洲、美洲与中国。',
     partner: '分销商标志 ', mailSubject: '联系请求', mailProfile: '身份',
   },
@@ -96,7 +96,7 @@ rewrite('<a href="#contact" sc-camel-on-click="{{ toDist }}" style=', '<a href="
 body = body.replace(/<sc-for list="\{\{ faq \}\}"[\s\S]*?<\/sc-for>/, () =>
   `<sc-for list="{{ faq }}" as="f">
 <details data-open="{{ f.open }}" style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ f.a }}</p>
 </details>
 </sc-for>`);
@@ -160,6 +160,13 @@ const SCRIPT = `<script>
   var q = document.getElementById('q');
   var note = document.getElementById('search-note');
   var search = document.querySelector('[data-search]');
+
+  // Navigation : fondu à droite seulement si des liens restent masqués à droite.
+  var nav = document.querySelector('[data-nav]');
+  function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
+  nav.addEventListener('scroll', navFade, { passive: true });
+  addEventListener('resize', navFade);
+  navFade();
   function focusSearch() { q.focus(); q.scrollIntoView({ block: 'center' }); }
   // Recherche de démonstration : pas encore de plateforme en production.
   search.addEventListener('submit', function (e) { e.preventDefault(); note.hidden = !q.value.trim(); });
@@ -207,6 +214,8 @@ function page(lang) {
     t, htmlLang: L.htmlLang,
     langs: Object.entries(LANGS).map(([k, o]) => ({ label: { fr: 'FR', en: 'EN', zh: '中文' }[k], href: o.path, hreflang: o.hreflang, current: k === lang ? 'page' : 'false', style: pill(k === lang) })),
     examples: ['STM32F103C8T6', 'LM358DR', 'ATMEGA328P-AU', 'GRM188R71H104KA93D'].map((label) => ({ label })),
+    // Grille « Logo distributeur » masquée tant qu'il n'y a pas de vrais partenaires.
+    showPartners: false,
     partners: Array.from({ length: 8 }, (_, i) => L.partner + String(i + 1).padStart(2, '0')),
     faq: t.faq.map((f, i) => ({ ...f, open: i === 0 ? 'open' : '' })),
     tabs: [['buyer', t.tabBuyer], ['dist', t.tabDist]].map(([key, label]) => ({ key, label, on: String(key === 'buyer'), style: tabStyle(key === 'buyer'), styleOn: tabStyle(true), styleOff: tabStyle(false) })),
@@ -221,16 +230,20 @@ function page(lang) {
     if (html.includes(bad)) throw new Error(`« ${bad} » reste dans la page ${lang}`);
   }
 
+  // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
+  // il coupe la marque). Les aperçus sociaux n'affichent que l'accroche :
+  // la marque y figure déjà via og:site_name, et le titre reste sous 60 caractères.
+  const title = `${L.headline} — Central.Parts`;
   const url = ORIGIN + L.path;
   const alt = Object.values(LANGS).map((o) => `<link rel="alternate" hreflang="${o.hreflang}" href="${ORIGIN + o.path}">`).join('\n')
     + `\n<link rel="alternate" hreflang="x-default" href="${ORIGIN}/">`;
   const img = `${ORIGIN}/${L.ogImage}`;
   const og = [
-    ['og:type', 'website'], ['og:site_name', 'Central.Parts'], ['og:url', url], ['og:title', L.title], ['og:description', L.description],
-    ['og:image', img], ['og:image:width', '1200'], ['og:image:height', '630'], ['og:image:alt', L.title], ['og:locale', L.ogLocale],
+    ['og:type', 'website'], ['og:site_name', 'Central.Parts'], ['og:url', url], ['og:title', L.headline], ['og:description', L.description],
+    ['og:image', img], ['og:image:width', '1200'], ['og:image:height', '630'], ['og:image:alt', title], ['og:locale', L.ogLocale],
     ...Object.entries(LANGS).filter(([k]) => k !== lang).map(([, o]) => ['og:locale:alternate', o.ogLocale]),
   ].map(([p, c]) => `<meta property="${p}" content="${esc(c)}">`).join('\n');
-  const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.title], ['twitter:description', L.description], ['twitter:image', img]]
+  const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.headline], ['twitter:description', L.description], ['twitter:image', img]]
     .map(([n, c]) => `<meta name="${n}" content="${esc(c)}">`).join('\n');
   const mail = JSON.stringify({ subject: L.mailSubject, profile: L.mailProfile });
 
@@ -240,7 +253,7 @@ function page(lang) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(L.title)}</title>
+<title>${esc(title)}</title>
 <meta name="description" content="${esc(L.description)}">
 <link rel="canonical" href="${url}">
 ${alt}

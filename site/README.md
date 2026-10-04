@@ -58,8 +58,8 @@ Le déploiement ne supprime pas ce qui a disparu de `site/` : l'étape « Nettoi
 
 - [ ] Brancher le formulaire de contact sur un vrai endpoint (aujourd'hui : `mailto:contact@central.parts`).
 - [ ] Lien « Ouvrir la plateforme » après la recherche : masqué tant que la plateforme n'est pas en production.
-- [ ] Remplacer les huit emplacements « Logo distributeur » par de vrais partenaires.
-- [ ] Recherche de démonstration → appel réel à l'API (`api/`).
+- [ ] Logos des distributeurs partenaires : grille masquée (`showPartners: false` dans `tools/build-site.mjs`) ; la réactiver avec les vrais logos.
+- [ ] Recherche de démonstration → API SiliconExpert, via un backend (`api/`) : la clé d'API ne doit jamais apparaître dans le site, qui est public.
 - [x] Mobile : en-tête sur deux lignes sous 640 px (iPhone 17, Pixel Pro), plus de débordement.
 - [ ] Mentions légales, politique de confidentialité, bandeau cookies si mesure d'audience.
 - [ ] Premier déploiement OVH (étapes ci-dessus).

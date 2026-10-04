@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Central.Parts — Composants électroniques, distributeurs autorisés</title>
+<title>Composants électroniques, distributeurs autorisés — Central.Parts</title>
 <meta name="description" content="Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.">
 <link rel="canonical" href="https://central.parts/">
 <link rel="alternate" hreflang="fr" href="https://central.parts/">
@@ -15,17 +15,17 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Central.Parts">
 <meta property="og:url" content="https://central.parts/">
-<meta property="og:title" content="Central.Parts — Composants électroniques, distributeurs autorisés">
+<meta property="og:title" content="Composants électroniques, distributeurs autorisés">
 <meta property="og:description" content="Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.">
 <meta property="og:image" content="https://central.parts/social-preview-fr.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Central.Parts — Composants électroniques, distributeurs autorisés">
+<meta property="og:image:alt" content="Composants électroniques, distributeurs autorisés — Central.Parts">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:locale:alternate" content="en_GB">
 <meta property="og:locale:alternate" content="zh_CN">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Central.Parts — Composants électroniques, distributeurs autorisés">
+<meta name="twitter:title" content="Composants électroniques, distributeurs autorisés">
 <meta name="twitter:description" content="Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.">
 <meta name="twitter:image" content="https://central.parts/social-preview-fr.png">
 <style>@font-face { font-family: 'Space Grotesk'; src: url("/assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
@@ -49,7 +49,7 @@
   --n-200: #d9d5cd;
   --n-300: #bdb8af;
   --n-400: #9aa0aa;
-  --n-500: #6b7079;
+  --n-500: #62676f;
   --n-600: #4a4e57;
   --n-700: #2a2e36;
   --n-800: #1e2128;
@@ -179,6 +179,8 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* Navigation qui défile : fondu sur le bord droit tant qu'il reste des liens à droite */
+[data-nav][data-more]{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent)}
 /* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
 @media (max-width:640px){
 [data-hdr]{height:auto!important;flex-wrap:wrap;padding:10px 16px 0!important;gap:10px 12px!important}
@@ -186,6 +188,7 @@ input,textarea,select,button{font-family:inherit}
 [data-nav]{order:3;flex:1 0 100%!important;gap:20px!important;padding:2px 0 12px}
 [data-search]>button{flex:1 1 100%}
 input,textarea,select{font-size:16px!important}
+[data-offices]{flex-basis:100%}
 }
 @media (max-width:400px){
 [data-hdr]{gap:10px 8px!important}
@@ -241,18 +244,19 @@ details[open] .faq-sign::before { content: '\2212'; }
 <section id="top" style="position: relative; overflow: hidden; border-bottom: 1px solid #D9D5CD">
 <svg width="760" height="760" viewBox="24 24 432 432" aria-hidden="true" style="position: absolute; right: -200px; top: 50%; margin-top: -380px; opacity: 0.06"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><circle cx="240" cy="240" r="40" fill="#15171C"></circle></svg>
 <div style="position: relative; max-width: 1280px; margin: 0 auto; padding: clamp(64px, 10vw, 128px) 24px clamp(56px, 8vw, 104px); display: flex; flex-direction: column; gap: 28px">
+<span style="margin-bottom: -16px; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">Composants électroniques qualifiés, sourcés auprès de distributeurs autorisés.</h1>
 <p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Recherche, cotation et achat en un seul endroit. Europe, Amériques, Chine.</p>
 <form data-search="1" role="search" action="#top" method="get" style="display: flex; gap: 8px; max-width: 760px; flex-wrap: wrap">
 <label style="flex: 1 1 360px; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 16px; background: #FFFFFF; border: 1px solid #C9C5BD; border-radius: 6px" class="fc2">
-<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7079" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#62676F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
 <input id="q" name="mpn" type="text" enterkeyhint="search" autocomplete="off" placeholder="Référence fabricant, ex. STM32F103C8T6" aria-label="Référence fabricant, ex. STM32F103C8T6" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 16px; color: #15171C">
 </label>
 <button type="submit" style="height: 52px; padding: 0 22px; border: 0; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 16px; font-weight: 500; cursor: pointer" class="hv3">Rechercher</button>
 </form>
 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
-<span style="font-size: 13px; color: #6B7079">Essayer :</span>
+<span style="font-size: 13px; color: #62676F">Essayer :</span>
 
 <button type="button" data-mpn="STM32F103C8T6" style="height: 28px; padding: 0 12px; border-radius: 999px; border: 1px solid #D9D5CD; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #15171C; cursor: pointer" class="hv4">STM32F103C8T6</button>
 
@@ -271,7 +275,7 @@ details[open] .faq-sign::before { content: '\2212'; }
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">Deux parcours, un même réseau</h2>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px">
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
-<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7079">Acheteurs</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #62676F">Acheteurs</span>
 <h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">Trouver, comparer, acheter</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57">Pour les équipes achats et supply chain qui cherchent une référence, comparent les offres et passent commande sans multiplier les interlocuteurs.</p>
 <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
@@ -280,7 +284,7 @@ details[open] .faq-sign::before { content: '\2212'; }
 <a href="#q" data-focus-search="1" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" class="hv5">Rechercher une référence</a>
 </div>
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
-<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7079">Distributeurs</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #62676F">Distributeurs</span>
 <h3 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">Rejoindre le réseau</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57">Pour les distributeurs autorisés qui veulent rendre leur stock visible auprès d’acheteurs qualifiés en Europe, aux Amériques et en Chine.</p>
 <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
@@ -297,19 +301,19 @@ details[open] .faq-sign::before { content: '\2212'; }
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 40px">
 
 <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid #15171C; padding-top: 20px">
-<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7079">01</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #62676F">01</span>
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Rechercher</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Saisissez une référence fabricant. Les offres des distributeurs autorisés s’affichent avec stock, paliers de prix et délais.</p>
 </div>
 
 <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid #15171C; padding-top: 20px">
-<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7079">02</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #62676F">02</span>
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Coter</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Pour une quantité ou une date précise, envoyez une demande de cotation. La réponse arrive avec une référence de suivi.</p>
 </div>
 
 <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px solid #15171C; padding-top: 20px">
-<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7079">03</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #62676F">03</span>
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Acheter</h3>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Validez l’offre retenue. La commande est passée auprès du distributeur et suivie jusqu’à la livraison.</p>
 </div>
@@ -323,25 +327,7 @@ details[open] .faq-sign::before { content: '\2212'; }
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">Uniquement des distributeurs autorisés</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Chaque offre provient d’un distributeur autorisé par le fabricant. Les pièces sont neuves, tracées et livrées avec leurs documents.</p>
 </div>
-<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1px; background: #D9D5CD; border: 1px solid #D9D5CD; border-radius: 10px; overflow: hidden">
 
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 01</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 02</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 03</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 04</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 05</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 06</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 07</div>
-
-<div style="height: 96px; background: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7079">Logo distributeur 08</div>
-
-</div>
 </section>
 
 <section style="border-top: 1px solid #D9D5CD">
@@ -352,27 +338,27 @@ details[open] .faq-sign::before { content: '\2212'; }
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Europe</h3>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; font-size: 14px">
-<span style="color: #6B7079">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">EUR</span>
-<span style="color: #6B7079">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">Français, English</span>
-<span style="color: #6B7079">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1 000+ · 1,84 €</span>
+<span style="color: #62676F">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">EUR</span>
+<span style="color: #62676F">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">Français, English</span>
+<span style="color: #62676F">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1 000+ · 1,84 €</span>
 </div>
 </div>
 
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Amériques</h3>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; font-size: 14px">
-<span style="color: #6B7079">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">USD</span>
-<span style="color: #6B7079">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">English</span>
-<span style="color: #6B7079">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1,000+ · $1.99</span>
+<span style="color: #62676F">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">USD</span>
+<span style="color: #62676F">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">English</span>
+<span style="color: #62676F">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1,000+ · $1.99</span>
 </div>
 </div>
 
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 16px">
 <h3 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em">Chine</h3>
 <div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; font-size: 14px">
-<span style="color: #6B7079">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">CNY</span>
-<span style="color: #6B7079">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">中文</span>
-<span style="color: #6B7079">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1,000+ · ¥14.30</span>
+<span style="color: #62676F">Devise</span><span style="font-family: 'IBM Plex Mono', monospace">CNY</span>
+<span style="color: #62676F">Langue</span><span style="font-family: 'IBM Plex Mono', monospace">中文</span>
+<span style="color: #62676F">Format</span><span style="font-family: 'IBM Plex Mono', monospace">1,000+ · ¥14.30</span>
 </div>
 </div>
 
@@ -446,27 +432,27 @@ details[open] .faq-sign::before { content: '\2212'; }
 <div style="display: flex; flex-direction: column; border-top: 1px solid #D9D5CD; grid-column: span 1; min-width: 0">
 
 <details open style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Qui vend les composants ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Qui vend les composants ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Les distributeurs autorisés du réseau. Central.Parts opère la recherche, la cotation et la commande.</p>
 </details>
 
 <details style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Comment fonctionne une demande de cotation ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Comment fonctionne une demande de cotation ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Vous indiquez référence, quantité et date souhaitée. La demande est transmise aux distributeurs concernés et vous recevez une réponse avec une référence de suivi.</p>
 </details>
 
 <details style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Dans quelles régions livrez-vous ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Dans quelles régions livrez-vous ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Europe, Amériques et Chine, avec des prix dans la devise locale.</p>
 </details>
 
 <details style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Puis-je intégrer Central.Parts à mon ERP ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Puis-je intégrer Central.Parts à mon ERP ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Oui, via l’API. Demandez un accès depuis le formulaire de contact.</p>
 </details>
 
 <details style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Comment devenir distributeur partenaire ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #6B7079; flex: none"></span></summary>
+<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">Comment devenir distributeur partenaire ?<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
 <p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">Remplissez le formulaire en choisissant « Distributeur ». Nous vérifions vos agréments fabricants avant l’ouverture du compte.</p>
 </details>
 
@@ -483,9 +469,9 @@ details[open] .faq-sign::before { content: '\2212'; }
 <form id="contact-form" action="mailto:contact@central.parts" method="post" enctype="text/plain" style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
 <div style="display: flex; gap: 24px; border-bottom: 1px solid #D9D5CD">
 
-<button type="button" data-tab="buyer" aria-pressed="true" data-style-on="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px" data-style-off="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #6B7079; border-bottom: 2px solid transparent; margin-bottom: -1px" style="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px">Acheteur</button>
+<button type="button" data-tab="buyer" aria-pressed="true" data-style-on="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px" data-style-off="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #62676F; border-bottom: 2px solid transparent; margin-bottom: -1px" style="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px">Acheteur</button>
 
-<button type="button" data-tab="dist" aria-pressed="false" data-style-on="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px" data-style-off="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #6B7079; border-bottom: 2px solid transparent; margin-bottom: -1px" style="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #6B7079; border-bottom: 2px solid transparent; margin-bottom: -1px">Distributeur</button>
+<button type="button" data-tab="dist" aria-pressed="false" data-style-on="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #15171C; border-bottom: 2px solid #15171C; margin-bottom: -1px" data-style-off="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #62676F; border-bottom: 2px solid transparent; margin-bottom: -1px" style="height: 40px; padding: 0; border: 0; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: #62676F; border-bottom: 2px solid transparent; margin-bottom: -1px">Distributeur</button>
 
 </div>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
@@ -511,6 +497,7 @@ details[open] .faq-sign::before { content: '\2212'; }
 <span style="width: 1px; align-self: stretch; background: #4A4E57"></span>
 <span style="display: block; font-family: 'IBM Plex Mono', monospace; font-size: 9px; line-height: 1.4; letter-spacing: 0.22em; text-transform: uppercase">Supply<br>Network<br>Operator</span>
 </span>
+<span data-offices="1" style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">Shenzhen · Paris · Denver</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px">© 2026 Central.Parts · central.parts</span>
 </div>
 </footer>
@@ -521,6 +508,13 @@ details[open] .faq-sign::before { content: '\2212'; }
   var q = document.getElementById('q');
   var note = document.getElementById('search-note');
   var search = document.querySelector('[data-search]');
+
+  // Navigation : fondu à droite seulement si des liens restent masqués à droite.
+  var nav = document.querySelector('[data-nav]');
+  function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
+  nav.addEventListener('scroll', navFade, { passive: true });
+  addEventListener('resize', navFade);
+  navFade();
   function focusSearch() { q.focus(); q.scrollIntoView({ block: 'center' }); }
   // Recherche de démonstration : pas encore de plateforme en production.
   search.addEventListener('submit', function (e) { e.preventDefault(); note.hidden = !q.value.trim(); });
