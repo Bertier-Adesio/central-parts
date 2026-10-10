@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!-- Maquette vivante de l'application Central.Parts, écrite à la main. Données fictives. Voir docs/decisions/0003-maquette-application.md. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette de l'application — Central.Parts</title>
+<meta name="description" content="Maquette vivante de la plateforme Central.Parts : acheteur, vendeurs, laboratoire, banque et opérateurs, avec la carte des endpoints de l'API. Données fictives.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/app/app.css?v=1">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="#/">
+    <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+    <span>Central<span class="accent">.</span>Parts</span>
+  </a>
+  <span class="tag">Maquette vivante</span>
+  <label class="actor"><span class="sr">Vous êtes</span><select id="actor"></select></label>
+  <div class="clock"><span class="muted">Jour simulé</span> <b data-clock>—</b> <button type="button" class="btn small ghost-inv" data-act="advance" title="Avancer d'un jour ouvré et lancer la tâche des délais">+1 jour ouvré</button></div>
+  <button type="button" class="btn small ghost-inv" data-act="reset">Réinitialiser</button>
+</header>
+
+<noscript>
+  <div class="noscript">
+    <p><strong>Cette maquette d'application a besoin de JavaScript.</strong> Sans JavaScript, consultez <a href="/proto/">le prototype du parcours</a>, lisible tel quel, et <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/api/endpoints.md">la carte des endpoints</a>.</p>
+  </div>
+</noscript>
+
+<div class="shell">
+  <nav id="nav" class="nav" aria-label="Navigation du rôle"></nav>
+  <main id="main" class="main" tabindex="-1"></main>
+</div>
+
+<section id="drawer" class="drawer" aria-label="Journal des appels d'API">
+  <div class="drawer-hd">
+    <button type="button" class="drawer-toggle" data-act="drawer" aria-expanded="false" aria-controls="log">API · <span data-log-count>0</span> appel(s)</button>
+    <label class="small"><input type="checkbox" id="reads"> Afficher les lectures (GET)</label>
+    <a class="small" href="#/api">Carte de l'API</a>
+  </div>
+  <ol id="log" class="log"></ol>
+</section>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="/app/js/registry.js?v=1"></script>
+<script src="/app/js/core.js?v=1"></script>
+<script src="/app/js/api.js?v=1"></script>
+<script src="/app/js/ui.js?v=1"></script>
+<script src="/app/js/views-public.js?v=1"></script>
+<script src="/app/js/views-buyer.js?v=1"></script>
+<script src="/app/js/views-seller.js?v=1"></script>
+<script src="/app/js/views-ops.js?v=1"></script>
+<script>CP.start();</script>
+</body>
+</html>

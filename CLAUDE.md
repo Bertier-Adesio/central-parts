@@ -14,6 +14,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 ## Arborescence
 
 - `site/` : landing page statique trilingue (FR `/`, EN `/en/`, 中文 `/zh/`), publiée telle quelle. Les pages HTML sont **générées** par `node tools/build-site.mjs` depuis `design/landing.dc.html`.
+- `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
 - `api/`, `data/`, `legal/` : à concevoir, voir leur README.
@@ -39,6 +40,16 @@ cd site && python3 -m http.server 8000
 ```
 
 Contrôler `/`, `/en/` et `/zh/` à 1280 px et 390 px de large, avec et sans JavaScript, sans erreur console ni requête externe, et sans aucun `{{` dans le HTML (`grep -c '{{' site/index.html site/*/index.html`).
+
+## Vérifier la maquette de l'application
+
+```bash
+node tools/test-app.mjs                 # règles métier de l'API simulée
+node tools/build-api-map.mjs            # régénère api/endpoints.md après toute modification de registry.js
+(cd site && python3 -m http.server 8765) & node tools/test-app-ui.mjs   # parcours complet dans Chromium
+```
+
+Incrémenter `?v=N` dans `site/app/index.html` à chaque modification des fichiers de `site/app/`.
 
 ## Déploiement
 
