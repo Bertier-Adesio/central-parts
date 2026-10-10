@@ -17,12 +17,18 @@ site/                           publié tel quel sur OVH
 ├── zh/index.html               中文 (généré)
 ├── social-preview-fr.png       og:image FR (généré)
 ├── social-preview-en.png       og:image EN et 中文 (généré)
+├── proto/                      prototype public de la plateforme (écrit à la main, FR, données fictives)
 └── assets/
     ├── favicon.svg
+    ├── tokens.css              copie de brand/tokens.css (générée)
     └── fonts/                  Space Grotesk (variable), IBM Plex Mono 400/500/600
 ```
 
 Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lisible sans JavaScript, indexable, aperçus sociaux corrects). Un seul petit script vanilla en fin de page gère les exemples de recherche, le focus du champ de recherche, les onglets Acheteur / Distributeur et l'envoi du formulaire de contact. La FAQ utilise `<details>` et fonctionne sans JavaScript. Voir [ADR 0002](../docs/decisions/0002-landing-statique-generee.md).
+
+## Prototype (`/proto/`)
+
+`site/proto/` contient le prototype public de la plateforme (build in public) : une nomenclature répartie entre Inventory et Opportunity, puis une transaction Opportunity simulée. Écrit à la main en HTML, `proto.css` et `proto.js`, avec les tokens de `/assets/tokens.css`. Sans JavaScript, toutes les étapes s'affichent à la suite. Page en `noindex`, données fictives.
 
 ## Modifier les textes
 
