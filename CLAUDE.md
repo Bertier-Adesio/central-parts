@@ -4,7 +4,12 @@ Instructions pour Claude Code dans ce dépôt.
 
 ## Projet
 
-Central.Parts est un Supply Network Operator (SNO) de composants électroniques : distributeur sans stock, ni entrepôt, ni camion, qui relie par API fournisseurs (fabricants, distributeurs, revendeurs, excédents clients) et acheteurs (EMS et OEM européens). Contexte complet : `docs/vision/modele-sno.md`.
+Central.Parts est un Supply Network Operator (SNO) de composants électroniques : distributeur sans stock, ni entrepôt, ni camion, qui relie fournisseurs et acheteurs (EMS, OEM, bureaux d'études européens). Une seule plateforme, deux offres :
+
+- **Inventory** : réseau de fabricants (Chine, Asie-Pacifique) et de distributeurs, offre courante agrégée et exposée par API.
+- **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires et escrow (l'acheteur paie à l'acceptation).
+
+Règle : la protection dépend de la source. Toute offre de broker ou de surplus passe par les rails Opportunity. Contexte complet : `docs/vision/plateforme.md`.
 
 ## Arborescence
 

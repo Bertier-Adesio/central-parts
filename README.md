@@ -2,7 +2,14 @@
 
 **Supply Network Operator (SNO) pour les composants électroniques.**
 
-Central.Parts est un distributeur sans stock, sans entrepôt et sans camion : la plateforme relie, de façon entièrement automatisée et API-first, les fournisseurs (fabricants, distributeurs, revendeurs, excédents de stock des clients) aux acheteurs (EMS et OEM français et européens). Le modèle s'inspire des opérateurs mobiles virtuels (MVNO) appliqués à la chaîne d'approvisionnement.
+Central.Parts est un distributeur sans stock, sans entrepôt et sans camion : la plateforme relie, de façon automatisée et API-first, les fournisseurs aux acheteurs (EMS et OEM français et européens). Le modèle s'inspire des opérateurs mobiles virtuels (MVNO) appliqués à la chaîne d'approvisionnement.
+
+Une seule plateforme, deux offres complémentaires :
+
+- **Inventory** : le réseau des fabricants (Chine, Asie-Pacifique) et des distributeurs, pour les références courantes.
+- **Opportunity** : surplus, obsolètes et brokers, pour les références introuvables dans le canal agréé ; lots décrits par un questionnaire d'état, tests en laboratoire partenaire, paiement du vendeur seulement après acceptation par l'acheteur.
+
+Détails : [`docs/vision/plateforme.md`](docs/vision/plateforme.md).
 
 Les offres Central.Parts sont consultables partout où les acheteurs travaillent : Adesio, Luminovo, CalcuQuote, les ERP, le site central.parts et les sites des distributeurs partenaires.
 
@@ -15,7 +22,7 @@ Les offres Central.Parts sont consultables partout où les acheteurs travaillent
 | [`api/`](api/) | API publique : recherche, offres, demandes de cotation, commandes | À concevoir |
 | [`data/`](data/) | Connecteurs fournisseurs, normalisation et enrichissement des données produit | À concevoir |
 | [`legal/`](legal/) | Gabarits contractuels (CGV, contrats distributeurs, mentions légales) | À rédiger |
-| [`docs/`](docs/) | Vision, modèle SNO, décisions d'architecture | v0 |
+| [`docs/`](docs/) | Vision, plateforme et offres, décisions d'architecture | v0 |
 
 ## Démarrer
 
