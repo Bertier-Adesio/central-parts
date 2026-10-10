@@ -4,6 +4,8 @@ Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`
 
 ## Canaux
 
+Le canal recommandé est l'[API fournisseur](../api/fournisseurs.md) : le stock est poussé à chaque changement. Les fichiers ci-dessous restent proposés en repli.
+
 | Canal | Volume | Endpoint | Traitement |
 |---|---|---|---|
 | Fichier par l'API ou l'écran vendeur | Jusqu'à 500 000 lignes | `POST /v1/stocklists` | Immédiat, rapport d'import en retour |

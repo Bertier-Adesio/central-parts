@@ -193,10 +193,20 @@ await step('vendeur : date code du lot', async () => {
 });
 ok((await state()).lots[brokerLot.id].dc === '2011', 'date code enregistré');
 
+await step('vendeur : intégration API', async () => {
+  await as('seller2'); await go('/vendeur/api');
+  await page.click('text=Créer une clé de test');
+  ok(/cp_test_/.test(await page.textContent('#main')), 'secret de la clé affiché');
+  await page.click('form[data-form="bulk"] button');
+  ok((await page.textContent('#main')).includes('mpn requis'), 'erreur de validation affichée');
+  await page.click('form[data-form="hook"] button');
+});
+ok(Object.values((await state()).lots).some((l) => l.sku === 'HB-000213' && l.source === 'api'), 'offre reçue par l\'API');
+
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));
 const actorFor = { public: 'public', buyer: 'buyer', seller: 'seller2', lab: 'lab', bank: 'bank', ops: 'ops1' };
-const sample = { '/acheteur/nomenclatures/:id': Object.keys(s.boms).pop(), '/acheteur/demandes/:id': dXC.id, '/acheteur/transactions/:id': tx.id, '/vendeur/lots/:id': 'LOT-102', '/vendeur/demandes/:id': dXC.id, '/vendeur/transactions/:id': tx.id, '/labo/dossiers/:id': lc.id, '/ops/transactions/:id': tx.id };
+const sample = { '/vendeur/api': '', '/acheteur/nomenclatures/:id': Object.keys(s.boms).pop(), '/acheteur/demandes/:id': dXC.id, '/acheteur/transactions/:id': tx.id, '/vendeur/lots/:id': 'LOT-102', '/vendeur/demandes/:id': dXC.id, '/vendeur/transactions/:id': tx.id, '/labo/dossiers/:id': lc.id, '/ops/transactions/:id': tx.id };
 for (const width of [1280, 390]) {
   await page.setViewportSize({ width, height: 900 });
   for (const r of routes) {

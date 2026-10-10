@@ -47,7 +47,8 @@
       if (!match) fail(404, 'Endpoint inconnu');
       if (match.e.roles.indexOf(actor.role) < 0) fail(403, 'Rôle « ' + actor.role + ' » non autorisé');
       var data = H[match.e.id]({ params: params, query: query, body: body || {}, actor: actor, org: actor.org && S().orgs[actor.org] });
-      res = { status: method === 'POST' && !opts.ok200 ? 201 : 200, data: data };
+      res = { status: method === 'POST' && !opts.ok200 && !(data && data.__ok200) ? 201 : 200, data: data };
+      if (data && data.__ok200) delete data.__ok200;
       if (method !== 'GET') CP.save();
     } catch (err) {
       if (!(err instanceof ApiError)) { console.error(err); err = new ApiError(500, 'Erreur interne de la maquette'); }
@@ -70,7 +71,11 @@
   function notify(to, text, link) {
     S().notifications.unshift({ id: next('NOT'), day: S().day, to: to, text: text, link: link || null });
   }
-  function hist(t, text) { t.history.push({ day: S().day, text: text }); event(t.id + ' · ' + text, t.id); }
+  function hist(t, text) {
+    t.history.push({ day: S().day, text: text });
+    event(t.id + ' · ' + text, t.id);
+    if (typeof deliver === 'function') deliver(t.sellerId, 'transaction.updated', { transaction_id: t.id, status: t.status, text: text });
+  }
   function alias(orgId) { var o = S().orgs[orgId]; return o ? o.alias : '—'; }
 
   // ------------------------------------------------------------ vues filtrées selon l'appelant
@@ -202,7 +207,7 @@
     var inv = S().inventory.filter(function (i) { return i.mpn.toUpperCase().indexOf(q) >= 0; });
     var by = {};
     CP.values(S().lots).forEach(function (l) {
-      if (l.mpn.toUpperCase().indexOf(q) < 0) return;
+      if (l.mpn.toUpperCase().indexOf(q) < 0 || !(l.qty > 0)) return;
       var g = by[l.mpn] || (by[l.mpn] = { mpn: l.mpn, mfr: l.mfr, lots: 0, qty: 0, origins: [] });
       g.lots++; g.qty += l.qty;
       var o = l.q && l.q.origin ? l.q.origin : 'Non renseignée';
@@ -276,14 +281,17 @@
     }
     var sellers = [];
     CP.values(S().lots).forEach(function (l) {
-      if (l.mpn.toUpperCase() === mpn && sellers.indexOf(l.sellerId) < 0) sellers.push(l.sellerId);
+      if (l.mpn.toUpperCase() === mpn && l.qty > 0 && sellers.indexOf(l.sellerId) < 0) sellers.push(l.sellerId);
     });
     var id = next('DEM');
     var lot = CP.values(S().lots).filter(function (l) { return l.mpn.toUpperCase() === mpn; })[0];
     var d = { id: id, buyerId: c.actor.org, bomId: bom ? bom.id : null, mpn: lot ? lot.mpn : mpn, mfr: (lot && lot.mfr) || b.mfr || '', qty: qty, dcMin: b.dcMin || '', pack: b.pack || 'Indifférent', zone: b.zone || zoneOf(b.delivery), delivery: b.delivery || '', leadDays: parseInt(b.leadDays, 10) || 10, target: b.target ? Number(b.target) : null, status: 'auction', day: S().day, closesDay: S().day + P.delays.auction, sellers: sellers };
     S().demands[id] = d;
     if (line) line.demandId = id;
-    sellers.forEach(function (s) { notify(s, 'Nouvelle demande ' + id + ' : ' + d.mpn + ' × ' + qty + ' correspond à votre stock.', '/vendeur/demandes/' + id); });
+    sellers.forEach(function (s) {
+      notify(s, 'Nouvelle demande ' + id + ' : ' + d.mpn + ' × ' + qty + ' correspond à votre stock.', '/vendeur/demandes/' + id);
+      deliver(s, 'demand.created', { demand_id: id, mpn: d.mpn, quantity: qty, date_code_min: d.dcMin, zone: d.zone, closes_on: CP.date(d.closesDay).toISOString().slice(0, 10) });
+    });
     event('Demande ' + id + ' anonymisée et diffusée à ' + sellers.length + ' vendeur(s).' + (sellers.length ? '' : ' Recherche étendue à prévoir.'), id);
     return demandView(d, c.actor);
   };
@@ -367,6 +375,7 @@
     }
     hist(t, 'Offre ' + o.id + ' retenue. Fiche transaction créée' + (level.id ? ', test : ' + level.name.toLowerCase() : '') + '.');
     notify(o.sellerId, 'Votre offre sur ' + d.id + ' est retenue : fiche ' + id + ' à signer.', '/vendeur/transactions/' + id);
+    deliver(o.sellerId, 'offer.accepted', { demand_id: d.id, transaction_id: id, lot_sku: S().lots[o.lotId].sku || null, quantity: d.qty, net_unit_price: o.net });
     return txView(t, c.actor);
   };
   function clampDays(v, def) { var n = parseInt(v, 10); return n >= 1 && n <= 30 ? n : def; }
@@ -496,6 +505,128 @@
     if (!l || l.sellerId !== c.actor.org) fail(404, 'Lot inconnu');
     l.docs = c.body.docs || {};
     return H['lot.get'](c);
+  };
+
+  // API fournisseur
+  // Événements poussés au système du fournisseur (livraison simulée, signature HMAC prévue).
+  function deliver(org, type, payload) {
+    var hooks = CP.values(S().webhooks || {}).filter(function (h) { return h.sellerId === org && h.events.indexOf(type) >= 0; });
+    hooks.forEach(function (h) {
+      S().deliveries = S().deliveries || [];
+      S().deliveries.unshift({ id: next('DLV'), hookId: h.id, sellerId: org, type: type, day: S().day, url: h.url, payload: payload, status: 200, signature: 'sha256=…' });
+    });
+  }
+  function ownOrg(c) {
+    if (c.actor.role !== 'ops' && c.actor.org !== c.params.id) fail(403, 'Clés d\'une autre société');
+    var o = S().orgs[c.params.id];
+    if (!o) fail(404, 'Société inconnue');
+    return o;
+  }
+  H['key.create'] = function (c) {
+    var o = ownOrg(c);
+    var env = c.body.environment === 'live' ? 'live' : 'test';
+    if (env === 'live' && o.kyb !== 'validated') fail(403, 'Clé de production réservée aux sociétés dont le KYB est validé');
+    S().apiKeys = S().apiKeys || {};
+    var id = next('KEY');
+    var secret = 'cp_' + env + '_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+    S().apiKeys[id] = { id: id, orgId: o.id, environment: env, prefix: secret.slice(0, 12), label: c.body.label || 'Clé ' + env, day: S().day, lastUsed: null };
+    event('Clé d\'API ' + env + ' créée pour ' + o.alias + '.', o.id);
+    var v = CP.clone(S().apiKeys[id]); v.secret = secret; v.note = 'Secret affiché une seule fois (maquette : clé fictive)';
+    return v;
+  };
+  H['key.list'] = function (c) {
+    var o = ownOrg(c);
+    return CP.values(S().apiKeys || {}).filter(function (k) { return k.orgId === o.id; });
+  };
+
+  // Une offre fournisseur devient un lot. Renvoie l'action faite ou une erreur de validation.
+  function upsertOffer(org, o, skuFromPath) {
+    if (!o || typeof o !== 'object') return { error: 'Offre invalide' };
+    var sku = String(skuFromPath || o.sku || '').trim();
+    var mpn = String(o.mpn || '').trim().toUpperCase();
+    var qty = Number(o.quantity);
+    if (!sku) return { error: 'sku requis' };
+    if (!mpn) return { error: 'mpn requis' };
+    if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
+    if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
+    var tiers = {};
+    var breaks = o.price_breaks || [];
+    if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
+    for (var i = 0; i < breaks.length; i++) {
+      var b = breaks[i];
+      if (!(b && Number(b.quantity) > 0 && Number(b.price) > 0)) return { error: 'price_breaks[' + i + '] invalide' };
+      tiers[Number(b.quantity)] = Number(b.price);
+    }
+    var lot = CP.values(S().lots).filter(function (l) { return l.sellerId === org && l.sku === sku; })[0];
+    var engaged = lot && CP.values(S().transactions).some(function (t) { return t.lotId === lot.id && ['released', 'refunded', 'closed_partial', 'cancelled'].indexOf(t.status) < 0; });
+    var data = { mpn: mpn, mfr: o.manufacturer || '', sku: sku, url: o.product_url || '', qty: qty, dc: o.date_code || '', pack: o.packaging || '', price: o.unit_price != null ? Number(o.unit_price) : null, tiers: o.price_breaks ? tiers : null, currency: o.currency || 'USD', origin: o.country_of_origin || '', leadDays: o.lead_time_days || null, updated: S().day, source: 'api' };
+    if (lot) {
+      if (engaged && lot.mpn !== mpn) return { error: 'Lot engagé dans une transaction : référence non modifiable' };
+      Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) lot[k] = data[k]; });
+      lot.qty = qty; lot.withdrawn = qty === 0;
+      return { sku: sku, lot: lot.id, action: 'updated' };
+    }
+    var id = next('LOT');
+    data.id = id; data.sellerId = org; data.q = {}; data.docs = {}; data.duplicateOf = null; data.withdrawn = qty === 0; data.tiers = data.tiers || {};
+    S().lots[id] = data;
+    return { sku: sku, lot: id, action: 'created' };
+  }
+  function supplier(c) {
+    var o = S().orgs[c.actor.org];
+    if (o.kyb !== 'validated') fail(403, 'KYB non validé');
+    return o;
+  }
+  H['sup.bulk'] = function (c) {
+    var org = supplier(c).id, list = c.body.offers;
+    if (!Array.isArray(list) || !list.length) fail(422, 'offers : liste d\'offres attendue');
+    if (list.length > 1000) fail(413, '1 000 offres au plus par appel (' + list.length + ' reçues)');
+    var res = { received: list.length, created: 0, updated: 0, errors: [], idempotency_key: c.body.idempotency_key || null };
+    list.forEach(function (o, i) {
+      var r = upsertOffer(org, o);
+      if (r.error) res.errors.push({ index: i, sku: o && o.sku || null, error: r.error });
+      else res[r.action]++;
+    });
+    event('API fournisseur ' + alias(org) + ' : ' + res.created + ' offre(s) créée(s), ' + res.updated + ' mise(s) à jour, ' + res.errors.length + ' erreur(s).', org);
+    res.__ok200 = true;
+    return res;
+  };
+  H['sup.upsert'] = function (c) {
+    var org = supplier(c).id;
+    var r = upsertOffer(org, c.body, c.params.sku);
+    if (r.error) fail(422, r.error);
+    return H['lot.get']({ params: { id: r.lot }, actor: c.actor });
+  };
+  H['sup.delete'] = function (c) {
+    var org = supplier(c).id;
+    var lot = CP.values(S().lots).filter(function (l) { return l.sellerId === org && l.sku === c.params.sku; })[0];
+    if (!lot) fail(404, 'Offre inconnue');
+    lot.qty = 0; lot.withdrawn = true; lot.updated = S().day;
+    return { sku: lot.sku, lot: lot.id, withdrawn: true };
+  };
+  H['sup.list'] = function (c) {
+    var since = c.query.updated_since != null ? Number(c.query.updated_since) : null;
+    return CP.values(S().lots).filter(function (l) {
+      return l.sellerId === c.actor.org && (!c.query.sku || l.sku === c.query.sku) && (since == null || (l.updated || 0) >= since);
+    }).map(function (l) {
+      return { sku: l.sku || null, lot_id: l.id, mpn: l.mpn, manufacturer: l.mfr, quantity: l.qty, unit_price: l.price, currency: l.currency || null, price_breaks: Object.keys(l.tiers || {}).map(function (q) { return { quantity: Number(q), price: l.tiers[q] }; }), date_code: l.dc || null, questionnaire_complete: complete(l), withdrawn: !!l.withdrawn };
+    });
+  };
+  var EVENTS = ['demand.created', 'offer.accepted', 'transaction.updated'];
+  H['hook.create'] = function (c) {
+    var org = supplier(c).id, b = c.body;
+    if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(b.url || '')) fail(422, 'URL HTTPS requise');
+    var ev = (b.events || []).filter(function (e) { return EVENTS.indexOf(e) >= 0; });
+    if (!ev.length) fail(422, 'Au moins un événement parmi : ' + EVENTS.join(', '));
+    S().webhooks = S().webhooks || {};
+    var id = next('HOOK');
+    S().webhooks[id] = { id: id, sellerId: org, url: b.url, events: ev, day: S().day };
+    return { id: id, url: b.url, events: ev, signing_secret: 'whsec_' + Math.random().toString(36).slice(2, 14), note: 'Secret de signature affiché une seule fois (maquette)' };
+  };
+  H['hook.list'] = function (c) {
+    return {
+      webhooks: CP.values(S().webhooks || {}).filter(function (h) { return h.sellerId === c.actor.org; }),
+      deliveries: (S().deliveries || []).filter(function (d) { return d.sellerId === c.actor.org; }).slice(0, 20),
+    };
   };
 
   // Transactions

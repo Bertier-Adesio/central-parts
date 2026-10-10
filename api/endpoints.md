@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-52 endpoints et 22 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+60 endpoints et 23 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -70,6 +70,19 @@
 | PUT | `/v1/lots/{id}/questionnaire` | Vendeur | Questionnaire d'état (13 questions) : les réponses engagent le vendeur | `/vendeur/lots/:id` |
 | PUT | `/v1/lots/{id}/documents` | Vendeur | Documents qualité : photos, CoC, preuve d'achat, datasheet, rapport d'inspection | `/vendeur/lots/:id` |
 
+## API fournisseur (intégration des brokers et distributeurs)
+
+| Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
+|---|---|---|---|---|
+| POST | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Création d'une clé d'API (test ou production), secret affiché une seule fois | `/vendeur/api` |
+| GET | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Clés d'API de la société (préfixe, environnement, dernière utilisation) | `/vendeur/api` |
+| POST | `/v1/supplier/offers/bulk` | Vendeur | Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne | `/vendeur/api` |
+| PUT | `/v1/supplier/offers/{sku}` | Vendeur | Création ou mise à jour d'une offre (quantité, prix, paliers, date code) | `/vendeur/api` |
+| DELETE | `/v1/supplier/offers/{sku}` | Vendeur | Retrait d'une offre vendue ailleurs (quantité à zéro, historique conservé) | `/vendeur/api` |
+| GET | `/v1/supplier/offers` | Vendeur | Offres du fournisseur, filtres sku et updated_since pour la réconciliation | `/vendeur/api` |
+| POST | `/v1/supplier/webhooks` | Vendeur | Abonnement aux événements : demande correspondant au stock, offre retenue, transaction | `/vendeur/api` |
+| GET | `/v1/supplier/webhooks` | Vendeur | Abonnements et dernières livraisons d'événements (signées HMAC) | `/vendeur/api` |
+
 ## Transactions
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
@@ -133,6 +146,7 @@
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
 | `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
+| `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list` |
 | `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |
 | `#/vendeur/transactions/:id` | Vendeur | Transaction (vue vendeur) | `tx.get`, `tx.sign`, `tx.ship`, `tx.counter`, `tx.dispute` |

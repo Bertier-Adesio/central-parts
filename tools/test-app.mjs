@@ -169,5 +169,31 @@ scenario('format broker, SFTP, date code', (CP) => {
   call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 });
 });
 
+scenario('API fournisseur : clés, offres en masse, retrait, webhooks', (CP) => {
+  const key = call(CP, 'seller2', 'POST', '/v1/organizations/S2/api-keys', { environment: 'live' });
+  ok(key.secret.startsWith('cp_live_') && !call(CP, 'seller2', 'GET', '/v1/organizations/S2/api-keys')[0].secret, 'secret affiché une seule fois');
+  call(CP, 'seller2', 'POST', '/v1/organizations/S1/api-keys', {}, [403]);
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'http://x.example', events: ['demand.created'] }, [422]);
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'https://erp.example.com/hook', events: ['demand.created', 'offer.accepted', 'transaction.updated'] });
+  const r = call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [
+    { sku: 'A1', mpn: 'lm317t', manufacturer: 'TI', quantity: 3000, unit_price: 0.4, price_breaks: [{ quantity: 1000, price: 0.35 }], date_code: '2019' },
+    { sku: 'A2', mpn: '', quantity: 5 },
+    { sku: 'A3', mpn: 'NE5532P', quantity: -1 },
+  ] });
+  ok(r.created === 1 && r.errors.length === 2 && r.errors[0].index === 1, 'erreurs ligne par ligne');
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: Array.from({ length: 1001 }, (_, i) => ({ sku: 'X' + i, mpn: 'M', quantity: 1 })) }, [413]);
+  const up = call(CP, 'seller2', 'PUT', '/v1/supplier/offers/A1', { mpn: 'LM317T', quantity: 2500, unit_price: 0.38 });
+  ok(up.qty === 2500 && up.mpn === 'LM317T', 'mise à jour unitaire par SKU');
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=A1')[0].price_breaks.length === 1, 'paliers conservés');
+  // Une demande sur la référence déclenche un webhook ; l'offre retirée n'est plus sollicitée.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'LM317T', qty: 1000, delivery: 'Lyon (France)' });
+  const hooks = call(CP, 'seller2', 'GET', '/v1/supplier/webhooks');
+  ok(hooks.deliveries.some((x) => x.type === 'demand.created' && x.payload.demand_id === d.id && !('buyer' in x.payload)), 'webhook demand.created anonyme');
+  call(CP, 'seller2', 'DELETE', '/v1/supplier/offers/A1');
+  const d2 = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'LM317T', qty: 10, delivery: 'Lyon (France)' });
+  call(CP, 'seller2', 'GET', '/v1/demands/' + d2.id, null, [404]);
+  call(CP, 'seller2', 'DELETE', '/v1/supplier/offers/INCONNU', null, [404]);
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

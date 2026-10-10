@@ -55,6 +55,7 @@ p { margin: 0 0 var(--space-3); }
 .m-POST { color: var(--status-success); }
 .m-PUT, .m-PATCH { color: var(--status-warning); }
 .m-DELETE { color: var(--status-danger); }
+.log .m-DELETE { color: var(--status-danger-bg); }
 
 /* Cartes et grilles */
 .card { background: var(--bg-raised); border: var(--border-width) solid var(--border-1); border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-4); box-shadow: var(--shadow-1); min-width: 0; }
@@ -135,6 +136,7 @@ td .inline { margin: 0; flex-wrap: nowrap; }
 .search .btn { height: var(--control-h-lg); }
 .hint { font-size: var(--text-sm); background: var(--status-info-bg); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
 .warn-line { font-size: var(--text-sm); color: var(--status-warning); margin: var(--space-2) 0 0; }
+.code { margin: var(--space-2) 0; padding: var(--space-3); background: var(--bg-inverse); color: var(--fg-inverse); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: var(--text-2xs); overflow-x: auto; white-space: pre; }
 .label-box { border: var(--border-width) dashed var(--border-strong); padding: var(--space-3); border-radius: var(--radius-md); font-size: var(--text-xs); }
 .qform { margin: 0 0 var(--space-4); padding-left: 1.4em; display: grid; gap: var(--space-2); }
 .qform li { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-2); align-items: end; }

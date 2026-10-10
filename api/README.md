@@ -13,6 +13,10 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 
 [`endpoints.md`](endpoints.md) liste les 49 endpoints et les 22 routes d'écran de la maquette vivante (`/app/`), avec les rôles autorisés et les étapes d'une transaction. Le fichier est généré depuis `site/app/js/registry.js` ; les règles métier sont implémentées en mémoire dans `site/app/js/api.js` (ADR 0003).
 
+## API fournisseur
+
+[`fournisseurs.md`](fournisseurs.md) : spécification v0 de l'API par laquelle les brokers et distributeurs poussent leur stock et reçoivent les demandes (ADR 0004).
+
 ## Prochaines étapes
 
 1. Dériver la spécification OpenAPI (`openapi.yaml`) de la carte des endpoints, avant tout code.

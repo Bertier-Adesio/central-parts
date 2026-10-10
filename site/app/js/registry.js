@@ -11,6 +11,7 @@ var CP_GROUPS = [
   ['inventory', 'Offre Inventory'],
   ['demands', 'Demandes et enchères (Opportunity)'],
   ['lots', 'Stock vendeur et questionnaire'],
+  ['supplier', 'API fournisseur (intégration des brokers et distributeurs)'],
   ['transactions', 'Transactions'],
   ['lab', 'Laboratoires'],
   ['payments', 'Compte dédié et ordres de paiement'],
@@ -59,6 +60,16 @@ var CP_ENDPOINTS = [
   { id: 'lot.questionnaire', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/questionnaire', roles: ['seller'], summary: 'Questionnaire d\'état (13 questions) : les réponses engagent le vendeur' },
   { id: 'lot.documents', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/documents', roles: ['seller'], summary: 'Documents qualité : photos, CoC, preuve d\'achat, datasheet, rapport d\'inspection' },
 
+  // API fournisseur : le vendeur pousse ses offres depuis son système, sans fichier.
+  { id: 'key.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Création d\'une clé d\'API (test ou production), secret affiché une seule fois' },
+  { id: 'key.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Clés d\'API de la société (préfixe, environnement, dernière utilisation)' },
+  { id: 'sup.bulk', group: 'supplier', method: 'POST', path: '/v1/supplier/offers/bulk', roles: ['seller'], summary: 'Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne' },
+  { id: 'sup.upsert', group: 'supplier', method: 'PUT', path: '/v1/supplier/offers/{sku}', roles: ['seller'], summary: 'Création ou mise à jour d\'une offre (quantité, prix, paliers, date code)' },
+  { id: 'sup.delete', group: 'supplier', method: 'DELETE', path: '/v1/supplier/offers/{sku}', roles: ['seller'], summary: 'Retrait d\'une offre vendue ailleurs (quantité à zéro, historique conservé)' },
+  { id: 'sup.list', group: 'supplier', method: 'GET', path: '/v1/supplier/offers', roles: ['seller'], summary: 'Offres du fournisseur, filtres sku et updated_since pour la réconciliation' },
+  { id: 'hook.create', group: 'supplier', method: 'POST', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnement aux événements : demande correspondant au stock, offre retenue, transaction' },
+  { id: 'hook.list', group: 'supplier', method: 'GET', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnements et dernières livraisons d\'événements (signées HMAC)' },
+
   // Transactions
   { id: 'tx.list', group: 'transactions', method: 'GET', path: '/v1/transactions', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Transactions de la partie appelante' },
   { id: 'tx.get', group: 'transactions', method: 'GET', path: '/v1/transactions/{id}', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Fiche transaction, étape en cours, délais, documents, historique' },
@@ -105,6 +116,7 @@ var CP_ROUTES = [
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
+  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list'] },
   { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },
