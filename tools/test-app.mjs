@@ -144,5 +144,30 @@ scenario('KYB et droits', (CP) => {
   ok(imp.created.length === 2 && imp.possibleDuplicates.length === 1, 'import et détection de doublon');
 });
 
+scenario('format broker, SFTP, date code', (CP) => {
+  const csv = 'Manufacturer,SKU,MPN,Product URL,Unit Price,Quantity,Price per 10 pcs,Price per 100 pcs,"Price per 1,000 pcs"\n' +
+    'AMD Xilinx,HB-1,XC2S50-5TQ144C,https://exemple.invalid/1,"1,250.00",900,1200,1100,"1,000.50"\n' +
+    'NXP,HB-2,,https://exemple.invalid/2,3,10,,,\n' +
+    'NXP,HB-3,MC68HC11E1CFNE2,https://exemple.invalid/3,19.5,300,19,18,17';
+  const job = call(CP, 'seller2', 'POST', '/v1/stocklists', { format: 'broker', csv });
+  ok(job.created.length === 2 && job.rejected.length === 1 && job.missingDateCode === 2, 'rapport d\'import broker');
+  const lot = call(CP, 'seller2', 'GET', '/v1/lots/' + job.created[0]);
+  ok(lot.sku === 'HB-1' && lot.price === 1250 && lot.tiers[1000] === 1000.5 && lot.tiers[10] === 1200, 'prix et paliers lus, virgules des milliers comprises');
+  const again = call(CP, 'seller2', 'POST', '/v1/stocklists', { csv: 'SKU;MPN;Quantity\nHB-1;XC2S50-5TQ144C;450' });
+  ok(again.updated.length === 1 && again.created.length === 0 && call(CP, 'seller2', 'GET', '/v1/lots/' + job.created[0]).qty === 450, 'mise à jour par SKU, séparateur point-virgule');
+  call(CP, 'seller2', 'GET', '/v1/stocklists/' + job.id);
+  call(CP, 'seller1', 'GET', '/v1/stocklists/' + job.id, null, [404]);
+  call(CP, 'seller2', 'POST', '/v1/webhooks/sftp/stocklist', { csv }, [403]);
+  const sftp = CP.system('POST', '/v1/webhooks/sftp/stocklist', { sellerId: 'S1', csv: 'MPN,Quantity,Date Code\nLM317T,5000,2018' });
+  ok(sftp.status === 201 && sftp.data.channel === 'sftp' && sftp.data.created.length === 1, 'dépôt SFTP traité');
+  // Sans date code, pas d'enchère ; une fois complété, l'enchère passe.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'MC68HC11E1CFNE2', qty: 250, delivery: 'Lyon (France)' });
+  const id = job.created[1];
+  call(CP, 'seller2', 'PUT', `/v1/lots/${id}/questionnaire`, { answers: Object.fromEntries(CP.QUESTIONS.map((q) => [q.k, q.a[0]])) });
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 }, [422]);
+  call(CP, 'seller2', 'PATCH', '/v1/lots/' + id, { dc: '2013' });
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 });
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

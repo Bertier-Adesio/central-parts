@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-49 endpoints et 22 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+52 endpoints et 22 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -61,9 +61,12 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| POST | `/v1/stocklists` | Vendeur | Import d'une stocklist (formats Octopart ou ECIA), dédoublonnage des lots | `/vendeur/stock` |
+| POST | `/v1/stocklists` | Vendeur | Import d'une stocklist CSV ou XLS (format broker, Octopart, ECIA) : paliers de prix, dédoublonnage par SKU, rapport d'import | `/vendeur/stock` |
+| POST | `/v1/webhooks/sftp/stocklist` | Système | Dépôt SFTP d'une stocklist volumineuse (plus de 500 000 lignes) : traitement asynchrone, même format | `/vendeur/stock` |
+| GET | `/v1/stocklists/{id}` | Vendeur, Central.Parts | Rapport d'import : lots créés, mis à jour, doublons possibles, lignes rejetées, date codes manquants | `/vendeur/stock` |
 | GET | `/v1/lots` | Vendeur, Central.Parts | Lots du vendeur et état du questionnaire | `/vendeur`, `/vendeur/stock` |
 | GET | `/v1/lots/{id}` | Vendeur, Central.Parts | Détail d'un lot | `/vendeur/lots/:id` |
+| PATCH | `/v1/lots/{id}` | Vendeur | Mise à jour du lot : date code, conditionnement, quantité | `/vendeur/lots/:id` |
 | PUT | `/v1/lots/{id}/questionnaire` | Vendeur | Questionnaire d'état (13 questions) : les réponses engagent le vendeur | `/vendeur/lots/:id` |
 | PUT | `/v1/lots/{id}/documents` | Vendeur | Documents qualité : photos, CoC, preuve d'achat, datasheet, rapport d'inspection | `/vendeur/lots/:id` |
 
@@ -129,8 +132,8 @@
 | `#/acheteur/demandes/:id` | Acheteur | Demande et offres consolidées | `dem.get`, `offer.list`, `offer.accept` |
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
-| `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import` |
-| `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.questionnaire`, `lot.documents` |
+| `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
+| `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |
 | `#/vendeur/transactions/:id` | Vendeur | Transaction (vue vendeur) | `tx.get`, `tx.sign`, `tx.ship`, `tx.counter`, `tx.dispute` |
 | `#/labo` | Laboratoire | Dossiers du laboratoire | `lab.cases`, `notif.list` |

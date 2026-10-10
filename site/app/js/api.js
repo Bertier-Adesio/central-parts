@@ -323,6 +323,7 @@
     var lot = S().lots[b.lotId];
     if (!lot || lot.sellerId !== c.actor.org || lot.mpn !== d.mpn) fail(422, 'Lot invalide pour cette demande');
     if (lot.qty < d.qty) fail(422, 'Quantité du lot insuffisante (' + lot.qty + ')');
+    if (!lot.dc) fail(422, 'Date code du lot manquant');
     if (!complete(lot)) fail(422, 'Questionnaire d\'état du lot incomplet');
     var net = Number(b.net);
     if (!(net > 0)) fail(422, 'Prix net invalide');
@@ -371,30 +372,95 @@
   function clampDays(v, def) { var n = parseInt(v, 10); return n >= 1 && n <= 30 ? n : def; }
 
   // Stock vendeur
-  H['stock.import'] = function (c) {
-    var rows = String(c.body.csv || '').split(/\r?\n/).map(function (r) { return r.trim(); }).filter(Boolean);
+  // Lecture CSV : séparateur détecté (; , tabulation), champs entre guillemets acceptés
+  // (« Price per 1,000 pcs »). Les fichiers XLS seront convertis côté serveur.
+  function parseCSV(text) {
+    var first = (text.split(/\r?\n/)[0] || '');
+    var sep = [';', '\t', ','].sort(function (a, b) { return first.split(b).length - first.split(a).length; })[0];
+    var rows = [], row = [], cur = '', q = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (q) {
+        if (ch === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') q = false;
+        else cur += ch;
+      } else if (ch === '"') q = true;
+      else if (ch === sep) { row.push(cur.trim()); cur = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        row.push(cur.trim()); cur = '';
+        if (row.some(function (x) { return x; })) rows.push(row);
+        row = [];
+      } else cur += ch;
+    }
+    row.push(cur.trim());
+    if (row.some(function (x) { return x; })) rows.push(row);
+    return rows;
+  }
+  function price(v) {
+    if (v == null || v === '') return null;
+    var n = Number(String(v).replace(/[^\d,.\-]/g, '').replace(/,(\d{1,4})$/, '.$1').replace(/,/g, ''));
+    return n > 0 ? n : null;
+  }
+
+  // Correspondance des colonnes (Octopart, ECIA, format broker) vers le modèle de lot.
+  var COLUMNS = {
+    mpn: ['mpn', 'manufacturer part number', 'part number', 'mfr_part_number'],
+    mfr: ['manufacturer', 'mfr', 'manufacturer_name', 'brand'],
+    sku: ['sku', 'seller sku', 'distributor part number'],
+    url: ['product url', 'product_url', 'url', 'link'],
+    qty: ['quantity', 'qty', 'stock', 'quantity_available', 'quantity available'],
+    dc: ['date_code', 'datecode', 'date code', 'dc'],
+    pack: ['packaging', 'package_type', 'package type', 'pack'],
+    price: ['unit price', 'unit_price', 'price', 'target_price'],
+    p10: ['price per 10 pcs', 'price_10', 'price break 10'],
+    p100: ['price per 100 pcs', 'price_100', 'price break 100'],
+    p1000: ['price per 1,000 pcs', 'price per 1000 pcs', 'price_1000', 'price break 1000'],
+    currency: ['currency', 'devise'],
+  };
+
+  function importRows(c, csv, format, channel) {
+    var org = c.actor.role === 'system' ? c.body.sellerId : c.actor.org;
+    if (!S().orgs[org] || S().orgs[org].type !== 'seller') fail(422, 'Vendeur inconnu');
+    var rows = parseCSV(String(csv || ''));
     if (rows.length < 2) fail(422, 'Fichier vide : une ligne d\'en-tête et au moins une ligne attendues');
-    var head = rows.shift().split(/[;,\t]/).map(function (h) { return h.trim().toLowerCase(); });
-    // Correspondance des colonnes Octopart et ECIA vers le modèle de lot.
-    var col = function (names) { for (var i = 0; i < names.length; i++) { var j = head.indexOf(names[i]); if (j >= 0) return j; } return -1; };
-    var ix = { mpn: col(['mpn', 'manufacturer part number', 'part number', 'mfr_part_number']), mfr: col(['manufacturer', 'mfr', 'manufacturer_name']), qty: col(['quantity', 'qty', 'stock', 'quantity_available']), dc: col(['date_code', 'datecode', 'date code', 'dc']), pack: col(['packaging', 'package_type', 'pack']), price: col(['price', 'unit_price', 'target_price']) };
-    if (ix.mpn < 0 || ix.qty < 0) fail(422, 'Colonnes obligatoires absentes : référence fabricant et quantité');
-    var created = [], updated = [], dupes = [];
-    rows.forEach(function (r) {
-      var f = r.split(/[;,\t]/).map(function (x) { return x.trim(); });
-      var mpn = (f[ix.mpn] || '').toUpperCase(), qty = parseInt(f[ix.qty], 10);
-      if (!mpn || !(qty > 0)) return;
-      var dc = ix.dc >= 0 ? f[ix.dc] : '';
-      var same = CP.values(S().lots).filter(function (l) { return l.sellerId === c.actor.org && l.mpn === mpn && l.dc === dc; })[0];
-      if (same) { same.qty = qty; updated.push(same.id); return; }
-      var other = CP.values(S().lots).filter(function (l) { return l.sellerId !== c.actor.org && l.mpn === mpn && l.dc === dc && l.qty === qty; })[0];
+    var head = rows.shift().map(function (h) { return h.toLowerCase().replace(/\s+/g, ' '); });
+    var ix = {};
+    Object.keys(COLUMNS).forEach(function (k) { ix[k] = -1; COLUMNS[k].forEach(function (n) { if (ix[k] < 0) ix[k] = head.indexOf(n); }); });
+    if (ix.mpn < 0 || ix.qty < 0) fail(422, 'Colonnes obligatoires absentes : référence fabricant (MPN) et quantité');
+    var get = function (f, k) { return ix[k] >= 0 ? (f[ix[k]] || '') : ''; };
+    var created = [], updated = [], dupes = [], rejected = [], noDc = 0;
+    rows.forEach(function (f, n) {
+      var mpn = get(f, 'mpn').toUpperCase(), qty = parseInt(get(f, 'qty').replace(/[^\d]/g, ''), 10);
+      if (!mpn || !(qty > 0)) { rejected.push({ line: n + 2, reason: !mpn ? 'MPN manquant' : 'Quantité invalide' }); return; }
+      var dc = get(f, 'dc'), sku = get(f, 'sku');
+      if (!dc) noDc++;
+      var tiers = {};
+      [['p10', 10], ['p100', 100], ['p1000', 1000]].forEach(function (t) { var v = price(get(f, t[0])); if (v) tiers[t[1]] = v; });
+      var data = { mpn: mpn, mfr: get(f, 'mfr'), sku: sku, url: get(f, 'url'), qty: qty, dc: dc, pack: get(f, 'pack'), price: price(get(f, 'price')), tiers: tiers, currency: get(f, 'currency') || 'USD' };
+      // Même lot chez le même vendeur : même SKU s'il existe, sinon même référence et même date code.
+      var same = CP.values(S().lots).filter(function (l) { return l.sellerId === org && (sku ? l.sku === sku : l.mpn === mpn && l.dc === dc); })[0];
+      if (same) { Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) same[k] = data[k]; }); updated.push(same.id); return; }
+      var other = CP.values(S().lots).filter(function (l) { return l.sellerId !== org && l.mpn === mpn && l.dc === dc && l.qty === qty; })[0];
       var id = next('LOT');
-      S().lots[id] = { id: id, sellerId: c.actor.org, mpn: mpn, mfr: ix.mfr >= 0 ? f[ix.mfr] : '', qty: qty, dc: dc, pack: ix.pack >= 0 ? f[ix.pack] : '', price: ix.price >= 0 ? Number(f[ix.price]) || null : null, q: {}, docs: {}, duplicateOf: other ? other.id : null };
+      data.id = id; data.sellerId = org; data.q = {}; data.docs = {}; data.duplicateOf = other ? other.id : null;
+      S().lots[id] = data;
       created.push(id);
       if (other) dupes.push(id);
     });
-    event('Stocklist importée par ' + alias(c.actor.org) + ' : ' + created.length + ' lot(s) créé(s), ' + updated.length + ' mis à jour.', c.actor.org);
-    return { format: c.body.format || 'auto', created: created, updated: updated, possibleDuplicates: dupes };
+    var job = { id: next('STK'), sellerId: org, channel: channel, format: format || 'auto', filename: c.body.filename || null, day: S().day, rows: rows.length, created: created, updated: updated, possibleDuplicates: dupes, rejected: rejected, missingDateCode: noDc, status: 'done' };
+    S().stocklists = S().stocklists || {};
+    S().stocklists[job.id] = job;
+    event('Stocklist ' + job.id + ' (' + channel + ') de ' + alias(org) + ' : ' + created.length + ' lot(s) créé(s), ' + updated.length + ' mis à jour, ' + rejected.length + ' ligne(s) rejetée(s).', org);
+    if (noDc) notify(org, noDc + ' lot(s) sans date code dans ' + job.id + ' : à compléter avant toute enchère Opportunity.', '/vendeur/stock');
+    return job;
+  }
+  H['stock.import'] = function (c) { return importRows(c, c.body.csv, c.body.format, 'api'); };
+  H['stock.sftp'] = function (c) { return importRows(c, c.body.csv, c.body.format, 'sftp'); };
+  H['stock.job'] = function (c) {
+    var j = (S().stocklists || {})[c.params.id];
+    if (!j || (!isOps(c.actor) && j.sellerId !== c.actor.org)) fail(404, 'Import inconnu');
+    return j;
   };
   H['lot.list'] = function (c) {
     return CP.values(S().lots).filter(function (l) { return isOps(c.actor) || l.sellerId === c.actor.org; }).map(function (l) {
@@ -405,6 +471,14 @@
     var l = S().lots[c.params.id];
     if (!l || (!isOps(c.actor) && l.sellerId !== c.actor.org)) fail(404, 'Lot inconnu');
     var v = CP.clone(l); v.complete = complete(l); return v;
+  };
+  H['lot.update'] = function (c) {
+    var l = S().lots[c.params.id], b = c.body;
+    if (!l || l.sellerId !== c.actor.org) fail(404, 'Lot inconnu');
+    if (b.qty != null && b.qty !== '') { var q = parseInt(b.qty, 10); if (!(q > 0)) fail(422, 'Quantité invalide'); l.qty = q; }
+    if (b.dc != null) l.dc = String(b.dc).trim();
+    if (b.pack != null) l.pack = String(b.pack).trim();
+    return H['lot.get'](c);
   };
   H['lot.questionnaire'] = function (c) {
     var l = S().lots[c.params.id];

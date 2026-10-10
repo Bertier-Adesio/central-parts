@@ -50,9 +50,12 @@ var CP_ENDPOINTS = [
   { id: 'offer.accept', group: 'demands', method: 'POST', path: '/v1/offers/{id}/accept', roles: ['buyer'], summary: 'Choix d\'une offre, du niveau de test et des délais : crée la fiche transaction' },
 
   // Stock vendeur
-  { id: 'stock.import', group: 'lots', method: 'POST', path: '/v1/stocklists', roles: ['seller'], summary: 'Import d\'une stocklist (formats Octopart ou ECIA), dédoublonnage des lots' },
+  { id: 'stock.import', group: 'lots', method: 'POST', path: '/v1/stocklists', roles: ['seller'], summary: 'Import d\'une stocklist CSV ou XLS (format broker, Octopart, ECIA) : paliers de prix, dédoublonnage par SKU, rapport d\'import' },
+  { id: 'stock.sftp', group: 'lots', method: 'POST', path: '/v1/webhooks/sftp/stocklist', roles: ['system'], summary: 'Dépôt SFTP d\'une stocklist volumineuse (plus de 500 000 lignes) : traitement asynchrone, même format' },
+  { id: 'stock.job', group: 'lots', method: 'GET', path: '/v1/stocklists/{id}', roles: ['seller', 'ops'], summary: 'Rapport d\'import : lots créés, mis à jour, doublons possibles, lignes rejetées, date codes manquants' },
   { id: 'lot.list', group: 'lots', method: 'GET', path: '/v1/lots', roles: ['seller', 'ops'], summary: 'Lots du vendeur et état du questionnaire' },
   { id: 'lot.get', group: 'lots', method: 'GET', path: '/v1/lots/{id}', roles: ['seller', 'ops'], summary: 'Détail d\'un lot' },
+  { id: 'lot.update', group: 'lots', method: 'PATCH', path: '/v1/lots/{id}', roles: ['seller'], summary: 'Mise à jour du lot : date code, conditionnement, quantité' },
   { id: 'lot.questionnaire', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/questionnaire', roles: ['seller'], summary: 'Questionnaire d\'état (13 questions) : les réponses engagent le vendeur' },
   { id: 'lot.documents', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/documents', roles: ['seller'], summary: 'Documents qualité : photos, CoC, preuve d\'achat, datasheet, rapport d\'inspection' },
 
@@ -101,8 +104,8 @@ var CP_ROUTES = [
   { path: '/acheteur/demandes/:id', role: 'buyer', title: 'Demande et offres consolidées', endpoints: ['dem.get', 'offer.list', 'offer.accept'] },
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
-  { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import'] },
-  { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.questionnaire', 'lot.documents'] },
+  { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
+  { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },
   { path: '/labo', role: 'lab', title: 'Dossiers du laboratoire', endpoints: ['lab.cases', 'notif.list'] },

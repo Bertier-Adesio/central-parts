@@ -175,6 +175,24 @@ ok(s.transactions['TX-0041'].status === 'settling', 'contrefaçon : remboursemen
 await step('horloge : +1 jour ouvré', async () => { await page.click('header [data-act="advance"]'); });
 ok((await state()).day === 1, 'jour simulé avancé');
 
+await step('vendeur : import au format broker, dépôt SFTP, date code', async () => {
+  await as('seller2'); await go('/vendeur/stock');
+  await page.click('form[data-form="import"] button');
+  await page.waitForSelector('text=Rapport d\'import');
+  ok((await page.textContent('#main')).includes('ne transmet pas le date code'), 'alerte date code manquant');
+  await page.click('text=Simuler un dépôt SFTP');
+  await page.waitForSelector('.card h2:has-text("SFTP") >> nth=0');
+});
+s = await state();
+const brokerLot = Object.values(s.lots).find((l) => l.sku === 'HB-000187');
+ok(brokerLot && brokerLot.tiers[1000] === 51, 'lot broker avec paliers');
+await step('vendeur : date code du lot', async () => {
+  await go('/vendeur/lots/' + brokerLot.id);
+  await page.fill('form[data-form="lot-update"] input[name="dc"]', '2011');
+  await page.click('form[data-form="lot-update"] button');
+});
+ok((await state()).lots[brokerLot.id].dc === '2011', 'date code enregistré');
+
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));
 const actorFor = { public: 'public', buyer: 'buyer', seller: 'seller2', lab: 'lab', bank: 'bank', ops: 'ops1' };

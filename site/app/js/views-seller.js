@@ -31,26 +31,51 @@
   };
 
   // ------------------------------------------------------------ stock et import
+  // Exemples fictifs. Le format broker reprend les colonnes annoncées par un broker partenaire.
   var SAMPLES = {
+    broker: 'Manufacturer,SKU,MPN,Product URL,Unit Price,Quantity,Price per 10 pcs,Price per 100 pcs,"Price per 1,000 pcs"\nAMD Xilinx,HB-000187,XC2S100-5TQ144C,https://exemple.invalid/p/HB-000187,58.00,600,56.50,54.00,51.00\nNXP,HB-000213,MC68HC10E1CFNE2,https://exemple.invalid/p/HB-000213,24.00,1200,23.20,22.10,20.90\nTexas Instruments,HB-004410,SN74LS245N,https://exemple.invalid/p/HB-004410,0.92,15000,0.88,0.81,0.74\nAnalog Devices,HB-007731,AD7714ARZ-5,https://exemple.invalid/p/HB-007731,11.40,250,11.00,10.50,',
     octopart: 'mpn,manufacturer,quantity,date_code,packaging,price\nXC2S100-5TQ144C,AMD Xilinx,600,2010,Plateau,52\nMC68HC11E1CFNE2,NXP,90,2012,Tube,19\nAD7714ARZ-5,Analog Devices,250,2015,Tube,9.5',
     ecia: 'Manufacturer Part Number;Manufacturer;Quantity Available;Date Code;Package Type;Unit Price\nEP2C8T144C8N;Intel;350;2013;Plateau;24\nMAX232CPE+;Analog Devices;1200;2019;Tube;1.2',
   };
+  function money(v) { return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }); }
+  var FORMATS = [['broker', 'Broker (CSV ou XLS)'], ['octopart', 'Octopart'], ['ecia', 'ECIA']];
+  function tiers(l) {
+    var t = l.tiers || {};
+    var k = Object.keys(t);
+    return k.length ? '<span class="tiers">' + k.map(function (q) { return CP.num(q) + '+ : ' + money(t[q]); }).join('<br>') + '</span>' : '—';
+  }
   CP.views['/vendeur/stock'] = function (r) {
     var lots = CP.get('/v1/lots') || [];
-    var fmt = r.query.format === 'ecia' ? 'ecia' : 'octopart';
-    return ui.page('Stock et lots', 'Chaque lot porte son questionnaire d\'état et ses documents. Un lot sans questionnaire complet ne peut pas enchérir.',
-      ui.card('Lots déclarés', ui.table(['Lot', 'Référence', 'Fabricant', '>Qté', 'Date code', 'Emballage', 'Questionnaire', 'Documents', ''], lots.map(function (l) {
-        var n = CP.DOCS.filter(function (d) { return l.docs && l.docs[d[0]]; }).length;
-        return [ui.link('/vendeur/lots/' + l.id, l.id), '<span class="mono">' + esc(l.mpn) + '</span>', esc(l.mfr || '—'), CP.num(l.qty), esc(l.dc || '—'), esc(l.pack || '—'), lotState(l), n + ' / ' + CP.DOCS.length, l.duplicateOf ? ui.pill('Doublon possible', 'wait') : ''];
+    var fmt = FORMATS.some(function (f) { return f[0] === r.query.format; }) ? r.query.format : 'broker';
+    var me = CP.state.orgs[CP.actor.org];
+    var last = CP.lastImport && CP.lastImport.sellerId === CP.actor.org ? CP.get('/v1/stocklists/' + CP.lastImport.id) : null;
+    var report = last ? ui.card('Rapport d\'import ' + esc(last.id) + ' ' + ui.pill(last.channel === 'sftp' ? 'SFTP' : 'API', 'inv'),
+      ui.stats([['Lignes lues', CP.num(last.rows)], ['Lots créés', last.created.length], ['Mis à jour', last.updated.length], ['Doublons possibles', last.possibleDuplicates.length], ['Lignes rejetées', last.rejected.length], ['Sans date code', last.missingDateCode]]) +
+      (last.rejected.length ? '<p class="small">' + last.rejected.map(function (x) { return 'Ligne ' + x.line + ' : ' + esc(x.reason); }).join(' · ') + '</p>' : '') +
+      (last.missingDateCode ? '<p class="warn-line">Le format broker ne transmet pas le date code. Il est exigé avant toute enchère Opportunity : à compléter dans la fiche du lot.</p>' : '')) : '';
+    return ui.page('Stock et lots', 'Chaque lot porte son date code, son questionnaire d\'état et ses documents. Un lot incomplet ne peut pas enchérir.',
+      report +
+      ui.card('Lots déclarés (' + lots.length + ')', ui.table(['Lot', 'SKU', 'Référence', 'Fabricant', '>Qté', 'Date code', '>Prix unitaire', 'Paliers', 'Questionnaire', ''], lots.map(function (l) {
+        return [ui.link('/vendeur/lots/' + l.id, l.id), '<span class="mono small">' + esc(l.sku || '—') + '</span>', '<span class="mono">' + esc(l.mpn) + '</span>', esc(l.mfr || '—'), CP.num(l.qty), l.dc ? esc(l.dc) : ui.pill('Manquant', 'todo'), l.price ? money(l.price) + ' ' + esc(l.currency || 'EUR') : '—', '<span class="small">' + tiers(l) + '</span>', lotState(l), l.duplicateOf ? ui.pill('Doublon possible', 'wait') : ''];
       }), 'Aucun lot. Importez une stocklist.')) +
-      '<form class="card form" data-form="import"><h2>Importer une stocklist</h2>' +
-      '<p class="muted small">Formats acceptés : flux fournisseur au format Octopart, ECIA Global Standard. Un même lot (référence et date code) est mis à jour plutôt que dupliqué ; un lot identique chez un autre vendeur est signalé comme doublon possible.</p>' +
-      '<fieldset class="choice"><label><input type="radio" name="format" value="octopart"' + (fmt === 'octopart' ? ' checked' : '') + ' data-sample="octopart"> Octopart</label><label><input type="radio" name="format" value="ecia"' + (fmt === 'ecia' ? ' checked' : '') + ' data-sample="ecia"> ECIA</label> ' + ui.link('/vendeur/stock?format=' + (fmt === 'ecia' ? 'octopart' : 'ecia'), 'Charger l\'exemple ' + (fmt === 'ecia' ? 'Octopart' : 'ECIA')) + '</fieldset>' +
-      '<label class="field"><span>Contenu du fichier</span><textarea name="csv" rows="6" class="mono">' + esc(SAMPLES[fmt]) + '</textarea></label><button class="btn">Importer</button></form>');
+      '<div class="grid2"><form class="card form" data-form="import"><h2>Importer un fichier</h2>' +
+      '<p class="muted small">CSV ou XLS jusqu\'à 500 000 lignes par l\'API. Colonnes reconnues : Manufacturer, SKU, MPN, Product URL, Unit Price, Quantity, Price per 10, 100 et 1 000 pcs, ainsi que les formats Octopart et ECIA. Un même SKU met à jour le lot existant.</p>' +
+      '<fieldset class="choice">' + FORMATS.map(function (f) { return '<label><input type="radio" name="format" value="' + f[0] + '"' + (fmt === f[0] ? ' checked' : '') + '> ' + f[1] + ' · ' + ui.link('/vendeur/stock?format=' + f[0], 'exemple') + '</label>'; }).join('') + '</fieldset>' +
+      '<label class="field"><span>Contenu du fichier (en maquette : CSV collé)</span><textarea name="csv" rows="7" class="mono">' + esc(SAMPLES[fmt]) + '</textarea></label><button class="btn">Importer</button></form>' +
+      ui.card('Dépôt SFTP pour les gros volumes', '<p>Au-delà de 500 000 lignes, le vendeur dépose son fichier par SFTP. Il est traité de façon asynchrone et produit le même rapport d\'import.</p>' +
+        ui.kv([['Serveur', '<span class="mono">sftp.central.parts</span> (prévu)'], ['Dossier', '<span class="mono">/inbox/' + esc(me.alias) + '/</span>'], ['Authentification', 'Clé SSH par société, déposée à l\'inscription'], ['Formats', 'CSV ou XLS, mêmes colonnes'], ['Fréquence', 'Quotidienne conseillée : le fichier complet remplace le précédent']]) +
+        '<p>' + ui.btn('Simuler un dépôt SFTP du fichier ci-contre', 'sftp-drop', {}, 'ghost') + '</p>') + '</div>');
   };
   CP.forms['import'] = function (d) {
-    var res = CP.call('POST', '/v1/stocklists', { format: d.format, csv: d.csv });
-    if (res) CP.toast(res.created.length + ' lot(s) créé(s), ' + res.updated.length + ' mis à jour' + (res.possibleDuplicates.length ? ', ' + res.possibleDuplicates.length + ' doublon(s) possible(s)' : '') + '.', 'ok');
+    var res = CP.call('POST', '/v1/stocklists', { format: d.format, csv: d.csv, filename: 'stocklist.' + (d.format === 'broker' ? 'xlsx' : 'csv') });
+    if (res) { CP.lastImport = res; CP.toast(res.created.length + ' lot(s) créé(s), ' + res.updated.length + ' mis à jour.', 'ok'); }
+  };
+  CP.actions['sftp-drop'] = function () {
+    var ta = document.querySelector('form[data-form="import"] textarea');
+    var fmt = document.querySelector('form[data-form="import"] input[name="format"]:checked');
+    var r = CP.system('POST', '/v1/webhooks/sftp/stocklist', { sellerId: CP.actor.org, format: fmt ? fmt.value : 'broker', filename: 'stock_' + CP.state.orgs[CP.actor.org].alias + '.csv', csv: ta ? ta.value : '' });
+    if (r.error) CP.toast(r.status + ' · ' + r.error, 'error');
+    else { CP.lastImport = r.data; CP.toast('Fichier SFTP traité : ' + r.data.created.length + ' lot(s) créé(s), ' + r.data.updated.length + ' mis à jour.', 'ok'); }
   };
 
   // ------------------------------------------------------------ lot : questionnaire et documents
@@ -59,6 +84,9 @@
     if (!l) return ui.page('Lot introuvable', '', '');
     var q = l.q || {}, cm = l.comments || {};
     return ui.page('Lot ' + esc(l.id), '<span class="mono">' + esc(l.mpn) + '</span> · ' + esc(l.mfr || '') + ' · ' + CP.num(l.qty) + ' pièces · date code ' + esc(l.dc || '—') + ' · ' + lotState(l),
+      '<form class="card form" data-form="lot-update"><input type="hidden" name="lot" value="' + esc(l.id) + '"><h2>Lot</h2>' +
+      ui.kv([['SKU vendeur', '<span class="mono">' + esc(l.sku || '—') + '</span>'], ['Fiche produit', l.url ? '<a href="' + esc(l.url) + '" rel="noopener nofollow" target="_blank">' + esc(l.url) + '</a>' : '—'], ['Prix unitaire', l.price ? money(l.price) + ' ' + esc(l.currency || 'EUR') : '—'], ['Paliers', tiers(l)]]) +
+      '<div class="row"><label class="field"><span>Date code (obligatoire pour enchérir)</span><input name="dc" value="' + esc(l.dc || '') + '" placeholder="2014 ou 2209"></label><label class="field"><span>Conditionnement</span><input name="pack" value="' + esc(l.pack || '') + '" placeholder="Plateau, tube, bobine…"></label><label class="field"><span>Quantité</span><input name="qty" type="number" min="1" value="' + l.qty + '"></label></div><button class="btn ghost">Enregistrer le lot</button></form>' +
       '<form class="card form" data-form="questionnaire"><input type="hidden" name="lot" value="' + esc(l.id) + '"><h2>Questionnaire d\'état</h2>' +
       '<p class="muted small">Les réponses engagent le vendeur, font partie de la commande et priment sur ses exclusions de garantie. « Refuse de répondre » reste possible mais visible de l\'acheteur, qui peut filtrer sur chaque réponse.</p>' +
       '<ol class="qform">' + CP.QUESTIONS.map(function (x) {
@@ -69,6 +97,7 @@
       '<p class="muted small">En maquette, cocher simule le téléversement du document.</p>' +
       '<div class="row-btn"><button class="btn">Enregistrer</button> ' + ui.btn('Tout renseigner (démo)', 'fill-q', { lot: l.id }, 'ghost') + '</div></form>');
   };
+  CP.forms['lot-update'] = function (d) { CP.call('PATCH', '/v1/lots/' + d.lot, { dc: d.dc, pack: d.pack, qty: d.qty }, 'Lot enregistré.'); };
   CP.forms.questionnaire = function (d) {
     var answers = {}, comments = {}, docs = {};
     Object.keys(d).forEach(function (k) {

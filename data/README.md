@@ -9,6 +9,10 @@ Collecte, normalisation et enrichissement des données composants issues des fou
 - Excédents de stock clients.
 - Partenaires données : SiliconExpert, Octopart.
 
+## Formats d'échange
+
+[`formats.md`](formats.md) : canaux (API, SFTP au-delà de 500 000 lignes), format broker, Octopart et ECIA, règles d'import et questions ouvertes.
+
 ## Organisation envisagée
 
 ```
