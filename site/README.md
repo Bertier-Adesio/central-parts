@@ -17,7 +17,8 @@ site/                           publié tel quel sur OVH
 ├── zh/index.html               中文 (généré)
 ├── social-preview-fr.png       og:image FR (généré)
 ├── social-preview-en.png       og:image EN et 中文 (généré)
-├── proto/                      prototype public de la plateforme (écrit à la main, FR, données fictives)
+├── proto/                      prototype public du parcours (écrit à la main, FR, données fictives)
+├── app/                        maquette vivante de l'application : cinq rôles, API simulée (ADR 0003)
 └── assets/
     ├── favicon.svg
     ├── tokens.css              copie de brand/tokens.css (générée)
@@ -29,6 +30,10 @@ Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lis
 ## Prototype (`/proto/`)
 
 `site/proto/` contient le prototype public de la plateforme (build in public) : une nomenclature répartie entre Inventory et Opportunity, puis une transaction Opportunity simulée. Écrit à la main en HTML, `proto.css` et `proto.js`, avec les tokens de `/assets/tokens.css`. Sans JavaScript, toutes les étapes s'affichent à la suite. Page en `noindex`, données fictives.
+
+## Maquette de l'application (`/app/`)
+
+`site/app/` est une application d'une page en JavaScript vanilla : routes `#/…` par rôle (acheteur, vendeurs, laboratoire, banque, Central.Parts), API simulée dans `js/api.js`, carte des endpoints dans `js/registry.js`, journal des appels en bas d'écran. L'état est enregistré dans le navigateur ; « Réinitialiser » repart des données de démonstration. Tests : `node tools/test-app.mjs` et `node tools/test-app-ui.mjs`. Voir [ADR 0003](../docs/decisions/0003-maquette-application.md).
 
 ## Modifier les textes
 
