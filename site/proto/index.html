@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<!-- Prototype écrit à la main (pas généré). Données fictives. Voir docs/vision/plateforme.md. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype de la plateforme — Central.Parts</title>
+<meta name="description" content="Prototype public de la plateforme Central.Parts : une nomenclature, deux offres (Inventory et Opportunity), une transaction payée seulement à l'acceptation. Données fictives.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/proto/proto.css">
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap hdr-in">
+    <a class="brand" href="/">
+      <svg width="24" height="24" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <span class="tag">Prototype v0.1</span>
+    <a class="hdr-link" href="https://github.com/Bertier-Adesio/central-parts/blob/main/docs/vision/plateforme.md">Le document de travail</a>
+  </div>
+</header>
+
+<div class="notice">
+  <div class="wrap"><strong>Build in public.</strong> Prototype non contractuel, données fictives : références réelles, mais prix, stocks, vendeurs et laboratoires inventés. Rien n'est commandé ni payé.</div>
+</div>
+
+<main class="wrap">
+
+  <section class="intro">
+    <p class="eyebrow">Supply Network Operator</p>
+    <h1>Une nomenclature, deux offres, une seule transaction.</h1>
+    <p class="lead">Central.Parts distribue des composants électroniques sans stock, sans entrepôt et sans camion. Les références courantes passent par <b>Inventory</b>, le réseau des fabricants et des distributeurs. Les références introuvables dans le canal agréé passent par <b>Opportunity</b> : surplus, obsolètes et brokers, avec un lot décrit par le vendeur, un test en laboratoire si l'acheteur le souhaite, et un vendeur payé seulement après acceptation.</p>
+    <dl class="cast">
+      <div><dt>Acheteur</dt><dd>Bureau d'études à Lyon, présérie de 250 cartes</dd></div>
+      <div><dt>Livraison</dt><dd>Chez son intégrateur à Shenzhen, test en laboratoire en route</dd></div>
+      <div><dt>Vendeurs</dt><dd>Anonymes pour l'acheteur, qui reste anonyme pour eux</dd></div>
+    </dl>
+  </section>
+
+  <nav class="steps" aria-label="Étapes du prototype">
+    <ol>
+      <li><a href="#s1" data-step="0"><span>1</span>Nomenclature</a></li>
+      <li><a href="#s2" data-step="1"><span>2</span>Enchère</a></li>
+      <li><a href="#s3" data-step="2"><span>3</span>Offres</a></li>
+      <li><a href="#s4" data-step="3"><span>4</span>Fiche et dépôt</a></li>
+      <li><a href="#s5" data-step="4"><span>5</span>Suivi</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. Nomenclature -->
+  <section class="step" id="s1">
+    <p class="who">Vue acheteur</p>
+    <h2>1. La nomenclature est répartie entre les deux offres</h2>
+    <p>L'acheteur dépose sa nomenclature : 8 lignes. Adesio lit chaque référence et cherche d'abord dans le réseau Inventory. Les lignes que le canal agréé ne peut plus servir deviennent des demandes Opportunity, anonymisées et diffusées aux détenteurs de surplus et aux brokers.</p>
+
+    <div class="file">
+      <span class="mono">preserie-v3_nomenclature.csv</span>
+      <span class="muted">8 lignes · déposé le 10/10/2026 à 09:12</span>
+    </div>
+
+    <div class="tbl">
+      <table>
+        <thead><tr><th>#</th><th>Référence</th><th>Fabricant</th><th class="num">Qté</th><th>Offre</th><th>Source</th><th class="num">Prix unitaire</th><th>Délai</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td class="mono">STM32G071RBT6</td><td>STMicroelectronics</td><td class="num">250</td><td><span class="pill inv">Inventory</span></td><td>Distributeur agréé</td><td class="num">2,41 €</td><td>3 j</td></tr>
+          <tr><td>2</td><td class="mono">TPS62130RGTR</td><td>Texas Instruments</td><td class="num">250</td><td><span class="pill inv">Inventory</span></td><td>Distributeur agréé</td><td class="num">1,12 €</td><td>3 j</td></tr>
+          <tr><td>3</td><td class="mono">GRM188R71H104KA93D</td><td>Murata</td><td class="num">5 000</td><td><span class="pill inv">Inventory</span></td><td>Distributeur agréé</td><td class="num">0,004 €</td><td>3 j</td></tr>
+          <tr><td>4</td><td class="mono">CH340C</td><td>WCH</td><td class="num">250</td><td><span class="pill inv">Inventory</span></td><td>Fabricant, Chine</td><td class="num">0,38 €</td><td>7 j</td></tr>
+          <tr><td>5</td><td class="mono">ESP32-C3-MINI-1-N4</td><td>Espressif</td><td class="num">250</td><td><span class="pill inv">Inventory</span></td><td>Fabricant, Chine</td><td class="num">1,95 €</td><td>7 j</td></tr>
+          <tr><td>6</td><td class="mono">LM358DR</td><td>Texas Instruments</td><td class="num">500</td><td><span class="pill inv">Inventory</span></td><td>Distributeur agréé</td><td class="num">0,09 €</td><td>3 j</td></tr>
+          <tr class="opp"><td>7</td><td class="mono">MC68HC11E1CFNE2</td><td>NXP</td><td class="num">250</td><td><span class="pill opp">Opportunity</span></td><td>Obsolète, aucun stock agréé</td><td class="num">Enchère</td><td>—</td></tr>
+          <tr class="opp"><td>8</td><td class="mono">XC2S50-5TQ144C</td><td>AMD Xilinx</td><td class="num">250</td><td><span class="pill opp">Opportunity</span></td><td>Obsolète, aucun stock agréé</td><td class="num">Enchère</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="split">
+      <div class="card">
+        <h3><span class="pill inv">Inventory</span> 6 lignes</h3>
+        <p>Prix et délais du réseau, traçabilité jusqu'au fabricant, certificat de conformité d'origine. Paiement classique.</p>
+      </div>
+      <div class="card">
+        <h3><span class="pill opp">Opportunity</span> 2 lignes</h3>
+        <p>Demandes anonymisées, enchère entre vendeurs, questionnaire d'état et escrow obligatoires. Le prototype suit la ligne 8.</p>
+      </div>
+    </div>
+    <p class="rule"><b>Règle de la plateforme :</b> la protection dépend de la source. Une offre de broker passe toujours par Opportunity, même pour une référence courante.</p>
+  </section>
+
+  <!-- 2. Enchère -->
+  <section class="step" id="s2">
+    <p class="who">Vue vendeur</p>
+    <h2>2. Les vendeurs enchérissent sans savoir qui achète</h2>
+    <p>Chaque détenteur dont le stock correspond reçoit la demande. Il voit ce qu'il faut pour chiffrer, jamais l'identité ni l'adresse de l'acheteur. Il propose son prix net ; les offres sont scellées, chacun ne connaît que son rang.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-hd"><span class="mono">Demande DEM-0427</span><span class="pill opp">Opportunity</span></div>
+        <dl class="kv">
+          <div><dt>Référence</dt><dd class="mono">XC2S50-5TQ144C</dd></div>
+          <div><dt>Quantité</dt><dd>250</dd></div>
+          <div><dt>Date code minimum</dt><dd>2010</dd></div>
+          <div><dt>Emballage</dt><dd>Plateau d'origine du fabricant</dd></div>
+          <div><dt>Questionnaire</dt><dd>Complet, photos obligatoires</dd></div>
+          <div><dt>Zone de livraison</dt><dd>Chine, Guangdong</dd></div>
+          <div><dt>Délai souhaité</dt><dd>10 jours ouvrés</dd></div>
+          <div><dt>Acheteur</dt><dd class="muted">Masqué</dd></div>
+        </dl>
+        <p class="timer">Clôture de l'enchère dans <b class="mono" data-countdown="172800">48:00:00</b></p>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span>Votre offre · vendeur V-2</span><span class="muted">Surplus EMS</span></div>
+        <p class="hint">Fourchette conseillée par Adesio : <b>38,00 € à 46,00 €</b> net l'unité.</p>
+        <form class="bid" data-bid>
+          <label for="bid">Prix net unitaire (€)</label>
+          <div class="bid-row">
+            <input id="bid" name="bid" type="number" inputmode="decimal" min="1" step="0.10" value="43.50">
+            <button type="submit" class="btn">Mettre à jour</button>
+          </div>
+        </form>
+        <p class="rank" aria-live="polite">Votre rang : <b data-rank>2 sur 3</b></p>
+        <p class="muted small">Les deux autres offres restent scellées. Vous ne voyez que votre rang.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Offres -->
+  <section class="step" id="s3">
+    <p class="who">Vue acheteur</p>
+    <h2>3. L'acheteur compare des offres consolidées</h2>
+    <p>Central.Parts ajoute sa marge et ses frais au prix net de chaque vendeur et présente des offres tout compris. Chaque offre montre l'origine du lot, les réponses au questionnaire d'état, qui engagent le vendeur, et les documents fournis ou absents.</p>
+
+    <fieldset class="offers">
+      <legend class="sr">Choisir une offre</legend>
+      <label class="offer">
+        <input type="radio" name="offer" value="A" data-price="46.10" checked>
+        <div class="offer-hd"><b>Offre A</b><span class="price">46,10 € <small>/ unité, tout compris</small></span></div>
+        <p class="muted small">Origine : surplus OEM/EMS · Expédition depuis l'Europe · 5 j ouvrés</p>
+        <ul class="qa">
+          <li class="ok">Déjà vendues une première fois : non</li>
+          <li class="ok">Retours qualité : aucun</li>
+          <li class="ok">Neuves, emballage d'origine (ouvert)</li>
+          <li class="ok">Date codes homogènes : 2011</li>
+          <li class="ok">Stockage en sachet étanche</li>
+        </ul>
+        <ul class="docs">
+          <li class="ok">Photos</li><li class="ok">Preuve d'achat</li><li class="ok">Datasheet</li><li class="ko">CoC fabricant</li><li class="ko">Rapport d'inspection</li>
+        </ul>
+      </label>
+      <label class="offer">
+        <input type="radio" name="offer" value="B" data-price="44.30">
+        <div class="offer-hd"><b>Offre B</b><span class="price">44,30 € <small>/ unité, tout compris</small></span></div>
+        <p class="muted small">Origine : broker · Expédition depuis l'Asie · 4 j ouvrés</p>
+        <ul class="qa">
+          <li class="warn">Déjà vendues une première fois : refuse de répondre</li>
+          <li class="ok">Retours qualité : aucun</li>
+          <li class="ok">Neuves, emballage d'origine (ouvert)</li>
+          <li class="warn">Date codes homogènes : non (2009 et 2012)</li>
+          <li class="warn">Conditions de stockage : inconnues</li>
+        </ul>
+        <ul class="docs">
+          <li class="ok">Photos</li><li class="ok">Datasheet</li><li class="ko">Preuve d'achat</li><li class="ko">CoC fabricant</li><li class="ko">Rapport d'inspection</li>
+        </ul>
+      </label>
+    </fieldset>
+
+    <h3>Test en laboratoire partenaire</h3>
+    <p>Le laboratoire reçoit les pièces du vendeur, les teste, puis les réexpédie à Shenzhen. Son certificat précède le paiement du vendeur. En cas de contrefaçon, les pièces ne repartent jamais chez le vendeur.</p>
+    <fieldset class="labs">
+      <legend class="sr">Niveau de test</legend>
+      <label><input type="radio" name="lab" value="0" data-price="0" data-days="0"> <span>Pas de test</span><span class="muted">—</span></label>
+      <label><input type="radio" name="lab" value="1" data-price="180" data-days="2"> <span>Contrôle visuel et marquage</span><span class="muted">180 € · 2 j</span></label>
+      <label><input type="radio" name="lab" value="2" data-price="420" data-days="3" checked> <span>+ Rayons X</span><span class="muted">420 € · 3 j</span></label>
+      <label><input type="radio" name="lab" value="3" data-price="560" data-days="3"> <span>+ XRF (analyse des matériaux)</span><span class="muted">560 € · 3 j</span></label>
+      <label><input type="radio" name="lab" value="4" data-price="950" data-days="5"> <span>+ Décapsulation</span><span class="muted">950 € · 5 j</span></label>
+    </fieldset>
+    <p class="muted small">Bientôt : 12 échantillons du même lot et du même date code, avec option d'achat du lot à prix fixé.</p>
+  </section>
+
+  <!-- 4. Fiche transaction -->
+  <section class="step" id="s4">
+    <p class="who">Vue acheteur</p>
+    <h2>4. Fiche transaction et dépôt des fonds</h2>
+    <p>La commande est résumée dans une fiche transaction signée électroniquement par l'acheteur puis par le vendeur. L'acheteur dépose les fonds sur un compte dédié : ils y restent jusqu'à l'acceptation des pièces.</p>
+
+    <div class="grid2">
+      <div class="card">
+        <div class="card-hd"><span class="mono">Fiche TX-2026-0042</span><span class="muted">Brouillon</span></div>
+        <dl class="kv">
+          <div><dt>Ligne</dt><dd><span class="mono">XC2S50-5TQ144C</span> × 250</dd></div>
+          <div><dt>Offre retenue</dt><dd data-out="offer">Offre A, 46,10 € l'unité</dd></div>
+          <div><dt>Laboratoire</dt><dd data-out="lab">Rayons X, 420 €</dd></div>
+          <div><dt>Facturation</dt><dd>Lyon, France</dd></div>
+          <div><dt>Livraison</dt><dd>Intégrateur, Shenzhen · via le laboratoire</dd></div>
+          <div><dt>Incoterm</dt><dd>DAP Shenzhen</dd></div>
+          <div><dt>Inspection à réception</dt><dd>10 jours ouvrés</dd></div>
+          <div><dt>Contre-inspection vendeur</dt><dd>10 jours ouvrés</dd></div>
+        </dl>
+        <p class="total">Total à déposer <b data-out="total">11 945,00 €</b></p>
+        <p class="muted small">Total hors taxes, transport inclus dans l'offre. Fiscalité et qualification juridique en cours d'arbitrage.</p>
+      </div>
+      <div class="card">
+        <h3>Ce que l'acheteur signe</h3>
+        <ul class="list">
+          <li>Les réponses du questionnaire font partie de la commande.</li>
+          <li>Sans réponse dans le délai d'inspection, les pièces sont réputées acceptées.</li>
+          <li>Rejet possible pour contrefaçon, non-conformité, écart de quantité ou dommage de transport, ligne par ligne.</li>
+          <li>Remboursement uniquement vers l'IBAN autorisé à l'inscription.</li>
+        </ul>
+        <div class="actions js">
+          <button class="btn" data-act="sign">Signer la fiche</button>
+          <button class="btn" data-act="fund" disabled>Déposer les fonds</button>
+        </div>
+        <p class="status" data-out="sign" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Suivi -->
+  <section class="step" id="s5">
+    <p class="who">Vue acheteur</p>
+    <h2>5. Le tableau de bord de la transaction</h2>
+    <p>Chaque étape a son délai et son minuteur. Les relances sont automatiques ; sans réaction dans le délai, la règle prévue s'applique. Ni PDF, ni fax.</p>
+
+    <div class="board">
+      <ol class="timeline" data-timeline>
+        <li data-k="fund"><b>Fonds déposés</b><span>Compte dédié, fonds conservés jusqu'à l'acceptation</span></li>
+        <li data-k="ship"><b>Expédition par le vendeur</b><span>Sur ordre de Central.Parts, sous 5 j ouvrés, sinon annulation et remboursement</span></li>
+        <li data-k="lab"><b>Test en laboratoire</b><span>Rayons X ; certificat déposé sur la plateforme</span></li>
+        <li data-k="deliver"><b>Livraison à Shenzhen</b><span>Réexpédition par le laboratoire à l'intégrateur</span></li>
+        <li data-k="inspect"><b>Inspection par l'intégrateur</b><span>10 j ouvrés ; sans réponse, réputé accepté</span></li>
+        <li data-k="pay"><b>Paiement du vendeur</b><span>Ou, en cas de rejet : retour, contre-inspection, remboursement de l'acheteur</span></li>
+      </ol>
+
+      <div class="panel js">
+        <p class="now">Étape en cours : <b data-now>—</b></p>
+        <p class="timer" data-step-timer hidden>Délai restant : <b class="mono" data-deadline>—</b></p>
+        <div class="actions" data-actions></div>
+        <h3>Journal</h3>
+        <ol class="log" data-log aria-live="polite"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="open">
+    <h2>Ce qui reste ouvert</h2>
+    <p>On construit en public, y compris ce qui n'est pas tranché :</p>
+    <ul class="list">
+      <li>La qualification juridique de Central.Parts sur Opportunity, l'entité qui porte l'activité et l'établissement qui tient le compte dédié.</li>
+      <li>L'anonymat à la livraison : transit par un laboratoire ou un entrepôt, étiquettes neutres, ou levée de l'anonymat à l'expédition.</li>
+      <li>L'effet du certificat du laboratoire sur l'inspection de l'acheteur, et la garantie après acceptation.</li>
+      <li>Les taux de commission et les barèmes.</li>
+    </ul>
+    <p>Documents : <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/docs/vision/plateforme.md">la plateforme</a> · <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/docs/vision/inventory.md">Inventory</a> · <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/docs/vision/opportunity.md">Opportunity</a>. Une remarque ? <a href="mailto:contact@central.parts?subject=Prototype">contact@central.parts</a></p>
+  </section>
+
+  <div class="pager js">
+    <button class="btn ghost" data-prev>Étape précédente</button>
+    <button class="btn" data-next>Étape suivante</button>
+  </div>
+</main>
+
+<footer class="ftr"><div class="wrap">© 2026 Central.Parts · Prototype v0.1 du 10 octobre 2026 · Données fictives</div></footer>
+
+<script src="/proto/proto.js"></script>
+</body>
+</html>

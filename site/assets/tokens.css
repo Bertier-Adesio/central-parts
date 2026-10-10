@@ -1,0 +1,128 @@
+/* Central.Parts — design tokens extraits de la landing page (site/index.html).
+   Consommer les alias sémantiques (bg-*, fg-*, border-*, accent, status-*), pas l'échelle brute. */
+
+:root {
+  --cp-ink: #15171c;
+  --cp-paper: #f4f2ee;
+  --cp-line: #d9d5cd;
+  --cp-grid: #9aa0aa;
+  --cp-red: #d7262e;
+  --cp-red-hot: #e8442a;
+  --cp-red-deep: #b3122e;
+  --n-0: #ffffff;
+  --n-25: #fbfaf8;
+  --n-50: #f4f2ee;
+  --n-100: #ece9e3;
+  --n-200: #d9d5cd;
+  --n-300: #bdb8af;
+  --n-400: #9aa0aa;
+  --n-500: #62676f;
+  --n-600: #4a4e57;
+  --n-700: #2a2e36;
+  --n-800: #1e2128;
+  --n-900: #15171c;
+  --green-600: oklch(0.52 0.11 155);
+  --green-50: oklch(0.95 0.03 155);
+  --amber-600: oklch(0.56 0.12 65);
+  --amber-50: oklch(0.95 0.04 75);
+  --blue-600: oklch(0.52 0.12 250);
+  --blue-50: oklch(0.95 0.025 250);
+  --red-600: var(--cp-red-deep);
+  --red-50: oklch(0.95 0.03 22);
+  --bg-page: var(--n-50);
+  --bg-surface: var(--n-25);
+  --bg-raised: var(--n-0);
+  --bg-sunken: var(--n-100);
+  --bg-inverse: var(--n-900);
+  --bg-inverse-raised: var(--n-800);
+  --fg-1: var(--n-900);
+  --fg-2: var(--n-600);
+  --fg-3: var(--n-500);
+  --fg-inverse: var(--n-50);
+  --fg-inverse-2: var(--n-300);
+  --border-1: var(--n-200);
+  --border-2: var(--n-300);
+  --border-strong: var(--n-900);
+  --accent: var(--cp-red);
+  --accent-hover: var(--cp-red-deep);
+  --accent-fg: #ffffff;
+  --status-success: var(--green-600);
+  --status-success-bg: var(--green-50);
+  --status-warning: var(--amber-600);
+  --status-warning-bg: var(--amber-50);
+  --status-info: var(--blue-600);
+  --status-info-bg: var(--blue-50);
+  --status-danger: var(--red-600);
+  --status-danger-bg: var(--red-50);
+  --stock-in: var(--status-success);
+  --stock-low: var(--status-warning);
+  --stock-out: var(--n-500);
+  --price-change: var(--fg-1);
+}
+
+:root {
+  --font-sans: 'Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Noto Sans SC', ui-monospace, 'SFMono-Regular', monospace;
+  --font-cjk: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 26px;
+  --text-2xl: 34px;
+  --text-3xl: 48px;
+  --text-4xl: 72px;
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-body: 1.5;
+  --leading-cjk: 1.7;
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-caps: 0.08em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+}
+
+:root {
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --content-max: 1280px;
+  --border-width: 1px;
+}
+
+:root {
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+  --shadow-0: none;
+  --shadow-1: 0 1px 0 rgba(21, 23, 28, 0.06);
+  --shadow-2: 0 1px 2px rgba(21, 23, 28, 0.06), 0 4px 12px -4px rgba(21, 23, 28, 0.10);
+  --shadow-pop: 0 12px 32px -12px rgba(21, 23, 28, 0.32), 0 0 0 1px rgba(21, 23, 28, 0.06);
+  --focus-ring: 0 0 0 2px #fbfaf8, 0 0 0 4px #d7262e;
+}
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.6, 0, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}

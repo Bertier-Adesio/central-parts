@@ -6,7 +6,7 @@
 //
 // Usage : node tools/build-site.mjs   (aucune dépendance)
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -283,3 +283,7 @@ for (const lang of Object.keys(LANGS)) {
   writeFileSync(file, page(lang));
   console.log(`${file.replace(ROOT + '/', '')}`);
 }
+
+// Tokens de marque publiés pour les pages écrites à la main (site/proto/).
+copyFileSync(join(ROOT, 'brand/tokens.css'), join(OUT, 'assets/tokens.css'));
+console.log('site/assets/tokens.css');
