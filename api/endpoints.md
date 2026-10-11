@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-60 endpoints et 23 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+66 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -83,6 +83,17 @@
 | POST | `/v1/supplier/webhooks` | Vendeur | Abonnement aux événements : demande correspondant au stock, offre retenue, transaction | `/vendeur/api` |
 | GET | `/v1/supplier/webhooks` | Vendeur | Abonnements et dernières livraisons d'événements (signées HMAC) | `/vendeur/api` |
 
+## Notifications : e-mail, WeCom, WeChat
+
+| Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
+|---|---|---|---|---|
+| GET | `/v1/organizations/{id}/notification-channels` | Vendeur, Central.Parts | Canaux de notification de la société et derniers messages envoyés | `/vendeur/notifications` |
+| POST | `/v1/organizations/{id}/notification-channels` | Vendeur | Ajout d'un canal : e-mail, robot de groupe WeCom (企业微信) ou compte de service WeChat (服务号), langue et événements | `/vendeur/notifications` |
+| DELETE | `/v1/organizations/{id}/notification-channels/{cid}` | Vendeur | Suppression d'un canal | `/vendeur/notifications` |
+| POST | `/v1/organizations/{id}/notification-channels/{cid}/test` | Vendeur | Envoi d'un message d'essai sur le canal | `/vendeur/notifications` |
+| POST | `/v1/wechat/qrcodes` | Vendeur | QR code temporaire du compte de service pour lier un utilisateur WeChat à un canal | `/vendeur/notifications` |
+| POST | `/v1/webhooks/wechat` | Système | Événement WeChat (abonnement ou scan du QR code) : rattache l'openid au canal | `/vendeur/notifications` |
+
 ## Transactions
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
@@ -147,6 +158,7 @@
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
 | `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
 | `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list` |
+| `#/vendeur/notifications` | Vendeur | Notifications (e-mail, WeCom, WeChat) | `chan.list`, `chan.create`, `chan.delete`, `chan.test`, `wechat.qr`, `wechat.event` |
 | `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |
 | `#/vendeur/transactions/:id` | Vendeur | Transaction (vue vendeur) | `tx.get`, `tx.sign`, `tx.ship`, `tx.counter`, `tx.dispute` |

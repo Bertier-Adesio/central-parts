@@ -520,14 +520,112 @@
   // API fournisseur
   // Événements poussés au système du fournisseur (livraison simulée, signature HMAC prévue).
   function deliver(org, type, payload) {
-    var hooks = CP.values(S().webhooks || {}).filter(function (h) { return h.sellerId === org && h.events.indexOf(type) >= 0; });
-    hooks.forEach(function (h) {
-      S().deliveries = S().deliveries || [];
+    S().deliveries = S().deliveries || [];
+    CP.values(S().webhooks || {}).filter(function (h) { return h.sellerId === org && h.events.indexOf(type) >= 0; }).forEach(function (h) {
       S().deliveries.unshift({ id: next('DLV'), hookId: h.id, sellerId: org, type: type, day: S().day, url: h.url, payload: payload, status: 200, signature: 'sha256=…' });
     });
+    CP.values(S().channels || {}).filter(function (ch) { return ch.orgId === org && ch.status === 'active' && ch.events.indexOf(type) >= 0; }).forEach(function (ch) {
+      S().deliveries.unshift(channelMessage(ch, type, payload));
+    });
   }
+
+  // Messages des canaux, dans la langue du vendeur. Liens vers la plateforme, jamais d'identité de l'acheteur.
+  var LINK = 'https://central.parts/app/#';
+  var ZH_STATUS = { to_sign_buyer: '待买方签署', to_sign_seller: '待您签署', awaiting_funds: '待买方付款至托管账户', to_ship: '已付款，请发货', to_lab: '运往检测实验室', at_lab: '实验室检测中', lab_passed: '检测合格', lab_failed: '检测不合格', to_buyer: '运往收货地址', inspection: '买方验货中', return_due: '买方退货中', counter_inspection: '待您复检退货', dispute: '争议调解中', settling: '付款处理中', released: '已付款给您', refunded: '已退款给买方', closed_partial: '部分付款已完成', cancelled: '已取消' };
+  var ZH_COUNTRY = { France: '法国', Chine: '中国', Allemagne: '德国', 'Hong Kong': '香港', 'Pays-Bas': '荷兰' };
+  function zhZone(z) { return String(z || '').split(/,\s*/).map(function (x) { return ZH_COUNTRY[x] || x; }).join(' '); }
+  function dayLabel(day, lang) {
+    return CP.date(day).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', day: 'numeric' });
+  }
+  function renderMessage(type, p, lang) {
+    var d = p.demand_id && S().demands[p.demand_id], t = p.transaction_id && S().transactions[p.transaction_id];
+    var closes = d ? dayLabel(d.closesDay, lang) : '';
+    if (type === 'demand.created') {
+      var url = LINK + '/vendeur/demandes/' + p.demand_id;
+      if (lang === 'zh') return { title: '【Central.Parts 新询价】' + p.mpn, lines: ['型号：' + p.mpn, '数量：' + CP.num(p.quantity), '最低批号 (D/C)：' + (p.date_code_min || '不限'), '交货区域：' + zhZone(p.zone), '报价截止：' + closes, '买方信息已匿名，请在平台内报价。'], button: '立即报价', url: url };
+      if (lang === 'en') return { title: '[Central.Parts] New RFQ: ' + p.mpn, lines: ['Part: ' + p.mpn, 'Quantity: ' + CP.num(p.quantity), 'Min. date code: ' + (p.date_code_min || 'any'), 'Delivery zone: ' + p.zone, 'Closes: ' + closes, 'Buyer kept anonymous. Quote on the platform.'], button: 'Quote now', url: url };
+      return { title: '[Central.Parts] Nouvelle demande : ' + p.mpn, lines: ['Référence : ' + p.mpn, 'Quantité : ' + CP.num(p.quantity), 'Date code minimum : ' + (p.date_code_min || 'indifférent'), 'Zone de livraison : ' + p.zone, 'Clôture : ' + closes, 'Acheteur anonyme. Répondez sur la plateforme.'], button: 'Répondre', url: url };
+    }
+    if (type === 'offer.accepted') {
+      var u2 = LINK + '/vendeur/transactions/' + p.transaction_id;
+      if (lang === 'zh') return { title: '【Central.Parts 报价已中标】' + p.transaction_id, lines: ['询价：' + p.demand_id, '数量：' + CP.num(p.quantity), '您的净价：' + CP.money(p.net_unit_price, p.currency), '请签署交易单。'], button: '查看交易', url: u2 };
+      if (lang === 'en') return { title: '[Central.Parts] Your offer won: ' + p.transaction_id, lines: ['RFQ: ' + p.demand_id, 'Quantity: ' + CP.num(p.quantity), 'Your net price: ' + CP.money(p.net_unit_price, p.currency), 'Please sign the transaction sheet.'], button: 'Open', url: u2 };
+      return { title: '[Central.Parts] Offre retenue : ' + p.transaction_id, lines: ['Demande : ' + p.demand_id, 'Quantité : ' + CP.num(p.quantity), 'Votre prix net : ' + CP.money(p.net_unit_price, p.currency), 'Fiche transaction à signer.'], button: 'Ouvrir', url: u2 };
+    }
+    if (type === 'transaction.updated') {
+      var u3 = LINK + '/vendeur/transactions/' + p.transaction_id;
+      if (lang === 'zh') return { title: '【Central.Parts 交易更新】' + p.transaction_id, lines: ['状态：' + (ZH_STATUS[t ? t.status : p.status] || p.status)], button: '查看交易', url: u3 };
+      if (lang === 'en') return { title: '[Central.Parts] Transaction update: ' + p.transaction_id, lines: [p.text], button: 'Open', url: u3 };
+      return { title: '[Central.Parts] ' + p.transaction_id, lines: [p.text], button: 'Ouvrir', url: u3 };
+    }
+    return { title: type, lines: [JSON.stringify(p)], button: 'Ouvrir', url: LINK + '/vendeur' };
+  }
+  function channelMessage(ch, type, payload) {
+    var m = renderMessage(type, payload, ch.lang);
+    var body;
+    if (ch.type === 'wecom') body = { msgtype: 'markdown', markdown: { content: '**' + m.title + '**\n' + m.lines.map(function (l) { return '> ' + l; }).join('\n') + '\n[' + m.button + '](' + m.url + ')' } };
+    else if (ch.type === 'wechat_oa') body = { touser: ch.target, template_id: 'TPL_' + type.replace('.', '_').toUpperCase(), url: m.url, data: { first: { value: m.title }, keyword1: { value: m.lines[0] || '' }, keyword2: { value: m.lines[1] || '' }, keyword3: { value: m.lines[2] || '' }, keyword4: { value: m.lines[4] || m.lines[3] || '' }, remark: { value: m.lines[m.lines.length - 1] } } };
+    else body = { to: ch.target, subject: m.title, text: m.lines.join('\n') + '\n\n' + m.button + ' : ' + m.url };
+    var endpoint = ch.type === 'wecom' ? ch.target.replace(/key=.*/, 'key=…') : ch.type === 'wechat_oa' ? 'https://api.weixin.qq.com/cgi-bin/message/template/send' : 'smtp';
+    return { id: next('DLV'), channelId: ch.id, channel: ch.type, lang: ch.lang, sellerId: ch.orgId, type: type, day: S().day, url: endpoint, message: m, payload: body, status: 200 };
+  }
+
+  var CHANNEL_TYPES = ['email', 'wecom', 'wechat_oa'];
+  H['chan.list'] = function (c) {
+    var o = ownOrg(c);
+    return {
+      channels: CP.values(S().channels || {}).filter(function (ch) { return ch.orgId === o.id; }),
+      deliveries: (S().deliveries || []).filter(function (d) { return d.sellerId === o.id && d.channelId; }).slice(0, 20),
+    };
+  };
+  H['chan.create'] = function (c) {
+    var o = ownOrg(c), b = c.body;
+    if (CHANNEL_TYPES.indexOf(b.type) < 0) fail(422, 'Type attendu : email, wecom ou wechat_oa');
+    if (b.type === 'wecom' && !/^https:\/\/qyapi\.weixin\.qq\.com\/cgi-bin\/webhook\/send\?key=[\w-]+$/.test(b.target || '')) fail(422, 'URL du robot WeCom attendue : https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…');
+    if (b.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(b.target || '')) fail(422, 'Adresse e-mail invalide');
+    var lang = ['zh', 'en', 'fr'].indexOf(b.lang) >= 0 ? b.lang : (o.lang || 'en');
+    var events = (b.events || []).filter(function (e) { return EVENTS.indexOf(e) >= 0; });
+    if (!events.length) fail(422, 'Au moins un événement');
+    S().channels = S().channels || {};
+    var id = next('CH');
+    // Le compte de service s'active quand l'utilisateur scanne le QR code (webhook WeChat).
+    S().channels[id] = { id: id, orgId: o.id, type: b.type, target: b.type === 'wechat_oa' ? null : b.target, lang: lang, events: events, status: b.type === 'wechat_oa' ? 'pending' : 'active', label: b.label || '' };
+    return S().channels[id];
+  };
+  function getChannel(c) {
+    var o = ownOrg(c), ch = (S().channels || {})[c.params.cid];
+    if (!ch || ch.orgId !== o.id) fail(404, 'Canal inconnu');
+    return ch;
+  }
+  H['chan.delete'] = function (c) { var ch = getChannel(c); delete S().channels[ch.id]; return { id: ch.id, deleted: true }; };
+  H['chan.test'] = function (c) {
+    var ch = getChannel(c);
+    if (ch.status !== 'active') fail(409, 'Canal pas encore activé');
+    var d = CP.values(S().demands).filter(function (x) { return x.sellers.indexOf(ch.orgId) >= 0; })[0] || { id: 'DEM-TEST', mpn: 'XC2S50-5TQ144C', qty: 250, dcMin: '2010', zone: 'Chine, Guangdong', closesDay: S().day + 2 };
+    var dlv = channelMessage(ch, 'demand.created', { demand_id: d.id, mpn: d.mpn, quantity: d.qty, date_code_min: d.dcMin, zone: d.zone });
+    dlv.test = true;
+    S().deliveries = S().deliveries || [];
+    S().deliveries.unshift(dlv);
+    return dlv;
+  };
+  H['wechat.qr'] = function (c) {
+    var ch = (S().channels || {})[c.body.channelId];
+    if (!ch || ch.orgId !== c.actor.org || ch.type !== 'wechat_oa') fail(404, 'Canal WeChat inconnu');
+    ch.scene = 'cp_' + ch.id + '_' + Math.random().toString(36).slice(2, 8);
+    return { channel_id: ch.id, scene: ch.scene, ticket: 'gQH47joAAAAAAAAAASxodHRwOi8v…(fictif)', expire_seconds: 600, url: 'https://mp.weixin.qq.com/cgi-bin/showqrcode?ticket=…' };
+  };
+  H['wechat.event'] = function (c) {
+    var b = c.body;
+    var ch = CP.values(S().channels || {}).filter(function (x) { return x.scene && x.scene === b.scene; })[0];
+    if (!ch) fail(404, 'QR code inconnu ou expiré');
+    if (['subscribe', 'SCAN'].indexOf(b.event) < 0 || !b.openid) fail(422, 'Événement subscribe ou SCAN avec openid attendu');
+    ch.target = b.openid; ch.status = 'active'; ch.scene = null;
+    event('Canal WeChat ' + ch.id + ' lié pour ' + alias(ch.orgId) + '.', ch.orgId);
+    return { channel_id: ch.id, status: 'active' };
+  };
+
   function ownOrg(c) {
-    if (c.actor.role !== 'ops' && c.actor.org !== c.params.id) fail(403, 'Clés d\'une autre société');
+    if (c.actor.role !== 'ops' && c.actor.org !== c.params.id) fail(403, 'Ressource d\'une autre société');
     var o = S().orgs[c.params.id];
     if (!o) fail(404, 'Société inconnue');
     return o;

@@ -230,5 +230,31 @@ scenario('devises : offres en USD, CNY (RMB) et EUR', (CP) => {
   ok(pay.currency === 'CNY' && Math.abs(pay.amountCurrency - 2.9 * 300 * 0.97) < 0.01 && Math.abs(o.amount - tx.total) < 0.01, 'paiement en CNY, ordre soldé en euros');
 });
 
+scenario('notifications : WeCom et WeChat en chinois, e-mail', (CP) => {
+  // V-4 (Shenzhen) a un robot WeCom et un compte de service WeChat liés dans les données de démonstration.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'XC2S50-5TQ144C', qty: 250, delivery: 'Intégrateur, Shenzhen (Chine)', dcMin: '2010' });
+  const list = call(CP, 'seller4', 'GET', '/v1/organizations/S4/notification-channels');
+  const wecom = list.deliveries.find((x) => x.channel === 'wecom' && x.type === 'demand.created');
+  const oa = list.deliveries.find((x) => x.channel === 'wechat_oa' && x.type === 'demand.created');
+  ok(wecom && wecom.payload.msgtype === 'markdown' && wecom.payload.markdown.content.includes('新询价') && wecom.payload.markdown.content.includes('中国 广东'.slice(0, 2)), 'message WeCom en chinois');
+  ok(oa && oa.payload.template_id && oa.payload.url.endsWith('/vendeur/demandes/' + d.id), 'message modèle WeChat avec lien vers la demande');
+  ok(!JSON.stringify(list.deliveries).includes('Atelier Lumen') && !JSON.stringify(list.deliveries).includes('Shenzhen (Chine)'.slice(0, 11) + ')'), 'aucune identité ni adresse de l\'acheteur');
+  call(CP, 'seller1', 'GET', '/v1/organizations/S4/notification-channels', null, [403]);
+  call(CP, 'seller1', 'POST', '/v1/organizations/S1/notification-channels', { type: 'wecom', target: 'https://exemple.com/hook', events: ['demand.created'] }, [422]);
+  const mail = call(CP, 'seller1', 'POST', '/v1/organizations/S1/notification-channels', { type: 'email', target: 'ventes@exemple.com', lang: 'en', events: ['demand.created'] });
+  const t = call(CP, 'seller1', 'POST', `/v1/organizations/S1/notification-channels/${mail.id}/test`, {});
+  ok(t.payload.subject.startsWith('[Central.Parts] New RFQ'), 'e-mail d\'essai en anglais');
+  // Liaison d'un compte de service par QR code.
+  const oa2 = call(CP, 'seller2', 'POST', '/v1/organizations/S2/notification-channels', { type: 'wechat_oa', lang: 'zh', events: ['demand.created'] });
+  ok(oa2.status === 'pending', 'canal WeChat en attente du scan');
+  call(CP, 'seller2', 'POST', `/v1/organizations/S2/notification-channels/${oa2.id}/test`, {}, [409]);
+  const qr = call(CP, 'seller2', 'POST', '/v1/wechat/qrcodes', { channelId: oa2.id });
+  call(CP, 'seller2', 'POST', '/v1/webhooks/wechat', { scene: qr.scene, openid: 'x', event: 'subscribe' }, [403]);
+  ok(CP.system('POST', '/v1/webhooks/wechat', { scene: 'inconnu', openid: 'x', event: 'subscribe' }).status === 404, 'QR code inconnu refusé');
+  ok(CP.system('POST', '/v1/webhooks/wechat', { scene: qr.scene, openid: 'o6_test', event: 'subscribe' }).status === 201, 'scan WeChat');
+  ok(call(CP, 'seller2', 'POST', `/v1/organizations/S2/notification-channels/${oa2.id}/test`, {}).payload.touser === 'o6_test', 'message envoyé à l\'openid lié');
+  call(CP, 'seller2', 'DELETE', `/v1/organizations/S2/notification-channels/${oa2.id}`);
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

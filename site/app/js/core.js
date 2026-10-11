@@ -75,6 +75,7 @@ var CP = window.CP = {};
     { id: 'seller1', role: 'seller', label: 'Vendeur V-1 · surplus EMS', org: 'S1' },
     { id: 'seller2', role: 'seller', label: 'Vendeur V-2 · broker', org: 'S2' },
     { id: 'seller3', role: 'seller', label: 'Vendeur V-3 · OEM', org: 'S3' },
+    { id: 'seller4', role: 'seller', label: 'Vendeur V-4 · surplus Shenzhen', org: 'S4' },
     { id: 'lab', role: 'lab', label: 'Laboratoire partenaire', org: 'L1' },
     { id: 'bank', role: 'bank', label: 'Banque · compte dédié', org: 'BK' },
     { id: 'ops1', role: 'ops', label: 'Central.Parts · opérateur 1', org: 'CP', user: 'Opérateur 1' },
@@ -91,14 +92,15 @@ var CP = window.CP = {};
 
   CP.seed = function () {
     var s = {
-      v: 2, day: 0,
-      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 106, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0 },
+      v: 3, day: 0,
+      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
       orgs: {
         B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001' },
         B2: { id: 'B2', type: 'buyer', name: 'Novatech EMS (fictif)', alias: 'A-3K9', city: 'Grenoble', country: 'France', kyb: 'pending', iban: 'FR76 1000 2000 0000 0000 0781 4', siren: '000 000 002' },
         S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR' },
         S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD' },
         S3: { id: 'S3', type: 'seller', name: 'Nord Électronique (fictif)', alias: 'V-3', city: 'Lille', country: 'France', kyb: 'validated', iban: 'FR76 3000 6000 0000 0000 0003 3', profile: 'Surplus OEM', currency: 'EUR' },
+        S4: { id: 'S4', type: 'seller', name: '深圳华强盈余电子 Huaqiang Surplus (fictif)', alias: 'V-4', city: 'Shenzhen', country: 'Chine', kyb: 'validated', iban: 'CN00 0000 0000 0000 0004', profile: 'Surplus EMS', currency: 'CNY', lang: 'zh' },
         L1: { id: 'L1', type: 'lab', name: 'Laboratoire partenaire Europe (fictif)', alias: 'LAB-EU', city: 'Eindhoven', country: 'Pays-Bas', kyb: 'validated', iban: 'NL91 ABNA 0000 0000 01' },
         BK: { id: 'BK', type: 'bank', name: 'Établissement teneur du compte dédié (à désigner)', alias: 'BANQUE', city: 'Paris', country: 'France', kyb: 'validated' },
         CP: { id: 'CP', type: 'ops', name: 'Central.Parts', alias: 'Central.Parts', city: 'Paris', country: 'France', kyb: 'validated' },
@@ -121,6 +123,12 @@ var CP = window.CP = {};
         'LOT-104': { id: 'LOT-104', currency: 'EUR', sellerId: 'S1', mpn: 'MC68HC11E1CFNE2', mfr: 'NXP', qty: 90, dc: '2012', pack: 'Tube', price: 19, q: {}, docs: { photos: false, coc: false, proof: false, datasheet: true, inspection: false } },
         'LOT-105': { id: 'LOT-105', currency: 'USD', sellerId: 'S2', mpn: 'STM32F103C8T6', mfr: 'STMicroelectronics', qty: 5000, dc: '2023', pack: 'Plateau', price: 2.1, q: fullQ({ origin: 'Autre broker' }), docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
         'LOT-106': { id: 'LOT-106', currency: 'EUR', sellerId: 'S3', mpn: 'LT1086CM#PBF', mfr: 'Analog Devices', qty: 800, dc: '2016', pack: 'Tube', price: 3.4, q: fullQ({ origin: 'Stock propre', pack: 'Tube' }), docs: { photos: true, coc: true, proof: true, datasheet: true, inspection: true } },
+        'LOT-107': { id: 'LOT-107', currency: 'CNY', sellerId: 'S4', mpn: 'XC2S50-5TQ144C', mfr: 'AMD Xilinx', qty: 500, dc: '', pack: 'Plateau', price: 300, q: {}, docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
+      },
+      // Canaux de notification des vendeurs : V-4 reçoit les demandes sur WeChat, en chinois.
+      channels: {
+        'CH-0001': { id: 'CH-0001', orgId: 'S4', type: 'wecom', target: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-fictif', lang: 'zh', events: ['demand.created', 'offer.accepted', 'transaction.updated'], status: 'active', label: '企业微信群 · 销售报价' },
+        'CH-0002': { id: 'CH-0002', orgId: 'S4', type: 'wechat_oa', target: 'o6_bmjrPTlm6_2sgVt7hMZOPfL2M (openid fictif)', lang: 'zh', events: ['demand.created', 'offer.accepted'], status: 'active', label: '王经理 · 微信服务号' },
       },
       boms: {
         'BOM-0012': { id: 'BOM-0012', buyerId: 'B1', name: 'carte-capteur-v2.csv', day: 0, lines: [
@@ -183,11 +191,11 @@ var CP = window.CP = {};
   };
 
   // ------------------------------------------------------------ persistance
-  var KEY = 'cp-app-state-v2';
+  var KEY = 'cp-app-state-v3';
   CP.load = function () {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.v === 2) return s; }
+      if (raw) { var s = JSON.parse(raw); if (s && s.v === 3) return s; }
     } catch (e) { /* stockage indisponible : on repart des données de démonstration */ }
     return CP.seed();
   };

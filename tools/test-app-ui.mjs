@@ -41,7 +41,7 @@ await step('acheteur : nomenclature', async () => {
 });
 let s = await state();
 const dXC = Object.values(s.demands).find((d) => d.mpn === 'XC2S50-5TQ144C' && d.id !== 'DEM-0427');
-ok(dXC && dXC.sellers.length === 2, 'demande XC2S50 diffusée à deux vendeurs');
+ok(dXC && dXC.sellers.length === 3, 'demande XC2S50 diffusée aux trois vendeurs qui ont la référence');
 
 await step('vendeurs : enchères', async () => {
   await as('seller1');
@@ -202,6 +202,16 @@ await step('vendeur : intégration API', async () => {
   await page.click('form[data-form="hook"] button');
 });
 ok(Object.values((await state()).lots).some((l) => l.sku === 'HB-000213' && l.source === 'api'), 'offre reçue par l\'API');
+
+await step('vendeur chinois : notifications WeChat', async () => {
+  await as('seller4'); await go('/vendeur/notifications');
+  ok((await page.textContent('#main')).includes('新询价'), 'demande reçue sur WeChat, en chinois');
+  await page.check('input[name="type"][value="wechat_oa"]');
+  await page.click('form[data-form="chan-add"] button');
+  await page.waitForSelector('svg.qr');
+  await page.click('text=Simuler le scan dans WeChat');
+});
+ok(Object.values((await state()).channels).filter((c) => c.orgId === 'S4' && c.status === 'active').length === 3, 'nouveau compte WeChat lié');
 
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));

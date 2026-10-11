@@ -12,6 +12,7 @@ var CP_GROUPS = [
   ['demands', 'Demandes et enchères (Opportunity)'],
   ['lots', 'Stock vendeur et questionnaire'],
   ['supplier', 'API fournisseur (intégration des brokers et distributeurs)'],
+  ['channels', 'Notifications : e-mail, WeCom, WeChat'],
   ['transactions', 'Transactions'],
   ['lab', 'Laboratoires'],
   ['payments', 'Compte dédié et ordres de paiement'],
@@ -70,6 +71,14 @@ var CP_ENDPOINTS = [
   { id: 'hook.create', group: 'supplier', method: 'POST', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnement aux événements : demande correspondant au stock, offre retenue, transaction' },
   { id: 'hook.list', group: 'supplier', method: 'GET', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnements et dernières livraisons d\'événements (signées HMAC)' },
 
+  // Canaux de notification : le vendeur reçoit les demandes là où il travaille (WeChat en Chine).
+  { id: 'chan.list', group: 'channels', method: 'GET', path: '/v1/organizations/{id}/notification-channels', roles: ['seller', 'ops'], summary: 'Canaux de notification de la société et derniers messages envoyés' },
+  { id: 'chan.create', group: 'channels', method: 'POST', path: '/v1/organizations/{id}/notification-channels', roles: ['seller'], summary: 'Ajout d\'un canal : e-mail, robot de groupe WeCom (企业微信) ou compte de service WeChat (服务号), langue et événements' },
+  { id: 'chan.delete', group: 'channels', method: 'DELETE', path: '/v1/organizations/{id}/notification-channels/{cid}', roles: ['seller'], summary: 'Suppression d\'un canal' },
+  { id: 'chan.test', group: 'channels', method: 'POST', path: '/v1/organizations/{id}/notification-channels/{cid}/test', roles: ['seller'], summary: 'Envoi d\'un message d\'essai sur le canal' },
+  { id: 'wechat.qr', group: 'channels', method: 'POST', path: '/v1/wechat/qrcodes', roles: ['seller'], summary: 'QR code temporaire du compte de service pour lier un utilisateur WeChat à un canal' },
+  { id: 'wechat.event', group: 'channels', method: 'POST', path: '/v1/webhooks/wechat', roles: ['system'], summary: 'Événement WeChat (abonnement ou scan du QR code) : rattache l\'openid au canal' },
+
   // Transactions
   { id: 'tx.list', group: 'transactions', method: 'GET', path: '/v1/transactions', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Transactions de la partie appelante' },
   { id: 'tx.get', group: 'transactions', method: 'GET', path: '/v1/transactions/{id}', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Fiche transaction, étape en cours, délais, documents, historique' },
@@ -117,6 +126,7 @@ var CP_ROUTES = [
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
   { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list'] },
+  { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
   { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },

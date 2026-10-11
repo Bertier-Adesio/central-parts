@@ -93,6 +93,33 @@ Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) 
 | `offer.accepted` | L'acheteur retient l'offre du fournisseur | `demand_id`, `transaction_id`, `lot_sku`, `quantity`, `net_unit_price`, `currency`, `date_code` |
 | `transaction.updated` | Chaque étape de la transaction (signature, dépôt, expédition, laboratoire, inspection, paiement) | `transaction_id`, `status`, `text` |
 
+## Notifications : e-mail, WeCom, WeChat
+
+Pour un fournisseur sans intégration, ou en plus des webhooks, les mêmes événements sont envoyés sur des canaux de messagerie, dans la langue choisie (中文, English, Français). Écran vendeur « Notifications » de la maquette.
+
+| Canal | Mise en place | Envoi par Central.Parts |
+|---|---|---|
+| Robot de groupe WeCom (企业微信) | Le vendeur ajoute un robot à son groupe (« 添加群机器人 ») et colle l'URL du webhook | `POST https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…`, message `markdown` |
+| Compte de service WeChat (服务号) | Le vendeur scanne un QR code temporaire du compte de service Central.Parts ; l'événement `subscribe` ou `SCAN` rattache son openid au canal | Message modèle : `POST https://api.weixin.qq.com/cgi-bin/message/template/send` (`touser`, `template_id`, `url`, `data`) |
+| E-mail | Adresse de l'équipe commerciale | SMTP |
+
+Endpoints : `GET` et `POST /v1/organizations/{id}/notification-channels`, `DELETE …/{cid}`, `POST …/{cid}/test`, `POST /v1/wechat/qrcodes`, et `POST /v1/webhooks/wechat` pour les événements reçus de WeChat.
+
+Exemple de message `demand.created` en chinois :
+
+```
+【Central.Parts 新询价】XC2S50-5TQ144C
+型号：XC2S50-5TQ144C
+数量：250
+最低批号 (D/C)：2010
+交货区域：中国 广东
+报价截止：10月14日
+买方信息已匿名，请在平台内报价。
+立即报价 › https://central.parts/app/#/vendeur/demandes/DEM-0431
+```
+
+Le message ne contient jamais l'identité ni l'adresse de l'acheteur. Le bouton ouvre la demande sur la plateforme, où le vendeur répond (prix, devise, date code).
+
 ## Erreurs
 
 | Code | Cas |
@@ -110,6 +137,10 @@ Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) 
 Toute offre de broker ou de surplus passe par les rails Opportunity : questionnaire d'état complet avant d'enchérir, date code au plus tard dans la réponse à la demande, paiement à l'acceptation des pièces. L'API alimente le stock ; elle ne dispense pas du questionnaire, qui se remplit une fois par lot (écran ou API à venir).
 
 ## À trancher
+
+5. WeChat : compte de service vérifié au nom de Central.Parts (vérification d'une société étrangère possible, payante) ou passage par un partenaire en Chine ; modèles de message à faire approuver par WeChat.
+6. Page de réponse en chinois, servie rapidement depuis la Chine (hébergement ou CDN avec licence ICP, ou mini-programme WeChat pour répondre sans quitter WeChat).
+7. Autres messageries : DingTalk (钉钉), Feishu (飞书) ; WhatsApp pour d'autres pays.
 
 1. Questionnaire d'état par API (même schéma que l'écran) ou modèle par défaut par fournisseur, appliqué à tous ses lots et modifiable lot par lot.
 2. Instantané complet par API (les SKU absents sont retirés) ou seulement par SFTP.
