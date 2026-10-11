@@ -5,7 +5,7 @@
 insert into public.currencies (code, name, eur_rate, account_label) values
   ('EUR', 'Euro', 1, 'FR76 ···· 0001 (fictif)'),
   ('USD', 'Dollar américain', 0.92, 'US ···· 0002 (fictif)'),
-  ('CNY', 'Yuan renminbi', 0.128, 'CN ···· 0003 (fictif)'),
+  ('CNH', 'Yuan offshore (CNH)', 0.128, 'HK ···· 0003 (fictif)'),
   ('HKD', 'Dollar de Hong Kong', 0.118, 'HK ···· 0004 (fictif)'),
   ('GBP', 'Livre sterling', 1.17, 'GB ···· 0005 (fictif)'),
   ('JPY', 'Yen', 0.0062, 'JP ···· 0006 (fictif)');
@@ -25,7 +25,7 @@ insert into public.organizations (id, type, name, alias, city, country, currency
   ('S1',  'seller', 'Surplus Rhénanie GmbH (fictif)', 'V-1', 'Cologne', 'DE', 'EUR', 'en', 'Surplus EMS', 'validated', false),
   ('S2',  'seller', 'Harbour Components Ltd (fictif)', 'V-2', 'Hong Kong', 'HK', 'USD', 'en', 'Broker', 'validated', false),
   ('S3',  'seller', 'Nord Électronique (fictif)', 'V-3', 'Lille', 'FR', 'EUR', 'fr', 'Surplus OEM', 'validated', false),
-  ('S4',  'seller', '深圳华强盈余电子 Huaqiang Surplus (fictif)', 'V-4', 'Shenzhen', 'CN', 'CNY', 'zh', 'Surplus EMS', 'validated', false),
+  ('S4',  'seller', '深圳华强盈余电子 Huaqiang Surplus (fictif)', 'V-4', 'Shenzhen', 'CN', 'CNH', 'zh', 'Surplus EMS', 'validated', false),
   ('L1',  'lab',    'Laboratoire partenaire Europe (fictif)', 'LAB-EU', 'Eindhoven', 'NL', null, 'en', null, 'validated', false),
   ('BK',  'bank',   'Établissement teneur du compte dédié (à désigner)', 'BANQUE', 'Paris', 'FR', null, 'fr', null, 'validated', false),
   ('CP',  'ops',    'Central.Parts', 'Central.Parts', 'Paris', 'FR', 'EUR', 'fr', null, 'validated', false);
@@ -77,7 +77,7 @@ insert into public.lots (id, seller_id, source, mpn, manufacturer, qty, date_cod
   ('LOT-106', 'S3', 'manual', 'LT1086CM#PBF', 'Analog Devices', 800, '2016', 'Tube', 3.4, 'EUR',
    '{"origin":"Stock propre","resold":"Non","returns":"Non","new":"Neuf","visual":"Bon","tested":"Non","functional":"Non testé","dcHomogeneous":"Oui","oem":"Oui","opened":"Oui","pack":"Tube","storage":"Oui","other":"Non"}',
    '{"photos":true,"coc":true,"proof":true,"datasheet":true,"inspection":true}'),
-  ('LOT-107', 'S4', 'file', 'XC2S50-5TQ144C', 'AMD Xilinx', 500, '', 'Plateau', 300, 'CNY', '{}',
+  ('LOT-107', 'S4', 'file', 'XC2S50-5TQ144C', 'AMD Xilinx', 500, '', 'Plateau', 300, 'CNH', '{}',
    '{"photos":true,"coc":false,"proof":false,"datasheet":true,"inspection":false}');
 
 insert into public.boms (id, buyer_id, name) values ('BOM-0012', 'B1', 'carte-capteur-v2.csv');
@@ -123,7 +123,7 @@ insert into public.transaction_history (tx_id, at, text) values
 
 insert into public.lab_cases (id, tx_id, lab_id, level, status, received_qty) values ('LAB-0020', 'TX-0041', 'L1', 1, 'received', 200);
 
-insert into public.escrow_movements (at, label, amount, currency, tx_id) values
+insert into public.funds_movements (at, label, amount, currency, tx_id) values
   (now() - interval '2 days', 'Virement reçu · Atelier Lumen (fictif) · réf. TX-0041', 942, 'EUR', 'TX-0041');
 
 -- Rattacher les comptes de test après les avoir créés dans Authentication > Users, par exemple :

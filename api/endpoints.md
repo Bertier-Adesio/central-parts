@@ -43,7 +43,7 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| POST | `/v1/inventory/orders` | Acheteur | Commande des lignes Inventory (paiement classique, hors escrow) | `/acheteur/nomenclatures/:id` |
+| POST | `/v1/inventory/orders` | Acheteur | Commande des lignes Inventory (paiement classique, hors compte dédié) | `/acheteur/nomenclatures/:id` |
 | GET | `/v1/inventory/orders` | Acheteur, Central.Parts | Commandes Inventory et leur suivi | `/acheteur` |
 
 ## Demandes et enchères (Opportunity)
@@ -131,7 +131,7 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| GET | `/v1/escrow` | Banque, Central.Parts | Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions | `/banque`, `/ops` |
+| GET | `/v1/funds` | Banque, Central.Parts | Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions | `/banque`, `/ops` |
 | GET | `/v1/payment-orders` | Banque, Central.Parts | Ordres de paiement et de remboursement | `/banque`, `/ops`, `/ops/paiements` |
 | POST | `/v1/payment-orders/{id}/approvals` | Central.Parts | Validation d'un ordre ; deux opérateurs distincts exigés | `/ops/paiements` |
 | POST | `/v1/payment-orders/{id}/transmit` | Central.Parts | Transmission de l'ordre validé à l'établissement financier | `/ops/paiements` |
@@ -173,8 +173,8 @@
 | `#/vendeur/transactions/:id` | Vendeur | Transaction (vue vendeur) | `tx.get`, `tx.sign`, `tx.ship`, `tx.counter`, `tx.dispute` |
 | `#/labo` | Laboratoire | Dossiers du laboratoire | `lab.cases`, `notif.list` |
 | `#/labo/dossiers/:id` | Laboratoire | Dossier de test | `lab.cases`, `lab.receive`, `lab.certify`, `lab.reship` |
-| `#/banque` | Banque | Console de l'établissement teneur du compte | `escrow.get`, `tx.list`, `order.list`, `bank.incoming`, `bank.execute`, `bank.executed` |
-| `#/ops` | Central.Parts | Console Central.Parts | `org.list`, `dem.list`, `tx.list`, `order.list`, `escrow.get`, `events.list` |
+| `#/banque` | Banque | Console de l'établissement teneur du compte | `funds.get`, `tx.list`, `order.list`, `bank.incoming`, `bank.execute`, `bank.executed` |
+| `#/ops` | Central.Parts | Console Central.Parts | `org.list`, `dem.list`, `tx.list`, `order.list`, `funds.get`, `events.list` |
 | `#/ops/kyb` | Central.Parts | KYB et statut vérifié | `org.list`, `org.decide`, `sub.renew` |
 | `#/ops/demandes` | Central.Parts | Demandes et enchères | `dem.list`, `dem.close`, `offer.list` |
 | `#/ops/transactions/:id` | Central.Parts | Transaction (vue opérateur) | `tx.get`, `tx.delivered`, `dispute.decide` |

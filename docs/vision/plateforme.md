@@ -1,6 +1,6 @@
 # La plateforme Central.Parts
 
-*Version 0.1 · 10 octobre 2026 · Document de travail.*
+*Version 0.2 · 11 octobre 2026 · Document de travail.*
 
 ## Principe
 
@@ -14,8 +14,8 @@ Une seule plateforme porte **deux offres complémentaires**. L'acheteur exprime 
 | Sources | Fabricants (Chine, Asie-Pacifique), distributeurs | Brokers, détenteurs de surplus (OEM, EMS, excédents de programmes des distributeurs) |
 | Pièces | Courantes : stock, paliers de prix, délais | Rares, obsolètes, en fin de vie, surplus au lot |
 | Formation du prix | Catalogue ou cotation | Enchère inversée anonyme sur la demande |
-| Preuve de conformité | Traçabilité et certificat de conformité du fabricant ou du distributeur | Questionnaire d'état engageant le vendeur, documents, test en laboratoire partenaire |
-| Paiement | Classique, éventuellement à terme | Escrow : l'acheteur ne paie le vendeur qu'après réception, test éventuel et acceptation |
+| Preuve de conformité | Traçabilité et certificat de conformité du fabricant ou du distributeur | Questionnaire d'état engageant le vendeur, documents, notes des acheteurs, test en laboratoire partenaire sur demande |
+| Paiement | Classique, éventuellement à terme | Payé seulement à l'acceptation : les fonds de l'acheteur restent sur un compte dédié jusqu'à l'acceptation du rapport de laboratoire ou de la livraison |
 
 Exemple : une nomenclature de 200 lignes arrive. Inventory couvre les références courantes ; les lignes introuvables dans le canal agréé partent en demande Opportunity. L'acheteur garde un seul dossier, un seul tableau de bord, un seul interlocuteur.
 
@@ -24,7 +24,7 @@ Exemple : une nomenclature de 200 lignes arrive. Inventory couvre les référenc
 Le niveau de protection d'une transaction dépend de **l'origine du stock**, quelle que soit la page où la pièce apparaît :
 
 - **Fabricant ou distributeur agréé** : rails Inventory, paiement classique, certificat de conformité d'origine.
-- **Broker ou détenteur de surplus** : rails Opportunity, **questionnaire d'état et escrow obligatoires**, même si la référence n'est pas obsolète.
+- **Broker ou détenteur de surplus** : rails Opportunity, **questionnaire d'état et paiement à l'acceptation obligatoires**, même si la référence n'est pas obsolète.
 
 L'origine du stock est affichée sur chaque offre. Une offre broker n'est jamais présentée comme une offre agréée.
 
@@ -33,7 +33,7 @@ L'origine du stock est affichée sur chaque offre. Une offre broker n'est jamais
 - **Demande acheteur** : référence seule, liste ou nomenclature complète ; quantité, date code minimum, conditionnement, adresse de livraison (éventuellement distincte de la facturation : intégrateur, sous-traitant, filiale).
 - **Adesio**, moteur de la plateforme : lecture des demandes et des stocks, matching des références, conseil de prix au vendeur.
 - **KYB** des acheteurs et des vendeurs avant toute transaction ; remboursements uniquement vers l'IBAN autorisé.
-- **Anonymat** entre acheteur et vendeur ; Central.Parts présente une offre consolidée.
+- **Anonymat** entre acheteur et vendeur jusqu'à l'expédition ; Central.Parts présente une offre détaillée dans la devise de l'acheteur.
 - **Fiche transaction** signée électroniquement à chaque commande, puis **tableau de bord** : étape en cours, minuteur, documents, historique, relances automatiques.
 - **Conformité** : contrôle des sanctions et des biens à double usage, RGPD.
 - **Points de contact** (API first) : site central.parts, API, ERP des clients, plateformes de cotation et d'achat (Adesio, Luminovo, CalcuQuote), sites des distributeurs partenaires.
@@ -51,7 +51,7 @@ Les données de prix et de stock d'agrégateurs comme Nexar, Octopart, TrustedPa
 
 ## Points ouverts
 
-La qualification juridique de Central.Parts dans l'offre Opportunity, l'entité qui porte l'activité, l'établissement financier et la préservation de l'anonymat à la livraison restent à arbitrer, avec un avocat et l'expert-comptable. Ces travaux ne sont pas versionnés dans ce dépôt public.
+Le montage juridique de l'offre Opportunity, l'entité qui porte l'activité et l'établissement financier sont en cours de validation avec un avocat et l'expert-comptable. Tant que ce montage n'est pas validé, le site public parle de paiement « seulement à l'acceptation » et n'emploie pas le mot « escrow ». Ces travaux ne sont pas versionnés dans ce dépôt public.
 
 ## Correspondance avec le dépôt
 

@@ -7,7 +7,7 @@ Instructions pour Claude Code dans ce dépôt.
 Central.Parts est un Supply Network Operator (SNO) de composants électroniques : distributeur sans stock, ni entrepôt, ni camion, qui relie fournisseurs et acheteurs (EMS, OEM, bureaux d'études européens). Une seule plateforme, deux offres :
 
 - **Inventory** : réseau de fabricants (Chine, Asie-Pacifique) et de distributeurs, offre courante agrégée et exposée par API.
-- **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires et escrow (l'acheteur paie à l'acceptation).
+- **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires sur demande et paiement à l'acceptation (fonds de l'acheteur sur un compte dédié jusqu'à l'acceptation). Le mot « escrow » n'apparaît pas sur le site public tant que le montage juridique n'est pas validé.
 
 Règle : la protection dépend de la source. Toute offre de broker ou de surplus passe par les rails Opportunity. Contexte complet : `docs/vision/plateforme.md`.
 

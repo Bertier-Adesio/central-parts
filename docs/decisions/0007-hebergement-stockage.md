@@ -21,7 +21,7 @@ La maquette (`site/app/`, ADR 0003) garde tout en mémoire dans le navigateur. P
 - **Aucun secret en base** : clés d'API fournisseur en empreinte seulement ; secrets des connecteurs, des webhooks et URL des robots WeCom dans un coffre (Supabase Vault ou celui du PaaS), référencés par une colonne `*_ref`.
 - **Pièces jointes** (photos, CoC, certificats de laboratoire) dans le stockage objet Supabase, compartiments privés, liens signés à durée courte.
 - **KYB chez un prestataire KYC** : la base ne garde que la référence du dossier et la décision, pas les pièces d'identité.
-- **Les fonds restent à la banque.** Les tables `payment_orders` et `escrow_movements` sont le registre de Central.Parts, rapproché des relevés ; journaux en ajout seul.
+- **Les fonds restent à la banque.** Les tables `payment_orders` et `funds_movements` (anciennement `escrow_movements`, ADR 0008) sont le registre de Central.Parts, rapproché des relevés ; journaux en ajout seul.
 - **Sauvegardes** : celles de Supabase, plus un export quotidien chiffré chez un second hébergeur européen (OVH Object Storage), pour pouvoir restaurer ailleurs.
 - **Le site public reste sur OVH**, inchangé (ADR 0002).
 - Schéma initial : `supabase/migrations/20261011000001_schema.sql`, données fictives `supabase/seed.sql`, contrôles `tools/test-db.sh` (60 contrôles de RLS et d'intégrité sur un PostgreSQL local).

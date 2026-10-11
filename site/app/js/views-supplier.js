@@ -7,7 +7,7 @@
   var SAMPLE = {
     offers: [
       { sku: 'HB-000187', mpn: 'XC2S100-5TQ144C', manufacturer: 'AMD Xilinx', quantity: 600, unit_price: 58.0, currency: 'USD', price_breaks: [{ quantity: 10, price: 56.5 }, { quantity: 100, price: 54.0 }, { quantity: 1000, price: 51.0 }], date_code: '2010', packaging: 'Plateau', country_of_origin: 'TW', lead_time_days: 3, product_url: 'https://exemple.invalid/p/HB-000187' },
-      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 168.0, currency: 'CNY', price_breaks: [{ quantity: 100, price: 155.0 }], packaging: 'Tube' },
+      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 168.0, currency: 'CNH', price_breaks: [{ quantity: 100, price: 155.0 }], packaging: 'Tube' },
       { sku: 'HB-000999', mpn: '', manufacturer: 'Texas Instruments', quantity: 10 },
     ],
     idempotency_key: 'lot-2026-10-12-0001',
@@ -42,7 +42,7 @@
         '<fieldset class="checks">' + [['demand.created', 'demand.created : nouvelle demande correspondant à votre stock'], ['offer.accepted', 'offer.accepted : votre offre est retenue'], ['transaction.updated', 'transaction.updated : chaque étape d\'une transaction']].map(function (e) { return '<label><input type="checkbox" name="ev_' + e[0] + '" checked> <span class="mono small">' + esc(e[1]) + '</span></label>'; }).join('') + '</fieldset><button class="btn">S\'abonner</button>' +
         ui.table(['Abonnement', 'URL', 'Événements'], hooks.webhooks.map(function (h) { return [esc(h.id), '<span class="mono small">' + esc(h.url) + '</span>', esc(h.events.join(', '))]; }), 'Aucun abonnement.') + '</form>' +
       ui.card('Dernières livraisons', hooks.deliveries.length ? '<ol class="hist">' + hooks.deliveries.map(function (d) { return '<li><span class="mono">' + esc(CP.fmtDay(d.day)) + '</span> <b class="mono small">' + esc(d.type) + '</b> → ' + d.status + '<pre class="code">' + esc(JSON.stringify(d.payload, null, 1)) + '</pre></li>'; }).join('') + '</ol>' : '<p class="empty">Aucun événement livré. Abonnez-vous, puis lancez une demande côté acheteur sur une référence de votre stock.</p>') + '</div>' +
-      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées, celles des comptes de Central.Parts : EUR, USD, CNY (RMB), HKD, GBP, JPY.</p>');
+      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées, celles des comptes de Central.Parts : EUR, USD, CNH (yuan offshore ; CNY et RMB acceptés), HKD, GBP, JPY.</p>');
   };
 
   // Connecteur : Central.Parts interroge l'API produit du broker (canal prioritaire).

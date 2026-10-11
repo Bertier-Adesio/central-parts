@@ -40,7 +40,7 @@ var CP_ENDPOINTS = [
   { id: 'bom.get', group: 'boms', method: 'GET', path: '/v1/boms/{id}', roles: ['buyer', 'ops'], summary: 'Détail d\'une nomenclature et répartition des lignes' },
 
   // Inventory
-  { id: 'inv.order', group: 'inventory', method: 'POST', path: '/v1/inventory/orders', roles: ['buyer'], summary: 'Commande des lignes Inventory (paiement classique, hors escrow)' },
+  { id: 'inv.order', group: 'inventory', method: 'POST', path: '/v1/inventory/orders', roles: ['buyer'], summary: 'Commande des lignes Inventory (paiement classique, hors compte dédié)' },
   { id: 'inv.orders', group: 'inventory', method: 'GET', path: '/v1/inventory/orders', roles: ['buyer', 'ops'], summary: 'Commandes Inventory et leur suivi' },
 
   // Demandes et enchères
@@ -107,7 +107,7 @@ var CP_ENDPOINTS = [
   { id: 'lab.reship', group: 'lab', method: 'POST', path: '/v1/lab/cases/{id}/reshipment', roles: ['lab'], summary: 'Réexpédition à l\'adresse de livraison désignée par l\'acheteur' },
 
   // Compte dédié et ordres
-  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
+  { id: 'funds.get', group: 'payments', method: 'GET', path: '/v1/funds', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
   { id: 'order.list', group: 'payments', method: 'GET', path: '/v1/payment-orders', roles: ['bank', 'ops'], summary: 'Ordres de paiement et de remboursement' },
   { id: 'order.approve', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/approvals', roles: ['ops'], summary: 'Validation d\'un ordre ; deux opérateurs distincts exigés' },
   { id: 'order.transmit', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/transmit', roles: ['ops'], summary: 'Transmission de l\'ordre validé à l\'établissement financier' },
@@ -141,8 +141,8 @@ var CP_ROUTES = [
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },
   { path: '/labo', role: 'lab', title: 'Dossiers du laboratoire', endpoints: ['lab.cases', 'notif.list'] },
   { path: '/labo/dossiers/:id', role: 'lab', title: 'Dossier de test', endpoints: ['lab.cases', 'lab.receive', 'lab.certify', 'lab.reship'] },
-  { path: '/banque', role: 'bank', title: 'Console de l\'établissement teneur du compte', endpoints: ['escrow.get', 'tx.list', 'order.list', 'bank.incoming', 'bank.execute', 'bank.executed'] },
-  { path: '/ops', role: 'ops', title: 'Console Central.Parts', endpoints: ['org.list', 'dem.list', 'tx.list', 'order.list', 'escrow.get', 'events.list'] },
+  { path: '/banque', role: 'bank', title: 'Console de l\'établissement teneur du compte', endpoints: ['funds.get', 'tx.list', 'order.list', 'bank.incoming', 'bank.execute', 'bank.executed'] },
+  { path: '/ops', role: 'ops', title: 'Console Central.Parts', endpoints: ['org.list', 'dem.list', 'tx.list', 'order.list', 'funds.get', 'events.list'] },
   { path: '/ops/kyb', role: 'ops', title: 'KYB et statut vérifié', endpoints: ['org.list', 'org.decide', 'sub.renew'] },
   { path: '/ops/demandes', role: 'ops', title: 'Demandes et enchères', endpoints: ['dem.list', 'dem.close', 'offer.list'] },
   { path: '/ops/transactions/:id', role: 'ops', title: 'Transaction (vue opérateur)', endpoints: ['tx.get', 'tx.delivered', 'dispute.decide'] },

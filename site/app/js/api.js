@@ -771,7 +771,7 @@
     if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
     if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
     var cur = CP.currency(o.currency, S().orgs[org].currency || 'USD');
-    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY)' };
+    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNH, HKD, GBP, JPY ; CNY et RMB acceptés comme CNH)' };
     var tiers = {};
     var breaks = o.price_breaks || [];
     if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
@@ -1058,7 +1058,7 @@
   };
 
   // Compte dédié et ordres
-  H['escrow.get'] = function () {
+  H['funds.get'] = function () {
     var ledger = {}, e = S().escrow, eurTotal = 0;
     var accounts = Object.keys(P.accounts).map(function (c) { return { currency: c, account: P.accounts[c], balance: round(e.balances[c] || 0) }; });
     e.movements.forEach(function (m) {

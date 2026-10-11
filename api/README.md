@@ -5,7 +5,7 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 ## Périmètre annoncé sur le site
 
 - Recherche par référence fabricant et par nomenclature (BOM).
-- Offres : stock, paliers de prix, délais, devise (EUR, USD, CNY).
+- Offres : stock, paliers de prix, délais, devise (EUR, USD, CNH, HKD, GBP, JPY).
 - Demandes de cotation avec référence de suivi.
 - Commandes et suivi jusqu'à la livraison.
 

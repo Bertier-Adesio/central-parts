@@ -4,7 +4,7 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 
 ```
 supabase/
-├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées)
+├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
 ├── seed.sql      données fictives de la maquette, pour le projet dev uniquement
 └── checks/       contrôles sur un PostgreSQL local (simulation minimale de Supabase, RLS, intégrité)
 ```
@@ -15,7 +15,7 @@ supabase/
 - **Inventory** : offre agrégée, nomenclatures, commandes.
 - **Opportunity** : lots (questionnaire et pièces en JSON, paliers de prix), connecteurs aux API produit des brokers et leur journal d'appels, canaux de notification, webhooks, clés d'API (empreinte seule), demandes, vendeurs consultés, enchères, offres.
 - **Transactions** : lot figé à l'acceptation, statuts de la maquette, historique, dossiers de laboratoire, litiges.
-- **Argent** : ordres de paiement et leurs lignes, double validation par deux opérateurs distincts, registre du compte dédié par devise (EUR, USD, CNY, HKD, GBP, JPY).
+- **Argent** : ordres de paiement et leurs lignes, double validation par deux opérateurs distincts, registre du compte dédié par devise (EUR, USD, CNH, HKD, GBP, JPY).
 
 Règles appliquées par la base :
 
@@ -30,7 +30,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller le contenu de `migrations/20261011000001_schema.sql`, exécuter ; puis faire de même avec `seed.sql`. Les deux ne s'exécutent qu'une fois, sur un projet vide.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, puis `20261011000002_cnh_compte_dedie.sql`) ; puis faire de même avec `seed.sql`. Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes. Chaque migration ne s'exécute qu'une fois ; `seed.sql` seulement sur un projet vide.
 
 **Par la CLI Supabase** :
 

@@ -57,7 +57,7 @@ do $$ begin
   perform tests.eq('acheteur : total visible', (select total from public.v_my_transactions), 942.00::numeric);
   perform tests.eq('acheteur : lot sans prix vendeur', (select lot ? 'unit_price' from public.v_my_transactions), false);
   perform tests.eq('acheteur : historique', (select count(*) from public.transaction_history), 4::bigint);
-  perform tests.eq('acheteur : pas de compte dédié', (select count(*) from public.escrow_movements), 0::bigint);
+  perform tests.eq('acheteur : pas de compte dédié', (select count(*) from public.funds_movements), 0::bigint);
   perform tests.eq('acheteur : pas de demande vendeur', (select count(*) from public.v_seller_demands), 0::bigint);
   perform tests.eq('acheteur : pas de journal', (select count(*) from public.events), 0::bigint);
   begin insert into public.demands (buyer_id, mpn, qty, currency, closes_at) values ('B1', 'X', 1, 'EUR', now());
@@ -107,8 +107,8 @@ reset role;
 
 set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000d1';
 do $$ begin
-  perform tests.eq('banque : mouvements', (select count(*) from public.escrow_movements), 1::bigint);
-  perform tests.eq('banque : solde EUR', (select balance from public.escrow_balances where currency = 'EUR'), 942.00::numeric);
+  perform tests.eq('banque : mouvements', (select count(*) from public.funds_movements), 1::bigint);
+  perform tests.eq('banque : solde EUR', (select balance from public.funds_balances where currency = 'EUR'), 942.00::numeric);
   perform tests.eq('banque : pas de demandes', (select count(*) from public.demands), 0::bigint);
 end $$;
 reset role;
@@ -135,7 +135,7 @@ end $$;
 -- ---------------------------------------------------------------- intégrité (rôle de l'API métier)
 set role service_role;
 do $$ begin
-  begin update public.escrow_movements set amount = 0; raise exception 'ÉCHEC mouvement modifié';
+  begin update public.funds_movements set amount = 0; raise exception 'ÉCHEC mouvement modifié';
   exception when raise_exception then
     if sqlerrm like 'ÉCHEC%' then raise; end if; raise notice 'ok  compte dédié en ajout seul'; end;
   begin delete from public.transaction_history; raise exception 'ÉCHEC historique supprimé';

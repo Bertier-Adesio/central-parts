@@ -58,7 +58,7 @@
 
   // ============================================================ banque
   CP.views['/banque'] = function () {
-    var esc_ = CP.get('/v1/escrow') || { balance: 0, balances: {}, ledger: {}, movements: [] };
+    var esc_ = CP.get('/v1/funds') || { balance: 0, balances: {}, ledger: {}, movements: [] };
     var tx = CP.get('/v1/transactions') || [], orders = CP.get('/v1/payment-orders') || [], notifs = CP.get('/v1/notifications') || [];
     var expected = tx.filter(function (t) { return t.status === 'awaiting_funds'; });
     var toExec = orders.filter(function (o) { return o.status === 'transmitted'; });
@@ -73,7 +73,7 @@
           o.status === 'transmitted' ? ui.btn('Exécuter', 'bank-exec', { order: o.id }, 'small') : ui.pill('Exécuté', 'ok')];
       }), 'Aucun ordre transmis.') + '<p class="muted small">La banque contrôle que chaque bénéficiaire est une société dont le KYB est validé et dont l\'IBAN est celui déclaré, puis notifie l\'exécution par webhook.</p>') +
       ui.card('Comptes de Central.Parts par devise', '<p class="muted small">Un compte dans chaque devise principale. L\'acheteur vire sur le compte de sa devise ; quand le vendeur est payé dans une autre devise, Central.Parts convertit d\'un compte à l\'autre avant le virement.</p>' +
-        ui.table(['Devise', 'Compte', '>Solde'], (esc_.accounts || []).map(function (a) { return [esc(a.currency === 'CNY' ? 'CNY (RMB)' : a.currency), '<span class="mono small iban">' + esc(a.account) + '</span>', CP.money(a.balance, a.currency)]; }))) +
+        ui.table(['Devise', 'Compte', '>Solde'], (esc_.accounts || []).map(function (a) { return [esc(a.currency), '<span class="mono small iban">' + esc(a.account) + '</span>', CP.money(a.balance, a.currency)]; }))) +
       '<div class="grid2">' + ui.card('Cantonnement par transaction', ui.table(['Transaction', '>Montant cantonné'], held.map(function (k) { return [esc(k), CP.money(esc_.ledger[k].amount, esc_.ledger[k].currency)]; }), 'Aucun fonds cantonné.')) + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Mouvements', ui.table(['Date', 'Libellé', '>Montant'], esc_.movements.map(function (m) { return [esc(CP.fmtDay(m.day)), esc(m.label) + (m.fx ? ' ' + ui.pill('Change', 'inv') : ''), '<span class="' + (m.amount < 0 ? 'neg' : 'pos') + '">' + CP.money(m.amount, m.currency) + '</span>']; }), 'Aucun mouvement.')));
   };
@@ -84,7 +84,7 @@
 
   // ============================================================ Central.Parts
   CP.views['/ops'] = function () {
-    var esc_ = CP.get('/v1/escrow') || { balance: 0 };
+    var esc_ = CP.get('/v1/funds') || { balance: 0 };
     var orgs = CP.get('/v1/organizations?kyb=pending') || [], dem = CP.get('/v1/demands') || [], tx = CP.get('/v1/transactions') || [], orders = CP.get('/v1/payment-orders') || [], events = CP.get('/v1/events') || [], notifs = CP.get('/v1/notifications') || [];
     var disputes = tx.filter(function (t) { return t.status === 'dispute'; });
     var pendingOrders = orders.filter(function (o) { return o.status === 'pending' || o.status === 'approved'; });
