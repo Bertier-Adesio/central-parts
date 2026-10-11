@@ -28,8 +28,10 @@ Colonnes annoncées par un broker partenaire (octobre 2026), en CSV ou XLS :
 | Price per 10 pcs | `tiers[10]` | Non | Palier |
 | Price per 100 pcs | `tiers[100]` | Non | Palier |
 | Price per 1,000 pcs | `tiers[1000]` | Non | Palier ; en CSV, l'en-tête contient une virgule et doit être entre guillemets |
+| Currency | `currency` | Recommandé | `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY`, `TWD`, `SGD` ; devise inconnue : ligne rejetée |
+| Date Code | `dc` | Non | Facultatif ; demandé au broker quand il répond à une demande |
 
-Les prix acceptent `1,250.00` comme `1250,00`. Devise par défaut : USD, à confirmer avec le fournisseur.
+Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise par défaut de la société s'applique.
 
 ## Formats Octopart et ECIA
 
@@ -40,13 +42,13 @@ Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufactu
 - Mise à jour : même SKU chez le même vendeur, ou à défaut même MPN et même date code.
 - Doublon possible : même MPN, même date code et même quantité chez un autre vendeur ; le lot est signalé, pas fusionné.
 - Lignes rejetées : MPN absent, quantité invalide ; le rapport donne le numéro de ligne et le motif.
-- Date code : absent du format broker. Il reste exigé avant toute enchère Opportunity (`PATCH /v1/lots/{id}`), avec le questionnaire d'état complet.
+- Date code : facultatif dans le stock. Le broker le donne quand il est consulté, dans sa réponse à la demande ; il est alors reporté sur le lot.
 - Rappel de la règle de la plateforme : toute offre de broker passe par les rails Opportunity (questionnaire, escrow).
 
 ## À confirmer avec le broker
 
 1. Liste complète des colonnes (la liste reçue s'arrête au palier 1 000 pcs) et un extrait de fichier.
-2. Date code, conditionnement, pays d'origine et délai : disponibles dans un autre champ ou un autre fichier ?
-3. Devise des prix et fréquence de mise à jour.
+2. Conditionnement, pays d'origine et délai : disponibles dans un autre champ ou un autre fichier ?
+3. Colonne de devise (sinon : devise unique de tout le fichier) et fréquence de mise à jour.
 4. Le SKU est-il stable dans le temps (clé de mise à jour) ?
 5. Fichier complet ou différentiel par SFTP ; nom de fichier et horaire de dépôt.

@@ -165,8 +165,9 @@ scenario('format broker, SFTP, date code', (CP) => {
   const id = job.created[1];
   call(CP, 'seller2', 'PUT', `/v1/lots/${id}/questionnaire`, { answers: Object.fromEntries(CP.QUESTIONS.map((q) => [q.k, q.a[0]])) });
   call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 }, [422]);
-  call(CP, 'seller2', 'PATCH', '/v1/lots/' + id, { dc: '2013' });
-  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 });
+  // Le date code est donné à la consultation, puis reporté sur le lot.
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18, dateCode: '2013' });
+  ok(call(CP, 'seller2', 'GET', '/v1/lots/' + id).dc === '2013', 'date code reporté sur le lot');
 });
 
 scenario('API fournisseur : clés, offres en masse, retrait, webhooks', (CP) => {
@@ -193,6 +194,40 @@ scenario('API fournisseur : clés, offres en masse, retrait, webhooks', (CP) => 
   const d2 = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'LM317T', qty: 10, delivery: 'Lyon (France)' });
   call(CP, 'seller2', 'GET', '/v1/demands/' + d2.id, null, [404]);
   call(CP, 'seller2', 'DELETE', '/v1/supplier/offers/INCONNU', null, [404]);
+});
+
+scenario('devises : offres en USD, CNY (RMB) et EUR', (CP) => {
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'C1', mpn: 'X1', quantity: 5, currency: 'BTC' }] });
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=C1').length === 0, 'devise inconnue refusée');
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'C2', mpn: 'NE5532P', quantity: 500, unit_price: 2.6, currency: 'rmb' }] });
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=C2')[0].currency === 'CNY', 'RMB normalisé en CNY');
+  call(CP, 'seller3', 'POST', '/v1/stocklists', { csv: 'MPN,Quantity,Unit Price,Currency\nNE5532P,800,0.40,EUR' });
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'NE5532P', qty: 300, delivery: 'Lyon (France)' });
+  const q = Object.fromEntries(CP.QUESTIONS.map((x) => [x.k, x.a[0]]));
+  const lot2 = call(CP, 'seller2', 'GET', '/v1/lots').find((l) => l.sku === 'C2');
+  const lot3 = call(CP, 'seller3', 'GET', '/v1/lots').find((l) => l.mpn === 'NE5532P');
+  call(CP, 'seller2', 'PUT', `/v1/lots/${lot2.id}/questionnaire`, { answers: q });
+  call(CP, 'seller3', 'PUT', `/v1/lots/${lot3.id}/questionnaire`, { answers: q });
+  const adv = call(CP, 'seller2', 'GET', '/v1/pricing/advice?mpn=NE5532P&currency=CNY');
+  ok(adv.currency === 'CNY' && adv.high > adv.low, 'conseil de prix dans la devise du vendeur');
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot2.id, net: 2.9, currency: 'XYZ', dateCode: '2021' }, [422]);
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot2.id, net: 2.9, currency: 'RMB', dateCode: '2021' }); // 0,37 € environ
+  const mine = call(CP, 'seller3', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot3.id, net: 0.39, currency: 'EUR', dateCode: '2019' });
+  ok(mine.rank === 2, 'rang calculé sur l\'équivalent en euros');
+  call(CP, 'ops1', 'POST', `/v1/demands/${d.id}/close`, {});
+  const offers = call(CP, 'buyer', 'GET', `/v1/demands/${d.id}/offers`);
+  ok(offers[0].seller === 'V-2' && offers[0].dc === '2021' && offers[0].currency === undefined, 'offre consolidée en euros, sans la devise du vendeur');
+  const tx = call(CP, 'buyer', 'POST', `/v1/offers/${offers[0].id}/accept`, { labLevel: 0 });
+  ok(call(CP, 'seller2', 'GET', '/v1/transactions/' + tx.id).netCurrency === 'CNY', 'le vendeur garde sa devise');
+  call(CP, 'buyer', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'seller2', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total });
+  call(CP, 'seller2', 'POST', `/v1/transactions/${tx.id}/shipments`, { tracking: 'Z' });
+  CP.system('POST', '/v1/webhooks/carrier', { txId: tx.id });
+  call(CP, 'buyer', 'POST', `/v1/transactions/${tx.id}/inspection`, { decision: 'accept' });
+  const o = call(CP, 'ops1', 'GET', '/v1/payment-orders').find((x) => x.txId === tx.id);
+  const pay = o.lines.find((l) => l.to === 'S2');
+  ok(pay.currency === 'CNY' && Math.abs(pay.amountCurrency - 2.9 * 300 * 0.97) < 0.01 && Math.abs(o.amount - tx.total) < 0.01, 'paiement en CNY, ordre soldé en euros');
 });
 
 console.log(`${checks - failures}/${checks} vérifications réussies`);

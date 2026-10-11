@@ -27,7 +27,7 @@
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
 | GET | `/v1/search` | Public, Acheteur, Vendeur, Laboratoire, Central.Parts | Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes) | `/recherche` |
-| GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité | `/vendeur/demandes/:id` |
+| GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur | `/vendeur/demandes/:id` |
 
 ## Nomenclatures
 
@@ -52,7 +52,7 @@
 | GET | `/v1/demands` | Acheteur, Vendeur, Central.Parts | Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops) | `/acheteur`, `/vendeur`, `/ops`, `/ops/demandes` |
 | GET | `/v1/demands/{id}` | Acheteur, Vendeur, Central.Parts | Détail d'une demande ; le vendeur ne voit ni l'acheteur ni l'adresse | `/acheteur/demandes/:id`, `/vendeur/demandes/:id` |
 | POST | `/v1/demands/{id}/close` | Central.Parts, Système | Clôture de l'enchère et calcul des offres consolidées (net + marge + frais) | `/ops/demandes` |
-| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée du vendeur : lot, prix net, délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
+| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s'il manque au stock), délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/bids/mine` | Vendeur | Offre du vendeur et son rang, sans les offres concurrentes | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/offers` | Acheteur, Central.Parts | Offres consolidées, prix tout compris, questionnaire et documents | `/acheteur/demandes/:id`, `/ops/demandes` |
 | POST | `/v1/offers/{id}/accept` | Acheteur | Choix d'une offre, du niveau de test et des délais : crée la fiche transaction | `/acheteur/demandes/:id` |

@@ -29,7 +29,7 @@ var CP_ENDPOINTS = [
 
   // Recherche
   { id: 'search', group: 'catalog', method: 'GET', path: '/v1/search', roles: ['public', 'buyer', 'seller', 'lab', 'ops'], summary: 'Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes)' },
-  { id: 'advice', group: 'catalog', method: 'GET', path: '/v1/pricing/advice', roles: ['seller', 'ops'], summary: 'Fourchette de prix conseillée par Adesio pour une référence et une quantité' },
+  { id: 'advice', group: 'catalog', method: 'GET', path: '/v1/pricing/advice', roles: ['seller', 'ops'], summary: 'Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur' },
 
   // Nomenclatures
   { id: 'bom.create', group: 'boms', method: 'POST', path: '/v1/boms', roles: ['buyer'], summary: 'Dépôt d\'une nomenclature : chaque ligne est affectée à Inventory ou à Opportunity' },
@@ -45,7 +45,7 @@ var CP_ENDPOINTS = [
   { id: 'dem.list', group: 'demands', method: 'GET', path: '/v1/demands', roles: ['buyer', 'seller', 'ops'], summary: 'Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops)' },
   { id: 'dem.get', group: 'demands', method: 'GET', path: '/v1/demands/{id}', roles: ['buyer', 'seller', 'ops'], summary: 'Détail d\'une demande ; le vendeur ne voit ni l\'acheteur ni l\'adresse' },
   { id: 'dem.close', group: 'demands', method: 'POST', path: '/v1/demands/{id}/close', roles: ['ops', 'system'], summary: 'Clôture de l\'enchère et calcul des offres consolidées (net + marge + frais)' },
-  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée du vendeur : lot, prix net, délai. Questionnaire du lot complet exigé' },
+  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s\'il manque au stock), délai. Questionnaire du lot complet exigé' },
   { id: 'bid.mine', group: 'demands', method: 'GET', path: '/v1/demands/{id}/bids/mine', roles: ['seller'], summary: 'Offre du vendeur et son rang, sans les offres concurrentes' },
   { id: 'offer.list', group: 'demands', method: 'GET', path: '/v1/demands/{id}/offers', roles: ['buyer', 'ops'], summary: 'Offres consolidées, prix tout compris, questionnaire et documents' },
   { id: 'offer.accept', group: 'demands', method: 'POST', path: '/v1/offers/{id}/accept', roles: ['buyer'], summary: 'Choix d\'une offre, du niveau de test et des délais : crée la fiche transaction' },

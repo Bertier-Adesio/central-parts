@@ -179,7 +179,7 @@ await step('vendeur : import au format broker, dépôt SFTP, date code', async (
   await as('seller2'); await go('/vendeur/stock');
   await page.click('form[data-form="import"] button');
   await page.waitForSelector('text=Rapport d\'import');
-  ok((await page.textContent('#main')).includes('ne transmet pas le date code'), 'alerte date code manquant');
+  ok((await page.textContent('#main')).includes('facultatif dans le stock'), 'date code annoncé à la consultation');
   await page.click('text=Simuler un dépôt SFTP');
   await page.waitForSelector('.card h2:has-text("SFTP") >> nth=0');
 });

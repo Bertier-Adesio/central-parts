@@ -7,7 +7,7 @@
   var SAMPLE = {
     offers: [
       { sku: 'HB-000187', mpn: 'XC2S100-5TQ144C', manufacturer: 'AMD Xilinx', quantity: 600, unit_price: 58.0, currency: 'USD', price_breaks: [{ quantity: 10, price: 56.5 }, { quantity: 100, price: 54.0 }, { quantity: 1000, price: 51.0 }], date_code: '2010', packaging: 'Plateau', country_of_origin: 'TW', lead_time_days: 3, product_url: 'https://exemple.invalid/p/HB-000187' },
-      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 24.0, currency: 'USD', price_breaks: [{ quantity: 100, price: 22.1 }], date_code: '2013', packaging: 'Tube' },
+      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 168.0, currency: 'CNY', price_breaks: [{ quantity: 100, price: 155.0 }], packaging: 'Tube' },
       { sku: 'HB-000999', mpn: '', manufacturer: 'Texas Instruments', quantity: 10 },
     ],
     idempotency_key: 'lot-2026-10-12-0001',
@@ -32,7 +32,7 @@
       ui.card('Requête équivalente', '<pre class="code">curl -X POST https://api.central.parts/v1/supplier/offers/bulk \\\n  -H "Authorization: Bearer cp_test_…" \\\n  -H "Idempotency-Key: lot-2026-10-12-0001" \\\n  -H "Content-Type: application/json" \\\n  -d @offres.json</pre>' +
         '<p class="muted small">Retrait d\'une offre vendue ailleurs : <span class="mono">DELETE /v1/supplier/offers/{sku}</span>. Réconciliation : <span class="mono">GET /v1/supplier/offers?updated_since=…</span>. Domaine <span class="mono">api.central.parts</span> prévu.</p>') + '</div>' +
       ui.card('Offres reçues par l\'API (' + offers.length + ')', ui.table(['SKU', 'Référence', '>Qté', '>Prix', 'Paliers', 'Date code', 'Questionnaire', ''], offers.map(function (o) {
-        return ['<span class="mono">' + esc(o.sku) + '</span>', '<span class="mono">' + esc(o.mpn) + '</span>', CP.num(o.quantity), o.unit_price ? esc(o.unit_price) + ' ' + esc(o.currency || '') : '—', String(o.price_breaks.length), o.date_code ? esc(o.date_code) : ui.pill('Manquant', 'todo'), o.questionnaire_complete ? ui.pill('Complet', 'ok') : ui.link('/vendeur/lots/' + o.lot_id, 'À compléter'), o.withdrawn ? ui.pill('Retirée', 'muted') : ui.btn('Retirer', 'sup-delete', { sku: o.sku }, 'small ghost')];
+        return ['<span class="mono">' + esc(o.sku) + '</span>', '<span class="mono">' + esc(o.mpn) + '</span>', CP.num(o.quantity), o.unit_price ? CP.money(o.unit_price, o.currency) : '—', String(o.price_breaks.length), o.date_code ? esc(o.date_code) : '<span class="muted small">À la consultation</span>', o.questionnaire_complete ? ui.pill('Complet', 'ok') : ui.link('/vendeur/lots/' + o.lot_id, 'À compléter'), o.withdrawn ? ui.pill('Retirée', 'muted') : ui.btn('Retirer', 'sup-delete', { sku: o.sku }, 'small ghost')];
       }), 'Aucune offre avec SKU pour le moment.')) +
       '<div class="grid2"><form class="card form" data-form="hook"><h2>3. Webhooks</h2><p class="muted small">Central.Parts appelle votre URL à chaque événement, signé HMAC-SHA256 (en-tête <span class="mono">CP-Signature</span>). Une demande qui correspond à votre stock peut ainsi recevoir une offre par l\'API sans passer par l\'écran.</p>' +
         (CP.lastHookSecret && CP.lastHookSecret.org === org ? '<p class="label-box mono">Secret de signature : ' + esc(CP.lastHookSecret.secret) + '</p><p class="warn-line">Copiez ce secret maintenant : il ne sera plus affiché.</p>' : '') +
@@ -40,7 +40,7 @@
         '<fieldset class="checks">' + [['demand.created', 'demand.created : nouvelle demande correspondant à votre stock'], ['offer.accepted', 'offer.accepted : votre offre est retenue'], ['transaction.updated', 'transaction.updated : chaque étape d\'une transaction']].map(function (e) { return '<label><input type="checkbox" name="ev_' + e[0] + '" checked> <span class="mono small">' + esc(e[1]) + '</span></label>'; }).join('') + '</fieldset><button class="btn">S\'abonner</button>' +
         ui.table(['Abonnement', 'URL', 'Événements'], hooks.webhooks.map(function (h) { return [esc(h.id), '<span class="mono small">' + esc(h.url) + '</span>', esc(h.events.join(', '))]; }), 'Aucun abonnement.') + '</form>' +
       ui.card('Dernières livraisons', hooks.deliveries.length ? '<ol class="hist">' + hooks.deliveries.map(function (d) { return '<li><span class="mono">' + esc(CP.fmtDay(d.day)) + '</span> <b class="mono small">' + esc(d.type) + '</b> → ' + d.status + '<pre class="code">' + esc(JSON.stringify(d.payload, null, 1)) + '</pre></li>'; }).join('') + '</ol>' : '<p class="empty">Aucun événement livré. Abonnez-vous, puis lancez une demande côté acheteur sur une référence de votre stock.</p>') + '</div>' +
-      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : date code et questionnaire d\'état restent exigés avant d\'enchérir.</p>');
+      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées : EUR, USD, CNY (RMB), HKD, GBP, JPY, TWD, SGD.</p>');
   };
 
   CP.actions['key-create'] = function (b) {

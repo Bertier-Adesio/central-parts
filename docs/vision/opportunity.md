@@ -83,7 +83,9 @@ flowchart TD
 ### 5.1 Import
 
 - Formats acceptés : flux fournisseur au format Octopart et ECIA Global Standard. **Proposé**
-- Champs obligatoires : référence fabricant, fabricant, quantité, date code, pays d'origine si connu, conditionnement, prix cible ou « sur demande ». **Proposé**
+- Champs obligatoires : référence fabricant, fabricant, quantité. Facultatifs : SKU, prix et devise (EUR, USD, CNY/RMB…), paliers, date code, pays d'origine, conditionnement. **Proposé**
+- Le date code peut manquer dans le stock d'un broker : il est demandé quand le broker est consulté, dans sa réponse à la demande. **Décidé**
+- Canal principal : API fournisseur (`api/fournisseurs.md`) ; fichiers CSV, XLS et SFTP en repli. **Proposé**
 - Doublons : un même lot proposé par plusieurs détenteurs ou brokers est identifié et affiché une seule fois (types de stock ECIA : réel, usine, doublon). **Proposé**
 
 ### 5.2 Questionnaire d'état
@@ -120,7 +122,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 
 - L'identité de l'acheteur est masquée aux vendeurs, et celle du vendeur à l'acheteur. **Décidé**
 - Le vendeur voit : référence, quantité, date code minimum, exigences d'emballage et de questionnaire, zone de livraison (pays ou région, jamais l'adresse), délai souhaité. **Proposé**
-- Le vendeur propose son prix net ; Adesio lui indique une fourchette conseillée. **Décidé**
+- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts convertit en euros pour l'acheteur et paie le vendeur dans sa devise. **Décidé**
 - Enchère inversée à offres scellées, avec indication du rang au vendeur. **Proposé**
 - L'acheteur voit une offre consolidée (prix tout compris, questionnaire, photos, documents, délai), éventuellement plusieurs offres classées. **Proposé**
 - **Anonymat à la livraison** : transit par un laboratoire ou un entrepôt partenaire, étiquettes neutres, ou levée de l'anonymat à l'expédition protégée par la clause de non-contournement. **À arbitrer**

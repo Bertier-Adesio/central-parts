@@ -27,7 +27,7 @@ L'API est le canal recommandé. Les fichiers CSV ou XLS (`POST /v1/stocklists`) 
 | `POST` | `/v1/supplier/webhooks` | S'abonner à des événements |
 | `GET` | `/v1/supplier/webhooks` | Abonnements et dernières livraisons |
 
-Une fois une demande reçue, le fournisseur enchérit avec les endpoints communs : `GET /v1/demands/{id}`, `POST /v1/demands/{id}/bids`, `GET /v1/demands/{id}/bids/mine`. Carte complète : [`endpoints.md`](endpoints.md).
+Une fois une demande reçue, le fournisseur enchérit avec les endpoints communs : `GET /v1/demands/{id}`, `POST /v1/demands/{id}/bids` (`lotId`, `net`, `currency`, `dateCode`, `leadDays`), `GET /v1/demands/{id}/bids/mine`. Le date code est obligatoire à ce moment s'il manque au lot ; il est alors reporté sur le lot. Carte complète : [`endpoints.md`](endpoints.md).
 
 ## L'offre
 
@@ -38,9 +38,9 @@ Une fois une demande reçue, le fournisseur enchérit avec les endpoints communs
 | `manufacturer` | texte | Recommandé | Fabricant |
 | `quantity` | entier ≥ 0 | Oui | Quantité disponible ; 0 retire l'offre |
 | `unit_price` | décimal | Non | Prix unitaire catalogue |
-| `currency` | ISO 4217 | Non | `USD` par défaut |
+| `currency` | ISO 4217 | Non | `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY`, `TWD`, `SGD` ; devise par défaut de la société sinon |
 | `price_breaks` | liste de `{quantity, price}` | Non | Paliers (10, 100, 1 000 pcs…) |
-| `date_code` | texte | Pour Opportunity | Exigé avant toute enchère |
+| `date_code` | texte | Non | Facultatif dans le stock ; donné au plus tard en répondant à une demande |
 | `packaging` | texte | Non | Plateau, tube, bande et bobine, vrac |
 | `country_of_origin` | ISO 3166 alpha-2 | Non | Pays d'origine |
 | `lead_time_days` | entier | Non | Délai d'expédition en jours ouvrés |
@@ -79,6 +79,10 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 { "received": 3, "created": 2, "updated": 0, "errors": [{ "index": 2, "sku": "HB-000999", "error": "mpn requis" }], "idempotency_key": "lot-2026-10-12-0001" }
 ```
 
+## Devises
+
+Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. Central.Parts convertit en euros pour classer les offres et présenter à l'acheteur un prix tout compris en euros ; le compte dédié est tenu en euros. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
+
 ## Webhooks
 
 `POST /v1/supplier/webhooks` avec `{ "url": "https://…", "events": [...] }`. Central.Parts appelle l'URL en `POST`, signé HMAC-SHA256 avec le secret de l'abonnement (en-tête `CP-Signature: sha256=…`, horodatage `CP-Timestamp`). Réponse `2xx` attendue sous 10 s ; nouvelles tentatives avec délai croissant pendant 24 h.
@@ -86,7 +90,7 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 | Événement | Quand | Contenu |
 |---|---|---|
 | `demand.created` | Une demande Opportunity correspond à une offre en stock | `demand_id`, `mpn`, `quantity`, `date_code_min`, `zone`, `closes_on` |
-| `offer.accepted` | L'acheteur retient l'offre du fournisseur | `demand_id`, `transaction_id`, `lot_sku`, `quantity`, `net_unit_price` |
+| `offer.accepted` | L'acheteur retient l'offre du fournisseur | `demand_id`, `transaction_id`, `lot_sku`, `quantity`, `net_unit_price`, `currency`, `date_code` |
 | `transaction.updated` | Chaque étape de la transaction (signature, dépôt, expédition, laboratoire, inspection, paiement) | `transaction_id`, `status`, `text` |
 
 ## Erreurs
@@ -103,7 +107,7 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 
 ## Règles qui s'appliquent aux offres de broker
 
-Toute offre de broker ou de surplus passe par les rails Opportunity : date code et questionnaire d'état complets avant d'enchérir, paiement à l'acceptation des pièces. L'API alimente le stock ; elle ne dispense pas du questionnaire, qui se remplit une fois par lot (écran ou API à venir).
+Toute offre de broker ou de surplus passe par les rails Opportunity : questionnaire d'état complet avant d'enchérir, date code au plus tard dans la réponse à la demande, paiement à l'acceptation des pièces. L'API alimente le stock ; elle ne dispense pas du questionnaire, qui se remplit une fois par lot (écran ou API à venir).
 
 ## À trancher
 

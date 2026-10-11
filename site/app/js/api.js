@@ -99,8 +99,8 @@
     v.seller = a.role === 'buyer' || a.role === 'lab' ? alias(t.sellerId) : S().orgs[t.sellerId].name;
     if (a.role === 'buyer' || a.role === 'lab') v.sellerProfile = S().orgs[t.sellerId].profile;
     if (a.role === 'seller' || a.role === 'lab') { delete v.unit; delete v.total; v.zone = zoneOf(t.delivery); delete v.delivery; }
-    if (a.role === 'buyer') delete v.net;
-    if (a.role === 'lab') { delete v.net; delete v.history; }
+    if (a.role === 'buyer') { delete v.net; delete v.netCurrency; delete v.netEur; }
+    if (a.role === 'lab') { delete v.net; delete v.netCurrency; delete v.netEur; delete v.history; }
     v.lot = lotPublic(S().lots[t.lotId]);
     v.labCase = CP.values(S().labCases).filter(function (c) { return c.txId === t.id; })[0] || null;
     v.orders = CP.values(S().orders).filter(function (o) { return o.txId === t.id; });
@@ -125,8 +125,9 @@
     var lab = t.labLevel ? t.labFee : 0;
     var labDone = CP.values(S().labCases).some(function (x) { return x.txId === t.id && x.verdict; });
     if (accepted > 0) {
-      var payout = round(t.net * accepted * (1 - P.sellerCommission));
-      var lines = [{ to: t.sellerId, label: 'Paiement du vendeur ' + alias(t.sellerId), amount: payout }];
+      var payout = round(t.netEur * accepted * (1 - P.sellerCommission));
+      var payCur = round(t.net * accepted * (1 - P.sellerCommission));
+      var lines = [{ to: t.sellerId, label: 'Paiement du vendeur ' + alias(t.sellerId) + (t.netCurrency !== 'EUR' ? ', versé ' + CP.money(payCur, t.netCurrency) : ''), amount: payout, currency: t.netCurrency, amountCurrency: payCur }];
       if (lab && rejected === 0) lines.push(labDone ? { to: t.labId, label: 'Frais de laboratoire', amount: lab } : { to: t.buyerId, label: 'Frais de laboratoire non engagés, rendus à l\'acheteur', amount: lab });
       var held = round(t.unit * accepted + (rejected === 0 ? lab : 0));
       lines.push({ to: 'CP', label: 'Marge et commissions Central.Parts', amount: round(held - payout - (rejected === 0 ? lab : 0)) });
@@ -217,10 +218,12 @@
   };
   H['advice'] = function (c) {
     var mpn = c.query.mpn;
-    var prices = CP.values(S().lots).filter(function (l) { return l.mpn === mpn; }).map(function (l) { return l.price; });
+    var cur = CP.currency(c.query.currency, 'EUR');
+    if (!cur) fail(422, 'Devise non prise en charge');
+    var prices = CP.values(S().lots).filter(function (l) { return l.mpn === mpn && l.price; }).map(function (l) { return CP.toEur(l.price, l.currency || 'EUR'); });
     if (!prices.length) fail(404, 'Pas assez de données pour cette référence');
     var avg = prices.reduce(function (a, b) { return a + b; }, 0) / prices.length;
-    return { mpn: mpn, low: round(avg * 0.95), high: round(avg * 1.15), basis: 'Données fictives de la maquette' };
+    return { mpn: mpn, currency: cur, low: CP.fromEur(avg * 0.95, cur), high: CP.fromEur(avg * 1.15, cur), basis: 'Données fictives de la maquette' };
   };
 
   // Nomenclatures
@@ -313,10 +316,10 @@
     var d = S().demands[c.params.id];
     if (!d) fail(404, 'Demande inconnue');
     if (d.status !== 'auction') fail(409, 'Enchère déjà clôturée');
-    var bids = CP.values(S().bids).filter(function (b) { return b.demandId === d.id; }).sort(function (a, b) { return a.net - b.net; });
+    var bids = CP.values(S().bids).filter(function (b) { return b.demandId === d.id; }).sort(function (a, b) { return a.netEur - b.netEur; });
     bids.forEach(function (b, i) {
       var id = next('OFF');
-      S().offers[id] = { id: id, demandId: d.id, bidId: b.id, sellerId: b.sellerId, lotId: b.lotId, net: b.net, unit: round(b.net * (1 + P.buyerMargin)), leadDays: b.leadDays, rank: i + 1, status: 'open', validUntil: S().day + 2 };
+      S().offers[id] = { id: id, demandId: d.id, bidId: b.id, sellerId: b.sellerId, lotId: b.lotId, net: b.net, currency: b.currency, netEur: b.netEur, dc: b.dc, unit: round(b.netEur * (1 + P.buyerMargin)), leadDays: b.leadDays, rank: i + 1, status: 'open', validUntil: S().day + 2 };
     });
     d.status = bids.length ? 'offers' : 'no_offer';
     d.closedDay = S().day;
@@ -331,18 +334,23 @@
     var lot = S().lots[b.lotId];
     if (!lot || lot.sellerId !== c.actor.org || lot.mpn !== d.mpn) fail(422, 'Lot invalide pour cette demande');
     if (lot.qty < d.qty) fail(422, 'Quantité du lot insuffisante (' + lot.qty + ')');
-    if (!lot.dc) fail(422, 'Date code du lot manquant');
     if (!complete(lot)) fail(422, 'Questionnaire d\'état du lot incomplet');
     var net = Number(b.net);
     if (!(net > 0)) fail(422, 'Prix net invalide');
+    // Le date code peut manquer au stock : le vendeur le donne quand il répond à la demande.
+    var dc = String(b.dateCode || lot.dc || '').trim();
+    if (!dc) fail(422, 'Date code requis pour répondre à une demande');
+    var cur = CP.currency(b.currency, lot.currency || S().orgs[c.actor.org].currency || 'EUR');
+    if (!cur) fail(422, 'Devise non prise en charge : ' + b.currency);
+    if (!lot.dc) lot.dc = dc;
     var mine = CP.values(S().bids).filter(function (x) { return x.demandId === d.id && x.sellerId === c.actor.org; })[0];
     if (!mine) { mine = { id: next('BID'), demandId: d.id, sellerId: c.actor.org }; S().bids[mine.id] = mine; }
-    mine.lotId = lot.id; mine.net = round(net); mine.leadDays = parseInt(b.leadDays, 10) || 5; mine.day = S().day;
+    mine.lotId = lot.id; mine.net = round(net); mine.currency = cur; mine.netEur = CP.toEur(net, cur); mine.dc = dc; mine.leadDays = parseInt(b.leadDays, 10) || 5; mine.day = S().day;
     event('Offre scellée reçue sur ' + d.id + ' (' + alias(c.actor.org) + ').', d.id);
     return H['bid.mine'](c);
   };
   H['bid.mine'] = function (c) {
-    var all = CP.values(S().bids).filter(function (x) { return x.demandId === c.params.id; }).sort(function (a, b) { return a.net - b.net; });
+    var all = CP.values(S().bids).filter(function (x) { return x.demandId === c.params.id; }).sort(function (a, b) { return a.netEur - b.netEur; });
     var mine = all.filter(function (x) { return x.sellerId === c.actor.org; })[0] || null;
     return { bid: mine, rank: mine ? all.indexOf(mine) + 1 : null, count: all.length };
   };
@@ -351,7 +359,8 @@
     if (!d || (c.actor.role === 'buyer' && d.buyerId !== c.actor.org)) fail(404, 'Demande inconnue');
     return CP.values(S().offers).filter(function (o) { return o.demandId === d.id; }).sort(function (a, b) { return a.rank - b.rank; }).map(function (o) {
       var v = { id: o.id, rank: o.rank, unit: o.unit, leadDays: o.leadDays, status: o.status, validUntil: o.validUntil, seller: alias(o.sellerId), sellerProfile: S().orgs[o.sellerId].profile, lot: lotPublic(S().lots[o.lotId]), origin: S().lots[o.lotId].q.origin };
-      if (isOps(c.actor)) { v.net = o.net; v.sellerName = S().orgs[o.sellerId].name; }
+      v.dc = o.dc || S().lots[o.lotId].dc;
+      if (isOps(c.actor)) { v.net = o.net; v.currency = o.currency; v.netEur = o.netEur; v.sellerName = S().orgs[o.sellerId].name; }
       return v;
     });
   };
@@ -364,7 +373,7 @@
     var level = P.labLevels[parseInt(b.labLevel, 10) || 0];
     var insp = clampDays(b.inspection, P.delays.inspection), counter = clampDays(b.counter, P.delays.counter);
     var id = next('TX');
-    var t = { id: id, demandId: d.id, offerId: o.id, buyerId: d.buyerId, sellerId: o.sellerId, lotId: o.lotId, mpn: d.mpn, mfr: d.mfr, qty: d.qty, net: o.net, unit: o.unit, labLevel: level.id, labId: level.id ? 'L1' : null, labFee: level.price, delivery: d.delivery || 'Adresse de l\'acheteur', incoterm: 'DAP', delays: { inspection: insp, counter: counter }, status: 'to_sign_buyer', signed: { buyer: false, seller: false }, due: null, day: S().day, history: [] };
+    var t = { id: id, demandId: d.id, offerId: o.id, buyerId: d.buyerId, sellerId: o.sellerId, lotId: o.lotId, mpn: d.mpn, mfr: d.mfr, qty: d.qty, net: o.net, netCurrency: o.currency || 'EUR', netEur: o.netEur != null ? o.netEur : o.net, dc: o.dc, unit: o.unit, labLevel: level.id, labId: level.id ? 'L1' : null, labFee: level.price, delivery: d.delivery || 'Adresse de l\'acheteur', incoterm: 'DAP', delays: { inspection: insp, counter: counter }, status: 'to_sign_buyer', signed: { buyer: false, seller: false }, due: null, day: S().day, history: [] };
     t.total = round(t.unit * t.qty + t.labFee);
     S().transactions[id] = t;
     CP.values(S().offers).forEach(function (x) { if (x.demandId === d.id) x.status = x.id === o.id ? 'accepted' : 'declined'; });
@@ -375,7 +384,7 @@
     }
     hist(t, 'Offre ' + o.id + ' retenue. Fiche transaction créée' + (level.id ? ', test : ' + level.name.toLowerCase() : '') + '.');
     notify(o.sellerId, 'Votre offre sur ' + d.id + ' est retenue : fiche ' + id + ' à signer.', '/vendeur/transactions/' + id);
-    deliver(o.sellerId, 'offer.accepted', { demand_id: d.id, transaction_id: id, lot_sku: S().lots[o.lotId].sku || null, quantity: d.qty, net_unit_price: o.net });
+    deliver(o.sellerId, 'offer.accepted', { demand_id: d.id, transaction_id: id, lot_sku: S().lots[o.lotId].sku || null, quantity: d.qty, net_unit_price: o.net, currency: o.currency, date_code: o.dc });
     return txView(t, c.actor);
   };
   function clampDays(v, def) { var n = parseInt(v, 10); return n >= 1 && n <= 30 ? n : def; }
@@ -444,9 +453,11 @@
       if (!mpn || !(qty > 0)) { rejected.push({ line: n + 2, reason: !mpn ? 'MPN manquant' : 'Quantité invalide' }); return; }
       var dc = get(f, 'dc'), sku = get(f, 'sku');
       if (!dc) noDc++;
+      var cur = CP.currency(get(f, 'currency'), c.body.currency || S().orgs[org].currency || 'USD');
+      if (!cur) { rejected.push({ line: n + 2, reason: 'Devise non prise en charge : ' + get(f, 'currency') }); return; }
       var tiers = {};
       [['p10', 10], ['p100', 100], ['p1000', 1000]].forEach(function (t) { var v = price(get(f, t[0])); if (v) tiers[t[1]] = v; });
-      var data = { mpn: mpn, mfr: get(f, 'mfr'), sku: sku, url: get(f, 'url'), qty: qty, dc: dc, pack: get(f, 'pack'), price: price(get(f, 'price')), tiers: tiers, currency: get(f, 'currency') || 'USD' };
+      var data = { mpn: mpn, mfr: get(f, 'mfr'), sku: sku, url: get(f, 'url'), qty: qty, dc: dc, pack: get(f, 'pack'), price: price(get(f, 'price')), tiers: tiers, currency: cur };
       // Même lot chez le même vendeur : même SKU s'il existe, sinon même référence et même date code.
       var same = CP.values(S().lots).filter(function (l) { return l.sellerId === org && (sku ? l.sku === sku : l.mpn === mpn && l.dc === dc); })[0];
       if (same) { Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) same[k] = data[k]; }); updated.push(same.id); return; }
@@ -461,7 +472,6 @@
     S().stocklists = S().stocklists || {};
     S().stocklists[job.id] = job;
     event('Stocklist ' + job.id + ' (' + channel + ') de ' + alias(org) + ' : ' + created.length + ' lot(s) créé(s), ' + updated.length + ' mis à jour, ' + rejected.length + ' ligne(s) rejetée(s).', org);
-    if (noDc) notify(org, noDc + ' lot(s) sans date code dans ' + job.id + ' : à compléter avant toute enchère Opportunity.', '/vendeur/stock');
     return job;
   }
   H['stock.import'] = function (c) { return importRows(c, c.body.csv, c.body.format, 'api'); };
@@ -549,6 +559,8 @@
     if (!mpn) return { error: 'mpn requis' };
     if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
     if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
+    var cur = CP.currency(o.currency, S().orgs[org].currency || 'USD');
+    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY, TWD, SGD)' };
     var tiers = {};
     var breaks = o.price_breaks || [];
     if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
@@ -559,7 +571,7 @@
     }
     var lot = CP.values(S().lots).filter(function (l) { return l.sellerId === org && l.sku === sku; })[0];
     var engaged = lot && CP.values(S().transactions).some(function (t) { return t.lotId === lot.id && ['released', 'refunded', 'closed_partial', 'cancelled'].indexOf(t.status) < 0; });
-    var data = { mpn: mpn, mfr: o.manufacturer || '', sku: sku, url: o.product_url || '', qty: qty, dc: o.date_code || '', pack: o.packaging || '', price: o.unit_price != null ? Number(o.unit_price) : null, tiers: o.price_breaks ? tiers : null, currency: o.currency || 'USD', origin: o.country_of_origin || '', leadDays: o.lead_time_days || null, updated: S().day, source: 'api' };
+    var data = { mpn: mpn, mfr: o.manufacturer || '', sku: sku, url: o.product_url || '', qty: qty, dc: o.date_code || '', pack: o.packaging || '', price: o.unit_price != null ? Number(o.unit_price) : null, tiers: o.price_breaks ? tiers : null, currency: cur, origin: o.country_of_origin || '', leadDays: o.lead_time_days || null, updated: S().day, source: 'api' };
     if (lot) {
       if (engaged && lot.mpn !== mpn) return { error: 'Lot engagé dans une transaction : référence non modifiable' };
       Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) lot[k] = data[k]; });

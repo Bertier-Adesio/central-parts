@@ -42,7 +42,7 @@
   function tiers(l) {
     var t = l.tiers || {};
     var k = Object.keys(t);
-    return k.length ? '<span class="tiers">' + k.map(function (q) { return CP.num(q) + '+ : ' + money(t[q]); }).join('<br>') + '</span>' : '—';
+    return k.length ? '<span class="tiers">' + k.map(function (q) { return CP.num(q) + '+ : ' + CP.money(t[q], l.currency); }).join('<br>') + '</span>' : '—';
   }
   CP.views['/vendeur/stock'] = function (r) {
     var lots = CP.get('/v1/lots') || [];
@@ -50,13 +50,13 @@
     var me = CP.state.orgs[CP.actor.org];
     var last = CP.lastImport && CP.lastImport.sellerId === CP.actor.org ? CP.get('/v1/stocklists/' + CP.lastImport.id) : null;
     var report = last ? ui.card('Rapport d\'import ' + esc(last.id) + ' ' + ui.pill(last.channel === 'sftp' ? 'SFTP' : 'API', 'inv'),
-      ui.stats([['Lignes lues', CP.num(last.rows)], ['Lots créés', last.created.length], ['Mis à jour', last.updated.length], ['Doublons possibles', last.possibleDuplicates.length], ['Lignes rejetées', last.rejected.length], ['Sans date code', last.missingDateCode]]) +
+      ui.stats([['Lignes lues', CP.num(last.rows)], ['Lots créés', last.created.length], ['Mis à jour', last.updated.length], ['Doublons possibles', last.possibleDuplicates.length], ['Lignes rejetées', last.rejected.length], ['Date code à la consultation', last.missingDateCode]]) +
       (last.rejected.length ? '<p class="small">' + last.rejected.map(function (x) { return 'Ligne ' + x.line + ' : ' + esc(x.reason); }).join(' · ') + '</p>' : '') +
-      (last.missingDateCode ? '<p class="warn-line">Le format broker ne transmet pas le date code. Il est exigé avant toute enchère Opportunity : à compléter dans la fiche du lot.</p>' : '')) : '';
-    return ui.page('Stock et lots', 'Chaque lot porte son date code, son questionnaire d\'état et ses documents. Un lot incomplet ne peut pas enchérir.',
+      (last.missingDateCode ? '<p class="muted small">' + last.missingDateCode + ' lot(s) sans date code : facultatif dans le stock, il sera demandé au moment de répondre à une demande.</p>' : '')) : '';
+    return ui.page('Stock et lots', 'Chaque lot porte son questionnaire d\'état et ses documents. Le date code est facultatif dans le stock : il est demandé quand vous répondez à une demande.',
       report +
       ui.card('Lots déclarés (' + lots.length + ')', ui.table(['Lot', 'SKU', 'Référence', 'Fabricant', '>Qté', 'Date code', '>Prix unitaire', 'Paliers', 'Questionnaire', ''], lots.map(function (l) {
-        return [ui.link('/vendeur/lots/' + l.id, l.id), '<span class="mono small">' + esc(l.sku || '—') + '</span>', '<span class="mono">' + esc(l.mpn) + '</span>', esc(l.mfr || '—'), CP.num(l.qty), l.dc ? esc(l.dc) : ui.pill('Manquant', 'todo'), l.price ? money(l.price) + ' ' + esc(l.currency || 'EUR') : '—', '<span class="small">' + tiers(l) + '</span>', lotState(l), l.duplicateOf ? ui.pill('Doublon possible', 'wait') : ''];
+        return [ui.link('/vendeur/lots/' + l.id, l.id), '<span class="mono small">' + esc(l.sku || '—') + '</span>', '<span class="mono">' + esc(l.mpn) + '</span>', esc(l.mfr || '—'), CP.num(l.qty), l.dc ? esc(l.dc) : '<span class="muted small">À la consultation</span>', l.price ? CP.money(l.price, l.currency) : '—', '<span class="small">' + tiers(l) + '</span>', lotState(l), l.duplicateOf ? ui.pill('Doublon possible', 'wait') : ''];
       }), 'Aucun lot. Importez une stocklist.')) +
       '<div class="grid2"><form class="card form" data-form="import"><h2>Importer un fichier</h2>' +
       '<p class="muted small">CSV ou XLS jusqu\'à 500 000 lignes par l\'API. Colonnes reconnues : Manufacturer, SKU, MPN, Product URL, Unit Price, Quantity, Price per 10, 100 et 1 000 pcs, ainsi que les formats Octopart et ECIA. Un même SKU met à jour le lot existant.</p>' +
@@ -85,8 +85,8 @@
     var q = l.q || {}, cm = l.comments || {};
     return ui.page('Lot ' + esc(l.id), '<span class="mono">' + esc(l.mpn) + '</span> · ' + esc(l.mfr || '') + ' · ' + CP.num(l.qty) + ' pièces · date code ' + esc(l.dc || '—') + ' · ' + lotState(l),
       '<form class="card form" data-form="lot-update"><input type="hidden" name="lot" value="' + esc(l.id) + '"><h2>Lot</h2>' +
-      ui.kv([['SKU vendeur', '<span class="mono">' + esc(l.sku || '—') + '</span>'], ['Fiche produit', l.url ? '<a href="' + esc(l.url) + '" rel="noopener nofollow" target="_blank">' + esc(l.url) + '</a>' : '—'], ['Prix unitaire', l.price ? money(l.price) + ' ' + esc(l.currency || 'EUR') : '—'], ['Paliers', tiers(l)]]) +
-      '<div class="row"><label class="field"><span>Date code (obligatoire pour enchérir)</span><input name="dc" value="' + esc(l.dc || '') + '" placeholder="2014 ou 2209"></label><label class="field"><span>Conditionnement</span><input name="pack" value="' + esc(l.pack || '') + '" placeholder="Plateau, tube, bobine…"></label><label class="field"><span>Quantité</span><input name="qty" type="number" min="1" value="' + l.qty + '"></label></div><button class="btn ghost">Enregistrer le lot</button></form>' +
+      ui.kv([['SKU vendeur', '<span class="mono">' + esc(l.sku || '—') + '</span>'], ['Fiche produit', l.url ? '<a href="' + esc(l.url) + '" rel="noopener nofollow" target="_blank">' + esc(l.url) + '</a>' : '—'], ['Prix unitaire', l.price ? CP.money(l.price, l.currency) : '—'], ['Paliers', tiers(l)]]) +
+      '<div class="row"><label class="field"><span>Date code (facultatif, demandé à la consultation)</span><input name="dc" value="' + esc(l.dc || '') + '" placeholder="2014 ou 2209"></label><label class="field"><span>Conditionnement</span><input name="pack" value="' + esc(l.pack || '') + '" placeholder="Plateau, tube, bobine…"></label><label class="field"><span>Quantité</span><input name="qty" type="number" min="1" value="' + l.qty + '"></label></div><button class="btn ghost">Enregistrer le lot</button></form>' +
       '<form class="card form" data-form="questionnaire"><input type="hidden" name="lot" value="' + esc(l.id) + '"><h2>Questionnaire d\'état</h2>' +
       '<p class="muted small">Les réponses engagent le vendeur, font partie de la commande et priment sur ses exclusions de garantie. « Refuse de répondre » reste possible mais visible de l\'acheteur, qui peut filtrer sur chaque réponse.</p>' +
       '<ol class="qform">' + CP.QUESTIONS.map(function (x) {
@@ -120,26 +120,30 @@
     var d = CP.get('/v1/demands/' + r.params.id);
     if (!d) return ui.page('Demande introuvable', 'Cette demande n\'a pas été diffusée à votre société.', '');
     var mine = CP.get('/v1/demands/' + d.id + '/bids/mine') || {};
-    var advice = CP.get('/v1/pricing/advice?mpn=' + encodeURIComponent(d.mpn) + '&qty=' + d.qty);
     var lots = (CP.get('/v1/lots') || []).filter(function (l) { return l.mpn === d.mpn; });
     var bid = mine.bid;
+    var lot0 = lots.filter(function (l) { return bid && l.id === bid.lotId; })[0] || lots[0] || {};
+    var cur = (bid && bid.currency) || lot0.currency || CP.state.orgs[CP.actor.org].currency || 'EUR';
+    var advice = CP.get('/v1/pricing/advice?mpn=' + encodeURIComponent(d.mpn) + '&qty=' + d.qty + '&currency=' + cur);
     var form = '';
     if (d.status === 'auction') {
       form = '<form class="card form" data-form="bid"><input type="hidden" name="demand" value="' + esc(d.id) + '"><h2>' + (bid ? 'Modifier votre offre' : 'Votre offre scellée') + '</h2>' +
-        (advice ? '<p class="hint">Fourchette conseillée par Adesio : <b>' + CP.eur(advice.low) + ' à ' + CP.eur(advice.high) + '</b> net l\'unité.</p>' : '') +
+        (advice ? '<p class="hint">Fourchette conseillée par Adesio : <b>' + CP.money(advice.low, cur) + ' à ' + CP.money(advice.high, cur) + '</b> net l\'unité.</p>' : '') +
         '<label class="field"><span>Lot proposé</span><select name="lot">' + lots.map(function (l) {
-          return '<option value="' + l.id + '"' + (bid && bid.lotId === l.id ? ' selected' : '') + '>' + l.id + ' · ' + CP.num(l.qty) + ' pièces · DC ' + esc(l.dc) + (l.complete ? '' : ' · questionnaire incomplet') + (l.qty < d.qty ? ' · quantité insuffisante' : '') + '</option>';
+          return '<option value="' + l.id + '"' + (lot0.id === l.id ? ' selected' : '') + '>' + l.id + ' · ' + CP.num(l.qty) + ' pièces · DC ' + esc(l.dc || 'à préciser') + (l.complete ? '' : ' · questionnaire incomplet') + (l.qty < d.qty ? ' · quantité insuffisante' : '') + '</option>';
         }).join('') + '</select></label>' +
-        '<div class="row"><label class="field"><span>Prix net unitaire (€)</span><input type="number" name="net" step="0.01" min="0.01" value="' + (bid ? bid.net : advice ? advice.high : '') + '" required></label><label class="field"><span>Expédition sous (j ouvrés)</span><input type="number" name="leadDays" min="1" max="30" value="' + (bid ? bid.leadDays : 5) + '"></label></div>' +
-        '<p class="muted small">Central.Parts ajoute sa marge et ses frais pour présenter une offre tout compris à l\'acheteur. Vous êtes payé de votre prix net, moins la commission vendeur, après acceptation des pièces.</p><button class="btn">' + (bid ? 'Mettre à jour' : 'Envoyer l\'offre') + '</button>' +
+        '<div class="row"><label class="field"><span>Prix net unitaire</span><input type="number" name="net" step="0.0001" min="0.0001" value="' + (bid ? bid.net : advice ? advice.high : '') + '" required></label>' +
+        '<label class="field"><span>Devise</span><select name="currency">' + Object.keys(CP.PARAMS.currencies).map(function (c) { return '<option value="' + c + '"' + (c === cur ? ' selected' : '') + '>' + (c === 'CNY' ? 'CNY (RMB)' : c) + '</option>'; }).join('') + '</select></label></div>' +
+        '<div class="row"><label class="field"><span>Date code du lot proposé</span><input name="dateCode" value="' + esc((bid && bid.dc) || lot0.dc || '') + '" placeholder="2014, 2209 ou 2009/2012" required></label><label class="field"><span>Expédition sous (j ouvrés)</span><input type="number" name="leadDays" min="1" max="30" value="' + (bid ? bid.leadDays : 5) + '"></label></div>' +
+        '<p class="muted small">Le date code peut manquer dans votre stock : il est demandé ici, au moment de la consultation, puis reporté sur le lot. Vous êtes payé dans votre devise, de votre prix net moins la commission vendeur, après acceptation des pièces. Central.Parts convertit en euros et ajoute sa marge pour l\'acheteur.</p><button class="btn">' + (bid ? 'Mettre à jour' : 'Envoyer l\'offre') + '</button>' +
         lots.filter(function (l) { return !l.complete; }).map(function (l) { return '<p class="warn-line">Le lot ' + ui.link('/vendeur/lots/' + l.id, l.id) + ' doit avoir un questionnaire complet pour enchérir.</p>'; }).join('') + '</form>';
     }
     return ui.page('Demande ' + esc(d.id), 'Demande anonymisée : ni le nom ni l\'adresse de l\'acheteur ne sont communiqués.',
       '<div class="grid2">' + ui.card('Ce que demande l\'acheteur', ui.kv([['Référence', '<span class="mono">' + esc(d.mpn) + '</span> · ' + esc(d.mfr)], ['Quantité', CP.num(d.qty)], ['Date code minimum', esc(d.dcMin || '—')], ['Emballage', esc(d.pack)], ['Zone de livraison', esc(d.zone)], ['Délai souhaité', d.leadDays + ' jours ouvrés'], ['Questionnaire', 'Complet, photos obligatoires'], ['Acheteur', '<span class="muted">Masqué</span>'], ['Clôture', esc(CP.fmtDay(d.closesDay))], ['Statut', CP.demStatus(d)]])) +
-      ui.card('Position', bid ? '<p class="rank">Votre offre : <b>' + CP.eur(bid.net) + '</b> net · rang <b>' + mine.rank + ' sur ' + mine.count + '</b></p><p class="muted small">Les offres concurrentes restent scellées : vous ne voyez que votre rang.</p>' : '<p class="empty">Pas encore d\'offre de votre part.</p>') + '</div>' + form);
+      ui.card('Position', bid ? '<p class="rank">Votre offre : <b>' + CP.money(bid.net, bid.currency) + '</b> net · date code ' + esc(bid.dc || '—') + ' · rang <b>' + mine.rank + ' sur ' + mine.count + '</b></p><p class="muted small">Les offres concurrentes restent scellées : vous ne voyez que votre rang.</p>' : '<p class="empty">Pas encore d\'offre de votre part.</p>') + '</div>' + form);
   };
   CP.forms.bid = function (d) {
-    var r = CP.call('POST', '/v1/demands/' + d.demand + '/bids', { lotId: d.lot, net: d.net, leadDays: d.leadDays });
+    var r = CP.call('POST', '/v1/demands/' + d.demand + '/bids', { lotId: d.lot, net: d.net, currency: d.currency, dateCode: d.dateCode, leadDays: d.leadDays });
     if (r) CP.toast('Offre enregistrée : rang ' + r.rank + ' sur ' + r.count + '.', 'ok');
   };
 
@@ -147,7 +151,7 @@
   CP.views['/vendeur/transactions/:id'] = function (r) {
     var t = CP.get('/v1/transactions/' + r.params.id);
     if (!t) return ui.page('Transaction introuvable', '', '');
-    var payout = t.net * t.qty * (1 - P.sellerCommission);
+    var payout = t.net * t.qty * (1 - P.sellerCommission), cur = t.netCurrency || 'EUR';
     var action;
     switch (t.status) {
       case 'to_sign_seller':
@@ -173,7 +177,7 @@
     return ui.page('Transaction ' + esc(t.id), esc(t.mpn) + ' × ' + CP.num(t.qty) + ' · acheteur ' + esc(t.buyer) + ' · ' + ui.txStatus(t) + ' ' + ui.due(t),
       ui.timeline(t) +
       '<div class="grid2">' + ui.card('Action', action, 'action') +
-      ui.card('Fiche transaction', ui.kv([['Lot', esc(t.lotId) + ' · <span class="mono">' + esc(t.mpn) + '</span>'], ['Quantité', CP.num(t.qty)], ['Votre prix net', CP.eur(t.net) + ' l\'unité'], ['Paiement estimé', CP.eur(payout) + ' <span class="muted small">(commission vendeur fictive de ' + Math.round(P.sellerCommission * 100) + ' %)</span>'], ['Acheteur', esc(t.buyer)], ['Zone de livraison', esc(t.zone)], ['Laboratoire', t.labLevel ? esc(P.labLevels[t.labLevel].name) : 'Pas de test'], ['Délai de contre-inspection', t.delays.counter + ' j ouvrés']])) + '</div>' +
+      ui.card('Fiche transaction', ui.kv([['Lot', esc(t.lotId) + ' · <span class="mono">' + esc(t.mpn) + '</span>'], ['Quantité', CP.num(t.qty)], ['Votre prix net', CP.money(t.net, cur) + ' l\'unité'], ['Date code', esc(t.dc || t.lot.dc || '—')], ['Paiement estimé', CP.money(payout, cur) + ' <span class="muted small">(commission vendeur fictive de ' + Math.round(P.sellerCommission * 100) + ' %)</span>'], ['Acheteur', esc(t.buyer)], ['Zone de livraison', esc(t.zone)], ['Laboratoire', t.labLevel ? esc(P.labLevels[t.labLevel].name) : 'Pas de test'], ['Délai de contre-inspection', t.delays.counter + ' j ouvrés']])) + '</div>' +
       CP.certificate(t) +
       ui.card('Historique', ui.history(t)));
   };
