@@ -200,6 +200,8 @@ await step('vendeur : intégration API', async () => {
   await page.click('form[data-form="bulk"] button');
   ok((await page.textContent('#main')).includes('mpn requis'), 'erreur de validation affichée');
   await page.click('form[data-form="hook"] button');
+  await page.click('form[data-form="sbx-demand"] button');
+  ok((await page.textContent('#main')).includes('Simuler l\'acceptation'), 'demande de test créée');
 });
 ok(Object.values((await state()).lots).some((l) => l.sku === 'HB-000213' && l.source === 'api'), 'offre reçue par l\'API');
 

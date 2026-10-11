@@ -96,6 +96,7 @@ var CP = window.CP = {};
       seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
       orgs: {
         B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001' },
+        SBX: { id: 'SBX', type: 'buyer', name: 'Acheteur du bac à sable', alias: 'A-TEST', city: 'Bac à sable', country: 'France', kyb: 'validated', iban: 'FR76 0000 0000 0000 0000 0000 999', sandbox: true },
         B2: { id: 'B2', type: 'buyer', name: 'Novatech EMS (fictif)', alias: 'A-3K9', city: 'Grenoble', country: 'France', kyb: 'pending', iban: 'FR76 1000 2000 0000 0000 0781 4', siren: '000 000 002' },
         S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR' },
         S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD' },

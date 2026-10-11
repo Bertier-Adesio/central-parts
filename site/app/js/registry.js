@@ -70,6 +70,8 @@ var CP_ENDPOINTS = [
   { id: 'sup.list', group: 'supplier', method: 'GET', path: '/v1/supplier/offers', roles: ['seller'], summary: 'Offres du fournisseur, filtres sku et updated_since pour la réconciliation' },
   { id: 'hook.create', group: 'supplier', method: 'POST', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnement aux événements : demande correspondant au stock, offre retenue, transaction' },
   { id: 'hook.list', group: 'supplier', method: 'GET', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnements et dernières livraisons d\'événements (signées HMAC)' },
+  { id: 'sbx.demand', group: 'supplier', method: 'POST', path: '/v1/sandbox/demands', roles: ['seller'], summary: 'Bac à sable : simule une demande d\'acheteur sur une référence du stock du fournisseur (déclenche webhooks et notifications)' },
+  { id: 'sbx.accept', group: 'supplier', method: 'POST', path: '/v1/sandbox/demands/{id}/accept', roles: ['seller'], summary: 'Bac à sable : simule la clôture et l\'acceptation de l\'offre du fournisseur, puis la signature de l\'acheteur' },
 
   // Canaux de notification : le vendeur reçoit les demandes là où il travaille (WeChat en Chine).
   { id: 'chan.list', group: 'channels', method: 'GET', path: '/v1/organizations/{id}/notification-channels', roles: ['seller', 'ops'], summary: 'Canaux de notification de la société et derniers messages envoyés' },
@@ -125,7 +127,7 @@ var CP_ROUTES = [
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
-  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list'] },
+  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
   { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
   { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },

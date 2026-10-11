@@ -23,7 +23,7 @@
       ui.stats([['Enchères ouvertes', open.length], ['Actions à faire', todo.length], ['Lots en stock', lots.length], ['Questionnaires incomplets', incomplete.length]]) +
       '<div class="grid2">' + ui.card('À faire', actions.length ? '<ul class="todo-list">' + actions.join('') + '</ul>' : '<p class="empty">Rien à faire pour le moment.</p>') + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Demandes correspondant à votre stock', ui.table(['Demande', 'Référence', '>Qté', 'Zone', 'Acheteur', 'Clôture', 'Statut'], dem.map(function (d) {
-        return [ui.link('/vendeur/demandes/' + d.id, d.id), '<span class="mono">' + esc(d.mpn) + '</span>', CP.num(d.qty), esc(d.zone), '<span class="muted">Masqué</span>', esc(CP.fmtDay(d.closesDay)), CP.demStatus(d)];
+        return [ui.link('/vendeur/demandes/' + d.id, d.id) + (d.sandbox ? ' ' + ui.pill('Bac à sable', 'wait') : ''), '<span class="mono">' + esc(d.mpn) + '</span>', CP.num(d.qty), esc(d.zone), '<span class="muted">Masqué</span>', esc(CP.fmtDay(d.closesDay)), CP.demStatus(d)];
       }), 'Aucune demande ne correspond à votre stock.')) +
       ui.card('Transactions', ui.table(['Transaction', 'Référence', '>Qté', 'Acheteur', 'Étape', ''], tx.map(function (t) {
         return [ui.link('/vendeur/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', CP.num(t.qty), esc(t.buyer), ui.txStatus(t), ui.due(t)];

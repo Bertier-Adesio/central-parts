@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-66 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+68 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -82,6 +82,8 @@
 | GET | `/v1/supplier/offers` | Vendeur | Offres du fournisseur, filtres sku et updated_since pour la réconciliation | `/vendeur/api` |
 | POST | `/v1/supplier/webhooks` | Vendeur | Abonnement aux événements : demande correspondant au stock, offre retenue, transaction | `/vendeur/api` |
 | GET | `/v1/supplier/webhooks` | Vendeur | Abonnements et dernières livraisons d'événements (signées HMAC) | `/vendeur/api` |
+| POST | `/v1/sandbox/demands` | Vendeur | Bac à sable : simule une demande d'acheteur sur une référence du stock du fournisseur (déclenche webhooks et notifications) | `/vendeur/api` |
+| POST | `/v1/sandbox/demands/{id}/accept` | Vendeur | Bac à sable : simule la clôture et l'acceptation de l'offre du fournisseur, puis la signature de l'acheteur | `/vendeur/api` |
 
 ## Notifications : e-mail, WeCom, WeChat
 
@@ -157,7 +159,7 @@
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
 | `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
-| `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list` |
+| `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list`, `sbx.demand`, `sbx.accept` |
 | `#/vendeur/notifications` | Vendeur | Notifications (e-mail, WeCom, WeChat) | `chan.list`, `chan.create`, `chan.delete`, `chan.test`, `wechat.qr`, `wechat.event` |
 | `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |

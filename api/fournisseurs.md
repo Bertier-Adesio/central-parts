@@ -93,6 +93,17 @@ Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) 
 | `offer.accepted` | L'acheteur retient l'offre du fournisseur | `demand_id`, `transaction_id`, `lot_sku`, `quantity`, `net_unit_price`, `currency`, `date_code` |
 | `transaction.updated` | Chaque étape de la transaction (signature, dépôt, expédition, laboratoire, inspection, paiement) | `transaction_id`, `status`, `text` |
 
+## Bac à sable
+
+Décidé pour les premiers brokers. Environnement isolé : `https://sandbox.api.central.parts/v1` (prévu), clés `cp_test_…` uniquement, mêmes endpoints, données fictives effacées chaque nuit, aucun argent réel ni banque réelle. Deux endpoints propres au bac à sable simulent l'acheteur :
+
+| Méthode | Chemin | Effet |
+|---|---|---|
+| `POST` | `/v1/sandbox/demands` | Crée une demande d'un acheteur fictif sur une référence du stock du fournisseur (`mpn`, `quantity`) ; webhooks et notifications partent comme en production, avec `"sandbox": true` |
+| `POST` | `/v1/sandbox/demands/{id}/accept` | Clôture la demande, retient l'offre du fournisseur et signe côté acheteur ; à la signature du fournisseur, le dépôt est simulé et l'expédition demandée |
+
+Parcours de recette conseillé : pousser des offres, s'abonner aux webhooks ou à WeChat, simuler une demande, enchérir par l'API, simuler l'acceptation, signer, déclarer l'expédition.
+
 ## Notifications : e-mail, WeCom, WeChat
 
 Pour un fournisseur sans intégration, ou en plus des webhooks, les mêmes événements sont envoyés sur des canaux de messagerie, dans la langue choisie (中文, English, Français). Écran vendeur « Notifications » de la maquette.
@@ -144,5 +155,4 @@ Toute offre de broker ou de surplus passe par les rails Opportunity : questionna
 
 1. Questionnaire d'état par API (même schéma que l'écran) ou modèle par défaut par fournisseur, appliqué à tous ses lots et modifiable lot par lot.
 2. Instantané complet par API (les SKU absents sont retirés) ou seulement par SFTP.
-3. Environnement de test (bac à sable) séparé, avec données fictives.
 4. Clients de référence fournis (exemples Python et Node) pour les premiers brokers.

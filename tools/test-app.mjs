@@ -256,5 +256,23 @@ scenario('notifications : WeCom et WeChat en chinois, e-mail', (CP) => {
   call(CP, 'seller2', 'DELETE', `/v1/organizations/S2/notification-channels/${oa2.id}`);
 });
 
+scenario('bac à sable : de l\'offre poussée à l\'expédition', (CP) => {
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'https://erp.example.com/hook', events: ['demand.created', 'offer.accepted'] });
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'T1', mpn: 'TL431ACDBZR', quantity: 9000, unit_price: 0.9, currency: 'CNY' }] });
+  call(CP, 'seller2', 'POST', '/v1/sandbox/demands', { mpn: 'INCONNU' }, [422]);
+  const d = call(CP, 'seller2', 'POST', '/v1/sandbox/demands', { mpn: 'TL431ACDBZR', quantity: 2000 });
+  ok(d.sandbox && call(CP, 'seller1', 'GET', '/v1/demands').every((x) => x.id !== d.id), 'demande de test visible du seul fournisseur');
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/webhooks').deliveries.some((x) => x.payload.demand_id === d.id && x.payload.sandbox), 'webhook de test');
+  call(CP, 'seller2', 'POST', `/v1/sandbox/demands/${d.id}/accept`, {}, [409]);
+  const lot = call(CP, 'seller2', 'GET', '/v1/lots').find((l) => l.sku === 'T1');
+  call(CP, 'seller2', 'PUT', `/v1/lots/${lot.id}/questionnaire`, { answers: Object.fromEntries(CP.QUESTIONS.map((q) => [q.k, q.a[0]])) });
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot.id, net: 0.85, currency: 'CNY', dateCode: '2024' });
+  const t = call(CP, 'seller2', 'POST', `/v1/sandbox/demands/${d.id}/accept`, {});
+  ok(t.status === 'to_sign_seller', 'offre retenue et signée par l\'acheteur fictif');
+  call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/signatures`, {});
+  ok(call(CP, 'seller2', 'GET', '/v1/transactions/' + t.id).status === 'to_ship', 'dépôt simulé : expédition demandée');
+  call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/shipments`, { tracking: 'SBX-1' });
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

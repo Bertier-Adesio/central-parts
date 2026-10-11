@@ -34,6 +34,7 @@
       ui.card('Offres reçues par l\'API (' + offers.length + ')', ui.table(['SKU', 'Référence', '>Qté', '>Prix', 'Paliers', 'Date code', 'Questionnaire', ''], offers.map(function (o) {
         return ['<span class="mono">' + esc(o.sku) + '</span>', '<span class="mono">' + esc(o.mpn) + '</span>', CP.num(o.quantity), o.unit_price ? CP.money(o.unit_price, o.currency) : '—', String(o.price_breaks.length), o.date_code ? esc(o.date_code) : '<span class="muted small">À la consultation</span>', o.questionnaire_complete ? ui.pill('Complet', 'ok') : ui.link('/vendeur/lots/' + o.lot_id, 'À compléter'), o.withdrawn ? ui.pill('Retirée', 'muted') : ui.btn('Retirer', 'sup-delete', { sku: o.sku }, 'small ghost')];
       }), 'Aucune offre avec SKU pour le moment.')) +
+      sandboxCard(org) +
       '<div class="grid2"><form class="card form" data-form="hook"><h2>3. Webhooks</h2><p class="muted small">Central.Parts appelle votre URL à chaque événement, signé HMAC-SHA256 (en-tête <span class="mono">CP-Signature</span>). Une demande qui correspond à votre stock peut ainsi recevoir une offre par l\'API sans passer par l\'écran.</p>' +
         (CP.lastHookSecret && CP.lastHookSecret.org === org ? '<p class="label-box mono">Secret de signature : ' + esc(CP.lastHookSecret.secret) + '</p><p class="warn-line">Copiez ce secret maintenant : il ne sera plus affiché.</p>' : '') +
         '<label class="field"><span>URL HTTPS</span><input name="url" value="https://erp.exemple.invalid/central-parts/webhooks"></label>' +
@@ -42,6 +43,18 @@
       ui.card('Dernières livraisons', hooks.deliveries.length ? '<ol class="hist">' + hooks.deliveries.map(function (d) { return '<li><span class="mono">' + esc(CP.fmtDay(d.day)) + '</span> <b class="mono small">' + esc(d.type) + '</b> → ' + d.status + '<pre class="code">' + esc(JSON.stringify(d.payload, null, 1)) + '</pre></li>'; }).join('') + '</ol>' : '<p class="empty">Aucun événement livré. Abonnez-vous, puis lancez une demande côté acheteur sur une référence de votre stock.</p>') + '</div>' +
       '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées : EUR, USD, CNY (RMB), HKD, GBP, JPY, TWD, SGD.</p>');
   };
+
+  function sandboxCard(org) {
+    var lots = (CP.get('/v1/lots') || []).filter(function (l) { return l.qty > 0; });
+    var dems = (CP.get('/v1/demands') || []).filter(function (d) { return d.sandbox; });
+    return ui.card('4. Bac à sable', '<p>Environnement de test isolé : <span class="mono">https://sandbox.api.central.parts/v1</span> (prévu), clés <span class="mono">cp_test_…</span> uniquement, données fictives effacées chaque nuit, aucun argent réel. Un acheteur fictif permet de tester toute la chaîne : offre poussée, demande reçue par webhook ou WeChat, enchère, offre retenue, signature, dépôt simulé, expédition.</p>' +
+      '<form class="inline" data-form="sbx-demand"><select name="mpn" aria-label="Référence">' + lots.map(function (l) { return '<option>' + esc(l.mpn) + '</option>'; }).join('') + '</select><input type="number" name="quantity" min="1" value="100" aria-label="Quantité"><button class="btn">Simuler une demande d\'acheteur</button></form>' +
+      ui.table(['Demande', 'Référence', '>Qté', 'Statut', ''], dems.map(function (d) {
+        return [ui.link('/vendeur/demandes/' + d.id, d.id), '<span class="mono">' + esc(d.mpn) + '</span>', CP.num(d.qty), CP.demStatus(d), d.status === 'auction' ? ui.btn('Simuler l\'acceptation de mon offre', 'sbx-accept', { id: d.id }, 'small') : d.txId ? ui.link('/vendeur/transactions/' + d.txId, d.txId) : ''];
+      }), 'Aucune demande de test.'));
+  }
+  CP.forms['sbx-demand'] = function (d) { CP.call('POST', '/v1/sandbox/demands', { mpn: d.mpn, quantity: d.quantity }, 'Demande de test créée : webhooks et notifications envoyés.'); };
+  CP.actions['sbx-accept'] = function (b) { CP.call('POST', '/v1/sandbox/demands/' + b.getAttribute('data-id') + '/accept', {}, 'Offre acceptée par l\'acheteur fictif : fiche à signer.'); };
 
   CP.actions['key-create'] = function (b) {
     var k = CP.call('POST', '/v1/organizations/' + CP.actor.org + '/api-keys', { environment: b.getAttribute('data-env') }, 'Clé créée.');

@@ -721,6 +721,34 @@
       return { sku: l.sku || null, lot_id: l.id, mpn: l.mpn, manufacturer: l.mfr, quantity: l.qty, unit_price: l.price, currency: l.currency || null, price_breaks: Object.keys(l.tiers || {}).map(function (q) { return { quantity: Number(q), price: l.tiers[q] }; }), date_code: l.dc || null, questionnaire_complete: complete(l), withdrawn: !!l.withdrawn };
     });
   };
+  // Bac à sable : un acheteur fictif (SBX) permet au fournisseur de tester son intégration de bout en bout.
+  H['sbx.demand'] = function (c) {
+    var org = c.actor.org, b = c.body;
+    var mpn = String(b.mpn || '').toUpperCase();
+    var lot = CP.values(S().lots).filter(function (l) { return l.sellerId === org && l.mpn.toUpperCase() === mpn && l.qty > 0; })[0];
+    if (!lot) fail(422, 'Référence absente de votre stock : poussez d\'abord une offre');
+    var qty = Math.min(parseInt(b.quantity, 10) || lot.qty, lot.qty);
+    var id = next('DEM');
+    var d = { id: id, buyerId: 'SBX', bomId: null, mpn: lot.mpn, mfr: lot.mfr, qty: qty, dcMin: b.date_code_min || '', pack: 'Indifférent', zone: 'France', delivery: 'Bac à sable (France)', leadDays: 10, target: null, status: 'auction', day: S().day, closesDay: S().day + P.delays.auction, sellers: [org], sandbox: true };
+    S().demands[id] = d;
+    notify(org, 'Bac à sable : demande ' + id + ' (' + d.mpn + ' × ' + qty + ').', '/vendeur/demandes/' + id);
+    deliver(org, 'demand.created', { demand_id: id, mpn: d.mpn, quantity: qty, date_code_min: d.dcMin, zone: d.zone, closes_on: CP.date(d.closesDay).toISOString().slice(0, 10), sandbox: true });
+    return demandView(d, c.actor);
+  };
+  H['sbx.accept'] = function (c) {
+    var d = S().demands[c.params.id];
+    if (!d || !d.sandbox || d.sellers.indexOf(c.actor.org) < 0) fail(404, 'Demande du bac à sable inconnue');
+    var mine = CP.values(S().bids).filter(function (x) { return x.demandId === d.id && x.sellerId === c.actor.org; })[0];
+    if (!mine) fail(409, 'Envoyez d\'abord une offre sur cette demande');
+    var buyer = { role: 'buyer', org: 'SBX', label: 'Acheteur du bac à sable' };
+    if (d.status === 'auction') H['dem.close']({ params: { id: d.id }, actor: SYSTEM, body: {} });
+    var o = CP.values(S().offers).filter(function (x) { return x.demandId === d.id && x.sellerId === c.actor.org; })[0];
+    var t = H['offer.accept']({ params: { id: o.id }, actor: buyer, body: { labLevel: 0 } });
+    H['tx.sign']({ params: { id: t.id }, actor: buyer, body: {} });
+    S().transactions[t.id].sandbox = true;
+    return txView(S().transactions[t.id], c.actor);
+  };
+
   var EVENTS = ['demand.created', 'offer.accepted', 'transaction.updated'];
   H['hook.create'] = function (c) {
     var org = supplier(c).id, b = c.body;
@@ -771,6 +799,8 @@
       hist(t, 'Fiche signée par le vendeur. Dépôt des fonds attendu, référence ' + t.id + '.');
       notify(t.buyerId, 'Fiche ' + t.id + ' signée. Virez ' + CP.eur(t.total) + ' sur le compte dédié, référence ' + t.id + '.', '/acheteur/transactions/' + t.id);
       notify('BK', 'Virement attendu : ' + CP.eur(t.total) + ', référence ' + t.id + '.', '/banque');
+      // Bac à sable : le dépôt de l'acheteur fictif est simulé aussitôt.
+      if (t.sandbox) H['bank.incoming']({ body: { reference: t.id, amount: t.total }, actor: { role: 'bank', org: 'BK' } });
     }
     return txView(t, c.actor);
   };
