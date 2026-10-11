@@ -15,7 +15,7 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 
 ## API fournisseur
 
-[`fournisseurs.md`](fournisseurs.md) : spécification v0 de l'API par laquelle les brokers et distributeurs poussent leur stock et reçoivent les demandes (ADR 0004), et ses notifications WeChat, WeCom et e-mail (ADR 0005).
+[`fournisseurs.md`](fournisseurs.md) : spécification v0 de l'API par laquelle les brokers et distributeurs poussent leur stock et reçoivent les demandes (ADR 0004), ses notifications WeChat, WeCom et e-mail (ADR 0005), et les connecteurs aux API produit des brokers, prioritaires (ADR 0006).
 
 ## Prochaines étapes
 

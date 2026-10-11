@@ -168,6 +168,21 @@
     return ui.pill(m[0], m[1]);
   }
 
+  CP.views['/ops/connecteurs'] = function () {
+    var list = CP.get('/v1/connectors') || [];
+    var q = CP.lastLiveQuery;
+    var STATUS = { ok: ['Actif', 'ok'], pending: ['À tester', 'todo'], down: ['Indisponible', 'danger'] };
+    return ui.page('Connecteurs aux API des brokers', 'Priorité aux brokers qui ont une API produit interrogeable : à chaque demande, Central.Parts interroge leur stock en direct et ne garde qu\'un instantané des lots concernés. Seuls les brokers vérifiés sont interrogés.',
+      ui.stats([['Connecteurs', list.length], ['Actifs', list.filter(function (c) { return c.status === 'ok'; }).length], ['À tester', list.filter(function (c) { return c.status === 'pending'; }).length], ['Indisponibles', list.filter(function (c) { return c.status === 'down'; }).length]]) +
+      ui.card('Connecteurs', ui.table(['Broker', 'Statut vendeur', 'Recherche', 'Auth.', 'Statut', '>Réponse', '>Appels', 'Dernier appel'], list.map(function (cn) {
+        var st = STATUS[cn.status] || [cn.status, ''];
+        return [esc(cn.seller) + ' (' + esc(cn.alias) + ')', ui.verified(cn.verified), '<span class="mono small">GET ' + esc(cn.baseUrl + cn.searchPath) + '</span>', esc(cn.auth), ui.pill(st[0], st[1]), cn.latencyMs ? cn.latencyMs + ' ms' : '—', String(cn.calls || 0), cn.lastCall != null ? esc(CP.fmtDay(cn.lastCall)) : '—'];
+      }), 'Aucun connecteur.')) +
+      ui.card('Interroger les API en direct', '<form class="inline" data-form="live-query"><input name="mpn" value="EPM7064SLC44-10" aria-label="Référence"><input name="quantity" type="number" min="1" value="100" aria-label="Quantité"><button class="btn">Interroger</button></form>' +
+        (q ? '<h3>' + esc(q.mpn) + '</h3>' + ui.table(['Broker', 'Connecteur', 'SKU', '>Quantité', '>Réponse'], q.results.map(function (r) { return [esc(CP.state.orgs[r.sellerId].alias), esc(r.connector), '<span class="mono small">' + esc(r.sku) + '</span>', CP.num(r.quantity), r.latencyMs + ' ms']; }), 'Aucun broker connecté n\'a cette référence.') : '<p class="muted small">C\'est l\'appel lancé automatiquement à chaque nouvelle demande.</p>')));
+  };
+  CP.forms['live-query'] = function (d) { var r = CP.call('POST', '/v1/connectors/query', { mpn: d.mpn, quantity: d.quantity }); if (r) CP.lastLiveQuery = r; };
+
   CP.views['/ops/paiements'] = function () {
     var orders = CP.get('/v1/payment-orders') || [];
     var me = CP.actor.user;

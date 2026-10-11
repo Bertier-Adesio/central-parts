@@ -46,7 +46,9 @@ scenario('nomenclature, enchère, transaction avec laboratoire, acceptation, pai
   // Le vendeur ne voit ni l'acheteur ni l'adresse.
   const seen = call(CP, 'seller3', 'GET', '/v1/demands/' + dem.id);
   ok(!seen.buyerId && !seen.delivery && seen.zone === 'Chine', 'anonymisation de la demande');
-  call(CP, 'seller2', 'GET', '/v1/demands/' + dem.id, null, [404]);
+  // V-2 a la référence dans son API produit, interrogée en direct : la demande lui parvient.
+  ok(call(CP, 'seller2', 'GET', '/v1/demands/' + dem.id).liveConfirmed === true, 'stock confirmé par l\'API du broker');
+  call(CP, 'seller1', 'GET', '/v1/demands/' + dem.id).id;
   // V-1 : lot de 90 pièces, insuffisant ; V-3 : lot complet.
   call(CP, 'seller1', 'POST', `/v1/demands/${dem.id}/bids`, { lotId: 'LOT-104', net: 18 }, [422]);
   const mine = call(CP, 'seller3', 'POST', `/v1/demands/${dem.id}/bids`, { lotId: 'LOT-103', net: 22, leadDays: 4 });
@@ -334,6 +336,33 @@ scenario('acheteur en USD, vendeur payé en CNY', (CP) => {
   call(CP, 'seller4', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'TW1', mpn: 'X', quantity: 1, currency: 'TWD' }] });
   ok(call(CP, 'seller4', 'GET', '/v1/supplier/offers?sku=TW1').length === 0, 'devise sans compte Central.Parts refusée');
   ok(call(CP, 'buyer2', 'GET', '/v1/transactions/' + tx.id).status === 'released', 'transaction soldée');
+});
+
+scenario('connecteurs : Central.Parts interroge l\'API produit des brokers', (CP) => {
+  // EPM7064 n'est dans aucun stock poussé : seule l'API de V-2 l'a.
+  ok(call(CP, 'buyer', 'GET', '/v1/search?q=EPM7064').opportunity.length === 0, 'référence absente du stock stocké');
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'EPM7064SLC44-10', qty: 1000, delivery: 'Lyon (France)' });
+  const seen = call(CP, 'seller2', 'GET', '/v1/demands/' + d.id);
+  ok(seen.liveConfirmed && seen.live === undefined, 'demande diffusée grâce à l\'API, détail des appels masqué');
+  const lot = call(CP, 'seller2', 'GET', '/v1/lots').find((l) => l.sku === 'HB-API-0003');
+  ok(lot && lot.source === 'pull' && lot.qty === 1500 && lot.dc === '2011', 'instantané du stock distant enregistré');
+  ok(call(CP, 'ops1', 'GET', '/v1/connectors')[0].calls >= 1, 'appels comptés');
+  // Déclaration d'un nouveau connecteur par un vendeur, puis appel d'essai.
+  call(CP, 'seller3', 'POST', '/v1/organizations/S3/connectors', { baseUrl: 'http://x', searchPath: '/p?mpn={mpn}', auth: 'api_key' }, [422]);
+  const cn = call(CP, 'seller3', 'POST', '/v1/organizations/S3/connectors', { name: 'API Nord', baseUrl: 'https://api.nord.example', searchPath: '/stock?mpn={mpn}', auth: 'api_key' });
+  ok(cn.status === 'pending' && cn.remote === undefined, 'connecteur en attente, catalogue non exposé');
+  const t = call(CP, 'seller3', 'POST', `/v1/organizations/S3/connectors/${cn.id}/test`, { mpn: 'MC68HC11E1CFNE2' });
+  ok(t.status === 'ok' && t.results.length === 1 && t.request.includes('mpn=MC68HC11E1CFNE2'), 'appel d\'essai et validation');
+  call(CP, 'seller2', 'GET', '/v1/organizations/S3/connectors', null, [403]);
+  // Un broker non vérifié n'est pas interrogé.
+  CP.state.orgs.S2.subscription.until = CP.state.day - 1;
+  const d2 = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'EPM7064SLC44-10', qty: 10, delivery: 'Lyon (France)' });
+  call(CP, 'seller2', 'GET', '/v1/demands/' + d2.id, null, [404]);
+  // Panne de l'API : la demande part quand même, l'incident est journalisé.
+  CP.state.orgs.S2.subscription.until = CP.state.day + 10;
+  CP.state.connectors['CON-0001'].status = 'down';
+  call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'XC2S50-5TQ144C', qty: 10, delivery: 'Lyon (France)' });
+  ok(call(CP, 'ops1', 'GET', '/v1/events').some((e) => /indisponible/.test(e.text)), 'panne du connecteur journalisée');
 });
 
 console.log(`${checks - failures}/${checks} vérifications réussies`);

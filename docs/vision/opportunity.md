@@ -87,7 +87,7 @@ flowchart TD
 - Formats acceptés : flux fournisseur au format Octopart et ECIA Global Standard. **Proposé**
 - Champs obligatoires : référence fabricant, fabricant, quantité. Facultatifs : SKU, prix et devise (EUR, USD, CNY/RMB…), paliers, date code, pays d'origine, conditionnement. **Proposé**
 - Le date code peut manquer dans le stock d'un broker : il est demandé quand le broker est consulté, dans sa réponse à la demande. **Décidé**
-- Canal principal : API fournisseur (`api/fournisseurs.md`) ; fichiers CSV, XLS et SFTP en repli. **Proposé**
+- Priorité aux brokers qui ont une API produit interrogeable : Central.Parts l'interroge en direct à chaque demande et ne garde qu'un instantané des lots trouvés. Puis envoi vers l'API fournisseur (`api/fournisseurs.md`), puis fichiers CSV, XLS et SFTP. **Décidé** (ADR 0006)
 - Doublons : un même lot proposé par plusieurs détenteurs ou brokers est identifié et affiché une seule fois (types de stock ECIA : réel, usine, doublon). **Proposé**
 
 ### 5.2 Questionnaire d'état

@@ -4,7 +4,7 @@ Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`
 
 ## Canaux
 
-Le canal recommandé est l'[API fournisseur](../api/fournisseurs.md) : le stock est poussé à chaque changement. Les fichiers ci-dessous restent proposés en repli.
+Ordre de priorité ([ADR 0006](../docs/decisions/0006-priorite-api-produit-brokers.md)) : 1. l'API produit du broker, interrogée par Central.Parts à chaque demande ; 2. l'envoi vers l'[API fournisseur](../api/fournisseurs.md) ; 3. les fichiers ci-dessous, en repli.
 
 | Canal | Volume | Endpoint | Traitement |
 |---|---|---|---|

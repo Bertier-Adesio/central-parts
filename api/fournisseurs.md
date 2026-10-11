@@ -2,7 +2,24 @@
 
 Spécification v0 de l'API par laquelle un fournisseur (broker, distributeur, détenteur de surplus, fabricant) pousse son stock vers Central.Parts et reçoit les demandes qui le concernent. Implémentation simulée : `site/app/js/api.js`, écran vendeur « Intégration API » de la maquette (`/app/#/vendeur/api`). Décision : [ADR 0004](../docs/decisions/0004-api-fournisseur.md).
 
-L'API est le canal recommandé. Les fichiers CSV ou XLS (`POST /v1/stocklists`) et le dépôt SFTP restent disponibles en repli ([`data/formats.md`](../data/formats.md)).
+**Ordre de priorité des canaux** ([ADR 0006](../docs/decisions/0006-priorite-api-produit-brokers.md)) :
+
+1. **API produit du broker**, interrogée par Central.Parts à chaque demande (connecteur, section suivante) : canal prioritaire.
+2. **Envoi vers l'API fournisseur** de Central.Parts, décrite dans ce document.
+3. **Fichiers** CSV ou XLS (`POST /v1/stocklists`) et dépôt **SFTP** ([`data/formats.md`](../data/formats.md)).
+
+## Connecteur : Central.Parts interroge votre API produit
+
+Le broker déclare son API ; Central.Parts l'appelle sur la référence de chaque nouvelle demande et ne garde qu'un instantané des lots trouvés.
+
+| Méthode | Chemin | Rôle |
+|---|---|---|
+| `POST` | `/v1/organizations/{id}/connectors` | Déclarer l'API : `baseUrl` (HTTPS), `searchPath` contenant `{mpn}`, `auth` (`api_key`, `oauth2`, `basic`, `none`) |
+| `GET` | `/v1/organizations/{id}/connectors` | Connecteurs, statut, temps de réponse, nombre d'appels |
+| `POST` | `/v1/organizations/{id}/connectors/{cid}/test` | Appel d'essai sur une référence ; active le connecteur |
+| `POST` | `/v1/connectors/query` | Interrogation en direct de toutes les API connectées (Central.Parts, lancée à chaque demande) |
+
+Ce que l'API du broker doit fournir, par référence : MPN, fabricant, quantité disponible, SKU ; si possible prix unitaire, devise, paliers, date code. Critères visés : réponse en moins de 2 secondes, disponibilité élevée, limites d'appels compatibles avec le volume de demandes. La correspondance des champs est adaptée à chaque broker. Les identifiants d'accès fournis par le broker sont conservés chiffrés et ne sont jamais réaffichés.
 
 ## Principes
 

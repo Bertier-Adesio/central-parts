@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-70 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+75 endpoints et 25 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -76,6 +76,11 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
+| GET | `/v1/organizations/{id}/connectors` | Vendeur, Central.Parts | Connecteurs vers l'API produit du fournisseur (prioritaire : Central.Parts interroge le stock en direct) | `/vendeur/api` |
+| POST | `/v1/organizations/{id}/connectors` | Vendeur, Central.Parts | Déclaration de l'API produit d'un broker : URL, chemin de recherche par MPN, authentification | `/vendeur/api` |
+| POST | `/v1/organizations/{id}/connectors/{cid}/test` | Vendeur, Central.Parts | Appel d'essai de l'API du broker sur une référence ; valide le connecteur | `/vendeur/api` |
+| GET | `/v1/connectors` | Central.Parts | Tous les connecteurs : état, temps de réponse, nombre d'appels | `/ops/connecteurs` |
+| POST | `/v1/connectors/query` | Central.Parts, Système | Interrogation en direct des API produit des brokers vérifiés pour une référence (lancée à chaque demande) | `/ops/connecteurs` |
 | POST | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Création d'une clé d'API (test ou production), secret affiché une seule fois | `/vendeur/api` |
 | GET | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Clés d'API de la société (préfixe, environnement, dernière utilisation) | `/vendeur/api` |
 | POST | `/v1/supplier/offers/bulk` | Vendeur | Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne | `/vendeur/api` |
@@ -161,7 +166,7 @@
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `sub.get`, `sub.renew`, `dem.list`, `lot.list`, `tx.list`, `notif.list` |
 | `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
-| `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list`, `sbx.demand`, `sbx.accept` |
+| `#/vendeur/api` | Vendeur | Intégration par API | `conn.list`, `conn.create`, `conn.test`, `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list`, `sbx.demand`, `sbx.accept` |
 | `#/vendeur/notifications` | Vendeur | Notifications (e-mail, WeCom, WeChat) | `chan.list`, `chan.create`, `chan.delete`, `chan.test`, `wechat.qr`, `wechat.event` |
 | `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |
@@ -173,6 +178,7 @@
 | `#/ops/kyb` | Central.Parts | KYB et statut vérifié | `org.list`, `org.decide`, `sub.renew` |
 | `#/ops/demandes` | Central.Parts | Demandes et enchères | `dem.list`, `dem.close`, `offer.list` |
 | `#/ops/transactions/:id` | Central.Parts | Transaction (vue opérateur) | `tx.get`, `tx.delivered`, `dispute.decide` |
+| `#/ops/connecteurs` | Central.Parts | Connecteurs aux API des brokers | `conn.all`, `conn.query` |
 | `#/ops/paiements` | Central.Parts | Ordres de paiement, double validation | `order.list`, `order.approve`, `order.transmit` |
 | `#/api` | Public | Carte des endpoints et des routes | — |
 

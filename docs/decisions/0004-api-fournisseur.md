@@ -1,7 +1,7 @@
 # 0004 — API fournisseur en canal principal, fichiers en repli
 
 - Date : 2026-10-10
-- Statut : proposée
+- Statut : proposée ; ordre des canaux précisé par l'ADR 0006 (API produit du broker en priorité)
 
 ## Contexte
 

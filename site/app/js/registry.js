@@ -64,6 +64,11 @@ var CP_ENDPOINTS = [
   { id: 'lot.documents', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/documents', roles: ['seller'], summary: 'Documents qualité : photos, CoC, preuve d\'achat, datasheet, rapport d\'inspection' },
 
   // API fournisseur : le vendeur pousse ses offres depuis son système, sans fichier.
+  { id: 'conn.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/connectors', roles: ['seller', 'ops'], summary: 'Connecteurs vers l\'API produit du fournisseur (prioritaire : Central.Parts interroge le stock en direct)' },
+  { id: 'conn.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/connectors', roles: ['seller', 'ops'], summary: 'Déclaration de l\'API produit d\'un broker : URL, chemin de recherche par MPN, authentification' },
+  { id: 'conn.test', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/connectors/{cid}/test', roles: ['seller', 'ops'], summary: 'Appel d\'essai de l\'API du broker sur une référence ; valide le connecteur' },
+  { id: 'conn.all', group: 'supplier', method: 'GET', path: '/v1/connectors', roles: ['ops'], summary: 'Tous les connecteurs : état, temps de réponse, nombre d\'appels' },
+  { id: 'conn.query', group: 'supplier', method: 'POST', path: '/v1/connectors/query', roles: ['ops', 'system'], summary: 'Interrogation en direct des API produit des brokers vérifiés pour une référence (lancée à chaque demande)' },
   { id: 'key.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Création d\'une clé d\'API (test ou production), secret affiché une seule fois' },
   { id: 'key.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Clés d\'API de la société (préfixe, environnement, dernière utilisation)' },
   { id: 'sup.bulk', group: 'supplier', method: 'POST', path: '/v1/supplier/offers/bulk', roles: ['seller'], summary: 'Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne' },
@@ -129,7 +134,7 @@ var CP_ROUTES = [
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['sub.get', 'sub.renew', 'dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
-  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
+  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['conn.list', 'conn.create', 'conn.test', 'key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
   { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
   { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
@@ -141,6 +146,7 @@ var CP_ROUTES = [
   { path: '/ops/kyb', role: 'ops', title: 'KYB et statut vérifié', endpoints: ['org.list', 'org.decide', 'sub.renew'] },
   { path: '/ops/demandes', role: 'ops', title: 'Demandes et enchères', endpoints: ['dem.list', 'dem.close', 'offer.list'] },
   { path: '/ops/transactions/:id', role: 'ops', title: 'Transaction (vue opérateur)', endpoints: ['tx.get', 'tx.delivered', 'dispute.decide'] },
+  { path: '/ops/connecteurs', role: 'ops', title: 'Connecteurs aux API des brokers', endpoints: ['conn.all', 'conn.query'] },
   { path: '/ops/paiements', role: 'ops', title: 'Ordres de paiement, double validation', endpoints: ['order.list', 'order.approve', 'order.transmit'] },
   { path: '/api', role: 'public', title: 'Carte des endpoints et des routes', endpoints: [] },
 ];

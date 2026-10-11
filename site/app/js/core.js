@@ -97,8 +97,8 @@ var CP = window.CP = {};
 
   CP.seed = function () {
     var s = {
-      v: 5, day: 0,
-      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
+      v: 6, day: 0,
+      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2, CON: 1 },
       orgs: {
         B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001', currency: 'EUR' },
         B3: { id: 'B3', type: 'buyer', name: 'Rocky Mountain Devices (fictif)', alias: 'A-5R8', city: 'Denver', country: 'États-Unis', kyb: 'validated', iban: 'US00 0000 0000 0000 0003', currency: 'USD' },
@@ -131,6 +131,16 @@ var CP = window.CP = {};
         'LOT-105': { id: 'LOT-105', currency: 'USD', sellerId: 'S2', mpn: 'STM32F103C8T6', mfr: 'STMicroelectronics', qty: 5000, dc: '2023', pack: 'Plateau', price: 2.1, q: fullQ({ origin: 'Autre broker' }), docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
         'LOT-106': { id: 'LOT-106', currency: 'EUR', sellerId: 'S3', mpn: 'LT1086CM#PBF', mfr: 'Analog Devices', qty: 800, dc: '2016', pack: 'Tube', price: 3.4, q: fullQ({ origin: 'Stock propre', pack: 'Tube' }), docs: { photos: true, coc: true, proof: true, datasheet: true, inspection: true } },
         'LOT-107': { id: 'LOT-107', currency: 'CNY', sellerId: 'S4', mpn: 'XC2S50-5TQ144C', mfr: 'AMD Xilinx', qty: 500, dc: '', pack: 'Plateau', price: 300, q: {}, docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
+      },
+      // Connecteurs : Central.Parts interroge l'API produit du broker au moment d'une demande.
+      // remote : catalogue distant simulé (ce que renverrait l'API du broker).
+      connectors: {
+        'CON-0001': { id: 'CON-0001', orgId: 'S2', name: 'API produit Harbour v2', baseUrl: 'https://api.harbour.example/v2', searchPath: '/products?mpn={mpn}', auth: 'api_key', status: 'ok', latencyMs: 420, lastCall: null, calls: 0,
+          remote: [
+            { sku: 'HB-API-0001', mpn: 'XC2S50-5TQ144C', manufacturer: 'AMD Xilinx', quantity: 400, unit_price: 43.0, currency: 'USD', date_code: '2009/2012' },
+            { sku: 'HB-API-0002', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 600, unit_price: 23.5, currency: 'USD', date_code: '2015' },
+            { sku: 'HB-API-0003', mpn: 'EPM7064SLC44-10', manufacturer: 'Intel (Altera)', quantity: 1500, unit_price: 6.8, currency: 'USD', date_code: '2011' },
+          ] },
       },
       // Canaux de notification des vendeurs : V-4 reçoit les demandes sur WeChat, en chinois.
       channels: {
@@ -199,11 +209,11 @@ var CP = window.CP = {};
   };
 
   // ------------------------------------------------------------ persistance
-  var KEY = 'cp-app-state-v5';
+  var KEY = 'cp-app-state-v6';
   CP.load = function () {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.v === 5) return s; }
+      if (raw) { var s = JSON.parse(raw); if (s && s.v === 6) return s; }
     } catch (e) { /* stockage indisponible : on repart des données de démonstration */ }
     return CP.seed();
   };
