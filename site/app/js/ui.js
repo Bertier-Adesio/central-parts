@@ -171,7 +171,7 @@
     var links = {
       public: [['/', 'Accueil'], ['/recherche', 'Recherche'], ['/inscription', 'Inscription'], ['/api', 'Carte de l\'API']],
       buyer: [['/acheteur', 'Tableau de bord'], ['/acheteur/nomenclature', 'Déposer une nomenclature'], ['/recherche', 'Recherche'], ['/api', 'Carte de l\'API']],
-      seller: [['/vendeur', 'Tableau de bord'], ['/vendeur/stock', 'Stock et lots'], ['/recherche', 'Recherche'], ['/api', 'Carte de l\'API']],
+      seller: [['/vendeur', 'Tableau de bord'], ['/vendeur/stock', 'Stock et lots'], ['/vendeur/api', 'Intégration API'], ['/vendeur/notifications', 'Notifications'], ['/recherche', 'Recherche'], ['/api', 'Carte de l\'API']],
       lab: [['/labo', 'Dossiers'], ['/api', 'Carte de l\'API']],
       bank: [['/banque', 'Compte dédié'], ['/api', 'Carte de l\'API']],
       ops: [['/ops', 'Vue d\'ensemble'], ['/ops/kyb', 'KYB'], ['/ops/demandes', 'Demandes'], ['/ops/paiements', 'Ordres de paiement'], ['/api', 'Carte de l\'API']],

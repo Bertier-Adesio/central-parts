@@ -11,6 +11,8 @@ var CP_GROUPS = [
   ['inventory', 'Offre Inventory'],
   ['demands', 'Demandes et enchères (Opportunity)'],
   ['lots', 'Stock vendeur et questionnaire'],
+  ['supplier', 'API fournisseur (intégration des brokers et distributeurs)'],
+  ['channels', 'Notifications : e-mail, WeCom, WeChat'],
   ['transactions', 'Transactions'],
   ['lab', 'Laboratoires'],
   ['payments', 'Compte dédié et ordres de paiement'],
@@ -28,7 +30,7 @@ var CP_ENDPOINTS = [
 
   // Recherche
   { id: 'search', group: 'catalog', method: 'GET', path: '/v1/search', roles: ['public', 'buyer', 'seller', 'lab', 'ops'], summary: 'Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes)' },
-  { id: 'advice', group: 'catalog', method: 'GET', path: '/v1/pricing/advice', roles: ['seller', 'ops'], summary: 'Fourchette de prix conseillée par Adesio pour une référence et une quantité' },
+  { id: 'advice', group: 'catalog', method: 'GET', path: '/v1/pricing/advice', roles: ['seller', 'ops'], summary: 'Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur' },
 
   // Nomenclatures
   { id: 'bom.create', group: 'boms', method: 'POST', path: '/v1/boms', roles: ['buyer'], summary: 'Dépôt d\'une nomenclature : chaque ligne est affectée à Inventory ou à Opportunity' },
@@ -44,17 +46,40 @@ var CP_ENDPOINTS = [
   { id: 'dem.list', group: 'demands', method: 'GET', path: '/v1/demands', roles: ['buyer', 'seller', 'ops'], summary: 'Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops)' },
   { id: 'dem.get', group: 'demands', method: 'GET', path: '/v1/demands/{id}', roles: ['buyer', 'seller', 'ops'], summary: 'Détail d\'une demande ; le vendeur ne voit ni l\'acheteur ni l\'adresse' },
   { id: 'dem.close', group: 'demands', method: 'POST', path: '/v1/demands/{id}/close', roles: ['ops', 'system'], summary: 'Clôture de l\'enchère et calcul des offres consolidées (net + marge + frais)' },
-  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée du vendeur : lot, prix net, délai. Questionnaire du lot complet exigé' },
+  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s\'il manque au stock), délai. Questionnaire du lot complet exigé' },
   { id: 'bid.mine', group: 'demands', method: 'GET', path: '/v1/demands/{id}/bids/mine', roles: ['seller'], summary: 'Offre du vendeur et son rang, sans les offres concurrentes' },
   { id: 'offer.list', group: 'demands', method: 'GET', path: '/v1/demands/{id}/offers', roles: ['buyer', 'ops'], summary: 'Offres consolidées, prix tout compris, questionnaire et documents' },
   { id: 'offer.accept', group: 'demands', method: 'POST', path: '/v1/offers/{id}/accept', roles: ['buyer'], summary: 'Choix d\'une offre, du niveau de test et des délais : crée la fiche transaction' },
 
   // Stock vendeur
-  { id: 'stock.import', group: 'lots', method: 'POST', path: '/v1/stocklists', roles: ['seller'], summary: 'Import d\'une stocklist (formats Octopart ou ECIA), dédoublonnage des lots' },
+  { id: 'stock.import', group: 'lots', method: 'POST', path: '/v1/stocklists', roles: ['seller'], summary: 'Import d\'une stocklist CSV ou XLS (format broker, Octopart, ECIA) : paliers de prix, dédoublonnage par SKU, rapport d\'import' },
+  { id: 'stock.sftp', group: 'lots', method: 'POST', path: '/v1/webhooks/sftp/stocklist', roles: ['system'], summary: 'Dépôt SFTP d\'une stocklist volumineuse (plus de 500 000 lignes) : traitement asynchrone, même format' },
+  { id: 'stock.job', group: 'lots', method: 'GET', path: '/v1/stocklists/{id}', roles: ['seller', 'ops'], summary: 'Rapport d\'import : lots créés, mis à jour, doublons possibles, lignes rejetées, date codes manquants' },
   { id: 'lot.list', group: 'lots', method: 'GET', path: '/v1/lots', roles: ['seller', 'ops'], summary: 'Lots du vendeur et état du questionnaire' },
   { id: 'lot.get', group: 'lots', method: 'GET', path: '/v1/lots/{id}', roles: ['seller', 'ops'], summary: 'Détail d\'un lot' },
+  { id: 'lot.update', group: 'lots', method: 'PATCH', path: '/v1/lots/{id}', roles: ['seller'], summary: 'Mise à jour du lot : date code, conditionnement, quantité' },
   { id: 'lot.questionnaire', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/questionnaire', roles: ['seller'], summary: 'Questionnaire d\'état (13 questions) : les réponses engagent le vendeur' },
   { id: 'lot.documents', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/documents', roles: ['seller'], summary: 'Documents qualité : photos, CoC, preuve d\'achat, datasheet, rapport d\'inspection' },
+
+  // API fournisseur : le vendeur pousse ses offres depuis son système, sans fichier.
+  { id: 'key.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Création d\'une clé d\'API (test ou production), secret affiché une seule fois' },
+  { id: 'key.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Clés d\'API de la société (préfixe, environnement, dernière utilisation)' },
+  { id: 'sup.bulk', group: 'supplier', method: 'POST', path: '/v1/supplier/offers/bulk', roles: ['seller'], summary: 'Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne' },
+  { id: 'sup.upsert', group: 'supplier', method: 'PUT', path: '/v1/supplier/offers/{sku}', roles: ['seller'], summary: 'Création ou mise à jour d\'une offre (quantité, prix, paliers, date code)' },
+  { id: 'sup.delete', group: 'supplier', method: 'DELETE', path: '/v1/supplier/offers/{sku}', roles: ['seller'], summary: 'Retrait d\'une offre vendue ailleurs (quantité à zéro, historique conservé)' },
+  { id: 'sup.list', group: 'supplier', method: 'GET', path: '/v1/supplier/offers', roles: ['seller'], summary: 'Offres du fournisseur, filtres sku et updated_since pour la réconciliation' },
+  { id: 'hook.create', group: 'supplier', method: 'POST', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnement aux événements : demande correspondant au stock, offre retenue, transaction' },
+  { id: 'hook.list', group: 'supplier', method: 'GET', path: '/v1/supplier/webhooks', roles: ['seller'], summary: 'Abonnements et dernières livraisons d\'événements (signées HMAC)' },
+  { id: 'sbx.demand', group: 'supplier', method: 'POST', path: '/v1/sandbox/demands', roles: ['seller'], summary: 'Bac à sable : simule une demande d\'acheteur sur une référence du stock du fournisseur (déclenche webhooks et notifications)' },
+  { id: 'sbx.accept', group: 'supplier', method: 'POST', path: '/v1/sandbox/demands/{id}/accept', roles: ['seller'], summary: 'Bac à sable : simule la clôture et l\'acceptation de l\'offre du fournisseur, puis la signature de l\'acheteur' },
+
+  // Canaux de notification : le vendeur reçoit les demandes là où il travaille (WeChat en Chine).
+  { id: 'chan.list', group: 'channels', method: 'GET', path: '/v1/organizations/{id}/notification-channels', roles: ['seller', 'ops'], summary: 'Canaux de notification de la société et derniers messages envoyés' },
+  { id: 'chan.create', group: 'channels', method: 'POST', path: '/v1/organizations/{id}/notification-channels', roles: ['seller'], summary: 'Ajout d\'un canal : e-mail, robot de groupe WeCom (企业微信) ou compte de service WeChat (服务号), langue et événements' },
+  { id: 'chan.delete', group: 'channels', method: 'DELETE', path: '/v1/organizations/{id}/notification-channels/{cid}', roles: ['seller'], summary: 'Suppression d\'un canal' },
+  { id: 'chan.test', group: 'channels', method: 'POST', path: '/v1/organizations/{id}/notification-channels/{cid}/test', roles: ['seller'], summary: 'Envoi d\'un message d\'essai sur le canal' },
+  { id: 'wechat.qr', group: 'channels', method: 'POST', path: '/v1/wechat/qrcodes', roles: ['seller'], summary: 'QR code temporaire du compte de service pour lier un utilisateur WeChat à un canal' },
+  { id: 'wechat.event', group: 'channels', method: 'POST', path: '/v1/webhooks/wechat', roles: ['system'], summary: 'Événement WeChat (abonnement ou scan du QR code) : rattache l\'openid au canal' },
 
   // Transactions
   { id: 'tx.list', group: 'transactions', method: 'GET', path: '/v1/transactions', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Transactions de la partie appelante' },
@@ -101,8 +126,10 @@ var CP_ROUTES = [
   { path: '/acheteur/demandes/:id', role: 'buyer', title: 'Demande et offres consolidées', endpoints: ['dem.get', 'offer.list', 'offer.accept'] },
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
-  { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import'] },
-  { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.questionnaire', 'lot.documents'] },
+  { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
+  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
+  { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
+  { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },
   { path: '/labo', role: 'lab', title: 'Dossiers du laboratoire', endpoints: ['lab.cases', 'notif.list'] },

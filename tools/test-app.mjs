@@ -144,5 +144,135 @@ scenario('KYB et droits', (CP) => {
   ok(imp.created.length === 2 && imp.possibleDuplicates.length === 1, 'import et détection de doublon');
 });
 
+scenario('format broker, SFTP, date code', (CP) => {
+  const csv = 'Manufacturer,SKU,MPN,Product URL,Unit Price,Quantity,Price per 10 pcs,Price per 100 pcs,"Price per 1,000 pcs"\n' +
+    'AMD Xilinx,HB-1,XC2S50-5TQ144C,https://exemple.invalid/1,"1,250.00",900,1200,1100,"1,000.50"\n' +
+    'NXP,HB-2,,https://exemple.invalid/2,3,10,,,\n' +
+    'NXP,HB-3,MC68HC11E1CFNE2,https://exemple.invalid/3,19.5,300,19,18,17';
+  const job = call(CP, 'seller2', 'POST', '/v1/stocklists', { format: 'broker', csv });
+  ok(job.created.length === 2 && job.rejected.length === 1 && job.missingDateCode === 2, 'rapport d\'import broker');
+  const lot = call(CP, 'seller2', 'GET', '/v1/lots/' + job.created[0]);
+  ok(lot.sku === 'HB-1' && lot.price === 1250 && lot.tiers[1000] === 1000.5 && lot.tiers[10] === 1200, 'prix et paliers lus, virgules des milliers comprises');
+  const again = call(CP, 'seller2', 'POST', '/v1/stocklists', { csv: 'SKU;MPN;Quantity\nHB-1;XC2S50-5TQ144C;450' });
+  ok(again.updated.length === 1 && again.created.length === 0 && call(CP, 'seller2', 'GET', '/v1/lots/' + job.created[0]).qty === 450, 'mise à jour par SKU, séparateur point-virgule');
+  call(CP, 'seller2', 'GET', '/v1/stocklists/' + job.id);
+  call(CP, 'seller1', 'GET', '/v1/stocklists/' + job.id, null, [404]);
+  call(CP, 'seller2', 'POST', '/v1/webhooks/sftp/stocklist', { csv }, [403]);
+  const sftp = CP.system('POST', '/v1/webhooks/sftp/stocklist', { sellerId: 'S1', csv: 'MPN,Quantity,Date Code\nLM317T,5000,2018' });
+  ok(sftp.status === 201 && sftp.data.channel === 'sftp' && sftp.data.created.length === 1, 'dépôt SFTP traité');
+  // Sans date code, pas d'enchère ; une fois complété, l'enchère passe.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'MC68HC11E1CFNE2', qty: 250, delivery: 'Lyon (France)' });
+  const id = job.created[1];
+  call(CP, 'seller2', 'PUT', `/v1/lots/${id}/questionnaire`, { answers: Object.fromEntries(CP.QUESTIONS.map((q) => [q.k, q.a[0]])) });
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18 }, [422]);
+  // Le date code est donné à la consultation, puis reporté sur le lot.
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: id, net: 18, dateCode: '2013' });
+  ok(call(CP, 'seller2', 'GET', '/v1/lots/' + id).dc === '2013', 'date code reporté sur le lot');
+});
+
+scenario('API fournisseur : clés, offres en masse, retrait, webhooks', (CP) => {
+  const key = call(CP, 'seller2', 'POST', '/v1/organizations/S2/api-keys', { environment: 'live' });
+  ok(key.secret.startsWith('cp_live_') && !call(CP, 'seller2', 'GET', '/v1/organizations/S2/api-keys')[0].secret, 'secret affiché une seule fois');
+  call(CP, 'seller2', 'POST', '/v1/organizations/S1/api-keys', {}, [403]);
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'http://x.example', events: ['demand.created'] }, [422]);
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'https://erp.example.com/hook', events: ['demand.created', 'offer.accepted', 'transaction.updated'] });
+  const r = call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [
+    { sku: 'A1', mpn: 'lm317t', manufacturer: 'TI', quantity: 3000, unit_price: 0.4, price_breaks: [{ quantity: 1000, price: 0.35 }], date_code: '2019' },
+    { sku: 'A2', mpn: '', quantity: 5 },
+    { sku: 'A3', mpn: 'NE5532P', quantity: -1 },
+  ] });
+  ok(r.created === 1 && r.errors.length === 2 && r.errors[0].index === 1, 'erreurs ligne par ligne');
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: Array.from({ length: 1001 }, (_, i) => ({ sku: 'X' + i, mpn: 'M', quantity: 1 })) }, [413]);
+  const up = call(CP, 'seller2', 'PUT', '/v1/supplier/offers/A1', { mpn: 'LM317T', quantity: 2500, unit_price: 0.38 });
+  ok(up.qty === 2500 && up.mpn === 'LM317T', 'mise à jour unitaire par SKU');
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=A1')[0].price_breaks.length === 1, 'paliers conservés');
+  // Une demande sur la référence déclenche un webhook ; l'offre retirée n'est plus sollicitée.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'LM317T', qty: 1000, delivery: 'Lyon (France)' });
+  const hooks = call(CP, 'seller2', 'GET', '/v1/supplier/webhooks');
+  ok(hooks.deliveries.some((x) => x.type === 'demand.created' && x.payload.demand_id === d.id && !('buyer' in x.payload)), 'webhook demand.created anonyme');
+  call(CP, 'seller2', 'DELETE', '/v1/supplier/offers/A1');
+  const d2 = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'LM317T', qty: 10, delivery: 'Lyon (France)' });
+  call(CP, 'seller2', 'GET', '/v1/demands/' + d2.id, null, [404]);
+  call(CP, 'seller2', 'DELETE', '/v1/supplier/offers/INCONNU', null, [404]);
+});
+
+scenario('devises : offres en USD, CNY (RMB) et EUR', (CP) => {
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'C1', mpn: 'X1', quantity: 5, currency: 'BTC' }] });
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=C1').length === 0, 'devise inconnue refusée');
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'C2', mpn: 'NE5532P', quantity: 500, unit_price: 2.6, currency: 'rmb' }] });
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/offers?sku=C2')[0].currency === 'CNY', 'RMB normalisé en CNY');
+  call(CP, 'seller3', 'POST', '/v1/stocklists', { csv: 'MPN,Quantity,Unit Price,Currency\nNE5532P,800,0.40,EUR' });
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'NE5532P', qty: 300, delivery: 'Lyon (France)' });
+  const q = Object.fromEntries(CP.QUESTIONS.map((x) => [x.k, x.a[0]]));
+  const lot2 = call(CP, 'seller2', 'GET', '/v1/lots').find((l) => l.sku === 'C2');
+  const lot3 = call(CP, 'seller3', 'GET', '/v1/lots').find((l) => l.mpn === 'NE5532P');
+  call(CP, 'seller2', 'PUT', `/v1/lots/${lot2.id}/questionnaire`, { answers: q });
+  call(CP, 'seller3', 'PUT', `/v1/lots/${lot3.id}/questionnaire`, { answers: q });
+  const adv = call(CP, 'seller2', 'GET', '/v1/pricing/advice?mpn=NE5532P&currency=CNY');
+  ok(adv.currency === 'CNY' && adv.high > adv.low, 'conseil de prix dans la devise du vendeur');
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot2.id, net: 2.9, currency: 'XYZ', dateCode: '2021' }, [422]);
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot2.id, net: 2.9, currency: 'RMB', dateCode: '2021' }); // 0,37 € environ
+  const mine = call(CP, 'seller3', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot3.id, net: 0.39, currency: 'EUR', dateCode: '2019' });
+  ok(mine.rank === 2, 'rang calculé sur l\'équivalent en euros');
+  call(CP, 'ops1', 'POST', `/v1/demands/${d.id}/close`, {});
+  const offers = call(CP, 'buyer', 'GET', `/v1/demands/${d.id}/offers`);
+  ok(offers[0].seller === 'V-2' && offers[0].dc === '2021' && offers[0].currency === undefined, 'offre consolidée en euros, sans la devise du vendeur');
+  const tx = call(CP, 'buyer', 'POST', `/v1/offers/${offers[0].id}/accept`, { labLevel: 0 });
+  ok(call(CP, 'seller2', 'GET', '/v1/transactions/' + tx.id).netCurrency === 'CNY', 'le vendeur garde sa devise');
+  call(CP, 'buyer', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'seller2', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total });
+  call(CP, 'seller2', 'POST', `/v1/transactions/${tx.id}/shipments`, { tracking: 'Z' });
+  CP.system('POST', '/v1/webhooks/carrier', { txId: tx.id });
+  call(CP, 'buyer', 'POST', `/v1/transactions/${tx.id}/inspection`, { decision: 'accept' });
+  const o = call(CP, 'ops1', 'GET', '/v1/payment-orders').find((x) => x.txId === tx.id);
+  const pay = o.lines.find((l) => l.to === 'S2');
+  ok(pay.currency === 'CNY' && Math.abs(pay.amountCurrency - 2.9 * 300 * 0.97) < 0.01 && Math.abs(o.amount - tx.total) < 0.01, 'paiement en CNY, ordre soldé en euros');
+});
+
+scenario('notifications : WeCom et WeChat en chinois, e-mail', (CP) => {
+  // V-4 (Shenzhen) a un robot WeCom et un compte de service WeChat liés dans les données de démonstration.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'XC2S50-5TQ144C', qty: 250, delivery: 'Intégrateur, Shenzhen (Chine)', dcMin: '2010' });
+  const list = call(CP, 'seller4', 'GET', '/v1/organizations/S4/notification-channels');
+  const wecom = list.deliveries.find((x) => x.channel === 'wecom' && x.type === 'demand.created');
+  const oa = list.deliveries.find((x) => x.channel === 'wechat_oa' && x.type === 'demand.created');
+  ok(wecom && wecom.payload.msgtype === 'markdown' && wecom.payload.markdown.content.includes('新询价') && wecom.payload.markdown.content.includes('中国 广东'.slice(0, 2)), 'message WeCom en chinois');
+  ok(oa && oa.payload.template_id && oa.payload.url.endsWith('/vendeur/demandes/' + d.id), 'message modèle WeChat avec lien vers la demande');
+  ok(!JSON.stringify(list.deliveries).includes('Atelier Lumen') && !JSON.stringify(list.deliveries).includes('Shenzhen (Chine)'.slice(0, 11) + ')'), 'aucune identité ni adresse de l\'acheteur');
+  call(CP, 'seller1', 'GET', '/v1/organizations/S4/notification-channels', null, [403]);
+  call(CP, 'seller1', 'POST', '/v1/organizations/S1/notification-channels', { type: 'wecom', target: 'https://exemple.com/hook', events: ['demand.created'] }, [422]);
+  const mail = call(CP, 'seller1', 'POST', '/v1/organizations/S1/notification-channels', { type: 'email', target: 'ventes@exemple.com', lang: 'en', events: ['demand.created'] });
+  const t = call(CP, 'seller1', 'POST', `/v1/organizations/S1/notification-channels/${mail.id}/test`, {});
+  ok(t.payload.subject.startsWith('[Central.Parts] New RFQ'), 'e-mail d\'essai en anglais');
+  // Liaison d'un compte de service par QR code.
+  const oa2 = call(CP, 'seller2', 'POST', '/v1/organizations/S2/notification-channels', { type: 'wechat_oa', lang: 'zh', events: ['demand.created'] });
+  ok(oa2.status === 'pending', 'canal WeChat en attente du scan');
+  call(CP, 'seller2', 'POST', `/v1/organizations/S2/notification-channels/${oa2.id}/test`, {}, [409]);
+  const qr = call(CP, 'seller2', 'POST', '/v1/wechat/qrcodes', { channelId: oa2.id });
+  call(CP, 'seller2', 'POST', '/v1/webhooks/wechat', { scene: qr.scene, openid: 'x', event: 'subscribe' }, [403]);
+  ok(CP.system('POST', '/v1/webhooks/wechat', { scene: 'inconnu', openid: 'x', event: 'subscribe' }).status === 404, 'QR code inconnu refusé');
+  ok(CP.system('POST', '/v1/webhooks/wechat', { scene: qr.scene, openid: 'o6_test', event: 'subscribe' }).status === 201, 'scan WeChat');
+  ok(call(CP, 'seller2', 'POST', `/v1/organizations/S2/notification-channels/${oa2.id}/test`, {}).payload.touser === 'o6_test', 'message envoyé à l\'openid lié');
+  call(CP, 'seller2', 'DELETE', `/v1/organizations/S2/notification-channels/${oa2.id}`);
+});
+
+scenario('bac à sable : de l\'offre poussée à l\'expédition', (CP) => {
+  call(CP, 'seller2', 'POST', '/v1/supplier/webhooks', { url: 'https://erp.example.com/hook', events: ['demand.created', 'offer.accepted'] });
+  call(CP, 'seller2', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'T1', mpn: 'TL431ACDBZR', quantity: 9000, unit_price: 0.9, currency: 'CNY' }] });
+  call(CP, 'seller2', 'POST', '/v1/sandbox/demands', { mpn: 'INCONNU' }, [422]);
+  const d = call(CP, 'seller2', 'POST', '/v1/sandbox/demands', { mpn: 'TL431ACDBZR', quantity: 2000 });
+  ok(d.sandbox && call(CP, 'seller1', 'GET', '/v1/demands').every((x) => x.id !== d.id), 'demande de test visible du seul fournisseur');
+  ok(call(CP, 'seller2', 'GET', '/v1/supplier/webhooks').deliveries.some((x) => x.payload.demand_id === d.id && x.payload.sandbox), 'webhook de test');
+  call(CP, 'seller2', 'POST', `/v1/sandbox/demands/${d.id}/accept`, {}, [409]);
+  const lot = call(CP, 'seller2', 'GET', '/v1/lots').find((l) => l.sku === 'T1');
+  call(CP, 'seller2', 'PUT', `/v1/lots/${lot.id}/questionnaire`, { answers: Object.fromEntries(CP.QUESTIONS.map((q) => [q.k, q.a[0]])) });
+  call(CP, 'seller2', 'POST', `/v1/demands/${d.id}/bids`, { lotId: lot.id, net: 0.85, currency: 'CNY', dateCode: '2024' });
+  const t = call(CP, 'seller2', 'POST', `/v1/sandbox/demands/${d.id}/accept`, {});
+  ok(t.status === 'to_sign_seller', 'offre retenue et signée par l\'acheteur fictif');
+  call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/signatures`, {});
+  ok(call(CP, 'seller2', 'GET', '/v1/transactions/' + t.id).status === 'to_ship', 'dépôt simulé : expédition demandée');
+  call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/shipments`, { tracking: 'SBX-1' });
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

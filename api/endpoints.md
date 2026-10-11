@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-49 endpoints et 22 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+68 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -27,7 +27,7 @@
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
 | GET | `/v1/search` | Public, Acheteur, Vendeur, Laboratoire, Central.Parts | Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes) | `/recherche` |
-| GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité | `/vendeur/demandes/:id` |
+| GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur | `/vendeur/demandes/:id` |
 
 ## Nomenclatures
 
@@ -52,7 +52,7 @@
 | GET | `/v1/demands` | Acheteur, Vendeur, Central.Parts | Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops) | `/acheteur`, `/vendeur`, `/ops`, `/ops/demandes` |
 | GET | `/v1/demands/{id}` | Acheteur, Vendeur, Central.Parts | Détail d'une demande ; le vendeur ne voit ni l'acheteur ni l'adresse | `/acheteur/demandes/:id`, `/vendeur/demandes/:id` |
 | POST | `/v1/demands/{id}/close` | Central.Parts, Système | Clôture de l'enchère et calcul des offres consolidées (net + marge + frais) | `/ops/demandes` |
-| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée du vendeur : lot, prix net, délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
+| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s'il manque au stock), délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/bids/mine` | Vendeur | Offre du vendeur et son rang, sans les offres concurrentes | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/offers` | Acheteur, Central.Parts | Offres consolidées, prix tout compris, questionnaire et documents | `/acheteur/demandes/:id`, `/ops/demandes` |
 | POST | `/v1/offers/{id}/accept` | Acheteur | Choix d'une offre, du niveau de test et des délais : crée la fiche transaction | `/acheteur/demandes/:id` |
@@ -61,11 +61,40 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| POST | `/v1/stocklists` | Vendeur | Import d'une stocklist (formats Octopart ou ECIA), dédoublonnage des lots | `/vendeur/stock` |
+| POST | `/v1/stocklists` | Vendeur | Import d'une stocklist CSV ou XLS (format broker, Octopart, ECIA) : paliers de prix, dédoublonnage par SKU, rapport d'import | `/vendeur/stock` |
+| POST | `/v1/webhooks/sftp/stocklist` | Système | Dépôt SFTP d'une stocklist volumineuse (plus de 500 000 lignes) : traitement asynchrone, même format | `/vendeur/stock` |
+| GET | `/v1/stocklists/{id}` | Vendeur, Central.Parts | Rapport d'import : lots créés, mis à jour, doublons possibles, lignes rejetées, date codes manquants | `/vendeur/stock` |
 | GET | `/v1/lots` | Vendeur, Central.Parts | Lots du vendeur et état du questionnaire | `/vendeur`, `/vendeur/stock` |
 | GET | `/v1/lots/{id}` | Vendeur, Central.Parts | Détail d'un lot | `/vendeur/lots/:id` |
+| PATCH | `/v1/lots/{id}` | Vendeur | Mise à jour du lot : date code, conditionnement, quantité | `/vendeur/lots/:id` |
 | PUT | `/v1/lots/{id}/questionnaire` | Vendeur | Questionnaire d'état (13 questions) : les réponses engagent le vendeur | `/vendeur/lots/:id` |
 | PUT | `/v1/lots/{id}/documents` | Vendeur | Documents qualité : photos, CoC, preuve d'achat, datasheet, rapport d'inspection | `/vendeur/lots/:id` |
+
+## API fournisseur (intégration des brokers et distributeurs)
+
+| Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
+|---|---|---|---|---|
+| POST | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Création d'une clé d'API (test ou production), secret affiché une seule fois | `/vendeur/api` |
+| GET | `/v1/organizations/{id}/api-keys` | Vendeur, Central.Parts | Clés d'API de la société (préfixe, environnement, dernière utilisation) | `/vendeur/api` |
+| POST | `/v1/supplier/offers/bulk` | Vendeur | Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne | `/vendeur/api` |
+| PUT | `/v1/supplier/offers/{sku}` | Vendeur | Création ou mise à jour d'une offre (quantité, prix, paliers, date code) | `/vendeur/api` |
+| DELETE | `/v1/supplier/offers/{sku}` | Vendeur | Retrait d'une offre vendue ailleurs (quantité à zéro, historique conservé) | `/vendeur/api` |
+| GET | `/v1/supplier/offers` | Vendeur | Offres du fournisseur, filtres sku et updated_since pour la réconciliation | `/vendeur/api` |
+| POST | `/v1/supplier/webhooks` | Vendeur | Abonnement aux événements : demande correspondant au stock, offre retenue, transaction | `/vendeur/api` |
+| GET | `/v1/supplier/webhooks` | Vendeur | Abonnements et dernières livraisons d'événements (signées HMAC) | `/vendeur/api` |
+| POST | `/v1/sandbox/demands` | Vendeur | Bac à sable : simule une demande d'acheteur sur une référence du stock du fournisseur (déclenche webhooks et notifications) | `/vendeur/api` |
+| POST | `/v1/sandbox/demands/{id}/accept` | Vendeur | Bac à sable : simule la clôture et l'acceptation de l'offre du fournisseur, puis la signature de l'acheteur | `/vendeur/api` |
+
+## Notifications : e-mail, WeCom, WeChat
+
+| Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
+|---|---|---|---|---|
+| GET | `/v1/organizations/{id}/notification-channels` | Vendeur, Central.Parts | Canaux de notification de la société et derniers messages envoyés | `/vendeur/notifications` |
+| POST | `/v1/organizations/{id}/notification-channels` | Vendeur | Ajout d'un canal : e-mail, robot de groupe WeCom (企业微信) ou compte de service WeChat (服务号), langue et événements | `/vendeur/notifications` |
+| DELETE | `/v1/organizations/{id}/notification-channels/{cid}` | Vendeur | Suppression d'un canal | `/vendeur/notifications` |
+| POST | `/v1/organizations/{id}/notification-channels/{cid}/test` | Vendeur | Envoi d'un message d'essai sur le canal | `/vendeur/notifications` |
+| POST | `/v1/wechat/qrcodes` | Vendeur | QR code temporaire du compte de service pour lier un utilisateur WeChat à un canal | `/vendeur/notifications` |
+| POST | `/v1/webhooks/wechat` | Système | Événement WeChat (abonnement ou scan du QR code) : rattache l'openid au canal | `/vendeur/notifications` |
 
 ## Transactions
 
@@ -129,8 +158,10 @@
 | `#/acheteur/demandes/:id` | Acheteur | Demande et offres consolidées | `dem.get`, `offer.list`, `offer.accept` |
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
 | `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
-| `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import` |
-| `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.questionnaire`, `lot.documents` |
+| `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
+| `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list`, `sbx.demand`, `sbx.accept` |
+| `#/vendeur/notifications` | Vendeur | Notifications (e-mail, WeCom, WeChat) | `chan.list`, `chan.create`, `chan.delete`, `chan.test`, `wechat.qr`, `wechat.event` |
+| `#/vendeur/lots/:id` | Vendeur | Lot : questionnaire et documents | `lot.get`, `lot.update`, `lot.questionnaire`, `lot.documents` |
 | `#/vendeur/demandes/:id` | Vendeur | Demande anonymisée et enchère | `dem.get`, `advice`, `bid.mine`, `bid.create` |
 | `#/vendeur/transactions/:id` | Vendeur | Transaction (vue vendeur) | `tx.get`, `tx.sign`, `tx.ship`, `tx.counter`, `tx.dispute` |
 | `#/labo` | Laboratoire | Dossiers du laboratoire | `lab.cases`, `notif.list` |

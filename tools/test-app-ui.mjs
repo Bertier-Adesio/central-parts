@@ -41,7 +41,7 @@ await step('acheteur : nomenclature', async () => {
 });
 let s = await state();
 const dXC = Object.values(s.demands).find((d) => d.mpn === 'XC2S50-5TQ144C' && d.id !== 'DEM-0427');
-ok(dXC && dXC.sellers.length === 2, 'demande XC2S50 diffusée à deux vendeurs');
+ok(dXC && dXC.sellers.length === 3, 'demande XC2S50 diffusée aux trois vendeurs qui ont la référence');
 
 await step('vendeurs : enchères', async () => {
   await as('seller1');
@@ -175,10 +175,50 @@ ok(s.transactions['TX-0041'].status === 'settling', 'contrefaçon : remboursemen
 await step('horloge : +1 jour ouvré', async () => { await page.click('header [data-act="advance"]'); });
 ok((await state()).day === 1, 'jour simulé avancé');
 
+await step('vendeur : import au format broker, dépôt SFTP, date code', async () => {
+  await as('seller2'); await go('/vendeur/stock');
+  await page.click('form[data-form="import"] button');
+  await page.waitForSelector('text=Rapport d\'import');
+  ok((await page.textContent('#main')).includes('facultatif dans le stock'), 'date code annoncé à la consultation');
+  await page.click('text=Simuler un dépôt SFTP');
+  await page.waitForSelector('.card h2:has-text("SFTP") >> nth=0');
+});
+s = await state();
+const brokerLot = Object.values(s.lots).find((l) => l.sku === 'HB-000187');
+ok(brokerLot && brokerLot.tiers[1000] === 51, 'lot broker avec paliers');
+await step('vendeur : date code du lot', async () => {
+  await go('/vendeur/lots/' + brokerLot.id);
+  await page.fill('form[data-form="lot-update"] input[name="dc"]', '2011');
+  await page.click('form[data-form="lot-update"] button');
+});
+ok((await state()).lots[brokerLot.id].dc === '2011', 'date code enregistré');
+
+await step('vendeur : intégration API', async () => {
+  await as('seller2'); await go('/vendeur/api');
+  await page.click('text=Créer une clé de test');
+  ok(/cp_test_/.test(await page.textContent('#main')), 'secret de la clé affiché');
+  await page.click('form[data-form="bulk"] button');
+  ok((await page.textContent('#main')).includes('mpn requis'), 'erreur de validation affichée');
+  await page.click('form[data-form="hook"] button');
+  await page.click('form[data-form="sbx-demand"] button');
+  ok((await page.textContent('#main')).includes('Simuler l\'acceptation'), 'demande de test créée');
+});
+ok(Object.values((await state()).lots).some((l) => l.sku === 'HB-000213' && l.source === 'api'), 'offre reçue par l\'API');
+
+await step('vendeur chinois : notifications WeChat', async () => {
+  await as('seller4'); await go('/vendeur/notifications');
+  ok((await page.textContent('#main')).includes('新询价'), 'demande reçue sur WeChat, en chinois');
+  await page.check('input[name="type"][value="wechat_oa"]');
+  await page.click('form[data-form="chan-add"] button');
+  await page.waitForSelector('svg.qr');
+  await page.click('text=Simuler le scan dans WeChat');
+});
+ok(Object.values((await state()).channels).filter((c) => c.orgId === 'S4' && c.status === 'active').length === 3, 'nouveau compte WeChat lié');
+
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));
 const actorFor = { public: 'public', buyer: 'buyer', seller: 'seller2', lab: 'lab', bank: 'bank', ops: 'ops1' };
-const sample = { '/acheteur/nomenclatures/:id': Object.keys(s.boms).pop(), '/acheteur/demandes/:id': dXC.id, '/acheteur/transactions/:id': tx.id, '/vendeur/lots/:id': 'LOT-102', '/vendeur/demandes/:id': dXC.id, '/vendeur/transactions/:id': tx.id, '/labo/dossiers/:id': lc.id, '/ops/transactions/:id': tx.id };
+const sample = { '/vendeur/api': '', '/acheteur/nomenclatures/:id': Object.keys(s.boms).pop(), '/acheteur/demandes/:id': dXC.id, '/acheteur/transactions/:id': tx.id, '/vendeur/lots/:id': 'LOT-102', '/vendeur/demandes/:id': dXC.id, '/vendeur/transactions/:id': tx.id, '/labo/dossiers/:id': lc.id, '/ops/transactions/:id': tx.id };
 for (const width of [1280, 390]) {
   await page.setViewportSize({ width, height: 900 });
   for (const r of routes) {

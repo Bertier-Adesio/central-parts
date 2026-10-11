@@ -69,7 +69,7 @@
         return ['<span class="mono">' + esc(t.id) + '</span>', esc(t.buyer), CP.eur(t.total), ui.due(t), ui.btn('Simuler la réception', 'bank-in', { tx: t.id, amount: t.total }, 'small') + ' ' + ui.btn('Montant erroné', 'bank-in', { tx: t.id, amount: CP.round(t.total - 100) }, 'small ghost')];
       }), 'Aucun virement attendu.') + '<p class="muted small">À réception, la banque appelle le webhook <span class="mono">POST /v1/webhooks/bank/incoming-transfer</span> ; Central.Parts rapproche par référence et montant.</p>') +
       ui.card('Ordres reçus de Central.Parts', ui.table(['Ordre', 'Type', 'Transaction', 'Bénéficiaires', '>Montant', 'Validations', ''], orders.map(function (o) {
-        return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', esc(o.txId), o.lines.map(function (l) { return esc(l.beneficiary) + ' <span class="mono small iban">' + esc(l.iban) + '</span> · ' + CP.eur(l.amount); }).join('<br>'), CP.eur(o.amount), esc(o.approvals.join(', ')),
+        return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', esc(o.txId), o.lines.map(function (l) { return esc(l.beneficiary) + ' <span class="mono small iban">' + esc(l.iban) + '</span> · ' + CP.eur(l.amount) + (l.currency && l.currency !== 'EUR' ? ' → versé ' + CP.money(l.amountCurrency, l.currency) : ''); }).join('<br>'), CP.eur(o.amount), esc(o.approvals.join(', ')),
           o.status === 'transmitted' ? ui.btn('Exécuter', 'bank-exec', { order: o.id }, 'small') : ui.pill('Exécuté', 'ok')];
       }), 'Aucun ordre transmis.') + '<p class="muted small">La banque contrôle que chaque bénéficiaire est une société dont le KYB est validé et dont l\'IBAN est celui déclaré, puis notifie l\'exécution par webhook.</p>') +
       '<div class="grid2">' + ui.card('Cantonnement par transaction', ui.table(['Transaction', '>Montant cantonné'], held.map(function (k) { return [esc(k), CP.eur(esc_.ledger[k])]; }), 'Aucun fonds cantonné.')) + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
@@ -95,7 +95,7 @@
       ui.stats([['Compte dédié', CP.eur(esc_.balance)], ['KYB en attente', orgs.length], ['Enchères ouvertes', dem.filter(function (d) { return d.status === 'auction'; }).length], ['Litiges', disputes.length], ['Ordres à traiter', pendingOrders.length]]) +
       '<div class="grid2">' + ui.card('À traiter', todo.length ? '<ul class="todo-list">' + todo.join('') + '</ul>' : '<p class="empty">Rien à traiter.</p>') + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Transactions', ui.table(['Transaction', 'Référence', 'Acheteur', 'Vendeur', '>Total', '>Marge brute', 'Étape', ''], tx.map(function (t) {
-        return [ui.link('/ops/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', esc(t.buyer), esc(t.seller), CP.eur(t.total), CP.eur((t.unit - t.net) * t.qty), ui.txStatus(t), ui.due(t)];
+        return [ui.link('/ops/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', esc(t.buyer), esc(t.seller), CP.eur(t.total), CP.eur((t.unit - (t.netEur != null ? t.netEur : t.net)) * t.qty), ui.txStatus(t), ui.due(t)];
       }), 'Aucune transaction.')) +
       ui.card('Journal d\'audit', '<ol class="hist">' + events.slice(0, 25).map(function (e) { return '<li><span class="mono">' + esc(CP.fmtDay(e.day)) + '</span> ' + esc(e.text) + '</li>'; }).join('') + '</ol>'));
   };
@@ -132,7 +132,7 @@
       dem.filter(function (d) { return d.status === 'offers' || d.status === 'ordered'; }).map(function (d) {
         var offers = CP.get('/v1/demands/' + d.id + '/offers') || [];
         return ui.card('Offres consolidées · ' + esc(d.id), ui.table(['Rang', 'Vendeur', '>Net vendeur', '>Prix acheteur', '>Écart unitaire', 'Statut'], offers.map(function (o) {
-          return [o.rank, esc(o.sellerName) + ' (' + esc(o.seller) + ')', CP.eur(o.net), CP.eur(o.unit), CP.eur(o.unit - o.net), esc({ open: 'Ouverte', accepted: 'Retenue', declined: 'Non retenue' }[o.status])];
+          return [o.rank, esc(o.sellerName) + ' (' + esc(o.seller) + ')', CP.money(o.net, o.currency) + (o.currency && o.currency !== 'EUR' ? '<br><span class="muted small">' + CP.eur(o.netEur) + '</span>' : ''), CP.eur(o.unit), CP.eur(o.unit - (o.netEur != null ? o.netEur : o.net)), esc({ open: 'Ouverte', accepted: 'Retenue', declined: 'Non retenue' }[o.status])];
         })) + '<p class="muted small">Marge de la maquette fictive (' + Math.round(P.buyerMargin * 100) + ' %), taux réels à fixer.</p>');
       }).join(''));
   };
@@ -152,7 +152,7 @@
     return ui.page('Transaction ' + esc(t.id), esc(t.buyer) + ' → ' + esc(t.seller) + ' · ' + ui.txStatus(t) + ' ' + ui.due(t),
       ui.timeline(t) +
       '<div class="grid2">' + ui.card('Action', action, 'action') +
-      ui.card('Économie de la transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> × ' + CP.num(t.qty)], ['Net vendeur', CP.eur(t.net) + ' l\'unité'], ['Prix acheteur', CP.eur(t.unit) + ' l\'unité'], ['Laboratoire', t.labLevel ? CP.eur(t.labFee) : '—'], ['Total cantonné', '<b>' + CP.eur(t.total) + '</b>'], ['Commission vendeur', CP.eur(t.net * t.qty * P.sellerCommission)], ['Livraison', esc(t.delivery)]])) + '</div>' +
+      ui.card('Économie de la transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> × ' + CP.num(t.qty)], ['Net vendeur', CP.money(t.net, t.netCurrency) + ' l\'unité' + (t.netCurrency && t.netCurrency !== 'EUR' ? ' (' + CP.eur(t.netEur) + ')' : '')], ['Prix acheteur', CP.eur(t.unit) + ' l\'unité'], ['Laboratoire', t.labLevel ? CP.eur(t.labFee) : '—'], ['Total cantonné', '<b>' + CP.eur(t.total) + '</b>'], ['Commission vendeur', CP.eur((t.netEur != null ? t.netEur : t.net) * t.qty * P.sellerCommission)], ['Livraison', esc(t.delivery)]])) + '</div>' +
       (t.orders.length ? ui.card('Ordres', ui.table(['Ordre', 'Type', '>Montant', 'Validations', 'Statut'], t.orders.map(function (o) { return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', CP.eur(o.amount), esc(o.approvals.join(', ')), orderStatus(o)]; }))) : '') +
       CP.certificate(t) + ui.card('Historique', ui.history(t)));
   };
