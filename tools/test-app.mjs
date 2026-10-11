@@ -295,5 +295,41 @@ scenario('statut vérifié : KYB et abonnement à jour', (CP) => {
   call(CP, 'ops1', 'POST', `/v1/organizations/${org.id}/subscription/renewal`, {}, [409]);
 });
 
+scenario('acheteur en USD, vendeur payé en CNY', (CP) => {
+  const d = call(CP, 'buyer2', 'POST', '/v1/demands', { mpn: 'XC2S50-5TQ144C', qty: 100, delivery: 'Usine, Denver (États-Unis)' });
+  ok(d.sellers === undefined && call(CP, 'seller4', 'GET', '/v1/demands/' + d.id).zone === 'États-Unis', 'demande diffusée, zone seule');
+  const q = Object.fromEntries(CP.QUESTIONS.map((x) => [x.k, x.a[0]]));
+  call(CP, 'seller4', 'PUT', '/v1/lots/LOT-107/questionnaire', { answers: q });
+  call(CP, 'seller4', 'POST', `/v1/demands/${d.id}/bids`, { lotId: 'LOT-107', net: 290, currency: 'CNY', dateCode: '2012' });
+  call(CP, 'ops1', 'POST', `/v1/demands/${d.id}/close`, {});
+  const offers = call(CP, 'buyer2', 'GET', `/v1/demands/${d.id}/offers`);
+  const o = offers.find((x) => x.seller === 'V-4');
+  ok(o.unitCurrency === 'USD' && Math.abs(o.unit - CP.fromEur(CP.toEur(290, 'CNY') * 1.12, 'USD')) < 0.02, 'offre consolidée en USD');
+  const tx = call(CP, 'buyer2', 'POST', `/v1/offers/${o.id}/accept`, { labLevel: 1 });
+  ok(tx.currency === 'USD' && Math.abs(tx.labFee - CP.fromEur(180, 'USD')) < 0.01, 'transaction et laboratoire en USD');
+  call(CP, 'buyer2', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'seller4', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total, currency: 'EUR' }, [422]);
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total, currency: 'USD' });
+  ok(Math.abs(call(CP, 'bank', 'GET', '/v1/escrow').balances.USD - tx.total) < 0.01, 'dépôt cantonné en USD');
+  call(CP, 'seller4', 'POST', `/v1/transactions/${tx.id}/shipments`, { tracking: 'SF-1' });
+  const lc = call(CP, 'lab', 'GET', '/v1/lab/cases').find((c) => c.txId === tx.id);
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/reception`, { qty: 100 });
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/certificate`, { verdict: 'pass', results: { visual: 'pass', marking: 'pass' } });
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/reshipment`, { tracking: 'R-1' });
+  CP.system('POST', '/v1/webhooks/carrier', { txId: tx.id });
+  call(CP, 'buyer2', 'POST', `/v1/transactions/${tx.id}/inspection`, { decision: 'accept' });
+  const ord = call(CP, 'ops1', 'GET', '/v1/payment-orders').find((x) => x.txId === tx.id);
+  const pay = ord.lines.find((l) => l.to === 'S4');
+  ok(ord.currency === 'USD' && Math.abs(ord.amount - tx.total) < 0.02, 'ordre en USD, soldant le dépôt');
+  ok(pay.currency === 'CNY' && Math.abs(pay.amountCurrency - 290 * 100 * 0.97) < 0.01, 'vendeur payé en CNY');
+  call(CP, 'ops1', 'POST', `/v1/payment-orders/${ord.id}/approvals`, {});
+  call(CP, 'ops2', 'POST', `/v1/payment-orders/${ord.id}/approvals`, {});
+  call(CP, 'ops1', 'POST', `/v1/payment-orders/${ord.id}/transmit`, {});
+  call(CP, 'bank', 'POST', `/bank/v1/orders/${ord.id}/execution`, {});
+  ok(Math.abs(call(CP, 'bank', 'GET', '/v1/escrow').balances.USD) < 0.02, 'solde USD revenu à zéro');
+  ok(call(CP, 'buyer2', 'GET', '/v1/transactions/' + tx.id).status === 'released', 'transaction soldée');
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

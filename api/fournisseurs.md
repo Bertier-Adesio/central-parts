@@ -81,7 +81,7 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 
 ## Devises
 
-Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. Central.Parts convertit en euros pour classer les offres et présenter à l'acheteur un prix tout compris en euros ; le compte dédié est tenu en euros. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
+Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. L'acheteur voit et paie dans la devise de son pays (EUR, USD, GBP, CNY…). Central.Parts classe les offres sur leur équivalent en euros, encaisse l'acheteur dans sa devise sur le compte dédié (un solde par devise) et paie le vendeur dans la sienne. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
 
 ## Webhooks
 

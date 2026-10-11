@@ -7,7 +7,7 @@ Cadre général : [`plateforme.md`](plateforme.md).
 ## 1. Synthèse
 
 - **Ce que c'est** : l'offre de Central.Parts pour les composants issus de surplus (OEM, EMS, distributeurs) et de brokers, où l'acheteur ne paie le vendeur qu'après avoir reçu, fait tester s'il le souhaite, puis accepté les pièces. **Décidé**
-- **Ce qui la distingue** : un stock contrôlé et une transaction sécurisée. Chaque lot est décrit par un questionnaire d'état qui engage le vendeur ; le paiement est conservé en euros jusqu'à l'acceptation ; des laboratoires partenaires peuvent certifier les pièces avant le paiement du vendeur ; acheteur et vendeur restent anonymes l'un pour l'autre. **Décidé**
+- **Ce qui la distingue** : un stock contrôlé et une transaction sécurisée. Chaque lot est décrit par un questionnaire d'état qui engage le vendeur ; le paiement est conservé, dans la devise de l'acheteur, jusqu'à l'acceptation ; des laboratoires partenaires peuvent certifier les pièces avant le paiement du vendeur ; acheteur et vendeur restent anonymes l'un pour l'autre. **Décidé**
 - **Comment les prix se forment** : les demandes des acheteurs sont anonymisées et diffusées aux vendeurs, qui proposent leur prix net par enchère. Central.Parts ajoute sa marge et présente une offre consolidée. Adesio conseille le prix du vendeur. **Décidé**
 - **Brokers** : toute offre de broker passe par les rails Opportunity (questionnaire et escrow), même pour une référence courante. **Décidé**
 
@@ -124,7 +124,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 
 - L'identité de l'acheteur est masquée aux vendeurs, et celle du vendeur à l'acheteur. **Décidé**
 - Le vendeur voit : référence, quantité, date code minimum, exigences d'emballage et de questionnaire, zone de livraison (pays ou région, jamais l'adresse), délai souhaité. **Proposé**
-- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts convertit en euros pour l'acheteur et paie le vendeur dans sa devise. **Décidé**
+- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts présente l'offre à l'acheteur dans la devise de son pays, l'encaisse dans cette devise et paie le vendeur dans la sienne. **Décidé**
 - Enchère inversée à offres scellées, avec indication du rang au vendeur. **Proposé**
 - L'acheteur voit une offre consolidée (prix tout compris, questionnaire, photos, documents, délai), éventuellement plusieurs offres classées. **Proposé**
 - **Anonymat à la livraison** : transit par un laboratoire ou un entrepôt partenaire, étiquettes neutres, ou levée de l'anonymat à l'expédition protégée par la clause de non-contournement. **À arbitrer**

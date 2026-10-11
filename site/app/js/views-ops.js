@@ -58,22 +58,22 @@
 
   // ============================================================ banque
   CP.views['/banque'] = function () {
-    var esc_ = CP.get('/v1/escrow') || { balance: 0, ledger: {}, movements: [] };
+    var esc_ = CP.get('/v1/escrow') || { balance: 0, balances: {}, ledger: {}, movements: [] };
     var tx = CP.get('/v1/transactions') || [], orders = CP.get('/v1/payment-orders') || [], notifs = CP.get('/v1/notifications') || [];
     var expected = tx.filter(function (t) { return t.status === 'awaiting_funds'; });
     var toExec = orders.filter(function (o) { return o.status === 'transmitted'; });
-    var held = Object.keys(esc_.ledger).filter(function (k) { return esc_.ledger[k] > 0.005; });
+    var held = Object.keys(esc_.ledger).filter(function (k) { return esc_.ledger[k].amount > 0.005; });
     return ui.page('Compte dédié', 'Vue de l\'établissement qui tient le compte où les dépôts des acheteurs sont cantonnés. Établissement et montage juridique à désigner : cette console décrit l\'API attendue de la banque.',
-      ui.stats([['Solde du compte dédié', CP.eur(esc_.balance)], ['Transactions cantonnées', held.length], ['Virements attendus', expected.length], ['Ordres à exécuter', toExec.length]]) +
+      ui.stats(Object.keys(esc_.balances).filter(function (c) { return esc_.balances[c]; }).map(function (c) { return ['Solde ' + c, CP.money(esc_.balances[c], c)]; }).concat([['Équivalent total', CP.eur(esc_.balance)], ['Transactions cantonnées', held.length], ['Virements attendus', expected.length], ['Ordres à exécuter', toExec.length]])) +
       ui.card('Virements attendus', ui.table(['Référence', 'Donneur d\'ordre', '>Montant attendu', 'Échéance', ''], expected.map(function (t) {
-        return ['<span class="mono">' + esc(t.id) + '</span>', esc(t.buyer), CP.eur(t.total), ui.due(t), ui.btn('Simuler la réception', 'bank-in', { tx: t.id, amount: t.total }, 'small') + ' ' + ui.btn('Montant erroné', 'bank-in', { tx: t.id, amount: CP.round(t.total - 100) }, 'small ghost')];
+        return ['<span class="mono">' + esc(t.id) + '</span>', esc(t.buyer), CP.money(t.total, t.currency), ui.due(t), ui.btn('Simuler la réception', 'bank-in', { tx: t.id, amount: t.total }, 'small') + ' ' + ui.btn('Montant erroné', 'bank-in', { tx: t.id, amount: CP.round(t.total - 100) }, 'small ghost')];
       }), 'Aucun virement attendu.') + '<p class="muted small">À réception, la banque appelle le webhook <span class="mono">POST /v1/webhooks/bank/incoming-transfer</span> ; Central.Parts rapproche par référence et montant.</p>') +
       ui.card('Ordres reçus de Central.Parts', ui.table(['Ordre', 'Type', 'Transaction', 'Bénéficiaires', '>Montant', 'Validations', ''], orders.map(function (o) {
-        return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', esc(o.txId), o.lines.map(function (l) { return esc(l.beneficiary) + ' <span class="mono small iban">' + esc(l.iban) + '</span> · ' + CP.eur(l.amount) + (l.currency && l.currency !== 'EUR' ? ' → versé ' + CP.money(l.amountCurrency, l.currency) : ''); }).join('<br>'), CP.eur(o.amount), esc(o.approvals.join(', ')),
+        return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', esc(o.txId), o.lines.map(function (l) { return esc(l.beneficiary) + ' <span class="mono small iban">' + esc(l.iban) + '</span> · ' + CP.money(l.amount, o.currency) + (l.currency && l.currency !== o.currency ? ' → versé ' + CP.money(l.amountCurrency, l.currency) : ''); }).join('<br>'), CP.money(o.amount, o.currency), esc(o.approvals.join(', ')),
           o.status === 'transmitted' ? ui.btn('Exécuter', 'bank-exec', { order: o.id }, 'small') : ui.pill('Exécuté', 'ok')];
       }), 'Aucun ordre transmis.') + '<p class="muted small">La banque contrôle que chaque bénéficiaire est une société dont le KYB est validé et dont l\'IBAN est celui déclaré, puis notifie l\'exécution par webhook.</p>') +
-      '<div class="grid2">' + ui.card('Cantonnement par transaction', ui.table(['Transaction', '>Montant cantonné'], held.map(function (k) { return [esc(k), CP.eur(esc_.ledger[k])]; }), 'Aucun fonds cantonné.')) + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
-      ui.card('Mouvements', ui.table(['Date', 'Libellé', '>Montant'], esc_.movements.map(function (m) { return [esc(CP.fmtDay(m.day)), esc(m.label), '<span class="' + (m.amount < 0 ? 'neg' : 'pos') + '">' + CP.eur(m.amount) + '</span>']; }), 'Aucun mouvement.')));
+      '<div class="grid2">' + ui.card('Cantonnement par transaction', ui.table(['Transaction', '>Montant cantonné'], held.map(function (k) { return [esc(k), CP.money(esc_.ledger[k].amount, esc_.ledger[k].currency)]; }), 'Aucun fonds cantonné.')) + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
+      ui.card('Mouvements', ui.table(['Date', 'Libellé', '>Montant'], esc_.movements.map(function (m) { return [esc(CP.fmtDay(m.day)), esc(m.label), '<span class="' + (m.amount < 0 ? 'neg' : 'pos') + '">' + CP.money(m.amount, m.currency) + '</span>']; }), 'Aucun mouvement.')));
   };
   CP.actions['bank-in'] = function (b) {
     CP.call('POST', '/v1/webhooks/bank/incoming-transfer', { reference: b.getAttribute('data-tx'), amount: Number(b.getAttribute('data-amount')) }, 'Virement rapproché : fonds cantonnés.');
@@ -89,13 +89,13 @@
     var todo = orgs.map(function (o) { return '<li>' + ui.link('/ops/kyb', 'KYB à valider : <b>' + esc(o.name) + '</b>') + '</li>'; })
       .concat(dem.filter(function (d) { return d.status === 'auction'; }).map(function (d) { return '<li>' + ui.link('/ops/demandes', '<b>' + d.id + '</b> · ' + esc(d.mpn)) + ' : enchère, ' + d.bids + ' offre(s), clôture ' + esc(CP.fmtDay(d.closesDay)) + '</li>'; }))
       .concat(disputes.map(function (t) { return '<li>' + ui.link('/ops/transactions/' + t.id, '<b>' + t.id + '</b>') + ' : litige à trancher ' + ui.due(t) + '</li>'; }))
-      .concat(pendingOrders.map(function (o) { return '<li>' + ui.link('/ops/paiements', '<b>' + o.id + '</b>') + ' : ' + (o.type === 'release' ? 'paiement' : 'remboursement') + ' de ' + CP.eur(o.amount) + ', ' + (o.status === 'approved' ? 'à transmettre' : o.approvals.length + '/2 validation') + '</li>'; }))
+      .concat(pendingOrders.map(function (o) { return '<li>' + ui.link('/ops/paiements', '<b>' + o.id + '</b>') + ' : ' + (o.type === 'release' ? 'paiement' : 'remboursement') + ' de ' + CP.money(o.amount, o.currency) + ', ' + (o.status === 'approved' ? 'à transmettre' : o.approvals.length + '/2 validation') + '</li>'; }))
       .concat(tx.filter(function (t) { return t.status === 'to_buyer'; }).map(function (t) { return '<li>' + ui.link('/ops/transactions/' + t.id, '<b>' + t.id + '</b>') + ' : en livraison, webhook transporteur attendu</li>'; }));
     return ui.page('Console Central.Parts', 'Vue opérateur : toutes les parties en clair. Connecté comme <b>' + esc(CP.actor.user) + '</b>.',
-      ui.stats([['Compte dédié', CP.eur(esc_.balance)], ['KYB en attente', orgs.length], ['Enchères ouvertes', dem.filter(function (d) { return d.status === 'auction'; }).length], ['Litiges', disputes.length], ['Ordres à traiter', pendingOrders.length]]) +
+      ui.stats([['Compte dédié (équivalent)', CP.eur(esc_.balance)], ['KYB en attente', orgs.length], ['Enchères ouvertes', dem.filter(function (d) { return d.status === 'auction'; }).length], ['Litiges', disputes.length], ['Ordres à traiter', pendingOrders.length]]) +
       '<div class="grid2">' + ui.card('À traiter', todo.length ? '<ul class="todo-list">' + todo.join('') + '</ul>' : '<p class="empty">Rien à traiter.</p>') + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Transactions', ui.table(['Transaction', 'Référence', 'Acheteur', 'Vendeur', '>Total', '>Marge brute', 'Étape', ''], tx.map(function (t) {
-        return [ui.link('/ops/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', esc(t.buyer), esc(t.seller), CP.eur(t.total), CP.eur((t.unit - (t.netEur != null ? t.netEur : t.net)) * t.qty), ui.txStatus(t), ui.due(t)];
+        return [ui.link('/ops/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', esc(t.buyer), esc(t.seller), CP.money(t.total, t.currency), CP.money((t.unit - CP.fromEur(t.netEur != null ? t.netEur : t.net, t.currency)) * t.qty, t.currency), ui.txStatus(t), ui.due(t)];
       }), 'Aucune transaction.')) +
       ui.card('Journal d\'audit', '<ol class="hist">' + events.slice(0, 25).map(function (e) { return '<li><span class="mono">' + esc(CP.fmtDay(e.day)) + '</span> ' + esc(e.text) + '</li>'; }).join('') + '</ol>'));
   };
@@ -135,7 +135,7 @@
       dem.filter(function (d) { return d.status === 'offers' || d.status === 'ordered'; }).map(function (d) {
         var offers = CP.get('/v1/demands/' + d.id + '/offers') || [];
         return ui.card('Offres consolidées · ' + esc(d.id), ui.table(['Rang', 'Vendeur', '>Net vendeur', '>Prix acheteur', '>Écart unitaire', 'Statut'], offers.map(function (o) {
-          return [o.rank, esc(o.sellerName) + ' (' + esc(o.seller) + ')', CP.money(o.net, o.currency) + (o.currency && o.currency !== 'EUR' ? '<br><span class="muted small">' + CP.eur(o.netEur) + '</span>' : ''), CP.eur(o.unit), CP.eur(o.unit - (o.netEur != null ? o.netEur : o.net)), esc({ open: 'Ouverte', accepted: 'Retenue', declined: 'Non retenue' }[o.status])];
+          return [o.rank, esc(o.sellerName) + ' (' + esc(o.seller) + ')', CP.money(o.net, o.currency) + (o.currency && o.currency !== 'EUR' ? '<br><span class="muted small">' + CP.eur(o.netEur) + '</span>' : ''), CP.money(o.unit, o.unitCurrency), CP.money(o.unit - CP.fromEur(o.netEur != null ? o.netEur : o.net, o.unitCurrency), o.unitCurrency), esc({ open: 'Ouverte', accepted: 'Retenue', declined: 'Non retenue' }[o.status])];
         })) + '<p class="muted small">Marge de la maquette fictive (' + Math.round(P.buyerMargin * 100) + ' %), taux réels à fixer.</p>');
       }).join(''));
   };
@@ -155,8 +155,8 @@
     return ui.page('Transaction ' + esc(t.id), esc(t.buyer) + ' → ' + esc(t.seller) + ' · ' + ui.txStatus(t) + ' ' + ui.due(t),
       ui.timeline(t) +
       '<div class="grid2">' + ui.card('Action', action, 'action') +
-      ui.card('Économie de la transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> × ' + CP.num(t.qty)], ['Net vendeur', CP.money(t.net, t.netCurrency) + ' l\'unité' + (t.netCurrency && t.netCurrency !== 'EUR' ? ' (' + CP.eur(t.netEur) + ')' : '')], ['Prix acheteur', CP.eur(t.unit) + ' l\'unité'], ['Laboratoire', t.labLevel ? CP.eur(t.labFee) : '—'], ['Total cantonné', '<b>' + CP.eur(t.total) + '</b>'], ['Commission vendeur', CP.eur((t.netEur != null ? t.netEur : t.net) * t.qty * P.sellerCommission)], ['Livraison', esc(t.delivery)]])) + '</div>' +
-      (t.orders.length ? ui.card('Ordres', ui.table(['Ordre', 'Type', '>Montant', 'Validations', 'Statut'], t.orders.map(function (o) { return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', CP.eur(o.amount), esc(o.approvals.join(', ')), orderStatus(o)]; }))) : '') +
+      ui.card('Économie de la transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> × ' + CP.num(t.qty)], ['Net vendeur', CP.money(t.net, t.netCurrency) + ' l\'unité' + (t.netCurrency && t.netCurrency !== 'EUR' ? ' (' + CP.eur(t.netEur) + ')' : '')], ['Prix acheteur', CP.money(t.unit, t.currency) + ' l\'unité'], ['Laboratoire', t.labLevel ? CP.money(t.labFee, t.currency) : '—'], ['Total cantonné', '<b>' + CP.money(t.total, t.currency) + '</b>'], ['Commission vendeur', CP.eur((t.netEur != null ? t.netEur : t.net) * t.qty * P.sellerCommission)], ['Livraison', esc(t.delivery)]])) + '</div>' +
+      (t.orders.length ? ui.card('Ordres', ui.table(['Ordre', 'Type', '>Montant', 'Validations', 'Statut'], t.orders.map(function (o) { return [esc(o.id), o.type === 'release' ? 'Paiement' : 'Remboursement', CP.money(o.amount, o.currency), esc(o.approvals.join(', ')), orderStatus(o)]; }))) : '') +
       CP.certificate(t) + ui.card('Historique', ui.history(t)));
   };
   CP.forms.dispute = function (d) { CP.call('POST', '/v1/disputes/' + d.dispute + '/decision', { winner: d.winner, basis: d.basis }, 'Litige tranché.'); };
@@ -175,8 +175,8 @@
       (orders.length ? orders.map(function (o) {
         var mine = o.approvals.indexOf(me) >= 0;
         return ui.card(esc(o.id) + ' · ' + (o.type === 'release' ? 'Paiement' : 'Remboursement') + ' · ' + esc(o.txId) + ' ' + orderStatus(o),
-          ui.table(['Bénéficiaire', 'IBAN', 'Libellé', '>Montant'], o.lines.map(function (l) { return [esc(l.beneficiary), '<span class="mono small iban">' + esc(l.iban) + '</span>', esc(l.label), CP.eur(l.amount)]; })) +
-          '<p class="total-line">Total <b>' + CP.eur(o.amount) + '</b> · validations : ' + (o.approvals.length ? esc(o.approvals.join(', ')) : 'aucune') + '</p>' +
+          ui.table(['Bénéficiaire', 'IBAN', 'Libellé', '>Montant'], o.lines.map(function (l) { return [esc(l.beneficiary), '<span class="mono small iban">' + esc(l.iban) + '</span>', esc(l.label), CP.money(l.amount, o.currency)]; })) +
+          '<p class="total-line">Total <b>' + CP.money(o.amount, o.currency) + '</b> · validations : ' + (o.approvals.length ? esc(o.approvals.join(', ')) : 'aucune') + '</p>' +
           (o.status === 'pending' ? ui.btn(mine ? 'Déjà validé par vous' : 'Valider', 'approve', { order: o.id }, '', mine) : '') +
           (o.status === 'approved' ? ui.btn('Transmettre à la banque', 'transmit', { order: o.id }) : ''));
       }).join('') : ui.card('', '<p class="empty">Aucun ordre. Ils sont créés quand une transaction arrive au paiement ou au remboursement.</p>')));

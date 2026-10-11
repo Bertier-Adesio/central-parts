@@ -74,6 +74,7 @@ var CP = window.CP = {};
   CP.ACTORS = [
     { id: 'public', role: 'public', label: 'Visiteur', org: null },
     { id: 'buyer', role: 'buyer', label: 'Acheteur · Atelier Lumen', org: 'B1' },
+    { id: 'buyer2', role: 'buyer', label: 'Acheteur · Rocky Mountain (USD)', org: 'B3' },
     { id: 'seller1', role: 'seller', label: 'Vendeur V-1 · surplus EMS', org: 'S1' },
     { id: 'seller2', role: 'seller', label: 'Vendeur V-2 · broker', org: 'S2' },
     { id: 'seller3', role: 'seller', label: 'Vendeur V-3 · OEM', org: 'S3' },
@@ -94,12 +95,13 @@ var CP = window.CP = {};
 
   CP.seed = function () {
     var s = {
-      v: 4, day: 0,
+      v: 5, day: 0,
       seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
       orgs: {
-        B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001' },
-        SBX: { id: 'SBX', type: 'buyer', name: 'Acheteur du bac à sable', alias: 'A-TEST', city: 'Bac à sable', country: 'France', kyb: 'validated', iban: 'FR76 0000 0000 0000 0000 0000 999', sandbox: true },
-        B2: { id: 'B2', type: 'buyer', name: 'Novatech EMS (fictif)', alias: 'A-3K9', city: 'Grenoble', country: 'France', kyb: 'pending', iban: 'FR76 1000 2000 0000 0000 0781 4', siren: '000 000 002' },
+        B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001', currency: 'EUR' },
+        B3: { id: 'B3', type: 'buyer', name: 'Rocky Mountain Devices (fictif)', alias: 'A-5R8', city: 'Denver', country: 'États-Unis', kyb: 'validated', iban: 'US00 0000 0000 0000 0003', currency: 'USD' },
+        SBX: { id: 'SBX', type: 'buyer', name: 'Acheteur du bac à sable', alias: 'A-TEST', city: 'Bac à sable', country: 'France', kyb: 'validated', iban: 'FR76 0000 0000 0000 0000 0000 999', sandbox: true, currency: 'EUR' },
+        B2: { id: 'B2', type: 'buyer', name: 'Novatech EMS (fictif)', alias: 'A-3K9', city: 'Grenoble', country: 'France', kyb: 'pending', iban: 'FR76 1000 2000 0000 0000 0781 4', siren: '000 000 002', currency: 'EUR' },
         S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 4 } },
         S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD', subscription: { plan: 'Vendeur Opportunity', until: 240 } },
         S3: { id: 'S3', type: 'seller', name: 'Nord Électronique (fictif)', alias: 'V-3', city: 'Lille', country: 'France', kyb: 'validated', iban: 'FR76 3000 6000 0000 0000 0003 3', profile: 'Surplus OEM', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 180 } },
@@ -156,14 +158,15 @@ var CP = window.CP = {};
       transactions: {
         'TX-0041': {
           id: 'TX-0041', demandId: null, offerId: null, buyerId: 'B1', sellerId: 'S3', lotId: 'LOT-106', mpn: 'LT1086CM#PBF', mfr: 'Analog Devices', qty: 200,
-          net: 3.4, netCurrency: 'EUR', netEur: 3.4, unit: 3.81, labLevel: 1, labId: 'L1', labFee: 180, delivery: 'Atelier, Lyon (France)', incoterm: 'DAP Lyon',
+          net: 3.4, netCurrency: 'EUR', netEur: 3.4, currency: 'EUR', unit: 3.81, labLevel: 1, labId: 'L1', labFee: 180, delivery: 'Atelier, Lyon (France)', incoterm: 'DAP Lyon',
           delays: { inspection: 10, counter: 10 }, status: 'at_lab', signed: { buyer: true, seller: true }, due: null, day: 0, history: [],
         },
       },
       labCases: {
         'LAB-0020': { id: 'LAB-0020', txId: 'TX-0041', labId: 'L1', level: 1, status: 'received', results: {}, verdict: null, day: 0 },
       },
-      escrow: { balance: 0, movements: [] },
+      // Compte dédié : un solde par devise des acheteurs.
+      escrow: { balances: {}, movements: [] },
       orders: {},
       disputes: {},
       notifications: [],
@@ -171,8 +174,8 @@ var CP = window.CP = {};
     };
     var t = s.transactions['TX-0041'];
     t.total = round(t.unit * t.qty + t.labFee);
-    s.escrow.balance = t.total;
-    s.escrow.movements.push({ day: 0, label: 'Virement reçu · Atelier Lumen (fictif) · réf. TX-0041', amount: t.total, txId: 'TX-0041' });
+    s.escrow.balances.EUR = t.total;
+    s.escrow.movements.push({ day: 0, label: 'Virement reçu · Atelier Lumen (fictif) · réf. TX-0041', amount: t.total, currency: 'EUR', txId: 'TX-0041' });
     t.history.push({ day: 0, text: 'Fiche signée par les deux parties.' }, { day: 0, text: 'Fonds reçus sur le compte dédié.' }, { day: 0, text: 'Expédié au laboratoire, suivi DHL 1Z-FICTIF-0041.' }, { day: 0, text: 'Pièces reçues au laboratoire : 200 unités, emballage intact.' });
     return s;
   };
@@ -194,11 +197,11 @@ var CP = window.CP = {};
   };
 
   // ------------------------------------------------------------ persistance
-  var KEY = 'cp-app-state-v4';
+  var KEY = 'cp-app-state-v5';
   CP.load = function () {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.v === 4) return s; }
+      if (raw) { var s = JSON.parse(raw); if (s && s.v === 5) return s; }
     } catch (e) { /* stockage indisponible : on repart des données de démonstration */ }
     return CP.seed();
   };

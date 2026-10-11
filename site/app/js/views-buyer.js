@@ -21,7 +21,7 @@
       ui.stats([['Demandes en enchère', dem.filter(function (d) { return d.status === 'auction'; }).length], ['Offres à étudier', offers.length], ['Actions à faire', todo.length], ['Transactions en cours', tx.filter(function (t) { return CP.TX_STATUS[t.status].turn !== null; }).length]]) +
       '<div class="grid2">' + ui.card('À faire', actions.length ? '<ul class="todo-list">' + actions.join('') + '</ul>' : '<p class="empty">Rien à faire pour le moment.</p>') + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Transactions Opportunity', ui.table(['Transaction', 'Référence', '>Qté', 'Vendeur', '>Montant', 'Étape', ''], tx.map(function (t) {
-        return [ui.link('/acheteur/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', CP.num(t.qty), esc(t.seller), CP.eur(t.total), ui.txStatus(t), ui.due(t)];
+        return [ui.link('/acheteur/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', CP.num(t.qty), esc(t.seller), CP.money(t.total, t.currency), ui.txStatus(t), ui.due(t)];
       }), 'Aucune transaction.')) +
       ui.card('Demandes Opportunity', ui.table(['Demande', 'Référence', '>Qté', 'Livraison', 'Clôture', 'Statut'], dem.map(function (d) {
         return [ui.link('/acheteur/demandes/' + d.id, d.id), '<span class="mono">' + esc(d.mpn) + '</span>', CP.num(d.qty), esc(d.delivery), esc(CP.fmtDay(d.closesDay)), demStatus(d)];
@@ -30,7 +30,7 @@
         return [ui.link('/acheteur/nomenclatures/' + b.id, b.id), esc(b.name), b.lines.length];
       }), 'Aucune nomenclature.') + '<p>' + ui.link('/acheteur/nomenclature', 'Déposer une nomenclature') + '</p>') +
       ui.card('Commandes Inventory', ui.table(['Commande', '>Lignes', '>Montant', 'Statut'], inv.map(function (o) {
-        return [o.id, o.lines.length, CP.eur(o.lines.reduce(function (s, l) { return s + l.qty * l.price; }, 0)), ui.pill(o.status, 'ok')];
+        return [o.id, o.lines.length, CP.money(CP.fromEur(o.lines.reduce(function (s, l) { return s + l.qty * l.price; }, 0), CP.buyerCurrency(CP.actor.org)), CP.buyerCurrency(CP.actor.org)), ui.pill(o.status, 'ok')];
       }), 'Aucune commande.')) + '</div>');
   };
 
@@ -59,14 +59,15 @@
     var inv = b.lines.filter(function (l) { return l.offer === 'inventory'; });
     var opp = b.lines.filter(function (l) { return l.offer === 'opportunity'; });
     var invTotal = inv.reduce(function (s, l) { return s + l.qty * l.price; }, 0);
+    var bc = CP.buyerCurrency(b.buyerId);
     var pending = opp.filter(function (l) { return !l.demandId; });
     return ui.page('Nomenclature ' + esc(b.id), esc(b.name) + ' · ' + b.lines.length + ' lignes · livraison : ' + esc(b.delivery || 'non précisée'),
       ui.card('Répartition', ui.table(['#', 'Référence', 'Fabricant', '>Qté', 'Offre', 'Source ou motif', '>Prix unitaire', 'Suite'], b.lines.map(function (l, i) {
         return [i + 1, '<span class="mono">' + esc(l.mpn) + '</span>', esc(l.mfr || '—'), CP.num(l.qty), l.offer === 'inventory' ? ui.pill('Inventory', 'inv') : ui.pill('Opportunity', 'opp'),
-          esc(l.offer === 'inventory' ? l.source : l.reason || ''), l.offer === 'inventory' ? CP.eur(l.price) : 'Enchère',
+          esc(l.offer === 'inventory' ? l.source : l.reason || ''), l.offer === 'inventory' ? CP.money(CP.fromEur(l.price, bc), bc) : 'Enchère',
           l.offer === 'inventory' ? (b.inventoryOrderId ? 'Commandée' : '') : l.demandId ? ui.link('/acheteur/demandes/' + l.demandId, l.demandId) : ui.btn('Lancer la demande', 'launch-demand', { bom: b.id, mpn: l.mpn, qty: l.qty }, 'small')];
       }))) +
-      '<div class="grid2">' + ui.card('<span class="pill inv">Inventory</span> ' + inv.length + ' ligne(s)', '<p>Prix et délais du réseau, certificat de conformité d\'origine, paiement classique.</p>' + ui.kv([['Montant', CP.eur(invTotal)], ['Commande', b.inventoryOrderId ? esc(b.inventoryOrderId) : 'Non passée']]) +
+      '<div class="grid2">' + ui.card('<span class="pill inv">Inventory</span> ' + inv.length + ' ligne(s)', '<p>Prix et délais du réseau, certificat de conformité d\'origine, paiement classique.</p>' + ui.kv([['Montant', CP.money(CP.fromEur(invTotal, bc), bc)], ['Commande', b.inventoryOrderId ? esc(b.inventoryOrderId) : 'Non passée']]) +
         (inv.length && !b.inventoryOrderId ? '<p>' + ui.btn('Commander les lignes Inventory', 'order-inventory', { bom: b.id }) + '</p>' : '')) +
       ui.card('<span class="pill opp">Opportunity</span> ' + opp.length + ' ligne(s)', '<p>Chaque ligne devient une demande anonymisée, diffusée aux vendeurs dont le stock correspond. Enchère de ' + P.delays.auction + ' jours ouvrés.</p>' +
         (pending.length ? '<p>' + ui.btn('Lancer les ' + pending.length + ' demande(s)', 'launch-all', { bom: b.id }) + '</p>' : '<p class="muted">Toutes les demandes sont lancées.</p>')) + '</div>');
@@ -101,15 +102,16 @@
       body = ui.card('Commandée', '<p>Offre retenue : ' + ui.link('/acheteur/transactions/' + d.txId, 'transaction ' + esc(d.txId)) + '.</p>');
     } else {
       var offers = CP.get('/v1/demands/' + d.id + '/offers') || [];
+      var bcur = CP.buyerCurrency(CP.actor.org);
       body = '<form data-form="accept-offer"><div class="offers">' + offers.map(function (o, i) {
         return '<label class="card offer"><input type="radio" name="offer" value="' + o.id + '"' + (i ? '' : ' checked') + '>' +
-          '<div class="offer-hd"><b>Offre ' + o.rank + '</b><span class="price">' + CP.eur(o.unit) + ' <small>l\'unité, tout compris</small></span></div>' +
+          '<div class="offer-hd"><b>Offre ' + o.rank + '</b><span class="price">' + CP.money(o.unit, o.unitCurrency) + ' <small>l\'unité, tout compris</small></span></div>' +
           '<p class="muted small">' + ui.verified(o.sellerVerified) + ' Vendeur ' + esc(o.seller) + ' · ' + esc(o.sellerProfile) + ' · origine : ' + esc(o.origin) + ' · date code ' + esc(o.dc || o.lot.dc || '—') + ' · expédition sous ' + o.leadDays + ' j ouvrés · valable jusqu\'au ' + esc(CP.fmtDay(o.validUntil)) + '</p>' +
-          '<p class="total-line">Prix converti en euros. Total pour ' + CP.num(d.qty) + ' pièces : <b>' + CP.eur(o.unit * d.qty) + '</b></p>' +
+          '<p class="total-line">Prix dans votre devise (' + esc(o.unitCurrency) + '). Total pour ' + CP.num(d.qty) + ' pièces : <b>' + CP.money(o.unit * d.qty, o.unitCurrency) + '</b></p>' +
           '<details><summary>Questionnaire d\'état et documents</summary>' + ui.questionnaire(o.lot) + ui.docs(o.lot) + '</details></label>';
       }).join('') + '</div>' +
         ui.card('Test en laboratoire et délais', '<fieldset class="labs">' + P.labLevels.map(function (l) {
-          return '<label><input type="radio" name="labLevel" value="' + l.id + '"' + (l.id === 2 ? ' checked' : '') + '> <span>' + esc(l.name) + '</span><span class="muted">' + (l.price ? CP.eur(l.price) + ' · ' + l.days + ' j' : '—') + '</span></label>';
+          return '<label><input type="radio" name="labLevel" value="' + l.id + '"' + (l.id === 2 ? ' checked' : '') + '> <span>' + esc(l.name) + '</span><span class="muted">' + (l.price ? CP.money(CP.fromEur(l.price, bcur), bcur) + ' · ' + l.days + ' j' : '—') + '</span></label>';
         }).join('') + '</fieldset>' +
         '<p class="muted small">Avec un test, le laboratoire reçoit les pièces du vendeur, les teste puis les réexpédie à l\'adresse de livraison. Son certificat précède le paiement du vendeur.</p>' +
         '<div class="row"><label class="field"><span>Délai d\'inspection à réception (1 à 30 j ouvrés)</span><input type="number" name="inspection" min="1" max="30" value="' + P.delays.inspection + '"></label><label class="field"><span>Délai de contre-inspection du vendeur</span><input type="number" name="counter" min="1" max="30" value="' + P.delays.counter + '"></label></div>' +
@@ -134,7 +136,7 @@
         break;
       case 'awaiting_funds':
         action = '<p>Virez le montant exact sur le compte dédié, avec la référence. Les fonds y restent jusqu\'à l\'acceptation des pièces.</p>' +
-          ui.kv([['Montant', '<b>' + CP.eur(t.total) + '</b>'], ['Référence', '<span class="mono">' + esc(t.id) + '</span>'], ['IBAN du compte dédié', '<span class="mono">FR76 0000 0000 0000 0000 0000 000</span> (fictif)']]) +
+          ui.kv([['Montant', '<b>' + CP.money(t.total, t.currency) + '</b>'], ['Devise du virement', esc(t.currency)], ['Référence', '<span class="mono">' + esc(t.id) + '</span>'], ['IBAN du compte dédié', '<span class="mono">FR76 0000 0000 0000 0000 0000 000</span> (fictif)']]) +
           '<p class="muted small">La réception est confirmée par la banque (webhook). Pour la simuler : passer en rôle Banque.</p>' + ui.btn('Continuer comme Banque', 'switch-actor', { actor: 'bank' }, 'ghost');
         break;
       case 'to_buyer':
@@ -155,7 +157,7 @@
     return ui.page('Transaction ' + esc(t.id), esc(t.mpn) + ' × ' + CP.num(t.qty) + ' · vendeur ' + esc(t.seller) + ' · ' + ui.txStatus(t) + ' ' + ui.due(t),
       ui.timeline(t) +
       '<div class="grid2">' + ui.card('Action', action, 'action') +
-      ui.card('Fiche transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> · ' + esc(t.mfr)], ['Quantité', CP.num(t.qty)], ['Prix unitaire tout compris', CP.eur(t.unit)], ['Laboratoire', lvl.id ? esc(lvl.name) + ', ' + CP.eur(t.labFee) : 'Pas de test'], ['Total', '<b>' + CP.eur(t.total) + '</b>'], ['Vendeur', esc(t.seller) + ' · ' + esc(t.sellerProfile || '')], ['Livraison', esc(t.delivery)], ['Délais', 'inspection ' + t.delays.inspection + ' j, contre-inspection ' + t.delays.counter + ' j'], ['Signatures', (t.signed.buyer ? 'acheteur ✓' : 'acheteur ✗') + ' · ' + (t.signed.seller ? 'vendeur ✓' : 'vendeur ✗')]])) + '</div>' +
+      ui.card('Fiche transaction', ui.kv([['Référence', '<span class="mono">' + esc(t.mpn) + '</span> · ' + esc(t.mfr)], ['Quantité', CP.num(t.qty)], ['Prix unitaire tout compris', CP.money(t.unit, t.currency)], ['Laboratoire', lvl.id ? esc(lvl.name) + ', ' + CP.money(t.labFee, t.currency) : 'Pas de test'], ['Total', '<b>' + CP.money(t.total, t.currency) + '</b>'], ['Vendeur', esc(t.seller) + ' · ' + esc(t.sellerProfile || '')], ['Livraison', esc(t.delivery)], ['Délais', 'inspection ' + t.delays.inspection + ' j, contre-inspection ' + t.delays.counter + ' j'], ['Signatures', (t.signed.buyer ? 'acheteur ✓' : 'acheteur ✗') + ' · ' + (t.signed.seller ? 'vendeur ✓' : 'vendeur ✗')]])) + '</div>' +
       certificate(t) +
       '<div class="grid2">' + ui.card('Questionnaire du lot', ui.questionnaire(t.lot) + ui.docs(t.lot)) + ui.card('Historique', ui.history(t)) + '</div>');
   };
