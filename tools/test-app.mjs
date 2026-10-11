@@ -274,5 +274,67 @@ scenario('bac à sable : de l\'offre poussée à l\'expédition', (CP) => {
   call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/shipments`, { tracking: 'SBX-1' });
 });
 
+scenario('statut vérifié : KYB et abonnement à jour', (CP) => {
+  ok(call(CP, 'seller1', 'GET', '/v1/organizations/S1/subscription').verified, 'V-1 vérifié au départ');
+  call(CP, 'seller2', 'GET', '/v1/organizations/S1/subscription', null, [403]);
+  const offers = (() => { call(CP, 'ops1', 'POST', '/v1/demands/DEM-0427/close', {}); return call(CP, 'buyer', 'GET', '/v1/demands/DEM-0427/offers'); })();
+  ok(offers.every((o) => o.sellerVerified === true), 'badge vérifié sur les offres');
+  for (let i = 0; i < 5; i++) CP.advanceDay(); // l'abonnement de V-1 expire au jour 4
+  const sub = call(CP, 'seller1', 'GET', '/v1/organizations/S1/subscription');
+  ok(!sub.verified && sub.subscription.status === 'expired', 'V-1 n\'est plus vérifié');
+  ok(call(CP, 'seller1', 'GET', '/v1/notifications').some((n) => /expir/.test(n.text)), 'rappel et avis d\'expiration');
+  // Une nouvelle demande ne lui est plus diffusée ; la recherche publique masque ses lots.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'MC68HC11E1CFNE2', qty: 50, delivery: 'Lyon (France)' });
+  call(CP, 'seller1', 'GET', '/v1/demands/' + d.id, null, [404]);
+  ok(call(CP, 'seller3', 'GET', '/v1/demands/' + d.id).id === d.id, 'les vendeurs vérifiés la reçoivent');
+  call(CP, 'seller1', 'POST', `/v1/demands/DEM-0428/bids`, { lotId: 'LOT-104', net: 18, dateCode: '2012' }, [403, 409]);
+  const renewed = call(CP, 'seller1', 'POST', '/v1/organizations/S1/subscription/renewal', {});
+  ok(renewed.verified && renewed.subscription.daysLeft === 250, 'renouvellement : statut vérifié rétabli');
+  // Un vendeur inscrit sans KYB validé ne peut pas s'abonner.
+  const org = call(CP, 'public', 'POST', '/v1/organizations', { type: 'seller', name: 'Nouveau Broker' });
+  call(CP, 'ops1', 'POST', `/v1/organizations/${org.id}/subscription/renewal`, {}, [409]);
+});
+
+scenario('acheteur en USD, vendeur payé en CNY', (CP) => {
+  const d = call(CP, 'buyer2', 'POST', '/v1/demands', { mpn: 'XC2S50-5TQ144C', qty: 100, delivery: 'Usine, Denver (États-Unis)' });
+  ok(d.sellers === undefined && call(CP, 'seller4', 'GET', '/v1/demands/' + d.id).zone === 'États-Unis', 'demande diffusée, zone seule');
+  const q = Object.fromEntries(CP.QUESTIONS.map((x) => [x.k, x.a[0]]));
+  call(CP, 'seller4', 'PUT', '/v1/lots/LOT-107/questionnaire', { answers: q });
+  call(CP, 'seller4', 'POST', `/v1/demands/${d.id}/bids`, { lotId: 'LOT-107', net: 290, currency: 'CNY', dateCode: '2012' });
+  call(CP, 'ops1', 'POST', `/v1/demands/${d.id}/close`, {});
+  const offers = call(CP, 'buyer2', 'GET', `/v1/demands/${d.id}/offers`);
+  const o = offers.find((x) => x.seller === 'V-4');
+  ok(o.unitCurrency === 'USD' && Math.abs(o.unit - CP.fromEur(CP.toEur(290, 'CNY') * 1.12, 'USD')) < 0.02, 'offre consolidée en USD');
+  const tx = call(CP, 'buyer2', 'POST', `/v1/offers/${o.id}/accept`, { labLevel: 1 });
+  ok(tx.currency === 'USD' && Math.abs(tx.labFee - CP.fromEur(180, 'USD')) < 0.01, 'transaction et laboratoire en USD');
+  call(CP, 'buyer2', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'seller4', 'POST', `/v1/transactions/${tx.id}/signatures`, {});
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total, currency: 'EUR' }, [422]);
+  call(CP, 'bank', 'POST', '/v1/webhooks/bank/incoming-transfer', { reference: tx.id, amount: tx.total, currency: 'USD' });
+  ok(Math.abs(call(CP, 'bank', 'GET', '/v1/escrow').balances.USD - tx.total) < 0.01, 'dépôt cantonné en USD');
+  call(CP, 'seller4', 'POST', `/v1/transactions/${tx.id}/shipments`, { tracking: 'SF-1' });
+  const lc = call(CP, 'lab', 'GET', '/v1/lab/cases').find((c) => c.txId === tx.id);
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/reception`, { qty: 100 });
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/certificate`, { verdict: 'pass', results: { visual: 'pass', marking: 'pass' } });
+  call(CP, 'lab', 'POST', `/v1/lab/cases/${lc.id}/reshipment`, { tracking: 'R-1' });
+  CP.system('POST', '/v1/webhooks/carrier', { txId: tx.id });
+  call(CP, 'buyer2', 'POST', `/v1/transactions/${tx.id}/inspection`, { decision: 'accept' });
+  const ord = call(CP, 'ops1', 'GET', '/v1/payment-orders').find((x) => x.txId === tx.id);
+  const pay = ord.lines.find((l) => l.to === 'S4');
+  ok(ord.currency === 'USD' && Math.abs(ord.amount - tx.total) < 0.02, 'ordre en USD, soldant le dépôt');
+  ok(pay.currency === 'CNY' && Math.abs(pay.amountCurrency - 290 * 100 * 0.97) < 0.01, 'vendeur payé en CNY');
+  call(CP, 'ops1', 'POST', `/v1/payment-orders/${ord.id}/approvals`, {});
+  call(CP, 'ops2', 'POST', `/v1/payment-orders/${ord.id}/approvals`, {});
+  call(CP, 'ops1', 'POST', `/v1/payment-orders/${ord.id}/transmit`, {});
+  call(CP, 'bank', 'POST', `/bank/v1/orders/${ord.id}/execution`, {});
+  ok(Math.abs(call(CP, 'bank', 'GET', '/v1/escrow').balances.USD) < 0.02, 'solde USD revenu à zéro');
+  const esc = call(CP, 'bank', 'GET', '/v1/escrow');
+  ok(esc.accounts.map((a) => a.currency).join() === 'EUR,USD,CNY,HKD,GBP,JPY', 'un compte par devise principale');
+  ok(esc.movements.some((m) => m.fx && m.currency === 'CNY' && Math.abs(m.amount - 290 * 100 * 0.97) < 0.01), 'conversion USD → CNY entre comptes de Central.Parts');
+  call(CP, 'seller4', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'TW1', mpn: 'X', quantity: 1, currency: 'TWD' }] });
+  ok(call(CP, 'seller4', 'GET', '/v1/supplier/offers?sku=TW1').length === 0, 'devise sans compte Central.Parts refusée');
+  ok(call(CP, 'buyer2', 'GET', '/v1/transactions/' + tx.id).status === 'released', 'transaction soldée');
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

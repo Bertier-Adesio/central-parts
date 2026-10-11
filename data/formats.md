@@ -28,7 +28,7 @@ Colonnes annoncées par un broker partenaire (octobre 2026), en CSV ou XLS :
 | Price per 10 pcs | `tiers[10]` | Non | Palier |
 | Price per 100 pcs | `tiers[100]` | Non | Palier |
 | Price per 1,000 pcs | `tiers[1000]` | Non | Palier ; en CSV, l'en-tête contient une virgule et doit être entre guillemets |
-| Currency | `currency` | Recommandé | `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY`, `TWD`, `SGD` ; devise inconnue : ligne rejetée |
+| Currency | `currency` | Recommandé | Devises des comptes de Central.Parts : `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY` ; autre devise : ligne rejetée |
 | Date Code | `dc` | Non | Facultatif ; demandé au broker quand il répond à une demande |
 
 Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise par défaut de la société s'applique.

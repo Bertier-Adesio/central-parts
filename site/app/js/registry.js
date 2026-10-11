@@ -26,6 +26,8 @@ var CP_ENDPOINTS = [
   { id: 'org.get', group: 'accounts', method: 'GET', path: '/v1/organizations/{id}', roles: ['buyer', 'seller', 'lab', 'ops'], summary: "Fiche société ; pseudonyme seul pour les autres parties" },
   { id: 'org.kyb', group: 'accounts', method: 'POST', path: '/v1/organizations/{id}/kyb', roles: ['public', 'buyer', 'seller', 'lab'], summary: 'Dépôt du dossier KYB : Kbis, bénéficiaires effectifs, signataires, IBAN autorisé' },
   { id: 'org.list', group: 'accounts', method: 'GET', path: '/v1/organizations', roles: ['ops'], summary: 'Liste des sociétés, filtre par statut KYB' },
+  { id: 'sub.get', group: 'accounts', method: 'GET', path: '/v1/organizations/{id}/subscription', roles: ['seller', 'ops'], summary: 'Abonnement du vendeur et statut « vérifié » (KYB validé et abonnement à jour)' },
+  { id: 'sub.renew', group: 'accounts', method: 'POST', path: '/v1/organizations/{id}/subscription/renewal', roles: ['seller', 'ops'], summary: 'Renouvellement de l\'abonnement vendeur (paiement en ligne ou enregistré par Central.Parts)' },
   { id: 'org.decide', group: 'accounts', method: 'POST', path: '/v1/organizations/{id}/kyb/decision', roles: ['ops'], summary: 'Validation ou refus du KYB, contrôle des listes de sanctions' },
 
   // Recherche
@@ -46,7 +48,7 @@ var CP_ENDPOINTS = [
   { id: 'dem.list', group: 'demands', method: 'GET', path: '/v1/demands', roles: ['buyer', 'seller', 'ops'], summary: 'Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops)' },
   { id: 'dem.get', group: 'demands', method: 'GET', path: '/v1/demands/{id}', roles: ['buyer', 'seller', 'ops'], summary: 'Détail d\'une demande ; le vendeur ne voit ni l\'acheteur ni l\'adresse' },
   { id: 'dem.close', group: 'demands', method: 'POST', path: '/v1/demands/{id}/close', roles: ['ops', 'system'], summary: 'Clôture de l\'enchère et calcul des offres consolidées (net + marge + frais)' },
-  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s\'il manque au stock), délai. Questionnaire du lot complet exigé' },
+  { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée d\'un vendeur vérifié : lot, prix net et devise, date code (donné à la consultation s\'il manque au stock), délai. Questionnaire du lot complet exigé' },
   { id: 'bid.mine', group: 'demands', method: 'GET', path: '/v1/demands/{id}/bids/mine', roles: ['seller'], summary: 'Offre du vendeur et son rang, sans les offres concurrentes' },
   { id: 'offer.list', group: 'demands', method: 'GET', path: '/v1/demands/{id}/offers', roles: ['buyer', 'ops'], summary: 'Offres consolidées, prix tout compris, questionnaire et documents' },
   { id: 'offer.accept', group: 'demands', method: 'POST', path: '/v1/offers/{id}/accept', roles: ['buyer'], summary: 'Choix d\'une offre, du niveau de test et des délais : crée la fiche transaction' },
@@ -100,7 +102,7 @@ var CP_ENDPOINTS = [
   { id: 'lab.reship', group: 'lab', method: 'POST', path: '/v1/lab/cases/{id}/reshipment', roles: ['lab'], summary: 'Réexpédition à l\'adresse de livraison désignée par l\'acheteur' },
 
   // Compte dédié et ordres
-  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Compte dédié : solde et cantonnement par transaction' },
+  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
   { id: 'order.list', group: 'payments', method: 'GET', path: '/v1/payment-orders', roles: ['bank', 'ops'], summary: 'Ordres de paiement et de remboursement' },
   { id: 'order.approve', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/approvals', roles: ['ops'], summary: 'Validation d\'un ordre ; deux opérateurs distincts exigés' },
   { id: 'order.transmit', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/transmit', roles: ['ops'], summary: 'Transmission de l\'ordre validé à l\'établissement financier' },
@@ -125,7 +127,7 @@ var CP_ROUTES = [
   { path: '/acheteur/nomenclatures/:id', role: 'buyer', title: 'Nomenclature répartie', endpoints: ['bom.get', 'inv.order', 'dem.create'] },
   { path: '/acheteur/demandes/:id', role: 'buyer', title: 'Demande et offres consolidées', endpoints: ['dem.get', 'offer.list', 'offer.accept'] },
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
-  { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['dem.list', 'lot.list', 'tx.list', 'notif.list'] },
+  { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['sub.get', 'sub.renew', 'dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
   { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
   { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
@@ -136,7 +138,7 @@ var CP_ROUTES = [
   { path: '/labo/dossiers/:id', role: 'lab', title: 'Dossier de test', endpoints: ['lab.cases', 'lab.receive', 'lab.certify', 'lab.reship'] },
   { path: '/banque', role: 'bank', title: 'Console de l\'établissement teneur du compte', endpoints: ['escrow.get', 'tx.list', 'order.list', 'bank.incoming', 'bank.execute', 'bank.executed'] },
   { path: '/ops', role: 'ops', title: 'Console Central.Parts', endpoints: ['org.list', 'dem.list', 'tx.list', 'order.list', 'escrow.get', 'events.list'] },
-  { path: '/ops/kyb', role: 'ops', title: 'KYB à valider', endpoints: ['org.list', 'org.decide'] },
+  { path: '/ops/kyb', role: 'ops', title: 'KYB et statut vérifié', endpoints: ['org.list', 'org.decide', 'sub.renew'] },
   { path: '/ops/demandes', role: 'ops', title: 'Demandes et enchères', endpoints: ['dem.list', 'dem.close', 'offer.list'] },
   { path: '/ops/transactions/:id', role: 'ops', title: 'Transaction (vue opérateur)', endpoints: ['tx.get', 'tx.delivered', 'dispute.decide'] },
   { path: '/ops/paiements', role: 'ops', title: 'Ordres de paiement, double validation', endpoints: ['order.list', 'order.approve', 'order.transmit'] },

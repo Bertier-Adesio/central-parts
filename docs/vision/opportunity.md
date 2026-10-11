@@ -7,13 +7,15 @@ Cadre général : [`plateforme.md`](plateforme.md).
 ## 1. Synthèse
 
 - **Ce que c'est** : l'offre de Central.Parts pour les composants issus de surplus (OEM, EMS, distributeurs) et de brokers, où l'acheteur ne paie le vendeur qu'après avoir reçu, fait tester s'il le souhaite, puis accepté les pièces. **Décidé**
-- **Ce qui la distingue** : un stock contrôlé et une transaction sécurisée. Chaque lot est décrit par un questionnaire d'état qui engage le vendeur ; le paiement est conservé en euros jusqu'à l'acceptation ; des laboratoires partenaires peuvent certifier les pièces avant le paiement du vendeur ; acheteur et vendeur restent anonymes l'un pour l'autre. **Décidé**
+- **Ce qui la distingue** : un stock contrôlé et une transaction sécurisée. Chaque lot est décrit par un questionnaire d'état qui engage le vendeur ; le paiement est conservé, dans la devise de l'acheteur, jusqu'à l'acceptation ; des laboratoires partenaires peuvent certifier les pièces avant le paiement du vendeur ; acheteur et vendeur restent anonymes l'un pour l'autre. **Décidé**
 - **Comment les prix se forment** : les demandes des acheteurs sont anonymisées et diffusées aux vendeurs, qui proposent leur prix net par enchère. Central.Parts ajoute sa marge et présente une offre consolidée. Adesio conseille le prix du vendeur. **Décidé**
 - **Brokers** : toute offre de broker passe par les rails Opportunity (questionnaire et escrow), même pour une référence courante. **Décidé**
 
 **Message** : « Ce que le canal agréé n'a plus, tracé et vérifié, payé seulement à l'acceptation. » Au discours « hors canal agréé = contrefaçon », Opportunity répond par la preuve : origine du lot, date code, conditionnement, documents, tests. **Proposé**
 
 ## 2. Cibles
+
+**Statut « vérifié »** : un vendeur de surplus ou un broker est « vérifié » sur Central.Parts quand sa société a passé le KYB et que son abonnement est à jour. Le statut est affiché aux acheteurs sur chaque offre. Seuls les vendeurs vérifiés reçoivent les demandes et peuvent enchérir ; si l'abonnement expire, les transactions en cours vont à leur terme. Le bac à sable reste ouvert sans abonnement pour l'intégration. **Décidé** (conséquences sur les demandes et les enchères : Proposé)
 
 - **Vendeurs** : détenteurs de surplus (OEM, EMS, CEM), y compris les excédents de programmes de stock et de consignation des distributeurs agréés ; brokers. **Décidé**
 - **Acheteurs** : EMS, OEM, bureaux d'études et entrepreneurs qui cherchent des références rares, obsolètes ou en fin de vie, y compris pour des préséries. **Décidé**
@@ -122,7 +124,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 
 - L'identité de l'acheteur est masquée aux vendeurs, et celle du vendeur à l'acheteur. **Décidé**
 - Le vendeur voit : référence, quantité, date code minimum, exigences d'emballage et de questionnaire, zone de livraison (pays ou région, jamais l'adresse), délai souhaité. **Proposé**
-- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts convertit en euros pour l'acheteur et paie le vendeur dans sa devise. **Décidé**
+- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts présente l'offre à l'acheteur dans la devise de son pays, l'encaisse sur son compte dans cette devise et paie le vendeur depuis son compte dans la sienne ; Central.Parts a des comptes dans les principales devises : EUR, USD, CNY (RMB), HKD, GBP et JPY, liste validée. **Décidé**
 - Enchère inversée à offres scellées, avec indication du rang au vendeur. **Proposé**
 - L'acheteur voit une offre consolidée (prix tout compris, questionnaire, photos, documents, délai), éventuellement plusieurs offres classées. **Proposé**
 - **Anonymat à la livraison** : transit par un laboratoire ou un entrepôt partenaire, étiquettes neutres, ou levée de l'anonymat à l'expédition protégée par la clause de non-contournement. **À arbitrer**
@@ -152,6 +154,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 | Commission acheteur (frais de recherche compris) | Acheteur | Décidé, taux à fixer |
 | Frais d'opération (banque, change, traitement) | Acheteur | Décidé, barème à fixer |
 | Commission vendeur, taux unique | Vendeur | Décidé, taux à fixer |
+| Abonnement vendeur (condition du statut « vérifié ») | Vendeur | Décidé, tarif et périodicité à fixer |
 | Laboratoire | Acheteur, sauf conditions particulières | Proposé |
 | Échantillonnage : forfait plus prix des pièces | Acheteur | Décidé, barème à fixer |
 | Transport | Selon l'Incoterm de la fiche | Proposé |

@@ -81,6 +81,18 @@
   // ------------------------------------------------------------ vues filtrées selon l'appelant
   function isOps(a) { return a.role === 'ops' || a.role === 'system'; }
 
+  // Statut « vérifié » d'un vendeur : KYB validé et abonnement à jour.
+  function subStatus(o) {
+    var sub = o && o.subscription;
+    if (!sub) return 'none';
+    return sub.until >= S().day ? 'active' : 'expired';
+  }
+  function verified(o) { return !!o && o.kyb === 'validated' && subStatus(o) === 'active'; }
+  CP.isVerified = function (orgId) { return verified(S().orgs[orgId]); };
+
+  function buyerCur(orgId) { var o = S().orgs[orgId]; return (o && o.currency) || 'EUR'; }
+  CP.buyerCurrency = buyerCur;
+
   function demandView(d, a) {
     var v = CP.clone(d);
     if (a.role === 'seller') {
@@ -125,9 +137,10 @@
     var lab = t.labLevel ? t.labFee : 0;
     var labDone = CP.values(S().labCases).some(function (x) { return x.txId === t.id && x.verdict; });
     if (accepted > 0) {
-      var payout = round(t.netEur * accepted * (1 - P.sellerCommission));
+      var cur = t.currency || 'EUR';
+      var payout = CP.fromEur(t.netEur * accepted * (1 - P.sellerCommission), cur);
       var payCur = round(t.net * accepted * (1 - P.sellerCommission));
-      var lines = [{ to: t.sellerId, label: 'Paiement du vendeur ' + alias(t.sellerId) + (t.netCurrency !== 'EUR' ? ', versé ' + CP.money(payCur, t.netCurrency) : ''), amount: payout, currency: t.netCurrency, amountCurrency: payCur }];
+      var lines = [{ to: t.sellerId, label: 'Paiement du vendeur ' + alias(t.sellerId) + (t.netCurrency !== cur ? ', versé ' + CP.money(payCur, t.netCurrency) : ''), amount: payout, currency: t.netCurrency, amountCurrency: payCur }];
       if (lab && rejected === 0) lines.push(labDone ? { to: t.labId, label: 'Frais de laboratoire', amount: lab } : { to: t.buyerId, label: 'Frais de laboratoire non engagés, rendus à l\'acheteur', amount: lab });
       var held = round(t.unit * accepted + (rejected === 0 ? lab : 0));
       lines.push({ to: 'CP', label: 'Marge et commissions Central.Parts', amount: round(held - payout - (rejected === 0 ? lab : 0)) });
@@ -144,9 +157,9 @@
   }
 
   function order(type, t, lines) {
-    var o = { id: next('ORD'), type: type, txId: t.id, lines: lines, amount: round(lines.reduce(function (s, l) { return s + l.amount; }, 0)), approvals: [], status: 'pending', day: S().day };
+    var o = { id: next('ORD'), type: type, txId: t.id, currency: t.currency || 'EUR', lines: lines, amount: round(lines.reduce(function (s, l) { return s + l.amount; }, 0)), approvals: [], status: 'pending', day: S().day };
     S().orders[o.id] = o;
-    notify('ops', 'Ordre ' + o.id + ' (' + (type === 'release' ? 'paiement' : 'remboursement') + ') à valider pour ' + t.id + '.', '/ops/paiements');
+    notify('ops', 'Ordre ' + o.id + ' (' + (type === 'release' ? 'paiement' : 'remboursement') + ', ' + CP.money(o.amount, o.currency) + ') à valider pour ' + t.id + '.', '/ops/paiements');
     return o;
   }
 
@@ -171,8 +184,9 @@
   H['org.get'] = function (c) {
     var o = S().orgs[c.params.id];
     if (!o) fail(404, 'Société inconnue');
-    if (isOps(c.actor) || c.actor.org === o.id) return o;
-    return { id: o.id, alias: o.alias, type: o.type, country: o.country };
+    var v = CP.clone(o); v.verified = verified(o); v.subscriptionStatus = subStatus(o);
+    if (isOps(c.actor) || c.actor.org === o.id) return v;
+    return { id: o.id, alias: o.alias, type: o.type, country: o.country, verified: v.verified };
   };
   H['org.kyb'] = function (c) {
     var o = S().orgs[c.params.id];
@@ -187,7 +201,7 @@
     return o;
   };
   H['org.list'] = function (c) {
-    return CP.values(S().orgs).filter(function (o) { return !c.query.kyb || o.kyb === c.query.kyb; });
+    return CP.values(S().orgs).filter(function (o) { return !c.query.kyb || o.kyb === c.query.kyb; }).map(function (o) { var v = CP.clone(o); v.verified = verified(o); v.subscriptionStatus = subStatus(o); return v; });
   };
   H['org.decide'] = function (c) {
     var o = S().orgs[c.params.id];
@@ -201,6 +215,25 @@
     return o;
   };
 
+  H['sub.get'] = function (c) {
+    var o = S().orgs[c.params.id];
+    if (!o || o.type !== 'seller') fail(404, 'Vendeur inconnu');
+    if (!isOps(c.actor) && c.actor.org !== o.id) fail(403, 'Ressource d\'une autre société');
+    var sub = o.subscription || null;
+    return { organization: o.id, kyb: o.kyb, subscription: sub ? { plan: sub.plan, until: CP.date(sub.until).toISOString().slice(0, 10), status: subStatus(o), daysLeft: sub.until - S().day } : null, verified: verified(o) };
+  };
+  H['sub.renew'] = function (c) {
+    var o = S().orgs[c.params.id];
+    if (!o || o.type !== 'seller') fail(404, 'Vendeur inconnu');
+    if (!isOps(c.actor) && c.actor.org !== o.id) fail(403, 'Ressource d\'une autre société');
+    if (o.kyb !== 'validated') fail(409, 'KYB à valider avant l\'abonnement');
+    var from = o.subscription && o.subscription.until >= S().day ? o.subscription.until : S().day;
+    o.subscription = { plan: 'Vendeur Opportunity', until: from + P.subscriptionDays, renewedDay: S().day, by: c.actor.role === 'ops' ? c.actor.user : 'vendeur' };
+    event('Abonnement de ' + o.alias + ' renouvelé jusqu\'au ' + CP.fmtDay(o.subscription.until) + '.', o.id);
+    notify(o.id, 'Abonnement renouvelé : statut « vérifié » jusqu\'au ' + CP.fmtDay(o.subscription.until) + '.', '/vendeur');
+    return H['sub.get'](c);
+  };
+
   // Recherche
   H['search'] = function (c) {
     var q = (c.query.q || '').trim().toUpperCase();
@@ -209,7 +242,8 @@
     var by = {};
     CP.values(S().lots).forEach(function (l) {
       if (l.mpn.toUpperCase().indexOf(q) < 0 || !(l.qty > 0)) return;
-      var g = by[l.mpn] || (by[l.mpn] = { mpn: l.mpn, mfr: l.mfr, lots: 0, qty: 0, origins: [] });
+      if (!verified(S().orgs[l.sellerId])) return;
+      var g = by[l.mpn] || (by[l.mpn] = { mpn: l.mpn, mfr: l.mfr, lots: 0, qty: 0, origins: [], verified: true });
       g.lots++; g.qty += l.qty;
       var o = l.q && l.q.origin ? l.q.origin : 'Non renseignée';
       if (g.origins.indexOf(o) < 0) g.origins.push(o);
@@ -284,7 +318,8 @@
     }
     var sellers = [];
     CP.values(S().lots).forEach(function (l) {
-      if (l.mpn.toUpperCase() === mpn && l.qty > 0 && sellers.indexOf(l.sellerId) < 0) sellers.push(l.sellerId);
+      // Seuls les vendeurs vérifiés reçoivent les demandes.
+      if (l.mpn.toUpperCase() === mpn && l.qty > 0 && sellers.indexOf(l.sellerId) < 0 && verified(S().orgs[l.sellerId])) sellers.push(l.sellerId);
     });
     var id = next('DEM');
     var lot = CP.values(S().lots).filter(function (l) { return l.mpn.toUpperCase() === mpn; })[0];
@@ -319,7 +354,7 @@
     var bids = CP.values(S().bids).filter(function (b) { return b.demandId === d.id; }).sort(function (a, b) { return a.netEur - b.netEur; });
     bids.forEach(function (b, i) {
       var id = next('OFF');
-      S().offers[id] = { id: id, demandId: d.id, bidId: b.id, sellerId: b.sellerId, lotId: b.lotId, net: b.net, currency: b.currency, netEur: b.netEur, dc: b.dc, unit: round(b.netEur * (1 + P.buyerMargin)), leadDays: b.leadDays, rank: i + 1, status: 'open', validUntil: S().day + 2 };
+      S().offers[id] = { id: id, demandId: d.id, bidId: b.id, sellerId: b.sellerId, lotId: b.lotId, net: b.net, currency: b.currency, netEur: b.netEur, dc: b.dc, buyerCurrency: buyerCur(d.buyerId), unit: CP.fromEur(b.netEur * (1 + P.buyerMargin), buyerCur(d.buyerId)), leadDays: b.leadDays, rank: i + 1, status: 'open', validUntil: S().day + 2 };
     });
     d.status = bids.length ? 'offers' : 'no_offer';
     d.closedDay = S().day;
@@ -331,6 +366,7 @@
     var d = S().demands[c.params.id], b = c.body;
     if (!d || d.sellers.indexOf(c.actor.org) < 0) fail(404, 'Demande inconnue');
     if (d.status !== 'auction') fail(409, 'Enchère clôturée');
+    if (!d.sandbox && !verified(S().orgs[c.actor.org])) fail(403, 'Statut « vérifié » requis pour enchérir : KYB validé et abonnement à jour');
     var lot = S().lots[b.lotId];
     if (!lot || lot.sellerId !== c.actor.org || lot.mpn !== d.mpn) fail(422, 'Lot invalide pour cette demande');
     if (lot.qty < d.qty) fail(422, 'Quantité du lot insuffisante (' + lot.qty + ')');
@@ -358,7 +394,7 @@
     var d = S().demands[c.params.id];
     if (!d || (c.actor.role === 'buyer' && d.buyerId !== c.actor.org)) fail(404, 'Demande inconnue');
     return CP.values(S().offers).filter(function (o) { return o.demandId === d.id; }).sort(function (a, b) { return a.rank - b.rank; }).map(function (o) {
-      var v = { id: o.id, rank: o.rank, unit: o.unit, leadDays: o.leadDays, status: o.status, validUntil: o.validUntil, seller: alias(o.sellerId), sellerProfile: S().orgs[o.sellerId].profile, lot: lotPublic(S().lots[o.lotId]), origin: S().lots[o.lotId].q.origin };
+      var v = { id: o.id, rank: o.rank, unit: o.unit, unitCurrency: o.buyerCurrency || buyerCur(d.buyerId), leadDays: o.leadDays, sellerVerified: verified(S().orgs[o.sellerId]), status: o.status, validUntil: o.validUntil, seller: alias(o.sellerId), sellerProfile: S().orgs[o.sellerId].profile, lot: lotPublic(S().lots[o.lotId]), origin: S().lots[o.lotId].q.origin };
       v.dc = o.dc || S().lots[o.lotId].dc;
       if (isOps(c.actor)) { v.net = o.net; v.currency = o.currency; v.netEur = o.netEur; v.sellerName = S().orgs[o.sellerId].name; }
       return v;
@@ -373,7 +409,7 @@
     var level = P.labLevels[parseInt(b.labLevel, 10) || 0];
     var insp = clampDays(b.inspection, P.delays.inspection), counter = clampDays(b.counter, P.delays.counter);
     var id = next('TX');
-    var t = { id: id, demandId: d.id, offerId: o.id, buyerId: d.buyerId, sellerId: o.sellerId, lotId: o.lotId, mpn: d.mpn, mfr: d.mfr, qty: d.qty, net: o.net, netCurrency: o.currency || 'EUR', netEur: o.netEur != null ? o.netEur : o.net, dc: o.dc, unit: o.unit, labLevel: level.id, labId: level.id ? 'L1' : null, labFee: level.price, delivery: d.delivery || 'Adresse de l\'acheteur', incoterm: 'DAP', delays: { inspection: insp, counter: counter }, status: 'to_sign_buyer', signed: { buyer: false, seller: false }, due: null, day: S().day, history: [] };
+    var t = { id: id, demandId: d.id, offerId: o.id, buyerId: d.buyerId, sellerId: o.sellerId, lotId: o.lotId, mpn: d.mpn, mfr: d.mfr, qty: d.qty, net: o.net, netCurrency: o.currency || 'EUR', netEur: o.netEur != null ? o.netEur : o.net, dc: o.dc, currency: o.buyerCurrency || buyerCur(d.buyerId), unit: o.unit, labLevel: level.id, labId: level.id ? 'L1' : null, labFee: CP.fromEur(level.price, o.buyerCurrency || buyerCur(d.buyerId)), delivery: d.delivery || 'Adresse de l\'acheteur', incoterm: 'DAP', delays: { inspection: insp, counter: counter }, status: 'to_sign_buyer', signed: { buyer: false, seller: false }, due: null, day: S().day, history: [] };
     t.total = round(t.unit * t.qty + t.labFee);
     S().transactions[id] = t;
     CP.values(S().offers).forEach(function (x) { if (x.demandId === d.id) x.status = x.id === o.id ? 'accepted' : 'declined'; });
@@ -658,7 +694,7 @@
     if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
     if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
     var cur = CP.currency(o.currency, S().orgs[org].currency || 'USD');
-    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY, TWD, SGD)' };
+    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY)' };
     var tiers = {};
     var breaks = o.price_breaks || [];
     if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
@@ -797,8 +833,8 @@
       need(t, ['to_sign_seller']);
       t.signed.seller = true; t.status = 'awaiting_funds'; due(t, 'funds', P.delays.funds);
       hist(t, 'Fiche signée par le vendeur. Dépôt des fonds attendu, référence ' + t.id + '.');
-      notify(t.buyerId, 'Fiche ' + t.id + ' signée. Virez ' + CP.eur(t.total) + ' sur le compte dédié, référence ' + t.id + '.', '/acheteur/transactions/' + t.id);
-      notify('BK', 'Virement attendu : ' + CP.eur(t.total) + ', référence ' + t.id + '.', '/banque');
+      notify(t.buyerId, 'Fiche ' + t.id + ' signée. Virez ' + CP.money(t.total, t.currency) + ' sur le compte dédié, référence ' + t.id + '.', '/acheteur/transactions/' + t.id);
+      notify('BK', 'Virement attendu : ' + CP.money(t.total, t.currency) + ', référence ' + t.id + '.', '/banque');
       // Bac à sable : le dépôt de l'acheteur fictif est simulé aussitôt.
       if (t.sandbox) H['bank.incoming']({ body: { reference: t.id, amount: t.total }, actor: { role: 'bank', org: 'BK' } });
     }
@@ -946,9 +982,15 @@
 
   // Compte dédié et ordres
   H['escrow.get'] = function () {
-    var ledger = {};
-    S().escrow.movements.forEach(function (m) { if (m.txId) ledger[m.txId] = round((ledger[m.txId] || 0) + m.amount); });
-    return { balance: round(S().escrow.balance), ledger: ledger, movements: S().escrow.movements.slice().reverse() };
+    var ledger = {}, e = S().escrow, eurTotal = 0;
+    var accounts = Object.keys(P.accounts).map(function (c) { return { currency: c, account: P.accounts[c], balance: round(e.balances[c] || 0) }; });
+    e.movements.forEach(function (m) {
+      if (!m.txId) return;
+      var l = ledger[m.txId] || (ledger[m.txId] = { amount: 0, currency: m.currency || 'EUR' });
+      l.amount = round(l.amount + m.amount);
+    });
+    Object.keys(e.balances).forEach(function (c) { e.balances[c] = round(e.balances[c]); eurTotal += CP.toEur(e.balances[c], c); });
+    return { accounts: accounts, balances: e.balances, balance: round(eurTotal), ledger: ledger, movements: e.movements.slice().reverse() };
   };
   H['order.list'] = function (c) {
     return CP.values(S().orders).filter(function (o) { return c.actor.role !== 'bank' || ['transmitted', 'executed'].indexOf(o.status) >= 0; }).reverse().map(function (o) {
@@ -972,7 +1014,7 @@
     if (!o) fail(404, 'Ordre inconnu');
     if (o.status !== 'approved') fail(409, 'Double validation requise avant transmission');
     o.status = 'transmitted';
-    notify('BK', 'Ordre ' + o.id + ' reçu : ' + CP.eur(o.amount) + '.', '/banque');
+    notify('BK', 'Ordre ' + o.id + ' reçu : ' + CP.money(o.amount, o.currency) + '.', '/banque');
     event('Ordre ' + o.id + ' transmis à la banque.', o.txId);
     return o;
   };
@@ -982,11 +1024,13 @@
     var t = S().transactions[c.body.reference];
     if (!t) fail(404, 'Référence inconnue : virement à renvoyer à l\'émetteur');
     if (t.status !== 'awaiting_funds') fail(409, 'Aucun dépôt attendu pour ' + t.id);
-    if (round(Number(c.body.amount)) !== t.total) fail(422, 'Montant ' + CP.eur(Number(c.body.amount)) + ' différent du montant attendu ' + CP.eur(t.total));
-    S().escrow.balance = round(S().escrow.balance + t.total);
-    S().escrow.movements.push({ day: S().day, label: 'Virement reçu · ' + S().orgs[t.buyerId].name + ' · réf. ' + t.id, amount: t.total, txId: t.id });
+    var cur = t.currency || 'EUR';
+    if (c.body.currency && CP.currency(c.body.currency) !== cur) fail(422, 'Devise du virement différente de la devise de la transaction (' + cur + ')');
+    if (round(Number(c.body.amount)) !== t.total) fail(422, 'Montant ' + CP.money(Number(c.body.amount), cur) + ' différent du montant attendu ' + CP.money(t.total, cur));
+    S().escrow.balances[cur] = round((S().escrow.balances[cur] || 0) + t.total);
+    S().escrow.movements.push({ day: S().day, label: 'Virement reçu · ' + S().orgs[t.buyerId].name + ' · réf. ' + t.id, amount: t.total, currency: cur, txId: t.id });
     t.status = 'to_ship'; due(t, 'ship', P.delays.ship);
-    hist(t, 'Fonds reçus sur le compte dédié (' + CP.eur(t.total) + '). Ordre d\'expédition envoyé au vendeur.');
+    hist(t, 'Fonds reçus sur le compte dédié (' + CP.money(t.total, cur) + '). Ordre d\'expédition envoyé au vendeur.');
     notify(t.sellerId, 'Fonds déposés pour ' + t.id + ' : expédiez avant le ' + CP.fmtDay(t.due.day) + '.', '/vendeur/transactions/' + t.id);
     notify(t.buyerId, 'Fonds reçus pour ' + t.id + '.', '/acheteur/transactions/' + t.id);
     return { reference: t.id, credited: t.total };
@@ -999,11 +1043,19 @@
       var org = S().orgs[l.to];
       if (l.to !== 'CP' && (!org || !org.iban || org.kyb !== 'validated')) fail(422, 'IBAN non autorisé pour ' + (org ? org.name : l.to));
     });
-    if (S().escrow.balance + 0.001 < o.amount) fail(422, 'Solde du compte dédié insuffisant');
-    S().escrow.balance = round(S().escrow.balance - o.amount);
+    var oc = o.currency || 'EUR';
+    if ((S().escrow.balances[oc] || 0) + 0.001 < o.amount) fail(422, 'Solde ' + oc + ' du compte dédié insuffisant');
+    S().escrow.balances[oc] = round(S().escrow.balances[oc] - o.amount);
     o.lines.forEach(function (l) {
       var org = S().orgs[l.to];
-      S().escrow.movements.push({ day: S().day, label: l.label + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amount, txId: o.txId });
+      // Paiement dans une autre devise : conversion entre deux comptes de Central.Parts, puis virement.
+      if (l.currency && l.currency !== oc && l.amountCurrency != null) {
+        S().escrow.movements.push({ day: S().day, label: 'Conversion ' + oc + ' → ' + l.currency + ' · ' + o.id, amount: -l.amount, currency: oc, txId: o.txId, fx: true });
+        S().escrow.movements.push({ day: S().day, label: 'Conversion ' + oc + ' → ' + l.currency + ' · ' + o.id, amount: l.amountCurrency, currency: l.currency, fx: true });
+        S().escrow.movements.push({ day: S().day, label: l.label.replace(/, versé .*$/, '') + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amountCurrency, currency: l.currency });
+      } else {
+        S().escrow.movements.push({ day: S().day, label: l.label + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amount, currency: oc, txId: o.txId });
+      }
     });
     o.status = 'executed'; o.executedDay = S().day;
     CP.api('POST', '/v1/webhooks/bank/order-executed', { orderId: o.id }, { actor: c.actor, ok200: true });
@@ -1032,6 +1084,12 @@
   H['events.list'] = function () { return S().events.slice(0, 80); };
   H['jobs.deadlines'] = function () {
     var day = S().day, done = [];
+    CP.values(S().orgs).forEach(function (o) {
+      if (o.type !== 'seller' || !o.subscription) return;
+      var left = o.subscription.until - day;
+      if (left === 3) notify(o.id, 'Votre abonnement expire le ' + CP.fmtDay(o.subscription.until) + ' : renouvelez-le pour garder le statut « vérifié ».', '/vendeur');
+      if (left === -1) { notify(o.id, 'Abonnement expiré : vous ne recevez plus les demandes. Les transactions en cours continuent.', '/vendeur'); event('Abonnement expiré : ' + o.alias + ' n\'est plus vérifié.', o.id); done.push(o.alias + ' : abonnement expiré'); }
+    });
     CP.values(S().demands).forEach(function (d) {
       if (d.status === 'auction' && d.closesDay <= day) { CP.system('POST', '/v1/demands/' + d.id + '/close'); done.push(d.id + ' clôturée'); }
     });
