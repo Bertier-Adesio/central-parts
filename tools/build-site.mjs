@@ -19,20 +19,20 @@ const CONTACT_EMAIL = 'contact@central.parts';
 const LANGS = {
   fr: {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
-    headline: 'Composants électroniques, distributeurs autorisés',
-    description: 'Recherche, cotation et achat de composants électroniques auprès de distributeurs autorisés. Europe, Amériques, Chine.',
+    headline: 'Composants électroniques, courants ou introuvables',
+    description: 'Supply Network Operator : le réseau agréé des fabricants et distributeurs (Inventory), et surplus, obsolètes et brokers contrôlés, payés à l’acceptation (Opportunity). Europe, Amériques, Chine.',
     partner: 'Logo distributeur ', mailSubject: 'Demande de contact', mailProfile: 'Profil',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
-    headline: 'Electronic components, authorised distributors',
-    description: 'Search, quote and buy electronic components from authorised distributors. Europe, the Americas, China.',
+    headline: 'Electronic components, current or hard to find',
+    description: 'Supply Network Operator: the authorised network of manufacturers and distributors (Inventory), plus checked surplus, obsolete and broker stock paid on acceptance (Opportunity). Europe, the Americas, China.',
     partner: 'Distributor logo ', mailSubject: 'Contact request', mailProfile: 'Profile',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-en.png',
-    headline: '电子元器件，授权分销商',
-    description: '从授权分销商搜索、询价并采购电子元器件。覆盖欧洲、美洲与中国。',
+    headline: '电子元器件，常规料与难寻料',
+    description: '供应网络运营商：制造商与授权分销商组成的授权网络（Inventory），以及经检验、验收后付款的盈余库存、停产料与贸易商库存（Opportunity）。覆盖欧洲、美洲与中国。',
     partner: '分销商标志 ', mailSubject: '联系请求', mailProfile: '身份',
   },
 };
