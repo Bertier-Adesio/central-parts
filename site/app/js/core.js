@@ -45,7 +45,7 @@ var CP = window.CP = {};
       { id: 4, name: 'Niveau 3 et décapsulation', price: 950, days: 5, tests: ['visual', 'marking', 'xray', 'xrf', 'decap'] },
     ],
     testNames: { visual: 'Contrôle visuel', marking: 'Marquage et étiquettes', xray: 'Rayons X', xrf: 'XRF (matériaux)', decap: 'Décapsulation' },
-    // Central.Parts a un compte dans chaque devise principale : ce sont les devises acceptées.
+    // Central.Parts a un compte dans chaque devise principale : ce sont les devises acceptées (liste validée).
     // Taux de conversion fictifs, en euros pour une unité. RMB est accepté comme CNY.
     currencies: { EUR: 1, USD: 0.92, CNY: 0.128, HKD: 0.118, GBP: 1.17, JPY: 0.0062 },
     accounts: { EUR: 'FR76 ···· 0001 (fictif)', USD: 'US ···· 0002 (fictif)', CNY: 'CN ···· 0003 (fictif)', HKD: 'HK ···· 0004 (fictif)', GBP: 'GB ···· 0005 (fictif)', JPY: 'JP ···· 0006 (fictif)' },
