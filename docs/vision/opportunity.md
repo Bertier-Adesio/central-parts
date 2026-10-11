@@ -15,6 +15,8 @@ Cadre général : [`plateforme.md`](plateforme.md).
 
 ## 2. Cibles
 
+**Statut « vérifié »** : un vendeur de surplus ou un broker est « vérifié » sur Central.Parts quand sa société a passé le KYB et que son abonnement est à jour. Le statut est affiché aux acheteurs sur chaque offre. Seuls les vendeurs vérifiés reçoivent les demandes et peuvent enchérir ; si l'abonnement expire, les transactions en cours vont à leur terme. Le bac à sable reste ouvert sans abonnement pour l'intégration. **Décidé** (conséquences sur les demandes et les enchères : Proposé)
+
 - **Vendeurs** : détenteurs de surplus (OEM, EMS, CEM), y compris les excédents de programmes de stock et de consignation des distributeurs agréés ; brokers. **Décidé**
 - **Acheteurs** : EMS, OEM, bureaux d'études et entrepreneurs qui cherchent des références rares, obsolètes ou en fin de vie, y compris pour des préséries. **Décidé**
 
@@ -152,6 +154,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 | Commission acheteur (frais de recherche compris) | Acheteur | Décidé, taux à fixer |
 | Frais d'opération (banque, change, traitement) | Acheteur | Décidé, barème à fixer |
 | Commission vendeur, taux unique | Vendeur | Décidé, taux à fixer |
+| Abonnement vendeur (condition du statut « vérifié ») | Vendeur | Décidé, tarif et périodicité à fixer |
 | Laboratoire | Acheteur, sauf conditions particulières | Proposé |
 | Échantillonnage : forfait plus prix des pièces | Acheteur | Décidé, barème à fixer |
 | Transport | Selon l'Incoterm de la fiche | Proposé |

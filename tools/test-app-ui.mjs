@@ -215,6 +215,14 @@ await step('vendeur chinois : notifications WeChat', async () => {
 });
 ok(Object.values((await state()).channels).filter((c) => c.orgId === 'S4' && c.status === 'active').length === 3, 'nouveau compte WeChat lié');
 
+await step('statut vérifié : expiration et renouvellement', async () => {
+  await page.evaluate(() => { CP.state.orgs.S3.subscription.until = CP.state.day - 1; CP.save(); });
+  await as('seller3'); await go('/vendeur');
+  ok((await page.textContent('#main')).includes('Non vérifié'), 'vendeur non vérifié affiché');
+  await page.click('text=Renouveler l\'abonnement');
+  ok((await page.textContent('#main')).includes('✓ Vérifié'), 'statut vérifié rétabli');
+});
+
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));
 const actorFor = { public: 'public', buyer: 'buyer', seller: 'seller2', lab: 'lab', bank: 'bank', ops: 'ops1' };

@@ -110,11 +110,14 @@
           '<label class="check"><input type="checkbox" name="sanctions"> Listes de sanctions UE vérifiées, aucune correspondance</label>' +
           '<div class="row-btn"><button class="btn" name="decision" value="validated">Valider</button> <button class="btn ghost" name="decision" value="rejected" formnovalidate>Refuser</button></div></form>';
       }).join('') : ui.card('', '<p class="empty">Aucun dossier en attente. Créez-en un depuis ' + ui.link('/inscription', 'l\'inscription') + ' (rôle Visiteur).</p>')) +
-      ui.card('Sociétés', ui.table(['Société', 'Type', 'Pseudonyme', 'Pays', 'KYB'], all.filter(function (o) { return ['buyer', 'seller', 'lab'].indexOf(o.type) >= 0; }).map(function (o) {
+      ui.card('Sociétés', '<p class="muted small">Vendeur « vérifié » : KYB validé et abonnement à jour. Seuls les vendeurs vérifiés reçoivent les demandes et peuvent enchérir.</p>' + ui.table(['Société', 'Type', 'Pseudonyme', 'Pays', 'KYB', 'Abonnement', 'Statut', ''], all.filter(function (o) { return ['buyer', 'seller', 'lab'].indexOf(o.type) >= 0 && !o.sandbox; }).map(function (o) {
         var k = { validated: ['Validé', 'ok'], pending: ['En attente', 'todo'], rejected: ['Refusé', 'danger'], draft: ['Incomplet', 'muted'] }[o.kyb];
-        return [esc(o.name), esc(o.type), esc(o.alias), esc(o.country), ui.pill(k[0], k[1])];
+        var seller = o.type === 'seller';
+        var sub = !seller ? '—' : !o.subscription ? 'Aucun' : o.subscriptionStatus === 'active' ? 'Jusqu\'au ' + esc(CP.fmtDay(o.subscription.until)) : ui.pill('Expiré le ' + CP.fmtDay(o.subscription.until), 'danger');
+        return [esc(o.name), esc(o.type), esc(o.alias), esc(o.country), ui.pill(k[0], k[1]), sub, seller ? ui.verified(o.verified) : '—', seller && o.kyb === 'validated' ? ui.btn('Enregistrer un renouvellement', 'ops-renew', { org: o.id }, 'small ghost') : ''];
       }))));
   };
+  CP.actions['ops-renew'] = function (b) { CP.call('POST', '/v1/organizations/' + b.getAttribute('data-org') + '/subscription/renewal', {}, 'Abonnement prolongé.'); };
   // Le bouton cliqué porte la décision : on la lit au moment de l'envoi.
   var lastDecision = null;
   document.addEventListener('click', function (e) { var b = e.target.closest('button[name="decision"]'); if (b) lastDecision = b.value; }, true);

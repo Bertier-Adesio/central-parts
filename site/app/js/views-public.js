@@ -46,7 +46,7 @@
       }), 'Aucune offre Inventory pour cette référence.'));
       body += ui.card('<span class="pill opp">Opportunity</span> Surplus, obsolètes et brokers', ui.table(['Référence', 'Fabricant', '>Lots', '>Pièces', 'Origines déclarées', ''], d.opportunity.map(function (o) {
         return ['<span class="mono">' + esc(o.mpn) + '</span>', esc(o.mfr), o.lots, CP.num(o.qty), esc(o.origins.join(', ')), CP.actor.role === 'buyer' ? '<form class="inline" data-form="quick-demand"><input type="hidden" name="mpn" value="' + esc(o.mpn) + '"><input name="qty" type="number" min="1" value="100" aria-label="Quantité"><button class="btn small">Lancer une demande</button></form>' : ''];
-      }), 'Aucun lot déclaré pour cette référence.') + '<p class="muted small">Les vendeurs restent anonymes : seuls l\'origine déclarée et les quantités sont publiques. Prix sur demande, par enchère.</p>');
+      }), 'Aucun lot déclaré pour cette référence.') + '<p class="muted small">Seuls les lots de vendeurs vérifiés (KYB validé, abonnement à jour) apparaissent. Les vendeurs restent anonymes : seuls l\'origine déclarée et les quantités sont publiques. Prix sur demande, par enchère.</p>');
     }
     return ui.page('Recherche', 'Une seule recherche couvre les deux offres.', body);
   };

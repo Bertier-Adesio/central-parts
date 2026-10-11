@@ -35,6 +35,8 @@ var CP = window.CP = {};
     buyerMargin: 0.12,      // marge et frais côté acheteur, fictif
     sellerCommission: 0.03, // commission vendeur, fictif
     delays: { funds: 4, ship: 5, inspection: 10, counter: 10, mediation: 15, auction: 2 },
+    // Abonnement vendeur : durée en jours ouvrés (un an environ), tarif à fixer.
+    subscriptionDays: 250,
     labLevels: [
       { id: 0, name: 'Pas de test', price: 0, days: 0, tests: [] },
       { id: 1, name: 'Contrôle visuel et marquage', price: 180, days: 2, tests: ['visual', 'marking'] },
@@ -92,16 +94,16 @@ var CP = window.CP = {};
 
   CP.seed = function () {
     var s = {
-      v: 3, day: 0,
+      v: 4, day: 0,
       seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
       orgs: {
         B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001' },
         SBX: { id: 'SBX', type: 'buyer', name: 'Acheteur du bac à sable', alias: 'A-TEST', city: 'Bac à sable', country: 'France', kyb: 'validated', iban: 'FR76 0000 0000 0000 0000 0000 999', sandbox: true },
         B2: { id: 'B2', type: 'buyer', name: 'Novatech EMS (fictif)', alias: 'A-3K9', city: 'Grenoble', country: 'France', kyb: 'pending', iban: 'FR76 1000 2000 0000 0000 0781 4', siren: '000 000 002' },
-        S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR' },
-        S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD' },
-        S3: { id: 'S3', type: 'seller', name: 'Nord Électronique (fictif)', alias: 'V-3', city: 'Lille', country: 'France', kyb: 'validated', iban: 'FR76 3000 6000 0000 0000 0003 3', profile: 'Surplus OEM', currency: 'EUR' },
-        S4: { id: 'S4', type: 'seller', name: '深圳华强盈余电子 Huaqiang Surplus (fictif)', alias: 'V-4', city: 'Shenzhen', country: 'Chine', kyb: 'validated', iban: 'CN00 0000 0000 0000 0004', profile: 'Surplus EMS', currency: 'CNY', lang: 'zh' },
+        S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 4 } },
+        S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD', subscription: { plan: 'Vendeur Opportunity', until: 240 } },
+        S3: { id: 'S3', type: 'seller', name: 'Nord Électronique (fictif)', alias: 'V-3', city: 'Lille', country: 'France', kyb: 'validated', iban: 'FR76 3000 6000 0000 0000 0003 3', profile: 'Surplus OEM', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 180 } },
+        S4: { id: 'S4', type: 'seller', name: '深圳华强盈余电子 Huaqiang Surplus (fictif)', alias: 'V-4', city: 'Shenzhen', country: 'Chine', kyb: 'validated', iban: 'CN00 0000 0000 0000 0004', profile: 'Surplus EMS', currency: 'CNY', lang: 'zh', subscription: { plan: 'Vendeur Opportunity', until: 200 } },
         L1: { id: 'L1', type: 'lab', name: 'Laboratoire partenaire Europe (fictif)', alias: 'LAB-EU', city: 'Eindhoven', country: 'Pays-Bas', kyb: 'validated', iban: 'NL91 ABNA 0000 0000 01' },
         BK: { id: 'BK', type: 'bank', name: 'Établissement teneur du compte dédié (à désigner)', alias: 'BANQUE', city: 'Paris', country: 'France', kyb: 'validated' },
         CP: { id: 'CP', type: 'ops', name: 'Central.Parts', alias: 'Central.Parts', city: 'Paris', country: 'France', kyb: 'validated' },
@@ -192,11 +194,11 @@ var CP = window.CP = {};
   };
 
   // ------------------------------------------------------------ persistance
-  var KEY = 'cp-app-state-v3';
+  var KEY = 'cp-app-state-v4';
   CP.load = function () {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.v === 3) return s; }
+      if (raw) { var s = JSON.parse(raw); if (s && s.v === 4) return s; }
     } catch (e) { /* stockage indisponible : on repart des données de démonstration */ }
     return CP.seed();
   };

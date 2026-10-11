@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-68 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+70 endpoints et 24 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -20,6 +20,8 @@
 | GET | `/v1/organizations/{id}` | Acheteur, Vendeur, Laboratoire, Central.Parts | Fiche société ; pseudonyme seul pour les autres parties | Hors écran : intégration, webhook ou tâche |
 | POST | `/v1/organizations/{id}/kyb` | Public, Acheteur, Vendeur, Laboratoire | Dépôt du dossier KYB : Kbis, bénéficiaires effectifs, signataires, IBAN autorisé | `/inscription` |
 | GET | `/v1/organizations` | Central.Parts | Liste des sociétés, filtre par statut KYB | `/ops`, `/ops/kyb` |
+| GET | `/v1/organizations/{id}/subscription` | Vendeur, Central.Parts | Abonnement du vendeur et statut « vérifié » (KYB validé et abonnement à jour) | `/vendeur` |
+| POST | `/v1/organizations/{id}/subscription/renewal` | Vendeur, Central.Parts | Renouvellement de l'abonnement vendeur (paiement en ligne ou enregistré par Central.Parts) | `/vendeur`, `/ops/kyb` |
 | POST | `/v1/organizations/{id}/kyb/decision` | Central.Parts | Validation ou refus du KYB, contrôle des listes de sanctions | `/ops/kyb` |
 
 ## Recherche et catalogue
@@ -52,7 +54,7 @@
 | GET | `/v1/demands` | Acheteur, Vendeur, Central.Parts | Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops) | `/acheteur`, `/vendeur`, `/ops`, `/ops/demandes` |
 | GET | `/v1/demands/{id}` | Acheteur, Vendeur, Central.Parts | Détail d'une demande ; le vendeur ne voit ni l'acheteur ni l'adresse | `/acheteur/demandes/:id`, `/vendeur/demandes/:id` |
 | POST | `/v1/demands/{id}/close` | Central.Parts, Système | Clôture de l'enchère et calcul des offres consolidées (net + marge + frais) | `/ops/demandes` |
-| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée du vendeur : lot, prix net et devise, date code (donné à la consultation s'il manque au stock), délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
+| POST | `/v1/demands/{id}/bids` | Vendeur | Offre scellée d'un vendeur vérifié : lot, prix net et devise, date code (donné à la consultation s'il manque au stock), délai. Questionnaire du lot complet exigé | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/bids/mine` | Vendeur | Offre du vendeur et son rang, sans les offres concurrentes | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/offers` | Acheteur, Central.Parts | Offres consolidées, prix tout compris, questionnaire et documents | `/acheteur/demandes/:id`, `/ops/demandes` |
 | POST | `/v1/offers/{id}/accept` | Acheteur | Choix d'une offre, du niveau de test et des délais : crée la fiche transaction | `/acheteur/demandes/:id` |
@@ -157,7 +159,7 @@
 | `#/acheteur/nomenclatures/:id` | Acheteur | Nomenclature répartie | `bom.get`, `inv.order`, `dem.create` |
 | `#/acheteur/demandes/:id` | Acheteur | Demande et offres consolidées | `dem.get`, `offer.list`, `offer.accept` |
 | `#/acheteur/transactions/:id` | Acheteur | Transaction (vue acheteur) | `tx.get`, `tx.sign`, `tx.inspect`, `tx.return`, `tx.dispute` |
-| `#/vendeur` | Vendeur | Tableau de bord vendeur | `dem.list`, `lot.list`, `tx.list`, `notif.list` |
+| `#/vendeur` | Vendeur | Tableau de bord vendeur | `sub.get`, `sub.renew`, `dem.list`, `lot.list`, `tx.list`, `notif.list` |
 | `#/vendeur/stock` | Vendeur | Stock et import de stocklist | `lot.list`, `stock.import`, `stock.sftp`, `stock.job` |
 | `#/vendeur/api` | Vendeur | Intégration par API | `key.create`, `key.list`, `sup.bulk`, `sup.upsert`, `sup.delete`, `sup.list`, `hook.create`, `hook.list`, `sbx.demand`, `sbx.accept` |
 | `#/vendeur/notifications` | Vendeur | Notifications (e-mail, WeCom, WeChat) | `chan.list`, `chan.create`, `chan.delete`, `chan.test`, `wechat.qr`, `wechat.event` |
@@ -168,7 +170,7 @@
 | `#/labo/dossiers/:id` | Laboratoire | Dossier de test | `lab.cases`, `lab.receive`, `lab.certify`, `lab.reship` |
 | `#/banque` | Banque | Console de l'établissement teneur du compte | `escrow.get`, `tx.list`, `order.list`, `bank.incoming`, `bank.execute`, `bank.executed` |
 | `#/ops` | Central.Parts | Console Central.Parts | `org.list`, `dem.list`, `tx.list`, `order.list`, `escrow.get`, `events.list` |
-| `#/ops/kyb` | Central.Parts | KYB à valider | `org.list`, `org.decide` |
+| `#/ops/kyb` | Central.Parts | KYB et statut vérifié | `org.list`, `org.decide`, `sub.renew` |
 | `#/ops/demandes` | Central.Parts | Demandes et enchères | `dem.list`, `dem.close`, `offer.list` |
 | `#/ops/transactions/:id` | Central.Parts | Transaction (vue opérateur) | `tx.get`, `tx.delivered`, `dispute.decide` |
 | `#/ops/paiements` | Central.Parts | Ordres de paiement, double validation | `order.list`, `order.approve`, `order.transmit` |

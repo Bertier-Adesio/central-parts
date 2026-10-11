@@ -60,6 +60,7 @@
       return '<div class="tbl"><table><thead><tr>' + head.map(function (h) { return '<th' + (h.charAt(0) === '>' ? ' class="num">' + h.slice(1) : '>' + h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
         rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td' + (head[i] && head[i].charAt(0) === '>' ? ' class="num"' : '') + '>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
     },
+    verified: function (on) { return on ? '<span class="pill ok" title="KYB validé et abonnement à jour">✓ Vérifié</span>' : '<span class="pill muted" title="KYB à valider ou abonnement expiré">Non vérifié</span>'; },
     pill: function (text, kind) { return '<span class="pill ' + (kind || '') + '">' + esc(text) + '</span>'; },
     link: function (href, text) { return '<a href="#' + esc(href) + '">' + text + '</a>'; },
     btn: function (label, act, data, kind, disabled) {

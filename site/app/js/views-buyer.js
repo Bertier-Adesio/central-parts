@@ -104,7 +104,7 @@
       body = '<form data-form="accept-offer"><div class="offers">' + offers.map(function (o, i) {
         return '<label class="card offer"><input type="radio" name="offer" value="' + o.id + '"' + (i ? '' : ' checked') + '>' +
           '<div class="offer-hd"><b>Offre ' + o.rank + '</b><span class="price">' + CP.eur(o.unit) + ' <small>l\'unité, tout compris</small></span></div>' +
-          '<p class="muted small">Vendeur ' + esc(o.seller) + ' · ' + esc(o.sellerProfile) + ' · origine : ' + esc(o.origin) + ' · date code ' + esc(o.dc || o.lot.dc || '—') + ' · expédition sous ' + o.leadDays + ' j ouvrés · valable jusqu\'au ' + esc(CP.fmtDay(o.validUntil)) + '</p>' +
+          '<p class="muted small">' + ui.verified(o.sellerVerified) + ' Vendeur ' + esc(o.seller) + ' · ' + esc(o.sellerProfile) + ' · origine : ' + esc(o.origin) + ' · date code ' + esc(o.dc || o.lot.dc || '—') + ' · expédition sous ' + o.leadDays + ' j ouvrés · valable jusqu\'au ' + esc(CP.fmtDay(o.validUntil)) + '</p>' +
           '<p class="total-line">Prix converti en euros. Total pour ' + CP.num(d.qty) + ' pièces : <b>' + CP.eur(o.unit * d.qty) + '</b></p>' +
           '<details><summary>Questionnaire d\'état et documents</summary>' + ui.questionnaire(o.lot) + ui.docs(o.lot) + '</details></label>';
       }).join('') + '</div>' +

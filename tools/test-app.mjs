@@ -274,5 +274,26 @@ scenario('bac à sable : de l\'offre poussée à l\'expédition', (CP) => {
   call(CP, 'seller2', 'POST', `/v1/transactions/${t.id}/shipments`, { tracking: 'SBX-1' });
 });
 
+scenario('statut vérifié : KYB et abonnement à jour', (CP) => {
+  ok(call(CP, 'seller1', 'GET', '/v1/organizations/S1/subscription').verified, 'V-1 vérifié au départ');
+  call(CP, 'seller2', 'GET', '/v1/organizations/S1/subscription', null, [403]);
+  const offers = (() => { call(CP, 'ops1', 'POST', '/v1/demands/DEM-0427/close', {}); return call(CP, 'buyer', 'GET', '/v1/demands/DEM-0427/offers'); })();
+  ok(offers.every((o) => o.sellerVerified === true), 'badge vérifié sur les offres');
+  for (let i = 0; i < 5; i++) CP.advanceDay(); // l'abonnement de V-1 expire au jour 4
+  const sub = call(CP, 'seller1', 'GET', '/v1/organizations/S1/subscription');
+  ok(!sub.verified && sub.subscription.status === 'expired', 'V-1 n\'est plus vérifié');
+  ok(call(CP, 'seller1', 'GET', '/v1/notifications').some((n) => /expir/.test(n.text)), 'rappel et avis d\'expiration');
+  // Une nouvelle demande ne lui est plus diffusée ; la recherche publique masque ses lots.
+  const d = call(CP, 'buyer', 'POST', '/v1/demands', { mpn: 'MC68HC11E1CFNE2', qty: 50, delivery: 'Lyon (France)' });
+  call(CP, 'seller1', 'GET', '/v1/demands/' + d.id, null, [404]);
+  ok(call(CP, 'seller3', 'GET', '/v1/demands/' + d.id).id === d.id, 'les vendeurs vérifiés la reçoivent');
+  call(CP, 'seller1', 'POST', `/v1/demands/DEM-0428/bids`, { lotId: 'LOT-104', net: 18, dateCode: '2012' }, [403, 409]);
+  const renewed = call(CP, 'seller1', 'POST', '/v1/organizations/S1/subscription/renewal', {});
+  ok(renewed.verified && renewed.subscription.daysLeft === 250, 'renouvellement : statut vérifié rétabli');
+  // Un vendeur inscrit sans KYB validé ne peut pas s'abonner.
+  const org = call(CP, 'public', 'POST', '/v1/organizations', { type: 'seller', name: 'Nouveau Broker' });
+  call(CP, 'ops1', 'POST', `/v1/organizations/${org.id}/subscription/renewal`, {}, [409]);
+});
+
 console.log(`${checks - failures}/${checks} vérifications réussies`);
 process.exit(failures ? 1 : 0);

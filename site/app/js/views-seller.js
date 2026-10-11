@@ -19,8 +19,13 @@
     var actions = todo.map(function (t) { return '<li>' + ui.link('/vendeur/transactions/' + t.id, '<b>' + t.id + '</b> · ' + esc(t.mpn)) + ' : ' + esc(CP.TX_STATUS[t.status].label.toLowerCase()) + ' ' + ui.due(t) + '</li>'; })
       .concat(open.map(function (d) { var b = CP.get('/v1/demands/' + d.id + '/bids/mine'); return '<li>' + ui.link('/vendeur/demandes/' + d.id, '<b>' + d.id + '</b> · ' + esc(d.mpn) + ' × ' + CP.num(d.qty)) + ' : ' + (b && b.bid ? 'votre offre est au rang ' + b.rank + ' sur ' + b.count : 'enchère ouverte, clôture le ' + esc(CP.fmtDay(d.closesDay))) + '</li>'; }))
       .concat(incomplete.map(function (l) { return '<li>' + ui.link('/vendeur/lots/' + l.id, '<b>' + l.id + '</b> · ' + esc(l.mpn)) + ' : questionnaire à compléter pour pouvoir enchérir</li>'; }));
-    return ui.page('Tableau de bord vendeur', esc(me.name) + ' · pseudonyme vu par les acheteurs : <b>' + esc(me.alias) + '</b> · profil : ' + esc(me.profile || ''),
-      ui.stats([['Enchères ouvertes', open.length], ['Actions à faire', todo.length], ['Lots en stock', lots.length], ['Questionnaires incomplets', incomplete.length]]) +
+    var sub = CP.get('/v1/organizations/' + CP.actor.org + '/subscription') || {};
+    var s = sub.subscription;
+    var statusCard = ui.card('Statut ' + ui.verified(sub.verified), '<p>Le statut « vérifié » affiché aux acheteurs signifie que votre société a passé le KYB et que son abonnement est à jour. Sans lui, vous ne recevez plus les demandes et ne pouvez plus enchérir ; les transactions en cours vont à leur terme.</p>' +
+      ui.kv([['KYB', sub.kyb === 'validated' ? ui.pill('Validé', 'ok') : ui.pill('À valider', 'todo')], ['Abonnement', s ? esc(s.plan) + ' · ' + (s.status === 'active' ? 'jusqu\'au ' + esc(CP.fmtDay(CP.state.orgs[CP.actor.org].subscription.until)) + (s.daysLeft <= 5 ? ' ' + ui.pill('Expire dans ' + s.daysLeft + ' j', 'todo') : '') : ui.pill('Expiré', 'danger')) : 'Aucun']]) +
+      '<p>' + ui.btn(s ? 'Renouveler l\'abonnement' : 'Souscrire l\'abonnement', 'sub-renew', {}, s && s.status === 'active' && s.daysLeft > 5 ? 'ghost' : '') + ' <span class="muted small">Tarif à fixer ; paiement en ligne prévu.</span></p>', sub.verified ? '' : 'action');
+    return ui.page('Tableau de bord vendeur', esc(me.name) + ' · pseudonyme vu par les acheteurs : <b>' + esc(me.alias) + '</b> · profil : ' + esc(me.profile || '') + ' · ' + ui.verified(sub.verified),
+      statusCard + ui.stats([['Enchères ouvertes', open.length], ['Actions à faire', todo.length], ['Lots en stock', lots.length], ['Questionnaires incomplets', incomplete.length]]) +
       '<div class="grid2">' + ui.card('À faire', actions.length ? '<ul class="todo-list">' + actions.join('') + '</ul>' : '<p class="empty">Rien à faire pour le moment.</p>') + ui.card('Notifications', ui.notifs(notifs)) + '</div>' +
       ui.card('Demandes correspondant à votre stock', ui.table(['Demande', 'Référence', '>Qté', 'Zone', 'Acheteur', 'Clôture', 'Statut'], dem.map(function (d) {
         return [ui.link('/vendeur/demandes/' + d.id, d.id) + (d.sandbox ? ' ' + ui.pill('Bac à sable', 'wait') : ''), '<span class="mono">' + esc(d.mpn) + '</span>', CP.num(d.qty), esc(d.zone), '<span class="muted">Masqué</span>', esc(CP.fmtDay(d.closesDay)), CP.demStatus(d)];
@@ -29,6 +34,8 @@
         return [ui.link('/vendeur/transactions/' + t.id, t.id), '<span class="mono">' + esc(t.mpn) + '</span>', CP.num(t.qty), esc(t.buyer), ui.txStatus(t), ui.due(t)];
       }), 'Aucune transaction.')));
   };
+
+  CP.actions['sub-renew'] = function () { CP.call('POST', '/v1/organizations/' + CP.actor.org + '/subscription/renewal', {}, 'Abonnement renouvelé : statut « vérifié » actif.'); };
 
   // ------------------------------------------------------------ stock et import
   // Exemples fictifs. Le format broker reprend les colonnes annoncées par un broker partenaire.
