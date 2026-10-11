@@ -126,7 +126,7 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| GET | `/v1/escrow` | Banque, Central.Parts | Compte dédié : solde et cantonnement par transaction | `/banque`, `/ops` |
+| GET | `/v1/escrow` | Banque, Central.Parts | Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions | `/banque`, `/ops` |
 | GET | `/v1/payment-orders` | Banque, Central.Parts | Ordres de paiement et de remboursement | `/banque`, `/ops`, `/ops/paiements` |
 | POST | `/v1/payment-orders/{id}/approvals` | Central.Parts | Validation d'un ordre ; deux opérateurs distincts exigés | `/ops/paiements` |
 | POST | `/v1/payment-orders/{id}/transmit` | Central.Parts | Transmission de l'ordre validé à l'établissement financier | `/ops/paiements` |

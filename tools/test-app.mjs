@@ -328,6 +328,11 @@ scenario('acheteur en USD, vendeur payé en CNY', (CP) => {
   call(CP, 'ops1', 'POST', `/v1/payment-orders/${ord.id}/transmit`, {});
   call(CP, 'bank', 'POST', `/bank/v1/orders/${ord.id}/execution`, {});
   ok(Math.abs(call(CP, 'bank', 'GET', '/v1/escrow').balances.USD) < 0.02, 'solde USD revenu à zéro');
+  const esc = call(CP, 'bank', 'GET', '/v1/escrow');
+  ok(esc.accounts.map((a) => a.currency).join() === 'EUR,USD,CNY,HKD,GBP,JPY', 'un compte par devise principale');
+  ok(esc.movements.some((m) => m.fx && m.currency === 'CNY' && Math.abs(m.amount - 290 * 100 * 0.97) < 0.01), 'conversion USD → CNY entre comptes de Central.Parts');
+  call(CP, 'seller4', 'POST', '/v1/supplier/offers/bulk', { offers: [{ sku: 'TW1', mpn: 'X', quantity: 1, currency: 'TWD' }] });
+  ok(call(CP, 'seller4', 'GET', '/v1/supplier/offers?sku=TW1').length === 0, 'devise sans compte Central.Parts refusée');
   ok(call(CP, 'buyer2', 'GET', '/v1/transactions/' + tx.id).status === 'released', 'transaction soldée');
 });
 

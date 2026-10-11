@@ -102,7 +102,7 @@ var CP_ENDPOINTS = [
   { id: 'lab.reship', group: 'lab', method: 'POST', path: '/v1/lab/cases/{id}/reshipment', roles: ['lab'], summary: 'Réexpédition à l\'adresse de livraison désignée par l\'acheteur' },
 
   // Compte dédié et ordres
-  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Compte dédié : solde et cantonnement par transaction' },
+  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
   { id: 'order.list', group: 'payments', method: 'GET', path: '/v1/payment-orders', roles: ['bank', 'ops'], summary: 'Ordres de paiement et de remboursement' },
   { id: 'order.approve', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/approvals', roles: ['ops'], summary: 'Validation d\'un ordre ; deux opérateurs distincts exigés' },
   { id: 'order.transmit', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/transmit', roles: ['ops'], summary: 'Transmission de l\'ordre validé à l\'établissement financier' },

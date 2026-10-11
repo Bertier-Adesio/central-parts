@@ -38,7 +38,7 @@ Une fois une demande reçue, le fournisseur enchérit avec les endpoints communs
 | `manufacturer` | texte | Recommandé | Fabricant |
 | `quantity` | entier ≥ 0 | Oui | Quantité disponible ; 0 retire l'offre |
 | `unit_price` | décimal | Non | Prix unitaire catalogue |
-| `currency` | ISO 4217 | Non | `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY`, `TWD`, `SGD` ; devise par défaut de la société sinon |
+| `currency` | ISO 4217 | Non | Une des devises des comptes de Central.Parts : `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY` ; devise par défaut de la société sinon |
 | `price_breaks` | liste de `{quantity, price}` | Non | Paliers (10, 100, 1 000 pcs…) |
 | `date_code` | texte | Non | Facultatif dans le stock ; donné au plus tard en répondant à une demande |
 | `packaging` | texte | Non | Plateau, tube, bande et bobine, vrac |
@@ -81,7 +81,7 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 
 ## Devises
 
-Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. L'acheteur voit et paie dans la devise de son pays (EUR, USD, GBP, CNY…). Central.Parts classe les offres sur leur équivalent en euros, encaisse l'acheteur dans sa devise sur le compte dédié (un solde par devise) et paie le vendeur dans la sienne. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
+Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. L'acheteur voit et paie dans la devise de son pays (EUR, USD, GBP, CNY…). Central.Parts a un compte dans chaque devise principale (EUR, USD, CNY, HKD, GBP, JPY) : ce sont les devises acceptées. Il classe les offres sur leur équivalent en euros, encaisse l'acheteur sur le compte de sa devise et paie le vendeur depuis le compte de la sienne, après conversion entre ses deux comptes. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
 
 ## Webhooks
 

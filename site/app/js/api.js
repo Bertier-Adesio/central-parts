@@ -694,7 +694,7 @@
     if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
     if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
     var cur = CP.currency(o.currency, S().orgs[org].currency || 'USD');
-    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY, TWD, SGD)' };
+    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY)' };
     var tiers = {};
     var breaks = o.price_breaks || [];
     if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
@@ -983,13 +983,14 @@
   // Compte dédié et ordres
   H['escrow.get'] = function () {
     var ledger = {}, e = S().escrow, eurTotal = 0;
+    var accounts = Object.keys(P.accounts).map(function (c) { return { currency: c, account: P.accounts[c], balance: round(e.balances[c] || 0) }; });
     e.movements.forEach(function (m) {
       if (!m.txId) return;
       var l = ledger[m.txId] || (ledger[m.txId] = { amount: 0, currency: m.currency || 'EUR' });
       l.amount = round(l.amount + m.amount);
     });
     Object.keys(e.balances).forEach(function (c) { e.balances[c] = round(e.balances[c]); eurTotal += CP.toEur(e.balances[c], c); });
-    return { balances: e.balances, balance: round(eurTotal), ledger: ledger, movements: e.movements.slice().reverse() };
+    return { accounts: accounts, balances: e.balances, balance: round(eurTotal), ledger: ledger, movements: e.movements.slice().reverse() };
   };
   H['order.list'] = function (c) {
     return CP.values(S().orders).filter(function (o) { return c.actor.role !== 'bank' || ['transmitted', 'executed'].indexOf(o.status) >= 0; }).reverse().map(function (o) {
@@ -1047,7 +1048,14 @@
     S().escrow.balances[oc] = round(S().escrow.balances[oc] - o.amount);
     o.lines.forEach(function (l) {
       var org = S().orgs[l.to];
-      S().escrow.movements.push({ day: S().day, label: l.label + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amount, currency: oc, txId: o.txId });
+      // Paiement dans une autre devise : conversion entre deux comptes de Central.Parts, puis virement.
+      if (l.currency && l.currency !== oc && l.amountCurrency != null) {
+        S().escrow.movements.push({ day: S().day, label: 'Conversion ' + oc + ' → ' + l.currency + ' · ' + o.id, amount: -l.amount, currency: oc, txId: o.txId, fx: true });
+        S().escrow.movements.push({ day: S().day, label: 'Conversion ' + oc + ' → ' + l.currency + ' · ' + o.id, amount: l.amountCurrency, currency: l.currency, fx: true });
+        S().escrow.movements.push({ day: S().day, label: l.label.replace(/, versé .*$/, '') + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amountCurrency, currency: l.currency });
+      } else {
+        S().escrow.movements.push({ day: S().day, label: l.label + ' · ' + (org ? org.name : l.to) + ' · ' + o.id, amount: -l.amount, currency: oc, txId: o.txId });
+      }
     });
     o.status = 'executed'; o.executedDay = S().day;
     CP.api('POST', '/v1/webhooks/bank/order-executed', { orderId: o.id }, { actor: c.actor, ok200: true });

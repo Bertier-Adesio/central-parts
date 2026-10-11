@@ -124,7 +124,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 
 - L'identité de l'acheteur est masquée aux vendeurs, et celle du vendeur à l'acheteur. **Décidé**
 - Le vendeur voit : référence, quantité, date code minimum, exigences d'emballage et de questionnaire, zone de livraison (pays ou région, jamais l'adresse), délai souhaité. **Proposé**
-- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts présente l'offre à l'acheteur dans la devise de son pays, l'encaisse dans cette devise et paie le vendeur dans la sienne. **Décidé**
+- Le vendeur propose son prix net dans sa devise (EUR, USD, CNY/RMB…) avec le date code du lot ; Adesio lui indique une fourchette conseillée. Central.Parts présente l'offre à l'acheteur dans la devise de son pays, l'encaisse sur son compte dans cette devise et paie le vendeur depuis son compte dans la sienne ; Central.Parts a des comptes dans les principales devises. **Décidé**
 - Enchère inversée à offres scellées, avec indication du rang au vendeur. **Proposé**
 - L'acheteur voit une offre consolidée (prix tout compris, questionnaire, photos, documents, délai), éventuellement plusieurs offres classées. **Proposé**
 - **Anonymat à la livraison** : transit par un laboratoire ou un entrepôt partenaire, étiquettes neutres, ou levée de l'anonymat à l'expédition protégée par la clause de non-contournement. **À arbitrer**
