@@ -223,6 +223,15 @@ await step('statut vérifié : expiration et renouvellement', async () => {
   ok((await page.textContent('#main')).includes('✓ Vérifié'), 'statut vérifié rétabli');
 });
 
+await step('connecteurs : essai côté broker, interrogation côté Central.Parts', async () => {
+  await as('seller2'); await go('/vendeur/api');
+  await page.click('button[data-act="conn-test"]');
+  ok((await page.textContent('#main')).includes('HB-API-0001'), 'réponse de l\'API du broker affichée');
+  await as('ops1'); await go('/ops/connecteurs');
+  await page.click('form[data-form="live-query"] button');
+  ok((await page.textContent('#main')).includes('HB-API-0003'), 'interrogation en direct');
+});
+
 // Toutes les routes, aux deux largeurs.
 const routes = await page.evaluate(() => CP_ROUTES.map((r) => ({ path: r.path, role: r.role })));
 const actorFor = { public: 'public', buyer: 'buyer', seller: 'seller2', lab: 'lab', bank: 'bank', ops: 'ops1' };

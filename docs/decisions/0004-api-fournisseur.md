@@ -1,7 +1,7 @@
 # 0004 — API fournisseur en canal principal, fichiers en repli
 
 - Date : 2026-10-10
-- Statut : proposée
+- Statut : proposée ; ordre des canaux précisé par l'ADR 0007 (API produit du broker en priorité)
 
 ## Contexte
 
@@ -13,7 +13,7 @@ Les premiers brokers transmettent leur stock en CSV ou XLS, et en SFTP au-delà 
 - Le **SKU du fournisseur** est la clé métier des offres.
 - Les fichiers CSV, XLS et le **SFTP restent proposés en repli**, avec le même modèle de lot et le même rapport d'import (`data/formats.md`).
 - Les règles d'Opportunity ne changent pas : questionnaire d'état exigé avant d'enchérir, quel que soit le canal. Le date code est facultatif dans le stock et demandé au broker quand il répond à une demande.
-- Chaque prix porte sa devise (EUR, USD, CNY/RMB…). Le vendeur est payé dans sa devise ; l'acheteur voit et paie dans la devise de son pays ; Central.Parts, qui a un compte dans chaque devise principale, fait la conversion entre ses comptes.
+- Chaque prix porte sa devise (EUR, USD, CNH…, `CNY` et `RMB` acceptés comme `CNH`). Le vendeur est payé dans sa devise ; l'acheteur voit et paie dans la devise de son pays ; Central.Parts, qui a un compte dans chaque devise principale, fait la conversion entre ses comptes.
 - La maquette implémente ces endpoints (`site/app/js/api.js`, écran `#/vendeur/api`) ; ils figurent dans `registry.js` et `api/endpoints.md`.
 
 ## Conséquences

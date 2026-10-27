@@ -2,7 +2,24 @@
 
 Spécification v0 de l'API par laquelle un fournisseur (broker, distributeur, détenteur de surplus, fabricant) pousse son stock vers Central.Parts et reçoit les demandes qui le concernent. Implémentation simulée : `site/app/js/api.js`, écran vendeur « Intégration API » de la maquette (`/app/#/vendeur/api`). Décision : [ADR 0004](../docs/decisions/0004-api-fournisseur.md).
 
-L'API est le canal recommandé. Les fichiers CSV ou XLS (`POST /v1/stocklists`) et le dépôt SFTP restent disponibles en repli ([`data/formats.md`](../data/formats.md)).
+**Ordre de priorité des canaux** ([ADR 0007](../docs/decisions/0007-priorite-api-produit-brokers.md)) :
+
+1. **API produit du broker**, interrogée par Central.Parts à chaque demande (connecteur, section suivante) : canal prioritaire.
+2. **Envoi vers l'API fournisseur** de Central.Parts, décrite dans ce document.
+3. **Fichiers** CSV ou XLS (`POST /v1/stocklists`) et dépôt **SFTP** ([`data/formats.md`](../data/formats.md)).
+
+## Connecteur : Central.Parts interroge votre API produit
+
+Le broker déclare son API ; Central.Parts l'appelle sur la référence de chaque nouvelle demande et ne garde qu'un instantané des lots trouvés.
+
+| Méthode | Chemin | Rôle |
+|---|---|---|
+| `POST` | `/v1/organizations/{id}/connectors` | Déclarer l'API : `baseUrl` (HTTPS), `searchPath` contenant `{mpn}`, `auth` (`api_key`, `oauth2`, `basic`, `none`) |
+| `GET` | `/v1/organizations/{id}/connectors` | Connecteurs, statut, temps de réponse, nombre d'appels |
+| `POST` | `/v1/organizations/{id}/connectors/{cid}/test` | Appel d'essai sur une référence ; active le connecteur |
+| `POST` | `/v1/connectors/query` | Interrogation en direct de toutes les API connectées (Central.Parts, lancée à chaque demande) |
+
+Ce que l'API du broker doit fournir, par référence : MPN, fabricant, quantité disponible, SKU ; si possible prix unitaire, devise, paliers, date code. Critères visés : réponse en moins de 2 secondes, disponibilité élevée, limites d'appels compatibles avec le volume de demandes. La correspondance des champs est adaptée à chaque broker. Les identifiants d'accès fournis par le broker sont conservés chiffrés et ne sont jamais réaffichés.
 
 ## Principes
 
@@ -38,7 +55,7 @@ Une fois une demande reçue, le fournisseur enchérit avec les endpoints communs
 | `manufacturer` | texte | Recommandé | Fabricant |
 | `quantity` | entier ≥ 0 | Oui | Quantité disponible ; 0 retire l'offre |
 | `unit_price` | décimal | Non | Prix unitaire catalogue |
-| `currency` | ISO 4217 | Non | Une des devises des comptes de Central.Parts : `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY` ; devise par défaut de la société sinon |
+| `currency` | ISO 4217 | Non | Une des devises des comptes de Central.Parts : `EUR`, `USD`, `CNH` (`CNY` et `RMB` acceptés comme `CNH`), `HKD`, `GBP`, `JPY` ; devise par défaut de la société sinon |
 | `price_breaks` | liste de `{quantity, price}` | Non | Paliers (10, 100, 1 000 pcs…) |
 | `date_code` | texte | Non | Facultatif dans le stock ; donné au plus tard en répondant à une demande |
 | `packaging` | texte | Non | Plateau, tube, bande et bobine, vrac |
@@ -81,7 +98,7 @@ Réponse `200` : les offres valides sont enregistrées même si d'autres sont en
 
 ## Devises
 
-Le fournisseur fixe ses prix et enchérit dans sa devise (EUR, USD, CNY/RMB…) ; il est payé dans cette devise, de son prix net moins la commission vendeur. L'acheteur voit et paie dans la devise de son pays (EUR, USD, GBP, CNY…). Central.Parts a un compte dans chaque devise principale. Liste validée : EUR, USD, CNY (RMB), HKD, GBP, JPY ; ce sont les seules devises acceptées. Il classe les offres sur leur équivalent en euros, encaisse l'acheteur sur le compte de sa devise et paie le vendeur depuis le compte de la sienne, après conversion entre ses deux comptes. Source des taux, moment de la conversion et couverture du risque de change : à arbitrer avec l'établissement financier. La maquette utilise des taux fictifs.
+Le fournisseur fixe ses prix et enchérit dans sa devise ; il reçoit exactement son prix net dans cette devise, moins ses frais. L'acheteur voit et paie dans la devise de son pays. Central.Parts a un compte dans chaque devise principale. Liste validée : EUR, USD, CNH (yuan offshore ; `CNY` et `RMB` sont acceptés et enregistrés en `CNH`), HKD, GBP, JPY ; ce sont les seules devises acceptées. Les offres sont classées sur leur équivalent en euros. Le prix d'achat est converti pour l'acheteur au taux de référence de la BCE, figé pendant la validité de l'offre ; au dépôt de l'acheteur, les fonds sont convertis dans la devise du vendeur et conservés dans cette devise jusqu'au paiement. Les vendeurs asiatiques sont payés en USD par défaut ; CNH, HKD et JPY quand l'établissement financier le permet. La maquette utilise des taux fictifs.
 
 ## Webhooks
 

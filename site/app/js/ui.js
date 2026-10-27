@@ -175,7 +175,7 @@
       seller: [['/vendeur', 'Tableau de bord'], ['/vendeur/stock', 'Stock et lots'], ['/vendeur/api', 'Intégration API'], ['/vendeur/notifications', 'Notifications'], ['/recherche', 'Recherche'], ['/api', 'Carte de l\'API']],
       lab: [['/labo', 'Dossiers'], ['/api', 'Carte de l\'API']],
       bank: [['/banque', 'Compte dédié'], ['/api', 'Carte de l\'API']],
-      ops: [['/ops', 'Vue d\'ensemble'], ['/ops/kyb', 'KYB'], ['/ops/demandes', 'Demandes'], ['/ops/paiements', 'Ordres de paiement'], ['/api', 'Carte de l\'API']],
+      ops: [['/ops', 'Vue d\'ensemble'], ['/ops/kyb', 'KYB'], ['/ops/demandes', 'Demandes'], ['/ops/connecteurs', 'Connecteurs'], ['/ops/paiements', 'Ordres de paiement'], ['/api', 'Carte de l\'API']],
     }[a.role];
     // Lien actif : le plus long préfixe de la route courante.
     var cur = CP.route.path, best = '';

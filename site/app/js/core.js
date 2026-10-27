@@ -46,9 +46,9 @@ var CP = window.CP = {};
     ],
     testNames: { visual: 'Contrôle visuel', marking: 'Marquage et étiquettes', xray: 'Rayons X', xrf: 'XRF (matériaux)', decap: 'Décapsulation' },
     // Central.Parts a un compte dans chaque devise principale : ce sont les devises acceptées (liste validée).
-    // Taux de conversion fictifs, en euros pour une unité. RMB est accepté comme CNY.
-    currencies: { EUR: 1, USD: 0.92, CNY: 0.128, HKD: 0.118, GBP: 1.17, JPY: 0.0062 },
-    accounts: { EUR: 'FR76 ···· 0001 (fictif)', USD: 'US ···· 0002 (fictif)', CNY: 'CN ···· 0003 (fictif)', HKD: 'HK ···· 0004 (fictif)', GBP: 'GB ···· 0005 (fictif)', JPY: 'JP ···· 0006 (fictif)' },
+    // Taux de conversion fictifs, en euros pour une unité. Yuan offshore (CNH) ; CNY et RMB sont acceptés comme CNH.
+    currencies: { EUR: 1, USD: 0.92, CNH: 0.128, HKD: 0.118, GBP: 1.17, JPY: 0.0062 },
+    accounts: { EUR: 'FR76 ···· 0001 (fictif)', USD: 'US ···· 0002 (fictif)', CNH: 'HK ···· 0003 (fictif)', HKD: 'HK ···· 0004 (fictif)', GBP: 'GB ···· 0005 (fictif)', JPY: 'JP ···· 0006 (fictif)' },
     rejectReasons: ['Contrefaçon ou soupçon de contrefaçon', 'Non-conformité à la commande ou au questionnaire', 'Écart de quantité', 'Dommage de transport'],
   };
 
@@ -97,8 +97,8 @@ var CP = window.CP = {};
 
   CP.seed = function () {
     var s = {
-      v: 5, day: 0,
-      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2 },
+      v: 7, day: 0,
+      seq: { BOM: 12, DEM: 430, BID: 900, OFF: 500, TX: 43, LAB: 20, ORD: 70, LOT: 107, INV: 18, ORG: 10, DSP: 3, NOT: 0, EVT: 0, CH: 2, CON: 1 },
       orgs: {
         B1: { id: 'B1', type: 'buyer', name: 'Atelier Lumen (fictif)', alias: 'A-7Q2', city: 'Lyon', country: 'France', kyb: 'validated', iban: 'FR76 3000 4000 0000 0000 0452 1', siren: '000 000 001', currency: 'EUR' },
         B3: { id: 'B3', type: 'buyer', name: 'Rocky Mountain Devices (fictif)', alias: 'A-5R8', city: 'Denver', country: 'États-Unis', kyb: 'validated', iban: 'US00 0000 0000 0000 0003', currency: 'USD' },
@@ -107,7 +107,7 @@ var CP = window.CP = {};
         S1: { id: 'S1', type: 'seller', name: 'Surplus Rhénanie GmbH (fictif)', alias: 'V-1', city: 'Cologne', country: 'Allemagne', kyb: 'validated', iban: 'DE89 3704 0044 0000 0000 01', profile: 'Surplus EMS', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 4 } },
         S2: { id: 'S2', type: 'seller', name: 'Harbour Components Ltd (fictif)', alias: 'V-2', city: 'Hong Kong', country: 'Hong Kong', kyb: 'validated', iban: 'HK00 0000 0000 0000 0002', profile: 'Broker', currency: 'USD', subscription: { plan: 'Vendeur Opportunity', until: 240 } },
         S3: { id: 'S3', type: 'seller', name: 'Nord Électronique (fictif)', alias: 'V-3', city: 'Lille', country: 'France', kyb: 'validated', iban: 'FR76 3000 6000 0000 0000 0003 3', profile: 'Surplus OEM', currency: 'EUR', subscription: { plan: 'Vendeur Opportunity', until: 180 } },
-        S4: { id: 'S4', type: 'seller', name: '深圳华强盈余电子 Huaqiang Surplus (fictif)', alias: 'V-4', city: 'Shenzhen', country: 'Chine', kyb: 'validated', iban: 'CN00 0000 0000 0000 0004', profile: 'Surplus EMS', currency: 'CNY', lang: 'zh', subscription: { plan: 'Vendeur Opportunity', until: 200 } },
+        S4: { id: 'S4', type: 'seller', name: '深圳华强盈余电子 Huaqiang Surplus (fictif)', alias: 'V-4', city: 'Shenzhen', country: 'Chine', kyb: 'validated', iban: 'CN00 0000 0000 0000 0004', profile: 'Surplus EMS', currency: 'CNH', lang: 'zh', subscription: { plan: 'Vendeur Opportunity', until: 200 } },
         L1: { id: 'L1', type: 'lab', name: 'Laboratoire partenaire Europe (fictif)', alias: 'LAB-EU', city: 'Eindhoven', country: 'Pays-Bas', kyb: 'validated', iban: 'NL91 ABNA 0000 0000 01' },
         BK: { id: 'BK', type: 'bank', name: 'Établissement teneur du compte dédié (à désigner)', alias: 'BANQUE', city: 'Paris', country: 'France', kyb: 'validated' },
         CP: { id: 'CP', type: 'ops', name: 'Central.Parts', alias: 'Central.Parts', city: 'Paris', country: 'France', kyb: 'validated' },
@@ -130,7 +130,17 @@ var CP = window.CP = {};
         'LOT-104': { id: 'LOT-104', currency: 'EUR', sellerId: 'S1', mpn: 'MC68HC11E1CFNE2', mfr: 'NXP', qty: 90, dc: '2012', pack: 'Tube', price: 19, q: {}, docs: { photos: false, coc: false, proof: false, datasheet: true, inspection: false } },
         'LOT-105': { id: 'LOT-105', currency: 'USD', sellerId: 'S2', mpn: 'STM32F103C8T6', mfr: 'STMicroelectronics', qty: 5000, dc: '2023', pack: 'Plateau', price: 2.1, q: fullQ({ origin: 'Autre broker' }), docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
         'LOT-106': { id: 'LOT-106', currency: 'EUR', sellerId: 'S3', mpn: 'LT1086CM#PBF', mfr: 'Analog Devices', qty: 800, dc: '2016', pack: 'Tube', price: 3.4, q: fullQ({ origin: 'Stock propre', pack: 'Tube' }), docs: { photos: true, coc: true, proof: true, datasheet: true, inspection: true } },
-        'LOT-107': { id: 'LOT-107', currency: 'CNY', sellerId: 'S4', mpn: 'XC2S50-5TQ144C', mfr: 'AMD Xilinx', qty: 500, dc: '', pack: 'Plateau', price: 300, q: {}, docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
+        'LOT-107': { id: 'LOT-107', currency: 'CNH', sellerId: 'S4', mpn: 'XC2S50-5TQ144C', mfr: 'AMD Xilinx', qty: 500, dc: '', pack: 'Plateau', price: 300, q: {}, docs: { photos: true, coc: false, proof: false, datasheet: true, inspection: false } },
+      },
+      // Connecteurs : Central.Parts interroge l'API produit du broker au moment d'une demande.
+      // remote : catalogue distant simulé (ce que renverrait l'API du broker).
+      connectors: {
+        'CON-0001': { id: 'CON-0001', orgId: 'S2', name: 'API produit Harbour v2', baseUrl: 'https://api.harbour.example/v2', searchPath: '/products?mpn={mpn}', auth: 'api_key', status: 'ok', latencyMs: 420, lastCall: null, calls: 0,
+          remote: [
+            { sku: 'HB-API-0001', mpn: 'XC2S50-5TQ144C', manufacturer: 'AMD Xilinx', quantity: 400, unit_price: 43.0, currency: 'USD', date_code: '2009/2012' },
+            { sku: 'HB-API-0002', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 600, unit_price: 23.5, currency: 'USD', date_code: '2015' },
+            { sku: 'HB-API-0003', mpn: 'EPM7064SLC44-10', manufacturer: 'Intel (Altera)', quantity: 1500, unit_price: 6.8, currency: 'USD', date_code: '2011' },
+          ] },
       },
       // Canaux de notification des vendeurs : V-4 reçoit les demandes sur WeChat, en chinois.
       channels: {
@@ -187,7 +197,7 @@ var CP = window.CP = {};
   // Devise normalisée (ISO 4217) ou null si inconnue.
   CP.currency = function (c, def) {
     var k = String(c || def || '').trim().toUpperCase();
-    if (k === 'RMB') k = 'CNY';
+    if (k === 'RMB' || k === 'CNY') k = 'CNH';
     return CP.PARAMS.currencies[k] ? k : null;
   };
   CP.toEur = function (amount, cur) { return round(amount * CP.PARAMS.currencies[CP.currency(cur, 'EUR')]); };
@@ -195,15 +205,15 @@ var CP = window.CP = {};
   CP.money = function (n, cur) {
     var c = CP.currency(cur, 'EUR');
     if (c === 'EUR') return CP.eur(n);
-    return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' ' + (c === 'CNY' ? 'CNY (RMB)' : c);
+    return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' ' + c;
   };
 
   // ------------------------------------------------------------ persistance
-  var KEY = 'cp-app-state-v5';
+  var KEY = 'cp-app-state-v7';
   CP.load = function () {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.v === 5) return s; }
+      if (raw) { var s = JSON.parse(raw); if (s && s.v === 7) return s; }
     } catch (e) { /* stockage indisponible : on repart des données de démonstration */ }
     return CP.seed();
   };

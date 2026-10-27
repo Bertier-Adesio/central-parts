@@ -40,7 +40,7 @@ var CP_ENDPOINTS = [
   { id: 'bom.get', group: 'boms', method: 'GET', path: '/v1/boms/{id}', roles: ['buyer', 'ops'], summary: 'Détail d\'une nomenclature et répartition des lignes' },
 
   // Inventory
-  { id: 'inv.order', group: 'inventory', method: 'POST', path: '/v1/inventory/orders', roles: ['buyer'], summary: 'Commande des lignes Inventory (paiement classique, hors escrow)' },
+  { id: 'inv.order', group: 'inventory', method: 'POST', path: '/v1/inventory/orders', roles: ['buyer'], summary: 'Commande des lignes Inventory (paiement classique, hors compte dédié)' },
   { id: 'inv.orders', group: 'inventory', method: 'GET', path: '/v1/inventory/orders', roles: ['buyer', 'ops'], summary: 'Commandes Inventory et leur suivi' },
 
   // Demandes et enchères
@@ -64,6 +64,11 @@ var CP_ENDPOINTS = [
   { id: 'lot.documents', group: 'lots', method: 'PUT', path: '/v1/lots/{id}/documents', roles: ['seller'], summary: 'Documents qualité : photos, CoC, preuve d\'achat, datasheet, rapport d\'inspection' },
 
   // API fournisseur : le vendeur pousse ses offres depuis son système, sans fichier.
+  { id: 'conn.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/connectors', roles: ['seller', 'ops'], summary: 'Connecteurs vers l\'API produit du fournisseur (prioritaire : Central.Parts interroge le stock en direct)' },
+  { id: 'conn.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/connectors', roles: ['seller', 'ops'], summary: 'Déclaration de l\'API produit d\'un broker : URL, chemin de recherche par MPN, authentification' },
+  { id: 'conn.test', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/connectors/{cid}/test', roles: ['seller', 'ops'], summary: 'Appel d\'essai de l\'API du broker sur une référence ; valide le connecteur' },
+  { id: 'conn.all', group: 'supplier', method: 'GET', path: '/v1/connectors', roles: ['ops'], summary: 'Tous les connecteurs : état, temps de réponse, nombre d\'appels' },
+  { id: 'conn.query', group: 'supplier', method: 'POST', path: '/v1/connectors/query', roles: ['ops', 'system'], summary: 'Interrogation en direct des API produit des brokers vérifiés pour une référence (lancée à chaque demande)' },
   { id: 'key.create', group: 'supplier', method: 'POST', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Création d\'une clé d\'API (test ou production), secret affiché une seule fois' },
   { id: 'key.list', group: 'supplier', method: 'GET', path: '/v1/organizations/{id}/api-keys', roles: ['seller', 'ops'], summary: 'Clés d\'API de la société (préfixe, environnement, dernière utilisation)' },
   { id: 'sup.bulk', group: 'supplier', method: 'POST', path: '/v1/supplier/offers/bulk', roles: ['seller'], summary: 'Création ou mise à jour de 1 000 offres au plus par appel, clé : SKU ; erreurs ligne par ligne' },
@@ -102,7 +107,7 @@ var CP_ENDPOINTS = [
   { id: 'lab.reship', group: 'lab', method: 'POST', path: '/v1/lab/cases/{id}/reshipment', roles: ['lab'], summary: 'Réexpédition à l\'adresse de livraison désignée par l\'acheteur' },
 
   // Compte dédié et ordres
-  { id: 'escrow.get', group: 'payments', method: 'GET', path: '/v1/escrow', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
+  { id: 'funds.get', group: 'payments', method: 'GET', path: '/v1/funds', roles: ['bank', 'ops'], summary: 'Comptes de Central.Parts dans les principales devises : soldes, cantonnement par transaction, conversions' },
   { id: 'order.list', group: 'payments', method: 'GET', path: '/v1/payment-orders', roles: ['bank', 'ops'], summary: 'Ordres de paiement et de remboursement' },
   { id: 'order.approve', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/approvals', roles: ['ops'], summary: 'Validation d\'un ordre ; deux opérateurs distincts exigés' },
   { id: 'order.transmit', group: 'payments', method: 'POST', path: '/v1/payment-orders/{id}/transmit', roles: ['ops'], summary: 'Transmission de l\'ordre validé à l\'établissement financier' },
@@ -129,18 +134,19 @@ var CP_ROUTES = [
   { path: '/acheteur/transactions/:id', role: 'buyer', title: 'Transaction (vue acheteur)', endpoints: ['tx.get', 'tx.sign', 'tx.inspect', 'tx.return', 'tx.dispute'] },
   { path: '/vendeur', role: 'seller', title: 'Tableau de bord vendeur', endpoints: ['sub.get', 'sub.renew', 'dem.list', 'lot.list', 'tx.list', 'notif.list'] },
   { path: '/vendeur/stock', role: 'seller', title: 'Stock et import de stocklist', endpoints: ['lot.list', 'stock.import', 'stock.sftp', 'stock.job'] },
-  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
+  { path: '/vendeur/api', role: 'seller', title: 'Intégration par API', endpoints: ['conn.list', 'conn.create', 'conn.test', 'key.create', 'key.list', 'sup.bulk', 'sup.upsert', 'sup.delete', 'sup.list', 'hook.create', 'hook.list', 'sbx.demand', 'sbx.accept'] },
   { path: '/vendeur/notifications', role: 'seller', title: 'Notifications (e-mail, WeCom, WeChat)', endpoints: ['chan.list', 'chan.create', 'chan.delete', 'chan.test', 'wechat.qr', 'wechat.event'] },
   { path: '/vendeur/lots/:id', role: 'seller', title: 'Lot : questionnaire et documents', endpoints: ['lot.get', 'lot.update', 'lot.questionnaire', 'lot.documents'] },
   { path: '/vendeur/demandes/:id', role: 'seller', title: 'Demande anonymisée et enchère', endpoints: ['dem.get', 'advice', 'bid.mine', 'bid.create'] },
   { path: '/vendeur/transactions/:id', role: 'seller', title: 'Transaction (vue vendeur)', endpoints: ['tx.get', 'tx.sign', 'tx.ship', 'tx.counter', 'tx.dispute'] },
   { path: '/labo', role: 'lab', title: 'Dossiers du laboratoire', endpoints: ['lab.cases', 'notif.list'] },
   { path: '/labo/dossiers/:id', role: 'lab', title: 'Dossier de test', endpoints: ['lab.cases', 'lab.receive', 'lab.certify', 'lab.reship'] },
-  { path: '/banque', role: 'bank', title: 'Console de l\'établissement teneur du compte', endpoints: ['escrow.get', 'tx.list', 'order.list', 'bank.incoming', 'bank.execute', 'bank.executed'] },
-  { path: '/ops', role: 'ops', title: 'Console Central.Parts', endpoints: ['org.list', 'dem.list', 'tx.list', 'order.list', 'escrow.get', 'events.list'] },
+  { path: '/banque', role: 'bank', title: 'Console de l\'établissement teneur du compte', endpoints: ['funds.get', 'tx.list', 'order.list', 'bank.incoming', 'bank.execute', 'bank.executed'] },
+  { path: '/ops', role: 'ops', title: 'Console Central.Parts', endpoints: ['org.list', 'dem.list', 'tx.list', 'order.list', 'funds.get', 'events.list'] },
   { path: '/ops/kyb', role: 'ops', title: 'KYB et statut vérifié', endpoints: ['org.list', 'org.decide', 'sub.renew'] },
   { path: '/ops/demandes', role: 'ops', title: 'Demandes et enchères', endpoints: ['dem.list', 'dem.close', 'offer.list'] },
   { path: '/ops/transactions/:id', role: 'ops', title: 'Transaction (vue opérateur)', endpoints: ['tx.get', 'tx.delivered', 'dispute.decide'] },
+  { path: '/ops/connecteurs', role: 'ops', title: 'Connecteurs aux API des brokers', endpoints: ['conn.all', 'conn.query'] },
   { path: '/ops/paiements', role: 'ops', title: 'Ordres de paiement, double validation', endpoints: ['order.list', 'order.approve', 'order.transmit'] },
   { path: '/api', role: 'public', title: 'Carte des endpoints et des routes', endpoints: [] },
 ];

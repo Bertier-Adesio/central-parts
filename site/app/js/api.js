@@ -65,13 +65,18 @@
   CP.system = function (method, url, body) { return CP.api(method, url, body, { actor: SYSTEM }); };
 
   // ------------------------------------------------------------ événements et notifications
+  // « 28 sept. » en fin de phrase donnerait deux points.
+  function tidy(t) { return String(t).replace(/\.\.(\s|$)/g, '.$1'); }
   function event(text, ref) {
+    text = tidy(text);
     S().events.unshift({ id: next('EVT'), day: S().day, text: text, ref: ref || null });
   }
   function notify(to, text, link) {
+    text = tidy(text);
     S().notifications.unshift({ id: next('NOT'), day: S().day, to: to, text: text, link: link || null });
   }
   function hist(t, text) {
+    text = tidy(text);
     t.history.push({ day: S().day, text: text });
     event(t.id + ' · ' + text, t.id);
     if (typeof deliver === 'function') deliver(t.sellerId, 'transaction.updated', { transaction_id: t.id, status: t.status, text: text });
@@ -96,7 +101,8 @@
   function demandView(d, a) {
     var v = CP.clone(d);
     if (a.role === 'seller') {
-      delete v.buyerId; delete v.bomId; delete v.delivery; delete v.target; delete v.sellers;
+      v.liveConfirmed = (d.live || []).some(function (x) { return x.sellerId === a.org; });
+      delete v.buyerId; delete v.bomId; delete v.delivery; delete v.target; delete v.sellers; delete v.live;
       v.buyer = 'Masqué';
     } else if (a.role === 'buyer') {
       delete v.sellers;
@@ -316,14 +322,17 @@
       if (!line) fail(422, 'Ligne absente de la nomenclature');
       if (line.demandId) fail(409, 'Demande déjà lancée pour cette ligne');
     }
-    var sellers = [];
+    // 1. Brokers prioritaires : interrogation en direct de leur API produit.
+    var live = queryConnectors(mpn, qty);
+    var sellers = live.filter(function (r) { return r.quantity >= 1; }).map(function (r) { return r.sellerId; });
+    // 2. Stock poussé (API fournisseur) ou importé (fichiers).
     CP.values(S().lots).forEach(function (l) {
       // Seuls les vendeurs vérifiés reçoivent les demandes.
       if (l.mpn.toUpperCase() === mpn && l.qty > 0 && sellers.indexOf(l.sellerId) < 0 && verified(S().orgs[l.sellerId])) sellers.push(l.sellerId);
     });
     var id = next('DEM');
     var lot = CP.values(S().lots).filter(function (l) { return l.mpn.toUpperCase() === mpn; })[0];
-    var d = { id: id, buyerId: c.actor.org, bomId: bom ? bom.id : null, mpn: lot ? lot.mpn : mpn, mfr: (lot && lot.mfr) || b.mfr || '', qty: qty, dcMin: b.dcMin || '', pack: b.pack || 'Indifférent', zone: b.zone || zoneOf(b.delivery), delivery: b.delivery || '', leadDays: parseInt(b.leadDays, 10) || 10, target: b.target ? Number(b.target) : null, status: 'auction', day: S().day, closesDay: S().day + P.delays.auction, sellers: sellers };
+    var d = { id: id, buyerId: c.actor.org, bomId: bom ? bom.id : null, mpn: lot ? lot.mpn : mpn, mfr: (lot && lot.mfr) || b.mfr || '', qty: qty, dcMin: b.dcMin || '', pack: b.pack || 'Indifférent', zone: b.zone || zoneOf(b.delivery), delivery: b.delivery || '', leadDays: parseInt(b.leadDays, 10) || 10, target: b.target ? Number(b.target) : null, status: 'auction', day: S().day, closesDay: S().day + P.delays.auction, sellers: sellers, live: live.map(function (r) { return { sellerId: r.sellerId, connector: r.connector, quantity: r.quantity, latencyMs: r.latencyMs }; }) };
     S().demands[id] = d;
     if (line) line.demandId = id;
     sellers.forEach(function (s) {
@@ -553,6 +562,74 @@
     return H['lot.get'](c);
   };
 
+  // Connecteurs : Central.Parts interroge l'API produit des brokers (priorité aux brokers qui en ont une).
+  function callConnector(cn, mpn) {
+    cn.calls = (cn.calls || 0) + 1; cn.lastCall = S().day;
+    if (cn.status === 'down') return { error: 'API du fournisseur indisponible', latencyMs: null };
+    var hits = (cn.remote || []).filter(function (p) { return p.mpn.toUpperCase() === mpn; });
+    return { latencyMs: cn.latencyMs || 500, results: hits };
+  }
+  // Interroge les connecteurs des vendeurs vérifiés ; chaque réponse met à jour un lot « pull » (instantané).
+  function queryConnectors(mpn, qty) {
+    var out = [];
+    CP.values(S().connectors || {}).forEach(function (cn) {
+      var org = S().orgs[cn.orgId];
+      if (!verified(org) || cn.status === 'pending') return;
+      var r = callConnector(cn, mpn);
+      if (r.error) { event('Connecteur ' + cn.id + ' (' + org.alias + ') : ' + r.error + '.', cn.orgId); return; }
+      r.results.forEach(function (p) {
+        var cur = CP.currency(p.currency, org.currency || 'USD');
+        var lot = CP.values(S().lots).filter(function (l) { return l.sellerId === cn.orgId && l.sku === p.sku; })[0];
+        var data = { mpn: p.mpn.toUpperCase(), mfr: p.manufacturer || '', sku: p.sku, qty: Number(p.quantity) || 0, price: p.unit_price || null, currency: cur, dc: p.date_code || '', updated: S().day, source: 'pull', connectorId: cn.id };
+        if (lot) Object.keys(data).forEach(function (k) { if (data[k] !== '' && data[k] != null) lot[k] = data[k]; });
+        else { var id = next('LOT'); data.id = id; data.sellerId = cn.orgId; data.q = {}; data.docs = {}; data.tiers = {}; S().lots[id] = data; }
+        out.push({ sellerId: cn.orgId, connector: cn.id, sku: p.sku, quantity: Number(p.quantity) || 0, latencyMs: r.latencyMs });
+      });
+    });
+    return out;
+  }
+  function ownConnector(c) {
+    var o = S().orgs[c.params.id];
+    if (!o || o.type !== 'seller') fail(404, 'Vendeur inconnu');
+    if (!isOps(c.actor) && c.actor.org !== o.id) fail(403, 'Ressource d\'une autre société');
+    return o;
+  }
+  function connView(cn) { var v = CP.clone(cn); delete v.remote; v.secret = cn.auth === 'none' ? null : '••••••'; return v; }
+  H['conn.list'] = function (c) {
+    if (c.params && c.params.id) { var o = ownConnector(c); return CP.values(S().connectors || {}).filter(function (cn) { return cn.orgId === o.id; }).map(connView); }
+    return CP.values(S().connectors || {}).map(function (cn) { var v = connView(cn); v.seller = S().orgs[cn.orgId].name; v.alias = S().orgs[cn.orgId].alias; v.verified = verified(S().orgs[cn.orgId]); return v; });
+  };
+  H['conn.all'] = function (c) { return H['conn.list']({ actor: c.actor, params: {} }); };
+  H['conn.create'] = function (c) {
+    var o = ownConnector(c), b = c.body;
+    if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(b.baseUrl || '')) fail(422, 'URL de base HTTPS requise');
+    if (!/\{mpn\}/.test(b.searchPath || '')) fail(422, 'Chemin de recherche avec {mpn} requis, par ex. /products?mpn={mpn}');
+    if (['api_key', 'oauth2', 'basic', 'none'].indexOf(b.auth) < 0) fail(422, 'Authentification : api_key, oauth2, basic ou none');
+    S().connectors = S().connectors || {};
+    var id = next('CON');
+    // La maquette simule l'API du broker à partir de son stock déclaré.
+    var remote = CP.values(S().lots).filter(function (l) { return l.sellerId === o.id && l.qty > 0; }).map(function (l) { return { sku: l.sku || l.id, mpn: l.mpn, manufacturer: l.mfr, quantity: l.qty, unit_price: l.price, currency: l.currency, date_code: l.dc }; });
+    S().connectors[id] = { id: id, orgId: o.id, name: b.name || 'API produit', baseUrl: b.baseUrl, searchPath: b.searchPath, auth: b.auth, status: 'pending', latencyMs: 600, lastCall: null, calls: 0, remote: remote };
+    event('Connecteur ' + id + ' déclaré par ' + o.alias + ' : à tester.', o.id);
+    notify('ops', 'Nouveau connecteur à valider : ' + o.alias + ' (' + b.baseUrl + ').', '/ops/connecteurs');
+    return connView(S().connectors[id]);
+  };
+  H['conn.test'] = function (c) {
+    var o = ownConnector(c), cn = (S().connectors || {})[c.params.cid];
+    if (!cn || cn.orgId !== o.id) fail(404, 'Connecteur inconnu');
+    var mpn = String(c.body.mpn || (cn.remote[0] && cn.remote[0].mpn) || '').toUpperCase();
+    if (!mpn) fail(422, 'Référence de test requise');
+    var r = callConnector(cn, mpn);
+    if (r.error) fail(502, r.error);
+    if (cn.status === 'pending') { cn.status = 'ok'; event('Connecteur ' + cn.id + ' validé : réponse en ' + r.latencyMs + ' ms.', o.id); }
+    return { connector: cn.id, request: 'GET ' + cn.baseUrl + cn.searchPath.replace('{mpn}', encodeURIComponent(mpn)), latencyMs: r.latencyMs, results: r.results, status: cn.status };
+  };
+  H['conn.query'] = function (c) {
+    var mpn = String(c.body.mpn || '').toUpperCase();
+    if (!mpn) fail(422, 'Référence requise');
+    return { mpn: mpn, results: queryConnectors(mpn, parseInt(c.body.quantity, 10) || 1) };
+  };
+
   // API fournisseur
   // Événements poussés au système du fournisseur (livraison simulée, signature HMAC prévue).
   function deliver(org, type, payload) {
@@ -694,7 +771,7 @@
     if (!(qty >= 0) || Math.floor(qty) !== qty) return { error: 'quantity doit être un entier positif ou nul' };
     if (o.unit_price != null && !(Number(o.unit_price) > 0)) return { error: 'unit_price doit être positif' };
     var cur = CP.currency(o.currency, S().orgs[org].currency || 'USD');
-    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNY/RMB, HKD, GBP, JPY)' };
+    if (!cur) return { error: 'currency non prise en charge (EUR, USD, CNH, HKD, GBP, JPY ; CNY et RMB acceptés comme CNH)' };
     var tiers = {};
     var breaks = o.price_breaks || [];
     if (!Array.isArray(breaks)) return { error: 'price_breaks doit être une liste' };
@@ -981,7 +1058,7 @@
   };
 
   // Compte dédié et ordres
-  H['escrow.get'] = function () {
+  H['funds.get'] = function () {
     var ledger = {}, e = S().escrow, eurTotal = 0;
     var accounts = Object.keys(P.accounts).map(function (c) { return { currency: c, account: P.accounts[c], balance: round(e.balances[c] || 0) }; });
     e.movements.forEach(function (m) {

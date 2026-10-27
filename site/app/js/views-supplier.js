@@ -7,7 +7,7 @@
   var SAMPLE = {
     offers: [
       { sku: 'HB-000187', mpn: 'XC2S100-5TQ144C', manufacturer: 'AMD Xilinx', quantity: 600, unit_price: 58.0, currency: 'USD', price_breaks: [{ quantity: 10, price: 56.5 }, { quantity: 100, price: 54.0 }, { quantity: 1000, price: 51.0 }], date_code: '2010', packaging: 'Plateau', country_of_origin: 'TW', lead_time_days: 3, product_url: 'https://exemple.invalid/p/HB-000187' },
-      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 168.0, currency: 'CNY', price_breaks: [{ quantity: 100, price: 155.0 }], packaging: 'Tube' },
+      { sku: 'HB-000213', mpn: 'MC68HC11E1CFNE2', manufacturer: 'NXP', quantity: 1200, unit_price: 168.0, currency: 'CNH', price_breaks: [{ quantity: 100, price: 155.0 }], packaging: 'Tube' },
       { sku: 'HB-000999', mpn: '', manufacturer: 'Texas Instruments', quantity: 10 },
     ],
     idempotency_key: 'lot-2026-10-12-0001',
@@ -20,7 +20,8 @@
     var offers = (CP.get('/v1/supplier/offers') || []).filter(function (o) { return o.sku; });
     var secret = CP.lastSecret && CP.lastSecret.org === org ? CP.lastSecret : null;
     var res = CP.lastBulk && CP.lastBulk.org === org ? CP.lastBulk.res : null;
-    return ui.page('Intégration par API', 'Le fournisseur pousse son stock depuis son propre système : chaque changement de quantité ou de prix arrive en quelques secondes, sans fichier. Les fichiers CSV, XLS et le SFTP restent disponibles en repli. Spécification : <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/api/fournisseurs.md">api/fournisseurs.md</a>.',
+    return ui.page('Intégration par API', 'Trois façons de rendre votre stock visible, par ordre de priorité : Central.Parts interroge votre API produit en direct ; vous poussez votre stock vers notre API ; vous déposez un fichier (CSV, XLS, SFTP). Spécification : <a href="https://github.com/Bertier-Adesio/central-parts/blob/main/api/fournisseurs.md">api/fournisseurs.md</a>.',
+      connectorCard(org) +
       ui.card('1. Clés d\'API', '<p class="muted small">Une clé par société et par environnement. En-tête <span class="mono">Authorization: Bearer &lt;clé&gt;</span>. La clé de production exige un KYB validé.</p>' +
         (secret ? '<p class="label-box mono">' + esc(secret.secret) + '</p><p class="warn-line">Copiez ce secret maintenant : il ne sera plus affiché.</p>' : '') +
         ui.table(['Clé', 'Environnement', 'Créée le', 'Libellé'], keys.map(function (k) { return ['<span class="mono">' + esc(k.prefix) + '…</span>', ui.pill(k.environment === 'live' ? 'Production' : 'Test', k.environment === 'live' ? 'ok' : 'wait'), esc(CP.fmtDay(k.day)), esc(k.label)]; }), 'Aucune clé.') +
@@ -41,7 +42,28 @@
         '<fieldset class="checks">' + [['demand.created', 'demand.created : nouvelle demande correspondant à votre stock'], ['offer.accepted', 'offer.accepted : votre offre est retenue'], ['transaction.updated', 'transaction.updated : chaque étape d\'une transaction']].map(function (e) { return '<label><input type="checkbox" name="ev_' + e[0] + '" checked> <span class="mono small">' + esc(e[1]) + '</span></label>'; }).join('') + '</fieldset><button class="btn">S\'abonner</button>' +
         ui.table(['Abonnement', 'URL', 'Événements'], hooks.webhooks.map(function (h) { return [esc(h.id), '<span class="mono small">' + esc(h.url) + '</span>', esc(h.events.join(', '))]; }), 'Aucun abonnement.') + '</form>' +
       ui.card('Dernières livraisons', hooks.deliveries.length ? '<ol class="hist">' + hooks.deliveries.map(function (d) { return '<li><span class="mono">' + esc(CP.fmtDay(d.day)) + '</span> <b class="mono small">' + esc(d.type) + '</b> → ' + d.status + '<pre class="code">' + esc(JSON.stringify(d.payload, null, 1)) + '</pre></li>'; }).join('') + '</ol>' : '<p class="empty">Aucun événement livré. Abonnez-vous, puis lancez une demande côté acheteur sur une référence de votre stock.</p>') + '</div>' +
-      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées, celles des comptes de Central.Parts : EUR, USD, CNY (RMB), HKD, GBP, JPY.</p>');
+      '<p class="muted small">' + esc(me.name) + ' · pseudonyme ' + esc(me.alias) + '. Toute offre de broker passe par les rails Opportunity : le questionnaire d\'état est exigé avant d\'enchérir, le date code au plus tard quand vous répondez à une demande. Devises acceptées, celles des comptes de Central.Parts : EUR, USD, CNH (yuan offshore ; CNY et RMB acceptés), HKD, GBP, JPY.</p>');
+  };
+
+  // Connecteur : Central.Parts interroge l'API produit du broker (canal prioritaire).
+  function connectorCard(org) {
+    var list = CP.get('/v1/organizations/' + org + '/connectors') || [];
+    var last = CP.lastConnTest && CP.lastConnTest.org === org ? CP.lastConnTest.res : null;
+    var STATUS = { ok: ['Actif', 'ok'], pending: ['À tester', 'todo'], down: ['Indisponible', 'danger'] };
+    return ui.card('0. Votre API produit · prioritaire', '<p>Vous avez déjà une API produit ? C\'est le canal prioritaire : à chaque demande, Central.Parts interroge votre API sur la référence, en direct. Votre stock est toujours à jour et vous n\'avez rien à envoyer. Les canaux ci-dessous (envoi par notre API, fichiers, SFTP) restent possibles en complément.</p>' +
+      ui.table(['Connecteur', 'Recherche', 'Authentification', 'Statut', '>Réponse', '>Appels', ''], list.map(function (cn) {
+        var st = STATUS[cn.status] || [cn.status, ''];
+        return [esc(cn.name), '<span class="mono small">GET ' + esc(cn.baseUrl + cn.searchPath) + '</span>', esc(cn.auth), ui.pill(st[0], st[1]), cn.latencyMs ? cn.latencyMs + ' ms' : '—', String(cn.calls || 0), ui.btn('Tester', 'conn-test', { cid: cn.id }, 'small')];
+      }), 'Aucun connecteur.') +
+      (last ? '<p class="mono small">' + esc(last.request) + ' → ' + last.results.length + ' résultat(s) en ' + last.latencyMs + ' ms</p><pre class="code">' + esc(JSON.stringify(last.results, null, 2)) + '</pre>' : '') +
+      '<form class="form sub" data-form="conn-add"><h3>Déclarer votre API</h3><div class="row"><label class="field"><span>URL de base (HTTPS)</span><input name="baseUrl" value="https://api.votre-societe.example/v1"></label><label class="field"><span>Recherche par référence ({mpn})</span><input name="searchPath" value="/products?mpn={mpn}"></label></div>' +
+      '<div class="row"><label class="field"><span>Nom</span><input name="name" value="API produit"></label><label class="field"><span>Authentification</span><select name="auth"><option value="api_key">Clé d\'API</option><option value="oauth2">OAuth 2</option><option value="basic">Basic</option><option value="none">Aucune</option></select></label></div>' +
+      '<p class="muted small">Champs attendus dans la réponse : MPN, fabricant, quantité, SKU ; si possible prix, devise, paliers, date code. Central.Parts adapte la correspondance des champs et teste avec vous avant activation.</p><button class="btn">Déclarer</button></form>', 'action');
+  }
+  CP.forms['conn-add'] = function (d) { CP.call('POST', '/v1/organizations/' + CP.actor.org + '/connectors', { name: d.name, baseUrl: d.baseUrl, searchPath: d.searchPath, auth: d.auth }, 'Connecteur déclaré : lancez un essai.'); };
+  CP.actions['conn-test'] = function (b) {
+    var r = CP.call('POST', '/v1/organizations/' + CP.actor.org + '/connectors/' + b.getAttribute('data-cid') + '/test', {}, 'Appel d\'essai réussi.');
+    if (r) CP.lastConnTest = { org: CP.actor.org, res: r };
   };
 
   function sandboxCard(org) {

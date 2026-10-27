@@ -4,7 +4,7 @@ Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`
 
 ## Canaux
 
-Le canal recommandé est l'[API fournisseur](../api/fournisseurs.md) : le stock est poussé à chaque changement. Les fichiers ci-dessous restent proposés en repli.
+Ordre de priorité ([ADR 0007](../docs/decisions/0007-priorite-api-produit-brokers.md)) : 1. l'API produit du broker, interrogée par Central.Parts à chaque demande ; 2. l'envoi vers l'[API fournisseur](../api/fournisseurs.md) ; 3. les fichiers ci-dessous, en repli.
 
 | Canal | Volume | Endpoint | Traitement |
 |---|---|---|---|
@@ -28,7 +28,7 @@ Colonnes annoncées par un broker partenaire (octobre 2026), en CSV ou XLS :
 | Price per 10 pcs | `tiers[10]` | Non | Palier |
 | Price per 100 pcs | `tiers[100]` | Non | Palier |
 | Price per 1,000 pcs | `tiers[1000]` | Non | Palier ; en CSV, l'en-tête contient une virgule et doit être entre guillemets |
-| Currency | `currency` | Recommandé | Devises des comptes de Central.Parts : `EUR`, `USD`, `CNY` (`RMB` accepté), `HKD`, `GBP`, `JPY` ; autre devise : ligne rejetée |
+| Currency | `currency` | Recommandé | Devises des comptes de Central.Parts : `EUR`, `USD`, `CNH` (`CNY` et `RMB` acceptés comme `CNH`), `HKD`, `GBP`, `JPY` ; autre devise : ligne rejetée |
 | Date Code | `dc` | Non | Facultatif ; demandé au broker quand il répond à une demande |
 
 Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise par défaut de la société s'applique.
@@ -43,7 +43,7 @@ Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufactu
 - Doublon possible : même MPN, même date code et même quantité chez un autre vendeur ; le lot est signalé, pas fusionné.
 - Lignes rejetées : MPN absent, quantité invalide ; le rapport donne le numéro de ligne et le motif.
 - Date code : facultatif dans le stock. Le broker le donne quand il est consulté, dans sa réponse à la demande ; il est alors reporté sur le lot.
-- Rappel de la règle de la plateforme : toute offre de broker passe par les rails Opportunity (questionnaire, escrow).
+- Rappel de la règle de la plateforme : toute offre de broker passe par les rails Opportunity (questionnaire d'état, paiement à l'acceptation).
 
 ## À confirmer avec le broker
 

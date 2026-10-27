@@ -11,7 +11,7 @@ Central.Parts s'adresse d'abord à des fabricants chinois, rencontrés à electr
 
 Le site ne dépend d'aucun service tiers :
 
-- Aucune ressource ni aucun lien vers Google, LinkedIn, réseaux sociaux, CDN, polices ou scripts externes. `tools/build-site.mjs` échoue si une page référence un domaine autre que `central.parts`.
+- Aucune ressource ni aucun lien vers Google, LinkedIn, réseaux sociaux, CDN, polices ou scripts externes. `tools/build-site.mjs` échoue si une page référence un domaine autre que `central.parts`, à une exception près : le formulaire partenaire Tencent Docs (`docs.qq.com/form/page/`), accessible depuis la Chine.
 - Polices auto-hébergées, préchargées ; pas de police CJK à télécharger (pile système PingFang SC / Microsoft YaHei).
 - Page légère (une trentaine de Ko, environ 7 Ko compressée), compression activée, cache réglé dans `.htaccess`.
 - `/` redirige vers `/zh/` ou `/en/` selon la langue du navigateur, sauf si le visiteur vient déjà du site (le sélecteur de langue reste utilisable).

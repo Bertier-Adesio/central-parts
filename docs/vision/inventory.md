@@ -13,7 +13,7 @@ Inventory est l'offre courante de Central.Parts : l'agrégation, sans stock prop
 - **Fabricants**, en priorité chinois et d'Asie-Pacifique déjà référencés par les plateformes du marché.
 - **Distributeurs**.
 
-Les offres de brokers et de détenteurs de surplus ne passent pas par Inventory : elles suivent les rails de l'offre [Opportunity](opportunity.md) (questionnaire d'état et escrow obligatoires), même pour une référence courante.
+Les offres de brokers et de détenteurs de surplus ne passent pas par Inventory : elles suivent les rails de l'offre [Opportunity](opportunity.md) (questionnaire d'état et paiement à l'acceptation obligatoires), même pour une référence courante.
 
 ## Acheteurs
 

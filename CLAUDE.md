@@ -7,7 +7,7 @@ Instructions pour Claude Code dans ce dépôt.
 Central.Parts est un Supply Network Operator (SNO) de composants électroniques : distributeur sans stock, ni entrepôt, ni camion, qui relie fournisseurs et acheteurs (EMS, OEM, bureaux d'études européens). Une seule plateforme, deux offres :
 
 - **Inventory** : réseau de fabricants (Chine, Asie-Pacifique) et de distributeurs, offre courante agrégée et exposée par API.
-- **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires et escrow (l'acheteur paie à l'acceptation).
+- **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires sur demande et paiement à l'acceptation (fonds de l'acheteur sur un compte dédié jusqu'à l'acceptation). Le mot « escrow » n'apparaît pas sur le site public tant que le montage juridique n'est pas validé.
 
 Règle : la protection dépend de la source. Toute offre de broker ou de surplus passe par les rails Opportunity. Contexte complet : `docs/vision/plateforme.md`.
 
@@ -17,6 +17,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
+- `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées) et données fictives du projet dev, voir ADR 0008.
 - `api/`, `data/`, `legal/` : à concevoir, voir leur README.
 - `docs/decisions/` : ADR numérotés (`000N-titre.md`).
 - `.github/workflows/deploy-site-ovh.yml` : publie `site/` sur l'hébergement OVH à chaque push sur `main` qui touche `site/` ou le workflow, puis retire de `www/` une liste explicite de fichiers qui ne doivent plus être publiés (design system, ancien runtime).
@@ -30,7 +31,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - Les pages publiées n'utilisent aucun runtime ni framework : HTML statique, un seul `<script>` vanilla en fin de page, tout lisible sans JavaScript.
 - Couleurs et typos : utiliser les variables de `brand/tokens.css` (alias sémantiques `--bg-*`, `--fg-*`, `--accent`…), pas de valeurs en dur.
 - Aucune ressource chargée depuis un CDN : tout est auto-hébergé dans `site/assets/`.
-- Le site doit rester accessible depuis la Chine : aucun lien ni ressource vers Google, LinkedIn ou un autre service tiers (le build échoue sinon). Voir `docs/decisions/0006-acces-depuis-la-chine.md`.
+- Le site doit rester accessible depuis la Chine : aucun lien ni ressource vers Google, LinkedIn ou un autre service tiers (le build échoue sinon), seule exception : le formulaire partenaire Tencent Docs. Voir `docs/decisions/0006-acces-depuis-la-chine.md`.
 - Une branche par sujet (`site/…`, `api/…`, `data/…`, `docs/…`), puis pull request vers `main`. Ne pas pousser directement sur `main` sans accord, car cela déploie le site en production.
 - Toute décision structurante (stack API, modèle de données, hébergement) donne lieu à un ADR dans `docs/decisions/`.
 
@@ -49,6 +50,8 @@ node tools/test-app.mjs                 # règles métier de l'API simulée
 node tools/build-api-map.mjs            # régénère api/endpoints.md après toute modification de registry.js
 (cd site && python3 -m http.server 8765) & node tools/test-app-ui.mjs   # parcours complet dans Chromium
 ```
+
+Toute modification du schéma passe par une nouvelle migration dans `supabase/migrations/`, vérifiée par `tools/test-db.sh` (PostgreSQL local).
 
 Incrémenter `?v=N` dans `site/app/index.html` à chaque modification des fichiers de `site/app/`.
 

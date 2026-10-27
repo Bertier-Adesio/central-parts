@@ -29,7 +29,7 @@ Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lis
 
 ## Accès depuis la Chine
 
-Aucune ressource ni aucun lien externe (Google, LinkedIn, CDN) : `tools/build-site.mjs` échoue sinon. Les polices sont auto-hébergées et préchargées, `.htaccess` active la compression et redirige `/` vers `/zh/` ou `/en/` selon la langue du navigateur. Détails et points ouverts : [ADR 0006](../docs/decisions/0006-acces-depuis-la-chine.md).
+Aucune ressource ni aucun lien externe (Google, LinkedIn, CDN) : `tools/build-site.mjs` échoue sinon. Seule exception : le formulaire partenaire Tencent Docs (`docs.qq.com`), accessible depuis la Chine. Les polices sont auto-hébergées et préchargées, `.htaccess` active la compression et redirige `/` vers `/zh/` ou `/en/` selon la langue du navigateur. Détails et points ouverts : [ADR 0006](../docs/decisions/0006-acces-depuis-la-chine.md).
 
 ## Prototype (`/proto/`)
 
