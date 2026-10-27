@@ -360,7 +360,17 @@ input,textarea,select{font-size:16px!important}
 <div style="display: flex; flex-wrap: wrap; gap: 12px">
 <a href="#contact" data-pick-tab="dist" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 16px; font-weight: 500" style-hover="background: #B3122E; color: #FFFFFF">{{ t.heroCtaDist }}</a>
 <a href="#contact" data-pick-tab="buyer" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 16px; font-weight: 500" style-hover="border-color: #15171C; color: #15171C">{{ t.heroCtaBuyer }}</a>
-</div>
+</div><sc-if value="{{ t.qrTop }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start">
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 132px">
+<span style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 6px; line-height: 0"><img src="/assets/wechat-account-qr.png" width="120" height="120" decoding="async" alt="{{ t.wcFollowAlt }}" style="width: 100%; height: auto"></span>
+<figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcFollow }}</strong>{{ t.wcFollowSub }}</figcaption>
+</figure>
+<figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 132px">
+<a href="https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" target="_blank" rel="noopener" style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 6px; line-height: 0"><img src="/assets/wechat-form-qr.png" width="120" height="120" decoding="async" alt="{{ t.wcFormAlt }}" style="width: 100%; height: auto"></a>
+<figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcForm }}</strong>{{ t.wcFormSub }}</figcaption>
+</figure>
+<p style="margin: 0; flex-basis: 100%; font-size: 13px; color: #4A4E57">{{ t.wcHint }}</p>
+</div></sc-if>
 </div>
 </section>
 
@@ -413,7 +423,7 @@ input,textarea,select{font-size:16px!important}
 <div style="display: flex; flex-direction: column; gap: 20px">
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
-<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 8px">
+<sc-if value="{{ t.qrBottom }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 8px">
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 160px">
 <span style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 8px; line-height: 0"><img src="/assets/wechat-account-qr.png" width="142" height="142" loading="lazy" decoding="async" alt="{{ t.wcFollowAlt }}" style="width: 100%; height: auto"></span>
 <figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcFollow }}</strong>{{ t.wcFollowSub }}</figcaption>
@@ -423,7 +433,7 @@ input,textarea,select{font-size:16px!important}
 <figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcForm }}</strong>{{ t.wcFormSub }}</figcaption>
 </figure>
 </div>
-<p style="margin: 0; font-size: 13px; color: #4A4E57">{{ t.wcHint }}</p>
+<p style="margin: 0; font-size: 13px; color: #4A4E57">{{ t.wcHint }}</p></sc-if>
 </div>
 <form sc-camel-on-submit="{{ onSend }}" style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
 <div style="display: flex; gap: 24px; border-bottom: 1px solid #D9D5CD">
@@ -492,6 +502,7 @@ fr: {
   wcFormSub: 'Formulaire en chinois et en anglais, environ 3 minutes',
   wcFormAlt: 'QR code du formulaire d’inscription partenaire',
   wcHint: 'Scannez avec WeChat (扫一扫).',
+  qrTop: false, qrBottom: true,
   tabBuyer: 'Acheteur', tabDist: 'Fournisseur',
   fName: 'Nom', fCompany: 'Société', fEmail: 'E-mail professionnel', fMsgBuyer: 'Références ou besoin', fMsgDist: 'Gammes de produits et composants clés', fSend: 'Envoyer',
   sentTitle: 'Demande envoyée', sentText: 'Nous vous répondons par e-mail.',
@@ -526,6 +537,7 @@ en: {
   wcFormSub: 'Form in Chinese and English, about 3 minutes',
   wcFormAlt: 'QR code of the partner registration form',
   wcHint: 'Scan with WeChat (扫一扫).',
+  qrTop: false, qrBottom: true,
   tabBuyer: 'Buyer', tabDist: 'Supplier',
   fName: 'Name', fCompany: 'Company', fEmail: 'Work e-mail', fMsgBuyer: 'Part numbers or need', fMsgDist: 'Product lines and key components', fSend: 'Send',
   sentTitle: 'Request sent', sentText: 'We will reply by e-mail.',
@@ -560,6 +572,7 @@ zh: {
   wcFormSub: '中英双语，约 3 分钟',
   wcFormAlt: '合作登记表二维码',
   wcHint: '请使用微信「扫一扫」。',
+  qrTop: true, qrBottom: false,  // site chinois : QR WeChat en haut de page
   tabBuyer: '采购方', tabDist: '供应商',
   fName: '姓名', fCompany: '公司', fEmail: '工作邮箱', fMsgBuyer: '料号或需求', fMsgDist: '产品线与主要元器件', fSend: '发送',
   sentTitle: '请求已发送', sentText: '我们将通过邮件回复您。',
