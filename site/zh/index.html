@@ -183,6 +183,10 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
+[data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
+[data-qr-pop]:target{display:flex}
+[data-qr-close]{position:absolute;inset:0;cursor:zoom-out}
 /* Navigation qui défile : fondu sur le bord droit tant qu'il reste des liens à droite */
 [data-nav][data-more]{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent)}
 /* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
@@ -240,8 +244,15 @@ input,textarea,select{font-size:16px!important}
 <section id="top" style="position: relative; overflow: hidden; border-bottom: 1px solid #D9D5CD">
 <svg width="760" height="760" viewBox="24 24 432 432" aria-hidden="true" style="position: absolute; right: -200px; top: 50%; margin-top: -380px; opacity: 0.06"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="#15171C" stroke-width="48" stroke-linecap="round"></path><circle cx="240" cy="240" r="40" fill="#15171C"></circle></svg>
 <div style="position: relative; max-width: 1280px; margin: 0 auto; padding: clamp(64px, 10vw, 128px) 24px clamp(56px, 8vw, 104px); display: flex; flex-direction: column; gap: 28px">
-<span style="margin-bottom: -16px; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px">
+<div style="min-width: 0; display: flex; flex-direction: column; gap: 28px">
+<span style="margin-bottom: -16px; display: block; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
+</div>
+<div style="flex: none; display: flex; gap: 8px"><figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; width: clamp(72px, 9vw, 116px)"><a href="#qr-gzh" aria-label="放大二维码 · 关注公众号" style="box-sizing: border-box; display: block; width: 100%; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 4px; line-height: 0; cursor: zoom-in"><img src="/assets/wechat-account-qr.png" width="108" height="108" decoding="async" fetchpriority="high" alt="Adesio Central.Parts 微信公众号二维码" style="width: 100%; height: auto"></a><figcaption style="font-size: 12px; line-height: 1.25; text-align: center; color: #15171C; font-weight: 600">关注公众号</figcaption></figure><figure style="margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; width: clamp(72px, 9vw, 116px)"><a href="#qr-form" aria-label="放大二维码 · 合作登记表" style="box-sizing: border-box; display: block; width: 100%; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 4px; line-height: 0; cursor: zoom-in"><img src="/assets/wechat-form-qr.png" width="108" height="108" decoding="async" fetchpriority="high" alt="合作登记表二维码" style="width: 100%; height: auto"></a><figcaption style="font-size: 12px; line-height: 1.25; text-align: center; color: #15171C; font-weight: 600">合作登记表</figcaption></figure></div>
+<div id="qr-gzh" data-qr-pop role="dialog" aria-modal="true" aria-label="关注公众号"><a href="#top" data-qr-close aria-label="关闭"></a><figure style="position: relative; box-sizing: border-box; margin: 0; width: min(100%, 340px); background: #FFFFFF; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center"><img src="/assets/wechat-account-qr.png" width="300" height="300" decoding="async" alt="Adesio Central.Parts 微信公众号二维码" style="width: 100%; height: auto"><figcaption style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.4; color: #4A4E57"><strong style="font-size: 17px; color: #15171C; font-weight: 600">关注公众号</strong>Adesio Central.Parts 官方公众号<span>在微信中长按二维码识别，或用另一部手机扫一扫。</span></figcaption><a href="#top" style="height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; color: #15171C; font-size: 15px; font-weight: 500">关闭</a></figure></div>
+<div id="qr-form" data-qr-pop role="dialog" aria-modal="true" aria-label="合作登记表"><a href="#top" data-qr-close aria-label="关闭"></a><figure style="position: relative; box-sizing: border-box; margin: 0; width: min(100%, 340px); background: #FFFFFF; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center"><img src="/assets/wechat-form-qr.png" width="300" height="300" decoding="async" alt="合作登记表二维码" style="width: 100%; height: auto"><figcaption style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; line-height: 1.4; color: #4A4E57"><strong style="font-size: 17px; color: #15171C; font-weight: 600">合作登记表</strong>中英双语，约 3 分钟<span>在微信中长按二维码识别，或用另一部手机扫一扫。</span></figcaption><a href="https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" target="_blank" rel="noopener" style="height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 15px; font-weight: 500">直接打开登记表</a><a href="#top" style="height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; color: #15171C; font-size: 15px; font-weight: 500">关闭</a></figure></div>
+</div>
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">中国元器件制造商，直连欧洲采购方。</h1>
 <p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Central.Parts 是供应网络运营商（SNO）：无库存、无仓库、无车队。我们为您整理产品数据，让您的元器件出现在欧洲 EMS 与 OEM 采购方已在使用的报价平台和 ERP 中。</p>
 <p data-event="1" style="margin: 0; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; padding: 8px 14px; border: 1px solid #C9C5BD; border-radius: 999px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.4; color: #15171C"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D7262E; flex: none"></span>electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位</p>
@@ -313,17 +324,6 @@ input,textarea,select{font-size:16px!important}
 <div style="display: flex; flex-direction: column; gap: 20px">
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">告诉我们您的需求</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">无论您是制造商还是采购方，请留下联系方式，我们会尽快与您联系。您也可以在微信上联系我们（Adesio Central.Parts），或发送邮件至 contact@central.parts。</p>
-<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 8px">
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 160px">
-<span style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 8px; line-height: 0"><img src="/assets/wechat-account-qr.png" width="142" height="142" loading="lazy" decoding="async" alt="Adesio Central.Parts 微信公众号二维码" style="width: 100%; height: auto"></span>
-<figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">关注公众号</strong>Adesio Central.Parts 官方公众号</figcaption>
-</figure>
-<figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 160px">
-<a href="https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" target="_blank" rel="noopener" style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 8px; line-height: 0"><img src="/assets/wechat-form-qr.png" width="142" height="142" loading="lazy" decoding="async" alt="合作登记表二维码" style="width: 100%; height: auto"></a>
-<figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">合作登记表</strong>中英双语，约 3 分钟</figcaption>
-</figure>
-</div>
-<p style="margin: 0; font-size: 13px; color: #4A4E57">请使用微信「扫一扫」。</p>
 </div>
 <form id="contact-form" action="mailto:contact@central.parts" method="post" enctype="text/plain" style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
 <div style="display: flex; gap: 24px; border-bottom: 1px solid #D9D5CD">
@@ -346,6 +346,7 @@ input,textarea,select{font-size:16px!important}
 <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500; font-size: 14px">请求已发送</span><span style="font-size: 13px; color: #C9C5BD">我们将通过邮件回复您。</span></span>
 </div>
 </form>
+
 </div>
 </section>
 
