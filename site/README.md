@@ -27,6 +27,10 @@ site/                           publié tel quel sur OVH
 
 Les pages sont du HTML statique : tous les textes sont écrits dans le HTML (lisible sans JavaScript, indexable, aperçus sociaux corrects). Un seul petit script vanilla en fin de page gère les exemples de recherche, le focus du champ de recherche, les onglets Acheteur / Distributeur et l'envoi du formulaire de contact. La FAQ utilise `<details>` et fonctionne sans JavaScript. Voir [ADR 0002](../docs/decisions/0002-landing-statique-generee.md).
 
+## Accès depuis la Chine
+
+Aucune ressource ni aucun lien externe (Google, LinkedIn, CDN) : `tools/build-site.mjs` échoue sinon. Les polices sont auto-hébergées et préchargées, `.htaccess` active la compression et redirige `/` vers `/zh/` ou `/en/` selon la langue du navigateur. Détails et points ouverts : [ADR 0006](../docs/decisions/0006-acces-depuis-la-chine.md).
+
 ## Prototype (`/proto/`)
 
 `site/proto/` contient le prototype public de la plateforme (build in public) : une nomenclature répartie entre Inventory et Opportunity, puis une transaction Opportunity simulée. Écrit à la main en HTML, `proto.css` et `proto.js`, avec les tokens de `/assets/tokens.css`. Sans JavaScript, toutes les étapes s'affichent à la suite. Page en `noindex`, données fictives.

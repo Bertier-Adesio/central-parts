@@ -187,6 +187,10 @@ function page(lang) {
     if (html.includes(bad)) throw new Error(`« ${bad} » reste dans la page ${lang}`);
   }
 
+  // Accès depuis la Chine : aucun domaine tiers (Google, LinkedIn, CDN…), seulement central.parts.
+  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN));
+  if (ext.length) throw new Error(`Ressource externe dans la page ${lang} : ${ext.join(', ')}`);
+
   // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
   // il coupe la marque). Les aperçus sociaux n'affichent que l'accroche :
   // la marque y figure déjà via og:site_name, et le titre reste sous 60 caractères.
@@ -215,6 +219,10 @@ function page(lang) {
 <link rel="canonical" href="${url}">
 ${alt}
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/space-grotesk-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/ibm-plex-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="applicable-device" content="pc,mobile">
+<meta http-equiv="Cache-Control" content="no-transform">
 ${og}
 ${tw}
 ${styles}
