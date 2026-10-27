@@ -183,6 +183,10 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
+[data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
+[data-qr-pop]:target{display:flex}
+[data-qr-close]{position:absolute;inset:0;cursor:zoom-out}
 /* Navigation qui défile : fondu sur le bord droit tant qu'il reste des liens à droite */
 [data-nav][data-more]{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 40px),transparent)}
 /* Mobile : l'en-tête passe sur deux lignes, la navigation défile sur toute la largeur */
