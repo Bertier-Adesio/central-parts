@@ -422,11 +422,13 @@ input,textarea,select{font-size:16px!important}
 
 <section id="contact" style="background: #ECE9E3; border-top: 1px solid #D9D5CD">
 <div style="max-width: 1280px; margin: 0 auto; padding: 96px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 48px; align-items: start">
-<div style="display: flex; flex-direction: column; gap: 20px">
+<sc-if value="{{ t.qrTop }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 20px">
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
-</div>
-<div style="display: flex; flex-direction: column; gap: 24px">
+</div></sc-if><sc-if value="{{ t.qrBottom }}" hint-placeholder-val="{{ true }}"><div style="grid-column: 1 / -1; max-width: 760px; display: flex; flex-direction: column; gap: 20px">
+<h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
+</div></sc-if>
 <form sc-camel-on-submit="{{ onSend }}" style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 28px; display: flex; flex-direction: column; gap: 18px">
 <div style="display: flex; gap: 24px; border-bottom: 1px solid #D9D5CD">
 <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="2">
@@ -447,7 +449,8 @@ input,textarea,select{font-size:16px!important}
 </div>
 </sc-if>
 </form>
-<sc-if value="{{ t.qrBottom }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-wrap: wrap; gap: 20px">
+<sc-if value="{{ t.qrBottom }}" hint-placeholder-val="{{ true }}"><div style="display: flex; flex-direction: column; gap: 20px">
+<div style="display: flex; flex-wrap: wrap; gap: 20px">
 <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px; width: 160px">
 <span style="display: block; background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 8px; padding: 8px; line-height: 0"><img src="/assets/wechat-account-qr.png" width="142" height="142" loading="lazy" decoding="async" alt="{{ t.wcFollowAlt }}" style="width: 100%; height: auto"></span>
 <figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcFollow }}</strong>{{ t.wcFollowSub }}</figcaption>
@@ -457,8 +460,8 @@ input,textarea,select{font-size:16px!important}
 <figcaption style="font-size: 13px; line-height: 1.35; color: #4A4E57"><strong style="display: block; color: #15171C; font-weight: 600">{{ t.wcForm }}</strong>{{ t.wcFormSub }}</figcaption>
 </figure>
 </div>
-<p style="margin: 0; font-size: 13px; color: #4A4E57">{{ t.wcHint }}</p></sc-if>
-</div>
+<p style="margin: 0; font-size: 13px; color: #4A4E57">{{ t.wcHint }}</p>
+</div></sc-if>
 </div>
 </section>
 
