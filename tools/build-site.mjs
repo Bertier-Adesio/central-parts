@@ -14,6 +14,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design/landing.dc.html');
 const OUT = join(ROOT, 'site');
 const ORIGIN = 'https://central.parts';
+// Seule exception externe : le formulaire partenaire Tencent Docs (accessible depuis la Chine).
+const TENCENT_FORM = 'https://docs.qq.com/form/page/';
 const CONTACT_EMAIL = 'contact@central.parts';
 
 const LANGS = {
@@ -188,7 +190,7 @@ function page(lang) {
   }
 
   // Accès depuis la Chine : aucun domaine tiers (Google, LinkedIn, CDN…), seulement central.parts.
-  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN));
+  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN) && !u.startsWith(TENCENT_FORM));
   if (ext.length) throw new Error(`Ressource externe dans la page ${lang} : ${ext.join(', ')}`);
 
   // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
