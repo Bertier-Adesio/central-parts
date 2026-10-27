@@ -14,26 +14,28 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design/landing.dc.html');
 const OUT = join(ROOT, 'site');
 const ORIGIN = 'https://central.parts';
+// Seule exception externe : le formulaire partenaire Tencent Docs (accessible depuis la Chine).
+const TENCENT_FORM = 'https://docs.qq.com/form/page/';
 const CONTACT_EMAIL = 'contact@central.parts';
 
 const LANGS = {
   fr: {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
-    headline: 'Composants électroniques, courants ou introuvables',
-    description: 'Supply Network Operator : le réseau agréé des fabricants et distributeurs (Inventory), et surplus, obsolètes et brokers contrôlés, payés à l’acceptation (Opportunity). Europe, Amériques, Chine.',
-    partner: 'Logo distributeur ', mailSubject: 'Demande de contact', mailProfile: 'Profil',
+    headline: 'Fabricants chinois vers l’Europe',
+    description: 'Central.Parts, Supply Network Operator : les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Shenzhen, Paris, Denver. electronica 2026, Hall B4, stand 251/12.',
+    mailSubject: 'Demande de contact', mailProfile: 'Profil',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
-    headline: 'Electronic components, current or hard to find',
-    description: 'Supply Network Operator: the authorised network of manufacturers and distributors (Inventory), plus checked surplus, obsolete and broker stock paid on acceptance (Opportunity). Europe, the Americas, China.',
-    partner: 'Distributor logo ', mailSubject: 'Contact request', mailProfile: 'Profile',
+    headline: 'Chinese component makers to European buyers',
+    description: 'Central.Parts, Supply Network Operator: Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Shenzhen, Paris, Denver. electronica 2026, Hall B4, Booth 251/12.',
+    mailSubject: 'Contact request', mailProfile: 'Profile',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-en.png',
-    headline: '电子元器件，常规料与难寻料',
-    description: '供应网络运营商：制造商与授权分销商组成的授权网络（Inventory），以及经检验、验收后付款的盈余库存、停产料与贸易商库存（Opportunity）。覆盖欧洲、美洲与中国。',
-    partner: '分销商标志 ', mailSubject: '联系请求', mailProfile: '身份',
+    headline: '中国元器件制造商，直连欧洲采购方',
+    description: 'Central.Parts 供应网络运营商：连接中国电子元器件制造商与欧洲 EMS、OEM 采购方。深圳、巴黎、丹佛。electronica 2026，B4 馆 251/12 展位。',
+    mailSubject: '联系请求', mailProfile: '身份',
   },
 };
 
@@ -77,29 +79,8 @@ function rewrite(from, to, count = 1) {
 rewrite('<button sc-camel-on-click="{{ l.pick }}" style="{{ l.style }}">{{ l.label }}</button>',
   '<a href="{{ l.href }}" hreflang="{{ l.hreflang }}" lang="{{ l.hreflang }}" aria-current="{{ l.current }}" style="display: inline-flex; align-items: center; text-decoration: none; {{ l.style }}">{{ l.label }}</a>');
 
-// Recherche : formulaire GET ?mpn=, exemples cliquables, note de démonstration sans lien plateforme.
-rewrite('<form data-search="1" sc-camel-on-submit="{{ onSearch }}" style=', '<form data-search="1" role="search" action="#top" method="get" style=');
-rewrite('<input value="{{ q }}" sc-camel-on-change="{{ onQ }}" ', '<input id="q" name="mpn" type="text" enterkeyhint="search" autocomplete="off" ');
-rewrite('<button sc-camel-on-click="{{ ex.pick }}" style=', '<button type="button" data-mpn="{{ ex.label }}" style=');
-body = body.replace(/<sc-if value="\{\{ searched \}\}"[^>]*>\s*<p style="([^"]*)">\{\{ t\.searchNote \}\}[\s\S]*?<\/p>\s*<\/sc-if>/, (m, st) => {
-  if (!m) throw new Error('note de recherche introuvable');
-  return `<p id="search-note" role="status" hidden style="${st}">{{ t.searchNote }}</p>`;
-});
-if (body.includes('ui_kits/')) throw new Error('Lien plateforme encore présent');
-
-// CTA acheteur : ramène au champ de recherche (focus via le script).
-rewrite('<a href="#top" style="margin-top: auto;', '<a href="#q" data-focus-search="1" style="margin-top: auto;');
 // CTA distributeur : ouvre le formulaire sur l'onglet Distributeur.
 rewrite('<a href="#contact" sc-camel-on-click="{{ toDist }}" style=', '<a href="#contact" data-pick-tab="dist" style=');
-
-// FAQ : <details>/<summary>, la première question ouverte comme dans la maquette.
-body = body.replace(/<sc-for list="\{\{ faq \}\}"[\s\S]*?<\/sc-for>/, () =>
-  `<sc-for list="{{ faq }}" as="f">
-<details data-open="{{ f.open }}" style="border-bottom: 1px solid #D9D5CD">
-<summary style="display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 0; list-style: none; font-size: 16px; font-weight: 500; color: #15171C; cursor: pointer">{{ f.q }}<span class="faq-sign" aria-hidden="true" style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #62676F; flex: none"></span></summary>
-<p style="margin: 0 0 20px; max-width: 640px; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ f.a }}</p>
-</details>
-</sc-for>`);
 
 // Contact : mailto en attendant un endpoint ; onglets Acheteur / Distributeur.
 rewrite('<form sc-camel-on-submit="{{ onSend }}" style=', `<form id="contact-form" action="mailto:${CONTACT_EMAIL}" method="post" enctype="text/plain" style=`);
@@ -157,28 +138,12 @@ function hoverClasses(html) {
 // ---------------------------------------------------------- pages
 const SCRIPT = `<script>
 (function () {
-  var q = document.getElementById('q');
-  var note = document.getElementById('search-note');
-  var search = document.querySelector('[data-search]');
-
   // Navigation : fondu à droite seulement si des liens restent masqués à droite.
   var nav = document.querySelector('[data-nav]');
   function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
   nav.addEventListener('scroll', navFade, { passive: true });
   addEventListener('resize', navFade);
   navFade();
-  function focusSearch() { q.focus(); q.scrollIntoView({ block: 'center' }); }
-  // Recherche de démonstration : pas encore de plateforme en production.
-  search.addEventListener('submit', function (e) { e.preventDefault(); note.hidden = !q.value.trim(); });
-  q.addEventListener('input', function () { note.hidden = true; });
-  document.querySelectorAll('[data-mpn]').forEach(function (b) {
-    b.addEventListener('click', function () { q.value = b.getAttribute('data-mpn'); note.hidden = true; q.focus(); });
-  });
-  document.querySelectorAll('[data-focus-search]').forEach(function (a) {
-    a.addEventListener('click', function (e) { e.preventDefault(); focusSearch(); });
-  });
-  if (location.hash === '#q') focusSearch();
-
   // Contact : onglets Acheteur / Distributeur, puis envoi par e-mail.
   var form = document.getElementById('contact-form');
   var sent = document.getElementById('contact-sent');
@@ -213,15 +178,9 @@ function page(lang) {
   const ctx = {
     t, htmlLang: L.htmlLang,
     langs: Object.entries(LANGS).map(([k, o]) => ({ label: { fr: 'FR', en: 'EN', zh: '中文' }[k], href: o.path, hreflang: o.hreflang, current: k === lang ? 'page' : 'false', style: pill(k === lang) })),
-    examples: ['STM32F103C8T6', 'LM358DR', 'ATMEGA328P-AU', 'GRM188R71H104KA93D'].map((label) => ({ label })),
-    // Grille « Logo distributeur » masquée tant qu'il n'y a pas de vrais partenaires.
-    showPartners: false,
-    partners: Array.from({ length: 8 }, (_, i) => L.partner + String(i + 1).padStart(2, '0')),
-    faq: t.faq.map((f, i) => ({ ...f, open: i === 0 ? 'open' : '' })),
     tabs: [['buyer', t.tabBuyer], ['dist', t.tabDist]].map(([key, label]) => ({ key, label, on: String(key === 'buyer'), style: tabStyle(key === 'buyer'), styleOn: tabStyle(true), styleOff: tabStyle(false) })),
   };
   let html = render(body, ctx)
-    .replace(/<details data-open="open"/g, '<details open').replace(/<details data-open=""/g, '<details')
     .replace(/ sc-camel-view-box=/g, ' viewBox=')
     .replace(/ hint-placeholder-[\w-]+="[^"]*"/g, '');
   const hv = hoverClasses(html);
@@ -229,6 +188,10 @@ function page(lang) {
   for (const bad of ['{{', 'sc-for', 'sc-if', 'sc-camel', 'x-dc', 'helmet', 'style-hover', 'style-focus']) {
     if (html.includes(bad)) throw new Error(`« ${bad} » reste dans la page ${lang}`);
   }
+
+  // Accès depuis la Chine : aucun domaine tiers (Google, LinkedIn, CDN…), seulement central.parts.
+  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN) && !u.startsWith(TENCENT_FORM));
+  if (ext.length) throw new Error(`Ressource externe dans la page ${lang} : ${ext.join(', ')}`);
 
   // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
   // il coupe la marque). Les aperçus sociaux n'affichent que l'accroche :
@@ -258,14 +221,15 @@ function page(lang) {
 <link rel="canonical" href="${url}">
 ${alt}
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/fonts/space-grotesk-var.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/ibm-plex-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="applicable-device" content="pc,mobile">
+<meta http-equiv="Cache-Control" content="no-transform">
 ${og}
 ${tw}
 ${styles}
 <style>
 [hidden] { display: none !important; }
-summary::-webkit-details-marker { display: none; }
-.faq-sign::before { content: '+'; }
-details[open] .faq-sign::before { content: '\\2212'; }
 ${hv.sheet}
 </style>
 </head>
