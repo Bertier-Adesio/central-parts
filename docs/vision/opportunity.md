@@ -118,7 +118,7 @@ flowchart TD
 
 ### 5.1 Canaux et formats
 
-- Priorité aux brokers qui ont une API produit interrogeable : Central.Parts l'interroge en direct à chaque demande et ne garde qu'un instantané des lots trouvés. Puis envoi vers l'API fournisseur ([`api/fournisseurs.md`](../../api/fournisseurs.md)), puis fichiers CSV, XLS et SFTP au-delà de 500 000 lignes. **Décidé** (ADR 0006)
+- Priorité aux brokers qui ont une API produit interrogeable : Central.Parts l'interroge en direct à chaque demande et ne garde qu'un instantané des lots trouvés. Puis envoi vers l'API fournisseur ([`api/fournisseurs.md`](../../api/fournisseurs.md)), puis fichiers CSV, XLS et SFTP au-delà de 500 000 lignes. **Décidé** (ADR 0007)
 - Formats reconnus : format broker (Manufacturer, SKU, MPN, Product URL, Unit Price, Quantity, Price per 10 / 100 / 1 000 pcs), Octopart, ECIA. **Décidé**
 - Champs obligatoires : référence fabricant, fabricant, quantité. Facultatifs : SKU, prix, devise, paliers, date code, pays d'origine, conditionnement, délai. **Décidé**
 - Devises acceptées, celles des comptes de Central.Parts : EUR, USD, CNH (yuan offshore ; CNY et RMB acceptés comme CNH), HKD, GBP, JPY. Une autre devise est refusée. **Décidé**

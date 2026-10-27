@@ -1,5 +1,5 @@
 -- Central.Parts : schéma initial (v0), tiré de la maquette vivante (site/app/js/core.js et api.js).
--- Voir docs/decisions/0007-hebergement-stockage.md.
+-- Voir docs/decisions/0008-hebergement-stockage.md.
 --
 -- Principes :
 --   * Une seule base PostgreSQL. Les écritures passent par l'API métier (rôle service_role) ;
@@ -152,7 +152,7 @@ create table public.inventory_offers (
 create index on public.inventory_offers (upper(mpn));
 
 -- ------------------------------------------------------------ connecteurs, canaux, clés
--- Connecteur vers l'API produit d'un broker (ADR 0006). Le secret d'accès vit dans le coffre.
+-- Connecteur vers l'API produit d'un broker (ADR 0007). Le secret d'accès vit dans le coffre.
 create table public.connectors (
   id          text primary key default app.ref('CON', 'app.con_seq'),
   org_id      text not null references public.organizations on delete cascade,

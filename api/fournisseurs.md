@@ -2,7 +2,7 @@
 
 Spécification v0 de l'API par laquelle un fournisseur (broker, distributeur, détenteur de surplus, fabricant) pousse son stock vers Central.Parts et reçoit les demandes qui le concernent. Implémentation simulée : `site/app/js/api.js`, écran vendeur « Intégration API » de la maquette (`/app/#/vendeur/api`). Décision : [ADR 0004](../docs/decisions/0004-api-fournisseur.md).
 
-**Ordre de priorité des canaux** ([ADR 0006](../docs/decisions/0006-priorite-api-produit-brokers.md)) :
+**Ordre de priorité des canaux** ([ADR 0007](../docs/decisions/0007-priorite-api-produit-brokers.md)) :
 
 1. **API produit du broker**, interrogée par Central.Parts à chaque demande (connecteur, section suivante) : canal prioritaire.
 2. **Envoi vers l'API fournisseur** de Central.Parts, décrite dans ce document.

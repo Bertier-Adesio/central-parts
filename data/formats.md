@@ -4,7 +4,7 @@ Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`
 
 ## Canaux
 
-Ordre de priorité ([ADR 0006](../docs/decisions/0006-priorite-api-produit-brokers.md)) : 1. l'API produit du broker, interrogée par Central.Parts à chaque demande ; 2. l'envoi vers l'[API fournisseur](../api/fournisseurs.md) ; 3. les fichiers ci-dessous, en repli.
+Ordre de priorité ([ADR 0007](../docs/decisions/0007-priorite-api-produit-brokers.md)) : 1. l'API produit du broker, interrogée par Central.Parts à chaque demande ; 2. l'envoi vers l'[API fournisseur](../api/fournisseurs.md) ; 3. les fichiers ci-dessous, en repli.
 
 | Canal | Volume | Endpoint | Traitement |
 |---|---|---|---|

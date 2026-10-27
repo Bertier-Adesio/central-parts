@@ -1,5 +1,5 @@
 -- Yuan offshore (CNH) à la place du CNY, et registre du compte dédié renommé (plus de mot « escrow »).
--- Voir docs/decisions/0008-parcours-prix-detaille-vocabulaire.md.
+-- Voir docs/decisions/0009-parcours-prix-detaille-vocabulaire.md.
 
 -- ------------------------------------------------------------ CNY → CNH
 -- Sans effet sur une base vide (les devises arrivent par seed.sql) ; sur une base déjà remplie,

@@ -15,10 +15,10 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 
 ## API fournisseur
 
-[`fournisseurs.md`](fournisseurs.md) : spécification v0 de l'API par laquelle les brokers et distributeurs poussent leur stock et reçoivent les demandes (ADR 0004), ses notifications WeChat, WeCom et e-mail (ADR 0005), et les connecteurs aux API produit des brokers, prioritaires (ADR 0006).
+[`fournisseurs.md`](fournisseurs.md) : spécification v0 de l'API par laquelle les brokers et distributeurs poussent leur stock et reçoivent les demandes (ADR 0004), ses notifications WeChat, WeCom et e-mail (ADR 0005), et les connecteurs aux API produit des brokers, prioritaires (ADR 0007).
 
 ## Prochaines étapes
 
 1. Dériver la spécification OpenAPI (`openapi.yaml`) de la carte des endpoints, avant tout code.
-2. Stack : base PostgreSQL sur Supabase (UE) et API métier dans un service Node à part, proposées dans l'ADR 0007 ; schéma dans `supabase/`.
+2. Stack : base PostgreSQL sur Supabase (UE) et API métier dans un service Node à part, proposées dans l'ADR 0008 ; schéma dans `supabase/`.
 3. Définir l'authentification des partenaires (clé d'API par canal, quotas).

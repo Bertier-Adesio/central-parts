@@ -1,4 +1,4 @@
-# 0008 — Deux parcours de livraison, prix détaillé, yuan offshore et vocabulaire public
+# 0009 — Deux parcours de livraison, prix détaillé, yuan offshore et vocabulaire public
 
 - Date : 2026-10-11
 - Statut : acceptée (montage juridique et contrats soumis à un avocat)

@@ -1,4 +1,4 @@
-# 0006 — Priorité aux brokers dotés d'une API produit interrogeable
+# 0007 — Priorité aux brokers dotés d'une API produit interrogeable
 
 - Date : 2026-10-11
 - Statut : acceptée

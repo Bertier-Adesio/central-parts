@@ -1,6 +1,6 @@
 # Base de données (Supabase)
 
-Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`). Choix d'hébergement : [ADR 0007](../docs/decisions/0007-hebergement-stockage.md).
+Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`). Choix d'hébergement : [ADR 0008](../docs/decisions/0008-hebergement-stockage.md).
 
 ```
 supabase/
