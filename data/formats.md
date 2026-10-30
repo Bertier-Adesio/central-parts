@@ -2,6 +2,22 @@
 
 Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`, écran vendeur « Stock et lots ») implémente la lecture de ces formats dans `site/app/js/api.js` (`importRows`).
 
+## Format attendu des brokers
+
+Format recommandé à tout broker sans API : le **flux distributeur Octopart**, tel que le produit déjà un broker partenaire. Modèle téléchargeable sur la page de dépôt : [`site/depot/stock-template.csv`](../site/depot/stock-template.csv), publié à `https://central.parts/depot/stock-template.csv`.
+
+```
+manufacturer,mpn,sku,distributor-url,quantity,price-break-1,price-usd-1,…,price-break-5,price-usd-5,moq
+```
+
+- Une ligne par référence ; `mpn` et `quantity` obligatoires.
+- Jusqu'à cinq paliers : quantité minimale (`price-break-N`) et prix unitaire en USD (`price-usd-N`). Une autre devise s'écrit dans l'en-tête (`price-cnh-N`, `price-eur-N`).
+- Séparateur virgule ou point-virgule, décimales à point ou à virgule, CSV, XLS ou XLSX.
+- Colonnes facultatives, ajoutées en fin de ligne : `date-code`, `packaging`.
+- Le `sku` sert de clé de mise à jour : il doit rester stable d'un fichier à l'autre.
+
+Les autres formats décrits ci-dessous restent acceptés.
+
 ## Canaux
 
 Ordre de priorité ([ADR 0007](../docs/decisions/0007-priorite-api-produit-brokers.md)) : 1. l'API produit du broker, interrogée par Central.Parts à chaque demande ; 2. l'envoi vers l'[API fournisseur](../api/fournisseurs.md) ; 3. les fichiers ci-dessous, en repli.
@@ -36,6 +52,10 @@ Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise 
 ## Formats Octopart et ECIA
 
 Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufacturer`, `quantity` / `Quantity Available`, `date_code` / `Date Code`, `packaging` / `Package Type`, `price` / `Unit Price`.
+
+**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. Les paramètres de suivi `utm_*` sont retirés du lien produit. La colonne `moq` n'est pas encore gardée.
+
+Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `年份` (date code), `包装`, `单价` / `价格`, `币种` / `货币`.
 
 ## Règles d'import
 
