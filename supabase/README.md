@@ -6,7 +6,8 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 supabase/
 ├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
 ├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : connexion WeChat et liens de dépôt)
-├── seed.sql      données fictives de la maquette, pour le projet dev uniquement
+├── reference.sql données de référence (devises, niveaux de test, opérateur) : sur tout projet, après les migrations
+├── seed.sql      données fictives de la maquette, pour un projet de démonstration uniquement
 └── checks/       contrôles sur un PostgreSQL local (simulation minimale de Supabase, RLS, intégrité)
 ```
 
@@ -31,7 +32,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, puis `20261030000004_depot_wechat.sql`) ; puis faire de même avec `seed.sql`. Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes. Chaque migration ne s'exécute qu'une fois ; `seed.sql` seulement sur un projet vide.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, puis `20261030000004_depot_wechat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
