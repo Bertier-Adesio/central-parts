@@ -20,5 +20,5 @@ Les brokers transmettent leur stock de trois façons possibles : fichier (CSV, X
 ## Conséquences
 
 - Moins de données à stocker : la base garde les connecteurs, les instantanés et les transactions, pas l'intégralité des stocks des brokers connectés.
-- La recherche publique ne montre que le stock stocké (poussé ou importé) ; le stock des API n'apparaît qu'à la demande. À trancher : interroger aussi les API à la recherche, avec cache court.
+- La recherche publique ne montre que le stock stocké (poussé ou importé) ; le stock des API n'apparaît qu'à la demande. Tranché par l'ADR 0011 : les API sont aussi interrogées à la recherche, avec un cache court.
 - Il faut un module de connecteurs (correspondance des champs par broker, gestion des clés, limites d'appels, temps de réponse, alertes de panne) et des critères d'éligibilité : temps de réponse, disponibilité, champs fournis.

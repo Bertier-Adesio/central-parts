@@ -11,7 +11,7 @@ Ordre de priorité ([ADR 0007](../docs/decisions/0007-priorite-api-produit-broke
 | Fichier par l'API ou l'écran vendeur | Jusqu'à 500 000 lignes | `POST /v1/stocklists` | Immédiat, rapport d'import en retour |
 | Dépôt SFTP | Au-delà de 500 000 lignes | `POST /v1/webhooks/sftp/stocklist` (déclenché par le dépôt) | Asynchrone, même rapport, consultable par `GET /v1/stocklists/{id}` |
 
-SFTP prévu : un dossier par société (`/inbox/<pseudonyme>/`), authentification par clé SSH déposée à l'inscription, fichier complet quotidien qui remplace le précédent. Fichiers CSV (séparateur `,` `;` ou tabulation, champs entre guillemets) ou XLS/XLSX, convertis côté serveur.
+Dépôt de fichiers en place ([ADR 0010](../docs/decisions/0010-depot-stock-connexion-wechat.md)) : compartiment privé Supabase `stock-imports`, un dossier par société, transformation en lots par la fonction Edge `import-stock`, rapport d'import dans `stock_imports` ; connexion du fournisseur par WeChat à venir. Un fichier dont le nom contient « complet » remplace le stock précédent. Fichiers CSV (séparateur `,` `;` ou tabulation, champs entre guillemets, UTF-8 ou GB18030) ou XLS/XLSX, 50 Mo au plus ; un SFTP pourra s'ajouter pour les très gros volumes.
 
 ## Format broker
 

@@ -14,7 +14,7 @@ La maquette (`site/app/`, ADR 0003) garde tout en mémoire dans le navigateur. P
 
 ## Décision
 
-- **Une seule base PostgreSQL**, hébergée par **Supabase en région UE** (Paris, `eu-west-3`, de préférence ; la région ne se change pas après création). Elle porte les organisations, abonnements, lots, demandes, enchères, offres, transactions, dossiers de laboratoire, litiges, ordres de paiement et le registre du compte dédié.
+- **Une seule base PostgreSQL**, hébergée par **Supabase en région UE**. Le projet a été créé à Francfort (`eu-central-1`) ; Paris était préféré, mais la région ne se change pas après création et Francfort reste dans l'UE. Elle porte les organisations, abonnements, lots, demandes, enchères, offres, transactions, dossiers de laboratoire, litiges, ordres de paiement et le registre du compte dédié.
 - **Deux projets** : `central-parts-dev` (données fictives, sert aussi de bac à sable aux brokers) et `central-parts-prod`, créé avant les premiers vrais vendeurs. Aucune donnée réelle dans `dev`.
 - **L'API métier fait toutes les écritures** (clé `service_role`, côté serveur uniquement). Elle porte les règles de la maquette (`site/app/js/api.js`) : transitions de transaction, double validation des ordres, statut « vérifié ». Elle tourne dans un service Node à part, sur un PaaS français (Clever Cloud ou Scaleway), avec les tâches planifiées.
 - **La RLS est la seconde ceinture** : les utilisateurs connectés n'ont que des droits de lecture, limités à leur organisation ; rien pour les visiteurs anonymes. Les lectures croisées passent par des vues qui ne montrent que les alias (`v_seller_demands`, `v_buyer_offers`, `v_my_transactions`, `v_seller_status`).
