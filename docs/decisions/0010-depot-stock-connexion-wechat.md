@@ -1,7 +1,7 @@
 # 0010 — Dépôt des fichiers de stock et connexion des fournisseurs par WeChat
 
 - Date : 2026-10-30
-- Statut : proposée (implémentée ; mise en service après configuration du compte de service WeChat)
+- Statut : proposée. Dépôt et transformation : en service. Connexion WeChat : implémentée et testée, **en pause** (30 octobre 2026) ; en attendant, l'opérateur dépose les fichiers reçus des fournisseurs. Reprise : AppID, domaine d'autorisation et secrets, voir `supabase/README.md`.
 
 ## Contexte
 
