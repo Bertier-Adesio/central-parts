@@ -40,9 +40,8 @@ L'offre agrégée de Central.Parts est consultable par les **visiteurs du site**
 
 - La fédération des petits brokers (ADR 0012) : qui vend, et comment le fédérateur est rémunéré. On en parlera d'abord avec le premier fédérateur pressenti, après le salon.
 - Le message en chinois des supports (kakémono, compte WeChat) n'est pas encore fixé.
-- Les tranches de disponibilité et la limite de requêtes de la recherche publique.
 
 ## Conséquences
 
-- À construire avant le salon : une fonction Edge de recherche publique et une page de recherche sur central.parts, à partir de `search_stock`.
+- Construit le 31 octobre 2026 : page `site/recherche/` (FR, EN, 中文), fonction Edge `search`, migration `20261031000008_recherche_publique.sql`. La recherche porte sur le début de la référence (3 caractères au moins), 50 lignes au plus, une par référence, catégorie de source et pays d'expédition. Tranches de disponibilité : 1+, 100+, 1 000+, 10 000+, 100 000+. Limite : 30 recherches par minute et par adresse IP, gardée sous forme d'empreinte. Marges par catégorie dans `app.price_rules`, saisies par l'opérateur ; sans règle, prix sur demande. Contrôles : `checks/05_recherche.sql`, `tools/test-search-ui.mjs`.
 - L'incoterm des offres Inventory est à préciser (DAP ou équivalent, l'acheteur importateur). Les mentions sur les droits et la TVA à l'import doivent figurer sur l'offre détaillée.
