@@ -1,0 +1,2 @@
+﻿manufacturer,mpn,sku,distributor-url,quantity,price-break-1,price-usd-1,price-break-2,price-usd-2,price-break-3,price-usd-3,price-break-4,price-usd-4,price-break-5,price-usd-5,moq
+Texas Instruments,NE555DR,NE555DR,https://www.example.com/product/NE555DR,10000,1,0.12,10,0.11,100,0.10,1000,0.09,10000,0.08,1
