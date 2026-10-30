@@ -1,5 +1,6 @@
-// Page de recherche publique (site/recherche/) dans Chromium, avec une fonction « search » simulée :
-// recherche, prix « à partir de » ou sur demande, trois langues, erreurs, 390 px sans défilement horizontal.
+// Pages de recherche publique (site/recherche/) et de suivi (site/recherche/commande/) dans Chromium, avec les fonctions
+// « search » et « order » simulées : recherche, prix « à partir de » ou sur demande, demande d'achat, suivi,
+// trois langues, erreurs, 390 px sans défilement horizontal.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-search-ui.mjs
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
 const { chromium } = pw.default || pw;
@@ -25,6 +26,18 @@ await page.route(FN + '**', (r) => {
     { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', availability: '10000+', price_from: 0.1234 },
     { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', availability: '1000+', price_from: null },
   ] });
+});
+const ORDER = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
+let sentOrder = null;
+await page.route(ORDER + '**', (r) => {
+  const u = new URL(r.request().url());
+  const reply = (d, status = 200) => r.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' }, body: JSON.stringify(d) });
+  if (r.request().method() === 'OPTIONS') return reply({});
+  if (u.pathname.endsWith('/quote')) { const n = +u.searchParams.get('qty'); return reply({ currency: u.searchParams.get('cur'), qty: n, unit_price: 0.12, total: +(0.12 * n).toFixed(2), covered: n <= 10000 }); }
+  if (u.pathname.endsWith('/status')) return u.searchParams.get('k') === 'tok' ? reply({ ref: 'PR-0001', status: 'confirmed', mpn: 'NE555DR', qty: 2000, currency: 'EUR', unit_price: 0.12, total: 240, created_at: '2026-11-01T10:00:00Z' }) : reply({ error: 'not_found' }, 404);
+  sentOrder = JSON.parse(r.request().postData());
+  if (sentOrder.vat === 'FR00000000000') return reply({ error: 'vat_invalid' }, 422);
+  return reply({ ref: 'PR-0001', token: 'tok', currency: 'EUR', unit_price: 0.12, total: 240, covered: true, vat_checked: true, status_url: 'https://central.parts/recherche/commande/?ref=PR-0001&k=tok' });
 });
 await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
 
@@ -63,6 +76,45 @@ await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
 ok(calls[calls.length - 1] === '?q=NE555&cur=USD' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
+
+// Demande d'achat sur la première offre (fabricant, Chine).
+await page.goto(BASE + '/recherche/?q=NE555&cur=EUR&lang=fr');
+await page.waitForSelector('.res');
+await page.click('.res .buy');
+await page.waitForSelector('#buy:not([hidden])');
+ok((await page.textContent('#buy-meta')).includes('Fabricant'), 'achat : offre choisie rappelée');
+await page.fill('#o-qty', '2000');
+await page.waitForFunction(() => document.getElementById('quote').textContent.includes('Total'));
+ok((await page.textContent('#quote')).includes('240'), 'achat : devis pour la quantité');
+await page.click('#o-send');
+ok((await page.textContent('#msg')).includes('Vérifiez'), 'achat : champs manquants signalés');
+await page.fill('#o-company', 'Atelier Test (fictif)');
+await page.fill('#o-vat', 'FR00000000000');
+await page.fill('#o-name', 'Jeanne Test');
+await page.fill('#o-email', 'achats@example.com');
+await page.selectOption('#o-country', 'FR');
+await page.fill('#o-address', '1 rue de l\'Exemple, 69000 Lyon');
+await page.click('#o-send');
+ok((await page.textContent('#msg')).includes('Cochez'), 'achat : conditions à accepter');
+await page.check('#o-terms');
+await page.click('#o-send');
+await page.waitForFunction(() => document.getElementById('msg').textContent.includes('VIES'));
+ok(true, 'achat : numéro de TVA refusé par VIES expliqué');
+await page.fill('#o-vat', 'FR12345678901');
+await page.click('#o-send');
+await page.waitForSelector('#done:not([hidden])');
+ok(sentOrder.mpn === 'NE555DR' && sentOrder.source === 'manufacturer' && sentOrder.ship_from === 'CN' && sentOrder.qty === '2000' && sentOrder.country === 'FR', 'achat : demande envoyée avec l\'offre et la quantité');
+ok((await page.textContent('#done-msg')).includes('PR-0001') && (await page.getAttribute('#done-link', 'href')).includes('k=tok'), 'achat : référence et lien de suivi');
+ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'achat : pas de défilement horizontal à 390 px');
+
+// Suivi de la demande.
+await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=tok&lang=fr');
+await page.waitForSelector('#out:not([hidden])');
+ok((await page.$$('.steps li.done')).length === 2 && (await page.textContent('#steps')).includes('confirmée'), 'suivi : étapes franchies');
+ok(!(await page.textContent('main')).match(/V-\d|ORG-/), 'suivi : jamais le fournisseur');
+await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=faux&lang=en');
+await page.waitForSelector('#msg:not([hidden])');
+ok((await page.textContent('#msg')).includes('not found'), 'suivi : lien faux');
 ok(errors.length === 0, 'aucune erreur ni requête externe : ' + errors.join(' | '));
 
 await browser.close();

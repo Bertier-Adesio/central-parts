@@ -142,6 +142,11 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       <button class="btn btn-main" type="submit" id="send" data-t="send">上传</button>
       <progress id="prog" max="100" value="0" hidden></progress>
     </form>
+    <section class="card" id="req-card" hidden>
+      <h2 data-t="reqTitle">询单</h2>
+      <p class="muted" data-t="reqLead">欧洲买家的采购申请。请在 24 小时内确认是否有货；不显示买家信息。</p>
+      <ul class="plain" id="req-list"></ul>
+    </section>
     <section class="card" id="imports-card">
       <h2 data-t="history">上传记录</h2>
       <div id="imports"><p class="muted" data-t="none">暂无记录。</p></div>
@@ -181,6 +186,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       pendingLic: '请上传营业执照，以便 Central.Parts 审核您的公司。', rejectedMsg: '您的公司未通过审核：', statusPending: '审核中',
       pick: '选择文件：CSV、XLS 或 XLSX，最大 50 MB', complete: '这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。',
       send: '上传', history: '上传记录', none: '暂无记录。', uploading: '正在上传…', uploaded: '已上传，正在处理…',
+      reqTitle: '询单', reqLead: '欧洲买家的采购申请。请在 24 小时内确认是否有货；不显示买家信息。', reqYes: '确认有货', reqNo: '无货',
+      rs: { submitted: '待确认', confirmed: '已确认', unavailable: '无货', proforma_sent: '已发形式发票', paid: '已收款', shipped: '已发货', cancelled: '已取消' },
+      reqLine: '数量 {qty} · 单价 {price} · 交货国家 {country}',
       teamTitle: '同事', teamLead: '邀请同事上传库存：每个链接仅限一人使用，14 天内有效。通过微信发送给同事。',
       invName: '同事姓名', invSend: '生成邀请链接', admin: '管理员', member: '成员', me: '（您）', you: '您', invited: '已邀请，待接受',
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
@@ -206,6 +214,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       pendingLic: 'Please upload your business licence so that Central.Parts can review your company.', rejectedMsg: 'Your company was not approved: ', statusPending: 'Under review',
       pick: 'Choose a file: CSV, XLS or XLSX, up to 50 MB', complete: 'This is my complete stock list: it replaces all stock uploaded before (parts missing from this file go to zero).',
       send: 'Upload', history: 'Uploads', none: 'No uploads yet.', uploading: 'Uploading…', uploaded: 'Uploaded, processing…',
+      reqTitle: 'Purchase requests', reqLead: 'Requests from European buyers. Please confirm availability within 24 hours; the buyer is not shown.', reqYes: 'Available', reqNo: 'Not available',
+      rs: { submitted: 'To confirm', confirmed: 'Confirmed', unavailable: 'Not available', proforma_sent: 'Proforma sent', paid: 'Paid', shipped: 'Shipped', cancelled: 'Cancelled' },
+      reqLine: 'Quantity {qty} · unit price {price} · delivery country {country}',
       teamTitle: 'Colleagues', teamLead: 'Invite colleagues to upload stock: each link is for one person and valid for 14 days. Send it on WeChat.',
       invName: 'Colleague name', invSend: 'Create an invitation link', admin: 'Admin', member: 'Member', me: ' (you)', you: 'You', invited: 'Invited, pending',
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
@@ -229,7 +240,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
-    renderImports(); if (org) renderOrg();
+    renderImports(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests();
   }
   function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
@@ -333,6 +344,29 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     org = o; renderOrg(); show('v-app');
     if (o.status !== 'rejected') refresh();
     if (o.role === 'admin') loadTeam();
+    if (o.status === 'validated') loadRequests();
+  }
+
+  // ---------------------------------------------------------------- demandes d'achat reçues (ADR 0014)
+  var requests = [];
+  function loadRequests() {
+    api('GET', '/requests').then(function (list) { requests = list; renderRequests(); }, function () {});
+  }
+  function renderRequests() {
+    $('req-card').hidden = !requests.length;
+    $('req-list').innerHTML = requests.map(function (r) {
+      var line = t().reqLine.replace('{qty}', r.qty).replace('{price}', r.unit_price == null ? '—' : r.unit_price + ' ' + r.currency).replace('{country}', r.delivery_country);
+      return '<li style="display:block"><div class="org"><strong>' + esc(r.ref) + ' · ' + esc(r.mpn) + '</strong><span class="badge">' + esc(t().rs[r.status] || r.status) + '</span></div>' +
+        '<p class="muted" style="margin:4px 0">' + esc(line) + '</p>' +
+        (r.status === 'submitted' ? '<div class="row"><button class="btn btn-main" type="button" data-ans="' + esc(r.ref) + '" data-ok="1">' + esc(t().reqYes) + '</button>' +
+          '<button class="btn btn-line" type="button" data-ans="' + esc(r.ref) + '" data-ok="">' + esc(t().reqNo) + '</button></div>' : '') + '</li>';
+    }).join('');
+    $('req-list').querySelectorAll('[data-ans]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('POST', '/requests/answer', { ref: b.getAttribute('data-ans'), ok: !!b.getAttribute('data-ok') }).then(loadRequests, lost);
+      });
+    });
   }
   function renderOrg() {
     $('org-name').textContent = org.name;

@@ -32,6 +32,8 @@ async function api(route) {
   if (path === '/upload-url') return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/y', path: 'ORG-0107/f.csv' });
   if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [] } }] : []);
   if (path === '/contacts') return reply(state.contacts);
+  if (path === '/requests') return reply(state.requests || []);
+  if (path === '/requests/answer') { state.answer = body; state.requests[0].status = body.ok ? 'confirmed' : 'unavailable'; return reply(state.requests[0]); }
   if (path === '/invite') { state.contacts.invites.push({ label: body.label }); return reply({ link: 'https://central.parts/depot/?invite=' + 'c'.repeat(36) }); }
   return reply({ error: 'not_found' }, 404);
 }
@@ -92,6 +94,17 @@ ok((await page.textContent('#team-list')).includes('小王'), 'invitation en cou
 await page.click('#lang');
 ok((await page.textContent('h1')) === 'Supplier centre' && (await page.textContent('#org-alias')) === 'Under review', 'bascule en anglais');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
+
+// 7 bis. Société validée : demande d'achat reçue, confirmée depuis la page.
+state.org = { ...ORG, status: 'validated', alias: 'V-9', has_license: true };
+state.requests = [{ ref: 'PR-0001', status: 'submitted', mpn: 'NE555DR', qty: 2000, unit_price: 0.8, currency: 'CNH', delivery_country: 'FR' }];
+await page.click('#lang');
+await page.reload();
+await page.waitForSelector('#req-card:not([hidden])');
+ok((await page.textContent('#req-list')).includes('PR-0001') && !(await page.textContent('#req-list')).match(/@|Atelier/), 'demande d\'achat reçue, sans l\'acheteur');
+await page.click('#req-list [data-ok="1"]');
+await page.waitForFunction(() => !document.querySelector('#req-list [data-ans]'));
+ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.textContent('#req-list')).includes('已确认'), 'demande confirmée depuis la page');
 
 // 8. Société refusée : motif affiché, dépôt masqué.
 state.org = { ...ORG, status: 'rejected', has_license: true, rejected_reason: '营业执照不清晰' };

@@ -11,6 +11,8 @@
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?}  → lien de dépôt signé vers le dossier de la société
 //   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport
+//   GET  /depot/requests    → demandes d'achat reçues par la société (90 jours), sans l'acheteur
+//   POST /depot/requests/answer {ref, ok} → confirme ou refuse une demande d'achat (ADR 0014)
 //   GET  /depot/contacts    → contacts et invitations en cours (administrateur)
 //   POST /depot/invite      {label}      → lien d'invitation d'un collègue (administrateur)
 //
@@ -131,6 +133,20 @@ Deno.serve(async (req) => {
       if (error) return json({ error: 'database', detail: error.message }, 500);
       // Rapport allégé pour la page : 50 lignes rejetées au plus.
       return json(data.map((i) => ({ ...i, report: { rejected: (i.report?.rejected || []).slice(0, 50) } })));
+    }
+
+    if (req.method === 'GET' && path.endsWith('/requests')) {
+      const { data, error } = await db.rpc('supplier_requests', { p_openid: session.openid });
+      if (error) return json({ error: 'database', detail: error.message }, 500);
+      return json(data);
+    }
+
+    if (req.method === 'POST' && path.endsWith('/requests/answer')) {
+      const { ref, ok } = await body();
+      const { data, error } = await db.rpc('supplier_answer', { p_openid: session.openid, p_ref: String(ref || ''), p_ok: !!ok });
+      if (error) return json({ error: 'not_found' }, 404);
+      await notifyOperators(db, `【询单 ${data.ref}】供应商${ok ? '确认有货' : '回复无货'}：${data.mpn} × ${data.qty}。${ok ? '请发送形式发票（回复「发票 ' + data.ref + '」记录）。' : ''}`);
+      return json(data);
     }
 
     if (req.method === 'GET' && path.endsWith('/contacts')) {

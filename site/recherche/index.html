@@ -44,6 +44,15 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
 .tag.opp{background:var(--status-warning-bg);color:var(--status-warning)}
 .cta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
 .btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
+.buy{grid-column:1 / -1;justify-self:start;min-height:var(--control-h-md);padding:0 14px}
+form.order label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+form.order input,form.order select,form.order textarea{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:8px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+form.order .two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:480px){form.order .two{grid-template-columns:1fr}}
+form.order .check{display:flex;gap:8px;align-items:flex-start;font-weight:normal}
+form.order .check input{width:auto;min-height:0;margin:3px 0 0}
+.quote{font-family:var(--font-mono);background:var(--bg-sunken);border-radius:var(--radius-sm);padding:10px 12px;margin:0 0 12px;font-size:var(--text-sm)}
+.quote:empty{display:none}
 </style>
 </head>
 <body>
@@ -70,6 +79,32 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
   <noscript><p class="msg err">La recherche nécessite JavaScript. · Search requires JavaScript. · 搜索需要启用 JavaScript。</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
   <section class="card" id="out" hidden aria-live="polite"><div id="list"></div></section>
+  <section class="card" id="buy" hidden>
+    <h2 data-t="buyTitle">Demande d'achat</h2>
+    <p class="mpn" id="buy-mpn"></p>
+    <p class="muted" id="buy-meta"></p>
+    <form class="order" id="order" novalidate>
+      <label><span data-t="fQty">Quantité</span><input type="number" id="o-qty" min="1" step="1" required inputmode="numeric"></label>
+      <div class="quote" id="quote" aria-live="polite"></div>
+      <div class="two">
+        <label><span data-t="fCompany">Société</span><input type="text" id="o-company" required maxlength="160" autocomplete="organization"></label>
+        <label><span data-t="fVat">N° de TVA intracommunautaire</span><input type="text" id="o-vat" required maxlength="20" placeholder="FR12345678901" spellcheck="false"></label>
+        <label><span data-t="fName">Nom et prénom</span><input type="text" id="o-name" required maxlength="120" autocomplete="name"></label>
+        <label><span data-t="fEmail">E-mail professionnel</span><input type="email" id="o-email" required maxlength="160" autocomplete="email"></label>
+        <label><span data-t="fPhone">Téléphone (facultatif)</span><input type="tel" id="o-phone" maxlength="40" autocomplete="tel"></label>
+        <label><span data-t="fCountry">Pays de livraison</span><select id="o-country" required></select></label>
+      </div>
+      <label><span data-t="fAddress">Adresse de livraison</span><textarea id="o-address" required maxlength="500" rows="3" autocomplete="street-address"></textarea></label>
+      <label><span data-t="fMessage">Message (facultatif)</span><textarea id="o-message" maxlength="1000" rows="2"></textarea></label>
+      <label class="check"><input type="checkbox" id="o-terms" required><span data-t="terms">Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).</span></label>
+      <div class="cta"><button class="btn btn-main" type="submit" id="o-send" data-t="send">Envoyer la demande</button><button class="btn btn-line" type="button" id="o-cancel" data-t="cancel">Annuler</button></div>
+    </form>
+    <div id="done" hidden>
+      <p class="msg ok" id="done-msg" style="margin:0 0 12px"></p>
+      <p class="muted" data-t="doneNext">Le fournisseur confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :</p>
+      <p><a id="done-link" href="#"></a></p>
+    </div>
+  </section>
   <section class="card">
     <h2 data-t="moreTitle">Quantités exactes, paliers et commande</h2>
     <p class="muted" data-t="moreText">Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.</p>
@@ -88,21 +123,36 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
       ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
       from: 'à partir de', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} »',
-      e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
+      buy: 'Acheter', buyTitle: "Demande d'achat", fQty: 'Quantité', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom', fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
+      terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
+      send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Le fournisseur confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
+      unit: 'Prix unitaire', total: 'Total', excl: "hors droits et TVA à l'import", toConfirm: 'Prix confirmé avec la proforma', partial: 'Quantité supérieure au stock affiché : le fournisseur confirmera la quantité disponible.',
+      sent: 'Demande {ref} envoyée.', choose: 'Choisir',
+      e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire.', not_found: "Cette offre n'est plus disponible.", terms: 'Cochez la case pour envoyer la demande.', too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
     en: { title: 'Search for a component', lead: 'The aggregated offer of Central.Parts: manufacturers, distributors, verified brokers and surplus. The supplier is never shown.',
       go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices, excluding import duties and VAT.',
       moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, every price break, lead times, quote requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
       ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
       from: 'from', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}"',
-      e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
+      buy: 'Buy', buyTitle: 'Purchase request', fQty: 'Quantity', fCompany: 'Company', fVat: 'VAT number', fName: 'Full name', fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
+      terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
+      send: 'Send the request', cancel: 'Cancel', doneNext: 'The supplier confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
+      unit: 'Unit price', total: 'Total', excl: 'excluding import duties and VAT', toConfirm: 'Price confirmed with the proforma', partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.',
+      sent: 'Request {ref} sent.', choose: 'Choose',
+      e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields.', not_found: 'This offer is no longer available.', terms: 'Tick the box to send the request.', too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
     zh: { title: '搜索元器件', lead: 'Central.Parts 汇总的现货：原厂、分销商、经审核的贸易商与呆滞库存。不显示供应商名称。',
       go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，不含进口关税和增值税。',
       moreTitle: '准确数量、价格阶梯与下单', moreText: '采购商账户或 API（Adesio、Luminovo、CalcuQuote、ERP）可查看准确数量、全部价格阶梯、交期并询价。贸易商与呆滞库存的报价通过 Opportunity 流程：状态问卷、可选实验室检测、验收后付款。',
       ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
       from: '起', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价',
-      e: { too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '搜索暂不可用，请稍后再试。' } }
+      buy: '购买', buyTitle: '采购申请', fQty: '数量', fCompany: '公司', fVat: '增值税号（欧盟）', fName: '姓名', fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '交货国家', fAddress: '交货地址', fMessage: '留言（选填）',
+      terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到银行转账后交易成立。买方负责进口清关（进口关税和增值税）。',
+      send: '提交申请', cancel: '取消', doneNext: '供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
+      unit: '单价', total: '合计', excl: '不含进口关税和增值税', toConfirm: '价格以形式发票为准', partial: '数量超过显示的库存：供应商将确认可供数量。',
+      sent: '申请 {ref} 已提交。', choose: '请选择',
+      e: { vat_invalid: '增值税号未通过 VIES 验证，请核对。', invalid: '请检查表单内容。', not_found: '该报价已不可用。', terms: '请勾选以提交申请。', too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '搜索暂不可用，请稍后再试。' } }
   };
   var COUNTRY = { fr: { CN: 'Chine', HK: 'Hong Kong', TW: 'Taïwan', DE: 'Allemagne', FR: 'France', US: 'États-Unis' },
                   en: { CN: 'China', HK: 'Hong Kong', TW: 'Taiwan', DE: 'Germany', FR: 'France', US: 'United States' },
@@ -122,6 +172,7 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     $('home').href = t().home; $('cta-buyer').href = t().home + '#contact';
     if (last) render(last);
+    if (offer) { describe(); fillCountries(); quote(); }
   }
   function say(text) { $('msg').hidden = !text; $('msg').className = 'msg err'; $('msg').textContent = text || ''; }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -134,14 +185,17 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
     var r = d.results || [];
     $('out').hidden = false;
     var head = '<p class="muted" style="margin:0 0 4px">' + esc((r.length ? t().count : t().none).replace('{n}', r.length).replace('{q}', d.query)) + '</p>';
-    $('list').innerHTML = head + r.map(function (x) {
+    $('list').innerHTML = head + r.map(function (x, i) {
       var price = x.price_from == null ? '<span class="muted">' + esc(t().onRequest) + '</span>'
         : (lang === 'zh' ? esc(money(x.price_from, d.currency)) + ' ' + esc(t().from) : esc(t().from) + ' ' + esc(money(x.price_from, d.currency)));
       var opp = x.source === 'broker' || x.source === 'surplus';
       return '<div class="res"><div><div class="mpn">' + esc(x.mpn) + '</div><div class="muted">' + esc(x.manufacturer) + '</div></div>' +
         '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
-        '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span><span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div></div>';
+        '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span>' +
+        '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div>' +
+        '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button></div>';
     }).join('');
+    $('list').querySelectorAll('.buy').forEach(function (b) { b.addEventListener('click', function () { openBuy(r[+b.getAttribute('data-i')], d.currency); }); });
   }
 
   function search(term, cur, push) {
@@ -155,6 +209,64 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
       }, function (code) { $('out').hidden = true; say(t().e[code] || t().e.other); })
       .then(function () { $('f').querySelector('button').disabled = false; });
   }
+
+  // ---------------------------------------------------------------- demande d'achat (ADR 0014)
+  var ORDER_FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
+  var COUNTRIES = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
+  var offer = null, quoteTimer = null;
+  function call(url, opts) {
+    return fetch(url, opts).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
+      function () { throw 'network'; });
+  }
+  function fillCountries() {
+    var names = null; try { names = new Intl.DisplayNames([lang === 'zh' ? 'zh-CN' : lang], { type: 'region' }); } catch (e) {}
+    var cur = $('o-country').value || (lang === 'fr' ? 'FR' : '');
+    $('o-country').innerHTML = '<option value="">' + esc(t().choose) + '</option>' + COUNTRIES.map(function (c) { return [c, names ? names.of(c) : c]; })
+      .sort(function (a, b) { return a[1].localeCompare(b[1]); }).map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
+    $('o-country').value = cur;
+  }
+  function openBuy(x, cur) {
+    offer = { mpn: x.mpn, source: x.source, ship_from: x.ship_from, currency: cur, x: x };
+    $('buy').hidden = false; $('order').hidden = false; $('done').hidden = true;
+    describe(); $('o-qty').value = ''; $('quote').textContent = '';
+    fillCountries();
+    $('buy').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('o-qty').focus();
+  }
+  function describe() {
+    var x = offer.x;
+    $('buy-mpn').textContent = x.mpn + ' · ' + x.manufacturer;
+    $('buy-meta').textContent = (t().src[x.source] || x.source) + ' · ' + t().shipFrom + ' ' + ((COUNTRY[lang][x.ship_from]) || x.ship_from) + ' · ' + t().avail + ' ' + x.availability;
+  }
+  function quote() {
+    var n = parseInt($('o-qty').value, 10);
+    if (!offer || !(n > 0)) { $('quote').textContent = ''; return; }
+    call(ORDER_FN + '/quote?mpn=' + encodeURIComponent(offer.mpn) + '&source=' + offer.source + '&ship_from=' + offer.ship_from + '&qty=' + n + '&cur=' + offer.currency)
+      .then(function (q) {
+        $('quote').textContent = q.unit_price == null ? t().toConfirm
+          : t().unit + ' ' + money(q.unit_price, q.currency) + ' · ' + t().total + ' ' + money(q.total, q.currency) + ' (' + t().excl + ')' + (q.covered ? '' : ' — ' + t().partial);
+      }, function (c) { $('quote').textContent = t().e[c] || t().e.other; });
+  }
+  $('o-qty').addEventListener('input', function () { clearTimeout(quoteTimer); quoteTimer = setTimeout(quote, 350); });
+  $('o-cancel').addEventListener('click', function () { $('buy').hidden = true; offer = null; });
+  $('order').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = function (id) { return $(id).value.trim(); };
+    if (!(parseInt(v('o-qty'), 10) > 0) || !v('o-company') || !v('o-vat') || !v('o-name') || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('o-email')) || !v('o-country') || !v('o-address')) return say(t().e.invalid);
+    if (!$('o-terms').checked) return say(t().e.terms);
+    say(''); $('o-send').disabled = true;
+    call(ORDER_FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      mpn: offer.mpn, source: offer.source, ship_from: offer.ship_from, currency: offer.currency, qty: v('o-qty'),
+      company: v('o-company'), vat: v('o-vat'), name: v('o-name'), email: v('o-email'), phone: v('o-phone'),
+      country: v('o-country'), address: v('o-address'), message: v('o-message') }) })
+      .then(function (d) {
+        $('order').hidden = true; $('done').hidden = false;
+        $('done-msg').textContent = t().sent.replace('{ref}', d.ref);
+        $('done-link').href = d.status_url + '&lang=' + lang; $('done-link').textContent = d.status_url.replace(/&k=.*/, '');
+        $('buy').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, function (c) { say(t().e[c] || t().e.other); $('msg').scrollIntoView({ behavior: 'smooth', block: 'center' }); })
+      .then(function () { $('o-send').disabled = false; });
+  });
 
   $('f').addEventListener('submit', function (ev) {
     ev.preventDefault();
