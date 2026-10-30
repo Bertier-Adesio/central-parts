@@ -24,13 +24,18 @@ Pour l'instant, Central.Parts ne recrute que des **fournisseurs chinois**, et ce
 
    Celui qui enregistre la société en devient l'**administrateur**.
 3. **Une société n'existe qu'une fois.** Le numéro 统一社会信用代码 est unique. S'il est déjà enregistré, la personne ne crée rien : elle envoie une demande d'adhésion, que l'administrateur de la société accepte ou refuse.
-4. **Invitation des collègues par l'administrateur, depuis la page.** L'administrateur :
+4. **Transmettre à qui de droit.** Souvent, la personne qui découvre la page, un commercial ou une assistante, n'est pas celle qui engage la société. Elle peut donc :
+   - commencer l'enregistrement, puis choisir « 我不是负责人，转发给负责人 » (je ne suis pas le responsable, je transmets). La page crée un **lien de transmission**, à usage unique et valable 14 jours, avec les informations déjà saisies. La personne l'envoie dans WeChat, en copiant le lien ou en enregistrant une image avec un QR code, faute de partage personnalisé sans licence ICP. Le responsable ouvre le lien, scanne, vérifie, complète et confirme : il devient administrateur, et l'initiateur devient membre ;
+   - si la société existe déjà, transmettre de la même façon sa demande d'adhésion à l'administrateur, qui l'accepte en scannant.
+
+   L'initiateur voit où en est sa demande : transmise, confirmée ou expirée.
+5. **Invitation des collègues par l'administrateur, depuis la page.** L'administrateur :
    - génère les liens d'invitation, à usage unique et valables 14 jours, comme aujourd'hui ;
    - choisit le rôle : administrateur ou membre ;
    - retire un accès.
 
    Une société garde toujours au moins un administrateur.
-5. **Dépôt possible avant validation, sans publication.** Une société en attente peut déposer son stock. Ses lots ne sont ni publiés ni renvoyés par `search_stock` ou l'API d'offres (ADR 0011) tant qu'elle n'est pas validée, car `app.is_verified` exige déjà un KYB validé et un abonnement en cours.
+6. **Dépôt possible avant validation, sans publication.** Une société en attente peut déposer son stock. Ses lots ne sont ni publiés ni renvoyés par `search_stock` ou l'API d'offres (ADR 0011) tant qu'elle n'est pas validée, car `app.is_verified` exige déjà un KYB validé et un abonnement en cours.
 
 ### Validation par l'opérateur, dans WeChat
 
@@ -57,7 +62,7 @@ Pour l'instant, Central.Parts ne recrute que des **fournisseurs chinois**, et ce
   - `parent_org_id` : le fédérateur, le cas échéant ;
   - `license_path` : la photo de la licence, dans un compartiment privé.
 - `wechat_identities` reçoit un rôle (`admin` ou `member`). Une identité reste rattachée à une seule société.
-- Nouvelles tables : `join_requests` (demandes d'adhésion) et `operators` (openid autorisés à valider).
+- Nouvelles tables : `join_requests` (demandes d'adhésion), `registration_handoffs` (enregistrements transmis au responsable, empreinte du jeton seule) et `operators` (openid autorisés à valider).
 - Le pseudonyme V-n est attribué automatiquement à la validation.
 - Les sociétés créées à la main avant cette décision deviennent `validated`. Leur premier contact devient administrateur.
 
