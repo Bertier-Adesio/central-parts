@@ -28,6 +28,8 @@ data/raw/
 data/exports/
 *.csv
 !data/samples/*.csv
+# Modèle vide publié pour les fournisseurs (données fictives).
+!site/depot/stock-template.csv
 
 # Documents administratifs
 *.pdf
