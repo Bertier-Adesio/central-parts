@@ -67,6 +67,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 <main class="wrap">
   <h1 data-t="title">库存文件上传</h1>
   <p class="lead" data-t="lead">供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
+  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。</span> <a href="stock-template.csv" download data-t="tplLink">下载模板（CSV）</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
@@ -109,6 +110,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     zh: { title: '库存文件上传', lead: '供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
       scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
       refresh: '刷新二维码', loginNote: '首次登录请使用 Central.Parts 发给您的邀请链接。',
+      tpl: '推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。', tplLink: '下载模板（CSV）',
       pick: '选择文件：CSV、XLS 或 XLSX，最大 50 MB', complete: '这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。',
       send: '上传', history: '上传记录', none: '暂无记录。', uploading: '正在上传…', uploaded: '已上传，正在处理…',
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
@@ -120,6 +122,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     en: { title: 'Stock file upload', lead: 'For suppliers: upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
       scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
       refresh: 'Refresh the QR code', loginNote: 'For your first login, use the invitation link sent by Central.Parts.',
+      tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and up to five price breaks (USD).', tplLink: 'Download the template (CSV)',
       pick: 'Choose a file: CSV, XLS or XLSX, up to 50 MB', complete: 'This is my complete stock list: it replaces all stock uploaded before (parts missing from this file go to zero).',
       send: 'Upload', history: 'Uploads', none: 'No uploads yet.', uploading: 'Uploading…', uploaded: 'Uploaded, processing…',
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
