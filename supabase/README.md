@@ -78,7 +78,7 @@ Page : `https://central.parts/depot/`, à ouvrir dans WeChat (ADR 0010).
 1. **Compte de service WeChat** (mp.weixin.qq.com) :
    - *设置与开发* > *接口权限* > *网页授权* > *修改* : domaine d'autorisation `central.parts`. WeChat fournit un fichier `MP_verify_….txt` : le placer à la racine de `site/`, publier, puis valider.
    - *设置与开发* > *基本配置* : relever l'AppID (public) et l'AppSecret (secret).
-2. **AppID dans la page** : `var APPID = '…'` dans `site/depot/index.html`, puis publier. Tant qu'il est vide, la page s'affiche « en configuration ».
+2. **AppID dans la page** : renseigné dans `site/depot/index.html` (`var APPID`). Vide, la page s'affiche « en configuration ».
 3. **Secrets de la fonction** (Terminal, jamais dans le dépôt) puis déploiement :
    ```bash
    supabase secrets set --project-ref tuhbzziqyisdnqzfvtkh WECHAT_APPID=… WECHAT_SECRET=… DEPOT_SECRET=$(openssl rand -hex 32)
