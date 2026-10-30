@@ -32,6 +32,9 @@ Deno.serve(async (req) => {
   });
   const path = new URL(req.url).pathname;
 
+  // Sans secret de session, une connexion scannée serait consommée sans pouvoir être remise : on refuse avant tout.
+  if (SECRET.length < 32) return json({ error: 'config', detail: 'DEPOT_SECRET absent ou trop court' }, 500);
+
   try {
     // ---------------------------------------------------------------- connexion par QR code
     if (req.method === 'POST' && path.endsWith('/qr')) {
