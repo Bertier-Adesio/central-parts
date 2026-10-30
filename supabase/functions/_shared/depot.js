@@ -1,4 +1,5 @@
-// Outils de la fonction « depot », sans dépendance (Deno et Node 22 : WebCrypto) ; testés par tools/test-import.mjs.
+// Outils partagés des fonctions « depot » et « wechat-events », sans dépendance (Deno et Node 22 : WebCrypto) ;
+// testés par tools/test-import.mjs.
 
 const enc = new TextEncoder();
 const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -44,4 +45,46 @@ export function storagePath(org, fileName, { complete = false, now = new Date() 
   if (!complete) base = base.replace(/complet|full/gi, 'stock'); // seul le choix explicite remplace tout le stock
   const stamp = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15); // 20261030-142501
   return `${org}/${stamp}-${base}${complete ? '-complet' : ''}.${ext}`;
+}
+
+// ---------------------------------------------------------------- connexion par QR code WeChat (扫码登录)
+
+// Scène aléatoire portée par le QR code temporaire (32 caractères hexadécimaux, préfixe « dl_ »).
+export function randomScene() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  return 'dl_' + Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+// Signature des appels de WeChat vers notre serveur : sha1 des trois valeurs triées (token, timestamp, nonce).
+export async function wechatSignatureOk(token, timestamp, nonce, signature) {
+  if (!token || !timestamp || !nonce || !signature) return false;
+  const s = [token, timestamp, nonce].sort().join('');
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-1', enc.encode(s)));
+  const hex = Array.from(h, (x) => x.toString(16).padStart(2, '0')).join('');
+  if (hex.length !== signature.length) return false;
+  let diff = 0;
+  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ signature.charCodeAt(i);
+  return diff === 0;
+}
+
+// Message XML de WeChat (mode clair) → champs simples, par exemple { MsgType, Event, EventKey, FromUserName }.
+export function parseWechatXml(xml) {
+  const out = {};
+  for (const m of String(xml || '').matchAll(/<(\w+)>(?:<!\[CDATA\[([\s\S]*?)\]\]>|([^<]*))<\/\1>/g)) out[m[1]] = m[2] ?? m[3];
+  return out;
+}
+
+// Scène d'un événement de scan : SCAN (déjà abonné) ou subscribe (abonnement en scannant), sinon null.
+export function sceneOf(msg) {
+  if (msg.MsgType !== 'event') return null;
+  if (msg.Event === 'SCAN') return msg.EventKey || null;
+  if (msg.Event === 'subscribe' && msg.EventKey && msg.EventKey.startsWith('qrscene_')) return msg.EventKey.slice(8);
+  return null;
+}
+
+// Réponse texte immédiate dans la conversation WeChat du fournisseur.
+export function replyText(toUser, fromUser, content, now = Date.now()) {
+  const cdata = (s) => '<![CDATA[' + String(s).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>';
+  return '<xml><ToUserName>' + cdata(toUser) + '</ToUserName><FromUserName>' + cdata(fromUser) + '</FromUserName>' +
+    '<CreateTime>' + Math.floor(now / 1000) + '</CreateTime><MsgType>' + cdata('text') + '</MsgType><Content>' + cdata(content) + '</Content></xml>';
 }

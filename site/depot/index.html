@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<!-- Page de dépôt des fichiers de stock des fournisseurs, connexion par WeChat (ADR 0010). Écrite à la main, pas générée.
-     Elle appelle la fonction Edge Supabase « depot » ; l'AppID WeChat n'est pas un secret, l'AppSecret reste côté serveur. -->
+<!-- Page de dépôt des fichiers de stock des fournisseurs, connexion par QR code WeChat (扫码登录, ADR 0010).
+     Écrite à la main, pas générée. Elle appelle la fonction Edge Supabase « depot » ; le QR code temporaire est une
+     image du compte de service (mp.weixin.qq.com). Aucun secret dans la page. -->
 <html lang="zh-Hans">
 <head>
 <meta charset="utf-8">
@@ -22,7 +23,6 @@ h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 .lead{color:var(--fg-2);margin:0 0 24px}
 .card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none}
-.btn-wx{background:#07C160;color:#fff;width:100%}
 .btn-main{background:var(--bg-inverse);color:var(--fg-inverse)}
 .btn[disabled]{opacity:.5;cursor:default}
 .muted{color:var(--fg-3);font-size:var(--text-sm)}
@@ -44,6 +44,11 @@ progress{width:100%;height:8px;margin:12px 0 0}
 .badge.processing,.badge.received{background:var(--status-warning-bg);color:var(--status-warning)}
 .nums{font-family:var(--font-mono);font-size:var(--text-sm);color:var(--fg-2);margin:4px 0 0;overflow-wrap:anywhere}
 details{font-size:var(--text-sm);margin:6px 0 0}
+.qr-card{text-align:center}
+.qr-title{font-weight:var(--weight-semibold);font-size:var(--text-lg);margin:0 0 12px}
+.qr-box{width:220px;height:220px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:var(--bg-sunken);border-radius:var(--radius-sm)}
+.qr-box img{width:220px;height:220px}
+#qr-refresh{margin:0 0 12px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -65,15 +70,12 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
-  <!-- Hors de WeChat -->
-  <section class="card" id="v-outside" hidden>
-    <p data-t="outside">请在微信中打开此页面：把链接发给自己（例如「文件传输助手」），然后在微信里点开。电脑版微信也可以。</p>
-    <p class="muted" id="page-url"></p>
-  </section>
-
-  <!-- Connexion -->
-  <section class="card" id="v-login" hidden>
-    <button class="btn btn-wx" type="button" id="login" data-t="login">微信登录</button>
+  <!-- Connexion par QR code -->
+  <section class="card qr-card" id="v-login" hidden>
+    <p class="qr-title" data-t="scan">微信扫码登录</p>
+    <div class="qr-box"><img id="qr" alt="" width="220" height="220" hidden><span id="qr-wait" class="muted" data-t="loading">正在生成二维码…</span></div>
+    <p class="muted" id="qr-hint" data-t="scanHint">请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。</p>
+    <button class="btn btn-main" type="button" id="qr-refresh" hidden data-t="refresh">刷新二维码</button>
     <p class="muted" data-t="loginNote">首次登录请使用 Central.Parts 发给您的邀请链接。</p>
   </section>
 
@@ -102,13 +104,11 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   'use strict';
   // Configuration publique. L'AppID du compte de service n'est pas un secret.
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/depot';
-  var APPID = 'wx90a9a7c046914f5e'; // AppID du compte de service WeChat « Adesio Central.Parts » (public)
-  var PAGE = 'https://central.parts/depot/';
 
   var T = {
     zh: { title: '库存文件上传', lead: '供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
-      outside: '请在微信中打开此页面：把链接发给自己（例如「文件传输助手」），然后在微信里点开。电脑版微信也可以。',
-      login: '微信登录', loginNote: '首次登录请使用 Central.Parts 发给您的邀请链接。',
+      scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
+      refresh: '刷新二维码', loginNote: '首次登录请使用 Central.Parts 发给您的邀请链接。',
       pick: '选择文件：CSV、XLS 或 XLSX，最大 50 MB', complete: '这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。',
       send: '上传', history: '上传记录', none: '暂无记录。', uploading: '正在上传…', uploaded: '已上传，正在处理…',
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
@@ -116,10 +116,10 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       rejected: '被拒绝的行', line: '第 {n} 行',
       e: { not_bound: '此微信账号尚未绑定供应商账户。请使用 Central.Parts 发给您的邀请链接。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系 Central.Parts。',
         session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '仅支持 CSV、XLS、XLSX 文件。', size: '文件超过 50 MB。',
-        config: '页面配置中，暂不可用。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
+        expired: '二维码已过期，请刷新。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
     en: { title: 'Stock file upload', lead: 'For suppliers: upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
-      outside: 'Please open this page in WeChat: send the link to yourself (e.g. "File Transfer"), then open it in WeChat. WeChat for desktop works too.',
-      login: 'Log in with WeChat', loginNote: 'For your first login, use the invitation link sent by Central.Parts.',
+      scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
+      refresh: 'Refresh the QR code', loginNote: 'For your first login, use the invitation link sent by Central.Parts.',
       pick: 'Choose a file: CSV, XLS or XLSX, up to 50 MB', complete: 'This is my complete stock list: it replaces all stock uploaded before (parts missing from this file go to zero).',
       send: 'Upload', history: 'Uploads', none: 'No uploads yet.', uploading: 'Uploading…', uploaded: 'Uploaded, processing…',
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
@@ -127,7 +127,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       rejected: 'Rejected lines', line: 'line {n}',
       e: { not_bound: 'This WeChat account is not linked to a supplier account yet. Please use the invitation link sent by Central.Parts.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please contact Central.Parts.',
         session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'Only CSV, XLS and XLSX files are accepted.', size: 'The file is larger than 50 MB.',
-        config: 'This page is being set up and is not available yet.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
+        expired: 'The QR code has expired, please refresh it.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
   };
   var lang = 'zh';
   try { lang = localStorage.getItem('cp-depot-lang') || (/^zh/i.test(navigator.language) ? 'zh' : 'en'); } catch (e) {}
@@ -142,7 +142,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     renderImports();
   }
-  function show(id) { ['v-outside', 'v-login', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
+  function show(id) { ['v-login', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
   function err(code) { say('err', t().e[code] || t().e.other); }
 
@@ -155,10 +155,27 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   }
   function setToken(v) { token = v; try { v ? sessionStorage.setItem('cp-depot-token', v) : sessionStorage.removeItem('cp-depot-token'); } catch (e) {} }
 
-  function loginUrl(state) {
-    return 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' + APPID + '&redirect_uri=' + encodeURIComponent(PAGE) +
-      '&response_type=code&scope=snsapi_base&state=' + encodeURIComponent(state) + '#wechat_redirect';
+  // Connexion par QR code : la page affiche un QR code temporaire, puis interroge la tentative toutes les 2 secondes.
+  var scene = null, pollTimer = null, invite = null;
+  function startLogin() {
+    show('v-login'); clearTimeout(pollTimer);
+    $('qr').hidden = true; $('qr-wait').hidden = false; $('qr-refresh').hidden = true;
+    api('POST', '/qr', { invite: invite }).then(function (d) {
+      scene = d.scene; $('qr').src = d.image; $('qr').hidden = false; $('qr-wait').hidden = true;
+      $('qr').alt = t().scan;
+      var until = Date.now() + (d.expires_in || 300) * 1000;
+      (function poll() {
+        if (Date.now() > until) { $('qr-refresh').hidden = false; return err('expired'); }
+        api('POST', '/qr/poll', { scene: scene }).then(function (r) {
+          if (r.status === 'ok') { invite = null; setToken(r.token); say('', ''); history.replaceState(null, '', '/depot/'); return enterApp(r.org); }
+          if (r.status === 'pending') { pollTimer = setTimeout(poll, 2000); return; }
+          $('qr-refresh').hidden = false;
+          err(r.status === 'consumed' ? 'other' : r.status);
+        }, function () { pollTimer = setTimeout(poll, 4000); });
+      })();
+    }, function (c) { $('qr-wait').hidden = true; $('qr-refresh').hidden = false; err(c); });
   }
+  $('qr-refresh').addEventListener('click', function () { say('', ''); startLogin(); });
 
   function enterApp(org) {
     if (org) { $('org-name').textContent = org.name; $('org-alias').textContent = org.alias; try { sessionStorage.setItem('cp-depot-org', JSON.stringify(org)); } catch (e) {} }
@@ -174,7 +191,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       if (list.some(function (i) { return i.status === 'received' || i.status === 'processing'; })) timer = setTimeout(refresh, 4000);
       else if ($('msg').className === 'msg ok') say('', '');
     }, function (code) {
-      if (code === 'session_expired' || code === 'not_bound') { setToken(null); show('v-login'); }
+      if (code === 'session_expired' || code === 'not_bound') { setToken(null); startLogin(); }
       err(code);
     });
   }
@@ -217,7 +234,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     }).then(function () {
       say('ok', t().uploaded); $('form').reset(); $('prog').hidden = true; refresh();
     }, function (code) {
-      if (code === 'session_expired' || code === 'not_bound') { setToken(null); show('v-login'); }
+      if (code === 'session_expired' || code === 'not_bound') { setToken(null); startLogin(); }
       err(code); $('prog').hidden = true;
     }).then(function () { $('send').disabled = false; });
   });
@@ -231,25 +248,10 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   // ---------------------------------------------------------------- démarrage
   applyLang();
   var q = new URLSearchParams(location.search);
-  var invite = q.get('invite'), code = q.get('code'), state = q.get('state');
-  var inWeChat = /MicroMessenger/i.test(navigator.userAgent);
-
-  if (!APPID) { show(null); return err('config'); }
-  if (code) {
-    // Retour de WeChat : le code s'échange contre une session ; state porte le jeton d'invitation, s'il y en a un.
-    history.replaceState(null, '', '/depot/');
-    api('POST', '/session', { code: code, invite: state && state !== 'login' ? state : null })
-      .then(function (d) { setToken(d.token); say('', ''); enterApp(d.org); }, function (c) { show('v-login'); err(c); });
-  } else if (token && !invite) {
-    enterApp(null);
-  } else if (!inWeChat) {
-    $('page-url').textContent = location.href;
-    show('v-outside');
-  } else {
-    show('v-login');
-    $('login').addEventListener('click', function () { location.href = loginUrl(invite && /^[0-9a-f]{36}$/.test(invite) ? invite : 'login'); });
-    if (invite) location.href = loginUrl(/^[0-9a-f]{36}$/.test(invite) ? invite : 'login'); // invitation : connexion directe
-  }
+  var inv = q.get('invite');
+  invite = inv && /^[0-9a-f]{36}$/.test(inv) ? inv : null;
+  if (token && !invite) enterApp(null);
+  else startLogin();
 })();
 </script>
 </body>

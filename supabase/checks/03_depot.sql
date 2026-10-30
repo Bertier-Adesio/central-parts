@@ -68,5 +68,51 @@ do $$ begin
 end $$;
 reset role;
 
+-- ---------------------------------------------------------------- connexion par QR code (扫码登录)
+update public.wechat_identities set revoked_at = null where openid = 'oFOURNISSEUR';
+insert into tests.vars values ('inv3', public.create_depot_invite('S3', 'Contact quotidien'));
+set role service_role;
+do $$
+declare inv3 text := (select v from tests.vars where k = 'inv3');
+begin
+  -- Fournisseur déjà rattaché : scan, puis la page récupère sa session une seule fois.
+  perform public.depot_login_start('dl_00000000000000000000000000000001');
+  perform tests.eq('tentative en attente', public.depot_login_poll('dl_00000000000000000000000000000001')->>'status', 'pending');
+  perform tests.eq('scan reconnu', public.depot_login_scan('dl_00000000000000000000000000000001', 'oFOURNISSEUR')->>'status', 'ok');
+  perform tests.eq('second scan sans effet', public.depot_login_scan('dl_00000000000000000000000000000001', 'oAUTRE')->>'status', 'ok');
+  perform tests.eq('page : connexion remise avec la société', public.depot_login_poll('dl_00000000000000000000000000000001')->'org'->>'org_id', 'S2');
+  perform tests.eq('connexion remise une seule fois', public.depot_login_poll('dl_00000000000000000000000000000001')->>'status', 'consumed');
+  -- Compte inconnu sans invitation.
+  perform public.depot_login_start('dl_00000000000000000000000000000002');
+  perform tests.eq('compte non rattaché', public.depot_login_scan('dl_00000000000000000000000000000002', 'oINCONNU')->>'status', 'not_bound');
+  perform tests.eq('page : non rattaché', public.depot_login_poll('dl_00000000000000000000000000000002')->>'status', 'not_bound');
+  -- Nouveau contact avec invitation : rattaché à sa société au scan.
+  perform public.depot_login_start('dl_00000000000000000000000000000003', inv3);
+  perform tests.eq('invitation au scan : rattachement', public.depot_login_scan('dl_00000000000000000000000000000003', 'oCONTACT')->>'status', 'ok');
+  perform tests.eq('nouveau contact rattaché à S3', (select org_id from public.wechat_identities where openid = 'oCONTACT'), 'S3');
+  perform tests.eq('invitation effacée de la tentative', (select invite from public.depot_logins where scene = 'dl_00000000000000000000000000000003'), null::text);
+  -- Invitation déjà utilisée : refusée dès l'ouverture si inconnue ; refusée au scan si déjà prise par un autre.
+  begin perform public.depot_login_start('dl_00000000000000000000000000000004', 'faux'); raise exception 'ÉCHEC invitation inventée acceptée';
+  exception when no_data_found then raise notice 'ok  invitation inventée refusée à l''ouverture'; end;
+  perform public.depot_login_start('dl_00000000000000000000000000000005', inv3);
+  perform tests.eq('invitation prise par un autre : refusée au scan', public.depot_login_scan('dl_00000000000000000000000000000005', 'oINTRUS')->>'status', 'invite_invalid');
+  -- QR code expiré.
+  perform public.depot_login_start('dl_00000000000000000000000000000006');
+  update public.depot_logins set expires_at = now() - interval '1 second' where scene = 'dl_00000000000000000000000000000006';
+  perform tests.eq('QR code expiré au scan', public.depot_login_scan('dl_00000000000000000000000000000006', 'oFOURNISSEUR')->>'status', 'expired');
+  begin perform public.depot_login_start('court'); raise exception 'ÉCHEC scène invalide acceptée';
+  exception when raise_exception then
+    if sqlerrm like 'ÉCHEC%' then raise; end if; raise notice 'ok  scène invalide refusée'; end;
+end $$;
+reset role;
+set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000a2';
+do $$ begin
+  begin perform public.depot_login_poll('dl_00000000000000000000000000000001'); raise exception 'ÉCHEC vendeur interroge une tentative';
+  exception when insufficient_privilege then raise notice 'ok  tentatives réservées au serveur'; end;
+  begin perform 1 from public.wechat_access_tokens; raise exception 'ÉCHEC jetons WeChat lisibles';
+  exception when insufficient_privilege then raise notice 'ok  jetons WeChat inaccessibles'; end;
+end $$;
+reset role;
+
 drop schema tests cascade;
 select 'Tous les tests du dépôt WeChat sont passés.' as resultat;

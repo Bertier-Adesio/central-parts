@@ -1,8 +1,9 @@
 // Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
-// et des outils de la page de dépôt (supabase/functions/depot/lib.js).
+// et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
 import { mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
-import { readSession, signSession, storagePath } from '../supabase/functions/depot/lib.js';
+import { parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
+import { createHash } from 'node:crypto';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -63,6 +64,21 @@ ok(storagePath('ORG-0100', 'stock.CSV', { complete: true, now: d }) === 'ORG-010
 ok(storagePath('ORG-0100', 'stock-complet.xlsx', { now: d }) === 'ORG-0100/20261030-142501-stock-stock.xlsx', 'chemin : « complet » dans le nom sans le choix : neutralisé');
 ok(storagePath('ORG-0100', '../../S2/x.csv', { now: d }) === 'ORG-0100/20261030-142501-S2-x.csv', 'chemin : pas de sortie du dossier');
 ok(storagePath('ORG-0100', 'notes.pdf', { now: d }) === null && storagePath('ORG-0100', '库存.xlsx', { now: d }) === 'ORG-0100/20261030-142501-stock.xlsx', 'chemin : PDF refusé, nom vide remplacé');
+
+// ---------------------------------------------------------------- connexion par QR code WeChat
+ok(/^dl_[0-9a-f]{32}$/.test(randomScene()) && randomScene() !== randomScene(), 'scène : aléatoire, 32 caractères hexadécimaux');
+const wtok = 'jeton-test', ts = '1700000000', nonce = '42';
+const wsig = createHash('sha1').update([wtok, ts, nonce].sort().join('')).digest('hex');
+ok(await wechatSignatureOk(wtok, ts, nonce, wsig), 'signature WeChat : acceptée');
+ok(!(await wechatSignatureOk('autre', ts, nonce, wsig)) && !(await wechatSignatureOk(wtok, ts, nonce, '')), 'signature WeChat : refusée si fausse ou absente');
+const scanXml = '<xml><ToUserName><![CDATA[gh_cp]]></ToUserName><FromUserName><![CDATA[oFOURNISSEUR]]></FromUserName><CreateTime>1700000000</CreateTime><MsgType><![CDATA[event]]></MsgType><Event><![CDATA[SCAN]]></Event><EventKey><![CDATA[dl_abc]]></EventKey><Ticket><![CDATA[t]]></Ticket></xml>';
+const scan = parseWechatXml(scanXml);
+ok(scan.FromUserName === 'oFOURNISSEUR' && scan.CreateTime === '1700000000' && sceneOf(scan) === 'dl_abc', 'événement SCAN : openid et scène');
+ok(sceneOf(parseWechatXml(scanXml.replace('[SCAN]', '[subscribe]').replace('[dl_abc]', '[qrscene_dl_abc]'))) === 'dl_abc', 'abonnement en scannant : scène sans préfixe');
+ok(sceneOf(parseWechatXml(scanXml.replace('[SCAN]', '[subscribe]').replace('[dl_abc]', '[]'))) === null && sceneOf({ MsgType: 'text' }) === null, 'abonnement simple et message texte : ignorés');
+const rep = replyText('oFOURNISSEUR', 'gh_cp', '已登录 ]]> test', 1700000000000);
+const back = parseWechatXml(rep);
+ok(back.ToUserName === 'oFOURNISSEUR' && back.MsgType === 'text' && back.CreateTime === '1700000000' && rep.includes('已登录'), 'réponse texte WeChat bien formée');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);
