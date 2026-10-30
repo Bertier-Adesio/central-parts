@@ -14,12 +14,14 @@ grant usage on schema tests to authenticated, anon, service_role;
 insert into storage.objects (bucket_id, name) values
   ('stock-imports', 'S2/stock-2026-10-30.csv'),
   ('stock-imports', 'INCONNU/stock.csv'),
-  ('stock-imports', 'S2/notes.pdf');
+  ('stock-imports', 'S2/notes.pdf'),
+  ('stock-imports', 'S2/.emptyFolderPlaceholder');
 do $$ begin
   perform tests.eq('dépôt S2 : import reçu', (select status from public.stock_imports where storage_path = 'S2/stock-2026-10-30.csv'), 'received');
   perform tests.eq('dépôt S2 : format CSV', (select format from public.stock_imports where storage_path = 'S2/stock-2026-10-30.csv'), 'csv');
   perform tests.eq('dossier inconnu : échec', (select status from public.stock_imports where storage_path = 'INCONNU/stock.csv'), 'failed');
   perform tests.eq('PDF refusé', (select error from public.stock_imports where storage_path = 'S2/notes.pdf'), 'Format non pris en charge : CSV, XLS ou XLSX');
+  perform tests.eq('fichier caché (dossier créé au tableau de bord) ignoré', (select count(*) from public.stock_imports where storage_path = 'S2/.emptyFolderPlaceholder'), 0::bigint);
 end $$;
 
 -- ---------------------------------------------------------------- transformation (fonction Edge → service_role)

@@ -32,7 +32,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, puis `20261030000004_depot_wechat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, puis `20261030000005_ignore_fichiers_caches.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
