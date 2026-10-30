@@ -1,7 +1,7 @@
 # 0010 — Dépôt des fichiers de stock et connexion des fournisseurs par WeChat
 
 - Date : 2026-10-30
-- Statut : proposée. Dépôt et transformation : en service. Connexion WeChat : implémentée et testée, par QR code (扫码登录), en cours de mise en service (voir `supabase/README.md`).
+- Statut : acceptée. Dépôt, transformation et connexion par QR code WeChat (扫码登录) en service : parcours complet vérifié le 30 octobre 2026 sur le projet Supabase (invitation, scan, dépôt, rapport d'import).
 
 ## Contexte
 
