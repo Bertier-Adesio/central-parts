@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<!-- Page de dépôt des fichiers de stock des fournisseurs, connexion par WeChat (ADR 0010). Écrite à la main, pas générée.
+     Elle appelle la fonction Edge Supabase « depot » ; l'AppID WeChat n'est pas un secret, l'AppSecret reste côté serveur. -->
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>库存上传 · Stock upload — Central.Parts</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.lang{background:none;border:1px solid var(--fg-inverse-2);color:var(--fg-inverse);border-radius:var(--radius-sm);padding:4px 10px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+main.wrap{padding:32px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+.lead{color:var(--fg-2);margin:0 0 24px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none}
+.btn-wx{background:#07C160;color:#fff;width:100%}
+.btn-main{background:var(--bg-inverse);color:var(--fg-inverse)}
+.btn[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.org{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+label.file{display:block;border:2px dashed var(--border-2);border-radius:var(--radius-md);padding:24px 16px;text-align:center;cursor:pointer;margin:0 0 12px;background:var(--bg-sunken)}
+label.file input{display:block;margin:12px auto 0;max-width:100%}
+.check{display:flex;gap:8px;align-items:flex-start;margin:0 0 16px;font-size:var(--text-sm)}
+progress{width:100%;height:8px;margin:12px 0 0}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+.msg.ok{background:var(--status-success-bg);color:var(--status-success)}
+.msg.info{background:var(--status-info-bg);color:var(--status-info)}
+.imp{border-top:1px solid var(--border-1);padding:12px 0}
+.imp:first-of-type{border-top:0}
+.imp-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.badge{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
+.badge.done{background:var(--status-success-bg);color:var(--status-success)}
+.badge.failed{background:var(--status-danger-bg);color:var(--status-danger)}
+.badge.processing,.badge.received{background:var(--status-warning-bg);color:var(--status-warning)}
+.nums{font-family:var(--font-mono);font-size:var(--text-sm);color:var(--fg-2);margin:4px 0 0;overflow-wrap:anywhere}
+details{font-size:var(--text-sm);margin:6px 0 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/zh/">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <button class="lang" type="button" id="lang">EN</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 data-t="title">库存文件上传</h1>
+  <p class="lead" data-t="lead">供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
+  <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
+  <div id="msg" class="msg" hidden role="status"></div>
+
+  <!-- Hors de WeChat -->
+  <section class="card" id="v-outside" hidden>
+    <p data-t="outside">请在微信中打开此页面：把链接发给自己（例如「文件传输助手」），然后在微信里点开。电脑版微信也可以。</p>
+    <p class="muted" id="page-url"></p>
+  </section>
+
+  <!-- Connexion -->
+  <section class="card" id="v-login" hidden>
+    <button class="btn btn-wx" type="button" id="login" data-t="login">微信登录</button>
+    <p class="muted" data-t="loginNote">首次登录请使用 Central.Parts 发给您的邀请链接。</p>
+  </section>
+
+  <!-- Dépôt -->
+  <section id="v-app" hidden>
+    <div class="card">
+      <div class="org"><strong id="org-name"></strong><span class="muted" id="org-alias"></span></div>
+    </div>
+    <form class="card" id="form">
+      <label class="file"><span data-t="pick">选择文件：CSV、XLS 或 XLSX，最大 50 MB</span>
+        <input type="file" id="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+      </label>
+      <label class="check"><input type="checkbox" id="complete"><span data-t="complete">这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。</span></label>
+      <button class="btn btn-main" type="submit" id="send" data-t="send">上传</button>
+      <progress id="prog" max="100" value="0" hidden></progress>
+    </form>
+    <section class="card">
+      <h2 style="font-size:var(--text-lg);margin:0 0 8px" data-t="history">上传记录</h2>
+      <div id="imports"><p class="muted" data-t="none">暂无记录。</p></div>
+    </section>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // Configuration publique. L'AppID du compte de service n'est pas un secret.
+  var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/depot';
+  var APPID = ''; // AppID du compte de service WeChat, à renseigner (设置与开发 > 基本配置)
+  var PAGE = 'https://central.parts/depot/';
+
+  var T = {
+    zh: { title: '库存文件上传', lead: '供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
+      outside: '请在微信中打开此页面：把链接发给自己（例如「文件传输助手」），然后在微信里点开。电脑版微信也可以。',
+      login: '微信登录', loginNote: '首次登录请使用 Central.Parts 发给您的邀请链接。',
+      pick: '选择文件：CSV、XLS 或 XLSX，最大 50 MB', complete: '这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。',
+      send: '上传', history: '上传记录', none: '暂无记录。', uploading: '正在上传…', uploaded: '已上传，正在处理…',
+      st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
+      nums: function (i) { return '新增 ' + i.created + ' · 更新 ' + i.updated + ' · 拒绝 ' + i.rejected + ' · 可能重复 ' + i.duplicates + ' · 缺少日期码 ' + i.missing_date_code + (i.withdrawn ? ' · 归零 ' + i.withdrawn : ''); },
+      rejected: '被拒绝的行', line: '第 {n} 行',
+      e: { not_bound: '此微信账号尚未绑定供应商账户。请使用 Central.Parts 发给您的邀请链接。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系 Central.Parts。',
+        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '仅支持 CSV、XLS、XLSX 文件。', size: '文件超过 50 MB。',
+        config: '页面配置中，暂不可用。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
+    en: { title: 'Stock file upload', lead: 'For suppliers: upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
+      outside: 'Please open this page in WeChat: send the link to yourself (e.g. "File Transfer"), then open it in WeChat. WeChat for desktop works too.',
+      login: 'Log in with WeChat', loginNote: 'For your first login, use the invitation link sent by Central.Parts.',
+      pick: 'Choose a file: CSV, XLS or XLSX, up to 50 MB', complete: 'This is my complete stock list: it replaces all stock uploaded before (parts missing from this file go to zero).',
+      send: 'Upload', history: 'Uploads', none: 'No uploads yet.', uploading: 'Uploading…', uploaded: 'Uploaded, processing…',
+      st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
+      nums: function (i) { return 'new ' + i.created + ' · updated ' + i.updated + ' · rejected ' + i.rejected + ' · possible duplicates ' + i.duplicates + ' · no date code ' + i.missing_date_code + (i.withdrawn ? ' · set to zero ' + i.withdrawn : ''); },
+      rejected: 'Rejected lines', line: 'line {n}',
+      e: { not_bound: 'This WeChat account is not linked to a supplier account yet. Please use the invitation link sent by Central.Parts.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please contact Central.Parts.',
+        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'Only CSV, XLS and XLSX files are accepted.', size: 'The file is larger than 50 MB.',
+        config: 'This page is being set up and is not available yet.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
+  };
+  var lang = 'zh';
+  try { lang = localStorage.getItem('cp-depot-lang') || (/^zh/i.test(navigator.language) ? 'zh' : 'en'); } catch (e) {}
+  var $ = function (id) { return document.getElementById(id); };
+  var t = function () { return T[lang]; };
+  var token = null, imports = [], timer = null;
+  try { token = sessionStorage.getItem('cp-depot-token'); } catch (e) {}
+
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+    $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    renderImports();
+  }
+  function show(id) { ['v-outside', 'v-login', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
+  function err(code) { say('err', t().e[code] || t().e.other); }
+
+  function api(method, path, body) {
+    var h = { 'Content-Type': 'application/json' };
+    if (token) h.Authorization = 'Bearer ' + token;
+    return fetch(FN + path, { method: method, headers: h, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
+            function () { throw 'network'; });
+  }
+  function setToken(v) { token = v; try { v ? sessionStorage.setItem('cp-depot-token', v) : sessionStorage.removeItem('cp-depot-token'); } catch (e) {} }
+
+  function loginUrl(state) {
+    return 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' + APPID + '&redirect_uri=' + encodeURIComponent(PAGE) +
+      '&response_type=code&scope=snsapi_base&state=' + encodeURIComponent(state) + '#wechat_redirect';
+  }
+
+  function enterApp(org) {
+    if (org) { $('org-name').textContent = org.name; $('org-alias').textContent = org.alias; try { sessionStorage.setItem('cp-depot-org', JSON.stringify(org)); } catch (e) {} }
+    else { try { var o = JSON.parse(sessionStorage.getItem('cp-depot-org') || 'null'); if (o) { $('org-name').textContent = o.name; $('org-alias').textContent = o.alias; } } catch (e) {} }
+    show('v-app');
+    refresh();
+  }
+
+  function refresh() {
+    clearTimeout(timer);
+    api('GET', '/imports').then(function (list) {
+      imports = list; renderImports();
+      if (list.some(function (i) { return i.status === 'received' || i.status === 'processing'; })) timer = setTimeout(refresh, 4000);
+      else if ($('msg').className === 'msg ok') say('', '');
+    }, function (code) {
+      if (code === 'session_expired' || code === 'not_bound') { setToken(null); show('v-login'); }
+      err(code);
+    });
+  }
+
+  function renderImports() {
+    var box = $('imports');
+    if (!box) return;
+    if (!imports.length) { box.innerHTML = '<p class="muted">' + esc(t().none) + '</p>'; return; }
+    box.innerHTML = imports.map(function (i) {
+      var rej = (i.report && i.report.rejected) || [];
+      return '<div class="imp"><div class="imp-h"><span>' + esc(i.file_name) + '</span><span class="badge ' + esc(i.status) + '">' + esc(t().st[i.status] || i.status) + '</span></div>' +
+        '<p class="muted" style="margin:2px 0 0">' + esc(new Date(i.received_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB')) + '</p>' +
+        (i.status === 'done' ? '<p class="nums">' + esc(t().nums(i)) + '</p>' : '') +
+        (i.error ? '<p class="msg err" style="margin:6px 0 0">' + esc(i.error) + '</p>' : '') +
+        (rej.length ? '<details><summary>' + esc(t().rejected) + ' (' + i.rejected + ')</summary><ul>' + rej.map(function (r) {
+          return '<li>' + esc(t().line.replace('{n}', r.line)) + ' : ' + esc(r.reason) + '</li>'; }).join('') + '</ul></details>' : '') +
+        '</div>';
+    }).join('');
+  }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  $('form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var f = $('file').files[0];
+    if (!f) return;
+    if (!/\.(csv|xls|xlsx)$/i.test(f.name)) return err('format');
+    if (f.size > 52428800) return err('size');
+    $('send').disabled = true; say('info', t().uploading);
+    api('POST', '/upload-url', { file_name: f.name, complete: $('complete').checked }).then(function (u) {
+      return new Promise(function (resolve, reject) {
+        var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
+        var x = new XMLHttpRequest();
+        x.open('PUT', u.signed_url);
+        x.setRequestHeader('x-upsert', 'false');
+        x.upload.onprogress = function (e) { if (e.lengthComputable) { $('prog').hidden = false; $('prog').value = Math.round(e.loaded / e.total * 100); } };
+        x.onload = function () { x.status < 300 ? resolve() : reject('other'); };
+        x.onerror = function () { reject('network'); };
+        x.send(fd);
+      });
+    }).then(function () {
+      say('ok', t().uploaded); $('form').reset(); $('prog').hidden = true; refresh();
+    }, function (code) {
+      if (code === 'session_expired' || code === 'not_bound') { setToken(null); show('v-login'); }
+      err(code); $('prog').hidden = true;
+    }).then(function () { $('send').disabled = false; });
+  });
+
+  $('lang').addEventListener('click', function () {
+    lang = lang === 'zh' ? 'en' : 'zh';
+    try { localStorage.setItem('cp-depot-lang', lang); } catch (e) {}
+    applyLang();
+  });
+
+  // ---------------------------------------------------------------- démarrage
+  applyLang();
+  var q = new URLSearchParams(location.search);
+  var invite = q.get('invite'), code = q.get('code'), state = q.get('state');
+  var inWeChat = /MicroMessenger/i.test(navigator.userAgent);
+
+  if (!APPID) { show(null); return err('config'); }
+  if (code) {
+    // Retour de WeChat : le code s'échange contre une session ; state porte le jeton d'invitation, s'il y en a un.
+    history.replaceState(null, '', '/depot/');
+    api('POST', '/session', { code: code, invite: state && state !== 'login' ? state : null })
+      .then(function (d) { setToken(d.token); say('', ''); enterApp(d.org); }, function (c) { show('v-login'); err(c); });
+  } else if (token && !invite) {
+    enterApp(null);
+  } else if (!inWeChat) {
+    $('page-url').textContent = location.href;
+    show('v-outside');
+  } else {
+    show('v-login');
+    $('login').addEventListener('click', function () { location.href = loginUrl(invite && /^[0-9a-f]{36}$/.test(invite) ? invite : 'login'); });
+    if (invite) location.href = loginUrl(/^[0-9a-f]{36}$/.test(invite) ? invite : 'login'); // invitation : connexion directe
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # 0010 — Dépôt des fichiers de stock et connexion des fournisseurs par WeChat
 
 - Date : 2026-10-30
-- Statut : proposée (la partie dépôt et transformation est implémentée ; la connexion WeChat attend les comptes WeChat)
+- Statut : proposée (implémentée ; mise en service après configuration du compte de service WeChat)
 
 ## Contexte
 
@@ -17,14 +17,14 @@ Un broker partenaire, en Chine, transmet son stock en fichiers CSV ou XLS. Il n'
 - Le stock devient interrogeable par l'**API REST de Supabase** : `POST /rest/v1/rpc/search_stock`. Elle renvoie l'offre Inventory et les disponibilités Opportunity des vendeurs vérifiés, agrégées par référence, sans identité ni prix du vendeur.
 - Migration `20261030000003_depot_stock_fichiers.sql` ; lecture des fichiers testée par `tools/test-import.mjs`, base par `tools/test-db.sh`.
 
-### Connexion par WeChat (proposée)
+### Connexion par WeChat (implémentée)
 
-- Une page de dépôt (`/depot/`, en chinois et en anglais) propose « 微信登录 ». Deux chemins, selon l'endroit où la page est ouverte :
-  - **dans WeChat** : autorisation de page web du compte de service (网页授权), qui exige un **compte de service (服务号) vérifié** ;
-  - **sur ordinateur** : connexion par QR code (网站应用), qui exige un compte développeur **WeChat Open Platform** vérifié et une application « site web ».
-- Le compte WeChat est rattaché une fois à la société du fournisseur, par l'opérateur ou par le QR de liaison déjà prévu pour les notifications (ADR 0005). Les deux accès partagent l'identifiant `unionid` si le compte de service et l'application site web sont liés au même compte Open Platform.
-- Après la connexion, une fonction Edge vérifie le rattachement et délivre un **lien de dépôt signé** vers le seul dossier de la société, valable deux heures. La page envoie le fichier puis affiche le rapport d'import. Le fournisseur n'a ni mot de passe, ni accès au reste de la base.
-- AppID et AppSecret WeChat sont des **secrets de fonction Edge** (tableau de bord Supabase), jamais dans le dépôt ni dans la page.
+- Central.Parts dispose d'un **compte de service (服务号) vérifié** : la page de dépôt `https://central.parts/depot/` (中文 par défaut, English) s'ouvre **dans WeChat**, sur téléphone ou dans WeChat pour ordinateur, et utilise l'autorisation de page web silencieuse (网页授权, `snsapi_base`) qui renvoie l'`openid` du fournisseur. Hors de WeChat, la page invite à l'ouvrir dans WeChat. La connexion par QR code sur un navigateur ordinaire (WeChat Open Platform, 网站应用) n'est pas retenue pour l'instant.
+- **Rattachement** : l'opérateur crée une invitation pour la société (`select public.create_depot_invite('ORG-…')`, usage unique, 14 jours) et envoie le lien `https://central.parts/depot/?invite=<jeton>` sur WeChat. À la première connexion, l'`openid` est rattaché à la société (`wechat_identities`) ; ensuite le fournisseur se connecte sans lien. Révocation : `revoked_at` sur son identité.
+- La **fonction Edge `depot`** échange le code WeChat contre l'`openid`, vérifie le rattachement, délivre un jeton de session signé (12 h) puis, à chaque envoi, un **lien de dépôt signé** vers le seul dossier de la société. La page envoie le fichier et affiche le rapport d'import (lignes rejetées comprises). Le fournisseur n'a ni mot de passe, ni accès au reste de la base.
+- Le choix « stock complet » est explicite dans la page ; le nom du fichier est horodaté et réduit à des caractères sûrs.
+- L'**AppSecret** WeChat et le secret de session sont des **secrets de fonction Edge**, jamais dans le dépôt ni dans la page ; l'AppID, public, figure dans la page.
+- Migration `20261030000004_depot_wechat.sql`, fonction `supabase/functions/depot/`, page `site/depot/index.html`.
 
 ### En attendant la connexion WeChat
 
@@ -32,6 +32,7 @@ Un broker partenaire, en Chine, transmet son stock en fichiers CSV ou XLS. Il n'
 
 ## Conséquences
 
-- Le dépôt fonctionne dès l'application de la migration et le déploiement de la fonction Edge ; la connexion WeChat dépend de la vérification des comptes WeChat, à mener au nom de la société dédiée.
+- Mise en service : configurer le domaine d'autorisation de page web du compte de service (`central.parts`, fichier de vérification `MP_verify_….txt` à la racine du site) et les secrets de la fonction ; voir `supabase/README.md`. Si WeChat exige une licence ICP pour ce domaine, il faudra un domaine ou un hébergement adaptés.
+- Le compte de service s'appelle « Adesio Central.Parts » ; à sa création, la société dédiée devra le reprendre ou en ouvrir un.
 - La page de dépôt et les fonctions Edge appellent `*.supabase.co`, hébergé en Europe : la rapidité de l'envoi depuis la Chine est à mesurer (ADR 0006), comme pour le site.
 - Les fichiers bruts des fournisseurs restent dans le compartiment privé, jamais dans le dépôt Git.

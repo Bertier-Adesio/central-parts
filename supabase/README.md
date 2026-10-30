@@ -5,7 +5,7 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 ```
 supabase/
 ├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
-├── functions/    fonctions Edge (import-stock : fichier de stock déposé → lots)
+├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : connexion WeChat et liens de dépôt)
 ├── seed.sql      données fictives de la maquette, pour le projet dev uniquement
 └── checks/       contrôles sur un PostgreSQL local (simulation minimale de Supabase, RLS, intégrité)
 ```
@@ -31,7 +31,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, puis `20261030000003_depot_stock_fichiers.sql`) ; puis faire de même avec `seed.sql`. Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes. Chaque migration ne s'exécute qu'une fois ; `seed.sql` seulement sur un projet vide.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, puis `20261030000004_depot_wechat.sql`) ; puis faire de même avec `seed.sql`. Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes. Chaque migration ne s'exécute qu'une fois ; `seed.sql` seulement sur un projet vide.
 
 **Par la CLI Supabase** :
 
@@ -70,7 +70,26 @@ Un fournisseur sans API (ADR 0010) dépose ses fichiers CSV, XLS ou XLSX ; ils d
      -H "Content-Type: application/json" -d '{"q": "XC2S50"}'
    ```
 
-La connexion du fournisseur par WeChat et sa page de dépôt sont décrites dans l'ADR 0010 ; elles attendent les comptes WeChat.
+### Dépôt par le fournisseur lui-même, connecté avec WeChat
+
+Page : `https://central.parts/depot/`, à ouvrir dans WeChat (ADR 0010).
+
+1. **Compte de service WeChat** (mp.weixin.qq.com) :
+   - *设置与开发* > *接口权限* > *网页授权* > *修改* : domaine d'autorisation `central.parts`. WeChat fournit un fichier `MP_verify_….txt` : le placer à la racine de `site/`, publier, puis valider.
+   - *设置与开发* > *基本配置* : relever l'AppID (public) et l'AppSecret (secret).
+2. **AppID dans la page** : `var APPID = '…'` dans `site/depot/index.html`, puis publier. Tant qu'il est vide, la page s'affiche « en configuration ».
+3. **Secrets de la fonction** (Terminal, jamais dans le dépôt) puis déploiement :
+   ```bash
+   supabase secrets set --project-ref tuhbzziqyisdnqzfvtkh WECHAT_APPID=… WECHAT_SECRET=… DEPOT_SECRET=$(openssl rand -hex 32)
+   supabase functions deploy depot --project-ref tuhbzziqyisdnqzfvtkh --use-api --no-verify-jwt
+   ```
+   `--no-verify-jwt` : la page n'a pas de compte Supabase ; la fonction vérifie elle-même sa session.
+4. **Inviter le fournisseur** (éditeur SQL), puis lui envoyer le lien sur WeChat :
+   ```sql
+   select 'https://central.parts/depot/?invite=' || public.create_depot_invite('ORG-0100', 'Prénom du contact');
+   ```
+   Le lien sert une fois, 14 jours ; ensuite le fournisseur rouvre simplement `https://central.parts/depot/` dans WeChat.
+5. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ## Vérifier en local
 
@@ -78,9 +97,9 @@ La connexion du fournisseur par WeChat et sa page de dépôt sont décrites dans
 tools/test-db.sh        # PostgreSQL local sur /var/tmp:54329 ; crée puis supprime la base cp_test
 ```
 
-Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 93 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
+Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 110 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations et rattachement WeChat (`checks/03_depot.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
 
-La lecture des fichiers (colonnes, séparateurs, prix, quantités) se teste sans base : `node tools/test-import.mjs`.
+La lecture des fichiers (colonnes, séparateurs, prix, quantités), le jeton de session et les chemins de dépôt se testent sans base : `node tools/test-import.mjs`.
 
 ## Secrets
 

@@ -1,6 +1,8 @@
-// Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js).
+// Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
+// et des outils de la page de dépôt (supabase/functions/depot/lib.js).
 // Usage : node tools/test-import.mjs
 import { mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
+import { readSession, signSession, storagePath } from '../supabase/functions/depot/lib.js';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -41,6 +43,26 @@ ok(x.rows.length === 1 && x.rows[0].qty === 3000 && x.rows[0].currency === 'CNH'
 ok(mapRows(parseCSV('MPN,Quantity\n')).error.startsWith('Fichier vide'), 'fichier sans ligne de données');
 ok(mapRows(parseCSV('Reference,Stock\nA,1\n')).error.startsWith('Colonnes obligatoires'), 'colonnes MPN ou quantité absentes');
 ok(price('$12.5') === 12.5 && price('') === null && price('0') === null, 'prix : symbole, vide, zéro');
+
+// ---------------------------------------------------------------- page de dépôt : jeton de session et chemin
+const secret = 'x'.repeat(64);
+const now = Date.UTC(2026, 9, 30, 14, 25, 1);
+const tok = await signSession(secret, { org: 'ORG-0100', openid: 'oABC' }, 3600, now);
+ok(JSON.stringify(await readSession(secret, tok, now + 1000)) === '{"org":"ORG-0100","openid":"oABC"}', 'jeton : lu avec le bon secret');
+ok(await readSession(secret, tok, now + 3601 * 1000) === null, 'jeton : expiré après sa durée');
+ok(await readSession('y'.repeat(64), tok, now) === null, 'jeton : refusé avec un autre secret');
+const [body, sig] = tok.split('.');
+const forged = Buffer.from(JSON.stringify({ org: 'S1', openid: 'oABC', exp: 9999999999 })).toString('base64url');
+ok(await readSession(secret, forged + '.' + sig, now) === null, 'jeton : société falsifiée refusée');
+ok(await readSession(secret, 'n importe quoi', now) === null && await readSession(secret, body, now) === null, 'jeton : illisible refusé');
+let threw = false; try { await signSession('court', { org: 'A', openid: 'b' }); } catch { threw = true; }
+ok(threw, 'jeton : secret trop court refusé');
+const d = new Date(now);
+ok(storagePath('ORG-0100', '库存表 IC.xlsx', { now: d }) === 'ORG-0100/20261030-142501-IC.xlsx', 'chemin : nom chinois réduit, horodaté');
+ok(storagePath('ORG-0100', 'stock.CSV', { complete: true, now: d }) === 'ORG-0100/20261030-142501-stock-complet.csv', 'chemin : stock complet choisi explicitement');
+ok(storagePath('ORG-0100', 'stock-complet.xlsx', { now: d }) === 'ORG-0100/20261030-142501-stock-stock.xlsx', 'chemin : « complet » dans le nom sans le choix : neutralisé');
+ok(storagePath('ORG-0100', '../../S2/x.csv', { now: d }) === 'ORG-0100/20261030-142501-S2-x.csv', 'chemin : pas de sortie du dossier');
+ok(storagePath('ORG-0100', 'notes.pdf', { now: d }) === null && storagePath('ORG-0100', '库存.xlsx', { now: d }) === 'ORG-0100/20261030-142501-stock.xlsx', 'chemin : PDF refusé, nom vide remplacé');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

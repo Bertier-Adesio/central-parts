@@ -14,7 +14,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 ## Arborescence
 
 - `site/` : landing page statique trilingue (FR `/`, EN `/en/`, 中文 `/zh/`), publiée telle quelle. Les pages HTML sont **générées** par `node tools/build-site.mjs` depuis `design/landing.dc.html`.
-- `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
+- `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/depot/` : page de dépôt des fichiers de stock des fournisseurs, connexion WeChat (ADR 0010, écrite à la main). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
 - `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock) et données fictives du projet dev, voir ADR 0008 et 0010.
