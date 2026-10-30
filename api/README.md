@@ -1,6 +1,6 @@
 # API Central.Parts
 
-API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ERP, site central.parts, sites partenaires) interrogent le réseau.
+API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ERP, site central.parts, sites partenaires) interrogent le réseau. Central.Parts y est une **API fournisseur unique** qui agrège tous ses fournisseurs sans jamais les nommer ([ADR 0011](../docs/decisions/0011-api-fournisseur-unique.md)).
 
 ## Périmètre annoncé sur le site
 
@@ -19,6 +19,6 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 
 ## Prochaines étapes
 
-1. Dériver la spécification OpenAPI (`openapi.yaml`) de la carte des endpoints, avant tout code.
+1. Dériver la spécification OpenAPI (`openapi.yaml`) de la carte des endpoints, avant tout code, en commençant par l'API d'offres de l'ADR 0011 (chiffrage : stock, paliers de prix tout compris, délais, catégorie de source).
 2. Stack : base PostgreSQL sur Supabase (UE) et API métier dans un service Node à part, proposées dans l'ADR 0008 ; schéma dans `supabase/`.
-3. Définir l'authentification des partenaires (clé d'API par canal, quotas).
+3. Authentification des partenaires : une clé d'API par client (Adesio d'abord), quotas et journal des appels (ADR 0011).
