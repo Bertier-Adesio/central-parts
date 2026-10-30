@@ -5,6 +5,7 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 ```
 supabase/
 ├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
+├── wechat/       menu du compte de service WeChat (publié par l'API)
 ├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : QR code WeChat et liens de dépôt ; wechat-events : scans)
 ├── reference.sql données de référence (devises, niveaux de test, opérateur) : sur tout projet, après les migrations
 ├── seed.sql      données fictives de la maquette, pour un projet de démonstration uniquement
@@ -94,7 +95,14 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    select 'https://central.parts/depot/?invite=' || public.create_depot_invite('ORG-0100', 'Prénom du contact');
    ```
    Le lien sert une fois, 14 jours ; ensuite le contact rouvre simplement `https://central.parts/depot/` et scanne.
-5. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
+5. **Message d'accueil et menu** : une fois le 消息推送 activé, les réponses automatiques et le menu de la console ne s'appliquent plus. Le message d'accueil (abonnement, scan d'un QR code du compte autre que celui du dépôt) est envoyé par `wechat-events`. Le menu est défini dans `wechat/menu.json` et publié par l'API WeChat, depuis le Terminal (le secret est saisi sans s'afficher) :
+   ```bash
+   read -s WS; TOKEN=$(curl -s -X POST https://api.weixin.qq.com/cgi-bin/stable_token -H "Content-Type: application/json" \
+     -d "{\"grant_type\":\"client_credential\",\"appid\":\"wx90a9a7c046914f5e\",\"secret\":\"$WS\"}" | sed -E 's/.*"access_token":"([^"]+)".*/\1/'); unset WS
+   curl -s -X POST "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=$TOKEN" -H "Content-Type: application/json" --data-binary @supabase/wechat/menu.json; echo
+   ```
+   Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
+6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ## Vérifier en local
 

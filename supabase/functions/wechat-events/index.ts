@@ -4,7 +4,9 @@
 //
 //   GET  : vérification de l'adresse par WeChat (renvoie echostr si la signature est bonne)
 //   POST : événement. Un scan du QR code de connexion au dépôt (SCAN, ou subscribe avec la scène) rattache
-//          l'openid à la tentative de connexion et répond au fournisseur dans WeChat ; tout le reste est ignoré.
+//          l'openid à la tentative de connexion et répond au fournisseur dans WeChat. Un abonnement, ou le scan
+//          d'un autre QR code du compte (stand, supports imprimés), reçoit le message d'accueil : le message
+//          automatique de la console WeChat ne s'applique plus une fois le 消息推送 activé. Le reste est ignoré.
 //
 // Secret de la fonction : WECHAT_TOKEN, le « Token » saisi dans la console WeChat.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
@@ -17,6 +19,20 @@ const REPLIES: Record<string, string> = {
   expired: '二维码已过期，请在上传页面刷新二维码。\nThis QR code has expired: refresh it on the upload page.',
 };
 
+// Message d'accueil (texte, liens cliquables dans WeChat ; 2 048 octets au plus).
+const WELCOME = [
+  '感谢关注 Central.Parts！',
+  '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。',
+  '',
+  '1. 合作登记：https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o',
+  '2. 了解我们：https://central.parts/zh/',
+  '3. 库存表模板：https://central.parts/depot/stock-template.csv',
+  '',
+  'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。',
+  '',
+  'Thank you for following Central.Parts. Partner form, website and stock template above. Meet us at electronica 2026, Hall B4, Booth 251/12.',
+].join('\n');
+
 Deno.serve(async (req) => {
   const q = new URL(req.url).searchParams;
   const ok = await wechatSignatureOk(Deno.env.get('WECHAT_TOKEN') || '', q.get('timestamp'), q.get('nonce'), q.get('signature'));
@@ -26,11 +42,15 @@ Deno.serve(async (req) => {
 
   const msg = parseWechatXml(await req.text());
   const scene = sceneOf(msg);
-  if (!scene || !scene.startsWith('dl_')) return new Response('success');
+  const reply = (text: string) =>
+    new Response(replyText(msg.FromUserName, msg.ToUserName, text), { headers: { 'Content-Type': 'application/xml' } });
+  if (!scene || !scene.startsWith('dl_')) {
+    const welcome = msg.MsgType === 'event' && (msg.Event === 'subscribe' || (msg.Event === 'SCAN' && scene));
+    return welcome ? reply(WELCOME) : new Response('success');
+  }
 
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data, error } = await db.rpc('depot_login_scan', { p_scene: scene, p_openid: msg.FromUserName, p_unionid: null });
   const text = error ? null : REPLIES[data?.status];
-  if (!text) return new Response('success');
-  return new Response(replyText(msg.FromUserName, msg.ToUserName, text), { headers: { 'Content-Type': 'application/xml' } });
+  return text ? reply(text) : new Response('success');
 });
