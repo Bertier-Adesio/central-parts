@@ -1,7 +1,7 @@
 // Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
-import { mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
+import { cleanUrl, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
 import { parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 
@@ -39,6 +39,19 @@ ok(o.rows.length === 1 && o.rows[0].pack === 'Tray' && o.rows[0].qty === 5000, '
 const sheet = [[], ['MPN', 'Quantity', 'Currency'], ['TPS62130RGTR', 3000, 'CNH'], ['', '', '']];
 const x = mapRows(sheet);
 ok(x.rows.length === 1 && x.rows[0].qty === 3000 && x.rows[0].currency === 'CNH', 'feuille XLSX : en-tête après lignes vides, nombres');
+
+// Flux distributeur Octopart : paliers en paires de colonnes, décimales à virgule, lien avec suivi.
+const flux = 'manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;price-break-2;price-usd-2;price-break-3;price-usd-3;moq\n' +
+  'Texas Instruments;TPS62130RGTR;V-1;https://example.com/p/TPS62130RGTR?utm_source=octopart&utm_medium=referral&ref=7;10000;1;0,5195;10;0,5039;1000;0,4779;1\n';
+const fx = mapRows(parseCSV(flux)).rows[0];
+ok(fx && fx.price === 0.5195 && fx.currency === 'USD', 'flux Octopart : prix du palier 1 et devise lue dans l\'en-tête');
+ok(fx && JSON.stringify(fx.tiers) === '{"10":0.5039,"1000":0.4779}', 'flux Octopart : paliers 10 et 1000');
+ok(fx && fx.url === 'https://example.com/p/TPS62130RGTR?ref=7', 'lien produit sans paramètres utm');
+ok(cleanUrl('pas un lien') === 'pas un lien' && cleanUrl('') === '', 'lien illisible gardé tel quel');
+
+// En-têtes chinois.
+const zh = mapRows(parseCSV('型号,品牌,数量,单价,批号,币种\nSTM32F103C8T6,ST,5000,1.2,2024+,RMB\n')).rows[0];
+ok(zh && zh.mpn === 'STM32F103C8T6' && zh.mfr === 'ST' && zh.qty === 5000 && zh.price === 1.2 && zh.dc === '2024+' && zh.currency === 'RMB', 'en-têtes chinois : 型号, 品牌, 数量, 单价, 批号, 币种');
 
 // Erreurs de fichier.
 ok(mapRows(parseCSV('MPN,Quantity\n')).error.startsWith('Fichier vide'), 'fichier sans ligne de données');

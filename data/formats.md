@@ -37,6 +37,10 @@ Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise 
 
 Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufacturer`, `quantity` / `Quantity Available`, `date_code` / `Date Code`, `packaging` / `Package Type`, `price` / `Unit Price`.
 
+**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. Les paramètres de suivi `utm_*` sont retirés du lien produit. La colonne `moq` n'est pas encore gardée.
+
+Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `年份` (date code), `包装`, `单价` / `价格`, `币种` / `货币`.
+
 ## Règles d'import
 
 - Mise à jour : même SKU chez le même vendeur, ou à défaut même MPN et même date code.
