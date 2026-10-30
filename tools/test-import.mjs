@@ -2,7 +2,7 @@
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
 import { cleanUrl, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
-import { parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
+import { creditCodeOk, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 
 let n = 0, bad = 0;
@@ -92,6 +92,13 @@ ok(sceneOf(parseWechatXml(scanXml.replace('[SCAN]', '[subscribe]').replace('[dl_
 const rep = replyText('oFOURNISSEUR', 'gh_cp', '已登录 ]]> test', 1700000000000);
 const back = parseWechatXml(rep);
 ok(back.ToUserName === 'oFOURNISSEUR' && back.MsgType === 'text' && back.CreateTime === '1700000000' && rep.includes('已登录'), 'réponse texte WeChat bien formée');
+
+// ---------------------------------------------------------------- inscription des fournisseurs
+ok(creditCodeOk('91350100M000100Y43') && creditCodeOk(' 91350100m000100y43 '), '统一社会信用代码 : exemple de la norme, minuscules et espaces');
+ok(!creditCodeOk('91350100M000100Y44') && !creditCodeOk('91350100M00010OY43') && !creditCodeOk(''), '统一社会信用代码 : clé fausse, lettre O, vide');
+ok(licensePath('ORG-0105', '营业执照.JPEG', d) === 'ORG-0105/licence-20261030-142501.jpg' && licensePath('ORG-0105', 'a.pdf', d).endsWith('.pdf'), 'licence : chemin horodaté dans le dossier de la société');
+ok(licensePath('ORG-0105', 'a.exe', d) === null, 'licence : format refusé');
+ok(JSON.stringify(await readSession(secret, await signSession(secret, { org: null, openid: 'oNEW' }, 3600, now), now)) === '{"org":null,"openid":"oNEW"}', 'jeton : compte sans société, pour l\'inscription');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

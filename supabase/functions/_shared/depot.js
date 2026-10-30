@@ -17,7 +17,7 @@ export async function signSession(secret, { org, openid }, ttlSeconds = 12 * 360
   return body + '.' + b64url(await hmac(secret, body));
 }
 
-// Renvoie { org, openid } si le jeton est intact et valide, sinon null.
+// Renvoie { org, openid } si le jeton est intact et valide, sinon null. org est null pour un compte qui s'inscrit.
 export async function readSession(secret, token, now = Date.now()) {
   if (!secret || typeof token !== 'string' || !token.includes('.')) return null;
   const [body, sig] = token.split('.');
@@ -28,7 +28,7 @@ export async function readSession(secret, token, now = Date.now()) {
   if (diff) return null;
   try {
     const p = JSON.parse(new TextDecoder().decode(unb64url(body)));
-    return p.exp > Math.floor(now / 1000) && p.org && p.openid ? { org: p.org, openid: p.openid } : null;
+    return p.exp > Math.floor(now / 1000) && p.openid ? { org: p.org || null, openid: p.openid } : null;
   } catch {
     return null;
   }
@@ -87,4 +87,24 @@ export function replyText(toUser, fromUser, content, now = Date.now()) {
   const cdata = (s) => '<![CDATA[' + String(s).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>';
   return '<xml><ToUserName>' + cdata(toUser) + '</ToUserName><FromUserName>' + cdata(fromUser) + '</FromUserName>' +
     '<CreateTime>' + Math.floor(now / 1000) + '</CreateTime><MsgType>' + cdata('text') + '</MsgType><Content>' + cdata(content) + '</Content></xml>';
+}
+
+// 统一社会信用代码 (GB 32100-2015) : 18 caractères, clé de contrôle modulo 31. Même règle que app.credit_code_ok.
+const CREDIT_CHARS = '0123456789ABCDEFGHJKLMNPQRTUWXY';
+const CREDIT_WEIGHTS = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28];
+export function creditCodeOk(code) {
+  const c = String(code || '').trim().toUpperCase();
+  if (!/^[0-9A-HJ-NPQRTUWXY]{18}$/.test(c)) return false;
+  let t = 0;
+  for (let i = 0; i < 17; i++) t += CREDIT_CHARS.indexOf(c[i]) * CREDIT_WEIGHTS[i];
+  const k = (31 - (t % 31)) % 31;
+  return CREDIT_CHARS[k] === c[17];
+}
+
+// Chemin de la photo de la licence : <société>/licence-<horodatage>.<ext> ; null si le format n'est pas accepté.
+export function licensePath(org, fileName, now = new Date()) {
+  const m = /\.(jpe?g|png|heic|webp|pdf)$/i.exec(String(fileName || ''));
+  if (!m) return null;
+  const ts = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+  return `${org}/licence-${ts}.${m[1].toLowerCase().replace('jpeg', 'jpg')}`;
 }

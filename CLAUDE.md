@@ -49,6 +49,7 @@ Contrôler `/`, `/en/` et `/zh/` à 1280 px et 390 px de large, avec et sans Jav
 node tools/test-app.mjs                 # règles métier de l'API simulée
 node tools/build-api-map.mjs            # régénère api/endpoints.md après toute modification de registry.js
 (cd site && python3 -m http.server 8765) & node tools/test-app-ui.mjs   # parcours complet dans Chromium
+node tools/test-depot-ui.mjs           # espace fournisseur site/depot/ (même serveur), API simulée
 ```
 
 Toute modification du schéma passe par une nouvelle migration dans `supabase/migrations/`, vérifiée par `tools/test-db.sh` (PostgreSQL local) ; la lecture des fichiers de stock par `node tools/test-import.mjs`.
