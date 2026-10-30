@@ -195,7 +195,7 @@ Liste fixe, chaque document marqué « fourni » ou « absent » : photos obliga
 | Marge de change, ligne distincte avec le taux de référence | Acheteur | Décidé, taux à fixer |
 | Frais de recherche étendue | Acheteur | Décidé, barème à fixer |
 | Frais d'opération (banque, change, traitement) | Acheteur | Décidé, barème à fixer |
-| Abonnement vendeur (condition du statut « vérifié ») | Vendeur | Décidé, au lancement |
+| Abonnement vendeur (condition du statut « vérifié ») | Vendeur | Décidé : gratuit jusqu'à la première vente, payant ensuite (ADR 0013) |
 | Frais de plateforme | Vendeur | Décidé, au lancement |
 | Forfait par transaction, frais de vente par paliers de valeur | Vendeur | Décidé, après le lancement |
 | Emplacements sponsorisés, uniquement sur le catalogue Inventory | Vendeur | Décidé, après le lancement |

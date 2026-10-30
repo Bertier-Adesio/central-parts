@@ -4,7 +4,7 @@
 -- 2. Il enregistre sa société (nom, 统一社会信用代码, ville, profil, devise) : register_supplier. Il en devient
 --    administrateur ; la société est « en attente » (kyb = 'pending') : elle peut déposer son stock, rien n'est publié.
 -- 3. Il dépose la photo de sa licence (营业执照) : set_supplier_license. Les opérateurs sont prévenus dans WeChat.
--- 4. Un opérateur répond 通过 ou 拒绝 dans WeChat : approve_supplier (pseudonyme V-n, abonnement d'un an) ou
+-- 4. Un opérateur répond 通过 ou 拒绝 dans WeChat : approve_supplier (pseudonyme V-n, abonnement gratuit jusqu'à la première vente) ou
 --    reject_supplier. L'administrateur invite ensuite ses collègues depuis la page : create_member_invite.
 
 alter table public.organizations
@@ -125,7 +125,8 @@ begin
   update public.organizations set license_path = p_path where id = p_org and type = 'seller';
 end $$;
 
--- Validation par un opérateur : pseudonyme V-n suivant, KYB validé, abonnement d'un an. Renvoie le pseudonyme.
+-- Validation par un opérateur : pseudonyme V-n suivant, KYB validé, abonnement gratuit jusqu'à la première vente
+-- (ADR 0013 ; un an au plus, revu à la première transaction). Renvoie le pseudonyme.
 create or replace function public.approve_supplier(p_org text, p_by text default null)
 returns text language plpgsql security definer set search_path = '' as $$
 declare o public.organizations; v_alias text;
@@ -139,7 +140,7 @@ begin
   update public.organizations set kyb = 'validated', kyb_decided_at = now(), alias = v_alias, rejected_reason = null
    where id = p_org;
   insert into public.subscriptions (org_id, plan, until)
-  select p_org, 'Vendeur Opportunity', current_date + 365
+  select p_org, 'Gratuit jusqu''à la première vente', current_date + 365
    where not exists (select 1 from public.subscriptions s where s.org_id = p_org and s.until >= current_date);
   insert into public.events (actor, text, ref) values ('ops', 'Société validée (' || v_alias || ')' || coalesce(' par ' || p_by, ''), p_org);
   return v_alias;
