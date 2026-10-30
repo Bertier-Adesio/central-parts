@@ -171,7 +171,11 @@ details{font-size:var(--text-sm);margin:6px 0 0}
           if (r.status === 'pending') { pollTimer = setTimeout(poll, 2000); return; }
           $('qr-refresh').hidden = false;
           err(r.status === 'consumed' ? 'other' : r.status);
-        }, function () { pollTimer = setTimeout(poll, 4000); });
+        }, function (c) {
+          // Coupure réseau : on réessaie ; erreur du serveur : on l'affiche au lieu de relancer une tentative déjà consommée.
+          if (c === 'network') { pollTimer = setTimeout(poll, 4000); return; }
+          $('qr-refresh').hidden = false; err(c);
+        });
       })();
     }, function (c) { $('qr-wait').hidden = true; $('qr-refresh').hidden = false; err(c); });
   }
