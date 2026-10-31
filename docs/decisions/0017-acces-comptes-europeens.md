@@ -25,7 +25,7 @@ Les fournisseurs chinois se connectent avec WeChat (ADR 0010, 0012), qui fonctio
 - Les fournisseurs chinois ne sont pas concernés : leur société est identifiée par le 统一社会信用代码 et leurs contacts par WeChat (ADR 0012).
 
 ## Points ouverts
-- Le service d'envoi d'e-mails (SMTP) et l'adresse d'expédition des codes, avec SPF et DKIM du domaine central.parts.
+- Le service d'envoi d'e-mails (SMTP) et l'adresse d'expédition des codes, avec SPF et DKIM du domaine central.parts. Ce service est un **sous-traitant** au sens du RGPD : le jour où il est retenu, il entre dans la politique de confidentialité (raison sociale, pays, encadrement d'un éventuel transfert hors UE), et son contrat de traitement des données est signé. Un service établi dans l'UE simplifie ce point.
 
 ## Conséquences
 - Remplace, dans l'ADR 0015, le « lien de connexion par e-mail » par un code à 6 chiffres.
