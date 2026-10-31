@@ -21,7 +21,9 @@ Le site central.parts est édité par **Adesio SAS**, au titre de son établisse
 - Données des services en ligne (espace fournisseurs, recherche) : Supabase, projet hébergé dans la région de Francfort (Allemagne). [À VALIDER : raison sociale et adresse du prestataire Supabase à mentionner]
 
 ### Propriété intellectuelle
-Les contenus du site (textes, logo, éléments graphiques) sont la propriété d'Adesio SAS, sauf mention contraire. Toute reproduction sans autorisation est interdite. [À VALIDER : mention de la marque « Central Parts », déposée à l'INPI le 1er octobre 2026 sous le n° 5304004, selon l'avis du juriste]
+Les contenus du site (textes, logo, éléments graphiques) sont la propriété d'Adesio SAS, sauf mention contraire. Toute reproduction sans autorisation est interdite.
+
+« Central Parts » est une marque déposée à l'INPI le 1er octobre 2026 sous le n° 5304004, en cours d'examen.
 
 ### Données personnelles
 Voir la [politique de confidentialité](/confidentialite/).
@@ -48,7 +50,9 @@ The central.parts website is published by **Adesio SAS**, through its establishm
 - Data of the online services (supplier space, search): Supabase, project hosted in the Frankfurt region (Germany). [TO BE VALIDATED: Supabase provider name and address]
 
 ### Intellectual property
-The content of this website (texts, logo, graphics) belongs to Adesio SAS unless stated otherwise. Any reproduction without permission is prohibited. [TO BE VALIDATED: mention of the "Central Parts" trademark]
+The content of this website (texts, logo, graphics) belongs to Adesio SAS unless stated otherwise. Any reproduction without permission is prohibited.
+
+"Central Parts" is a trademark filed with the French Patent and Trademark Office (INPI) on 1 October 2026 under no. 5304004, under examination.
 
 ### Personal data
 See the [privacy policy](/en/privacy/).
@@ -75,7 +79,9 @@ central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的�
 - 在线服务数据（供应商中心、搜索）：Supabase，项目托管于德国法兰克福区域。[待确认：Supabase 服务商名称与地址]
 
 ### 知识产权
-除另有说明外，本网站内容（文字、标志、图形）归 Adesio SAS 所有，未经许可不得转载。[待确认：「Central Parts」商标的表述]
+除另有说明外，本网站内容（文字、标志、图形）归 Adesio SAS 所有，未经许可不得转载。
+
+「Central Parts」商标已于 2026 年 10 月 1 日向法国国家工业产权局（INPI）提交注册申请，申请号 5304004，目前正在审查中。
 
 ### 个人数据
 请参阅[隐私政策](/zh/privacy/)。
