@@ -1,8 +1,6 @@
-# central.parts : la landing est indexable ; les prototypes (maquette, espace fournisseur, recherche) ne le sont pas.
+# central.parts : tout est accessible aux robots ; les pages en prototype (/app/, /proto/, /depot/, /recherche/)
+# portent une balise <meta name="robots" content="noindex"> et ne sont donc pas indexées.
 User-agent: *
-Disallow: /app/
-Disallow: /proto/
-Disallow: /depot/
-Disallow: /recherche/
+Disallow:
 
 Sitemap: https://central.parts/sitemap.xml

@@ -22,6 +22,7 @@ L'offre agrégée de Central.Parts est consultable par les **visiteurs du site**
 - Seules les offres des fournisseurs validés (`app.is_verified`) apparaissent.
 - La recherche publique passe par une fonction Edge avec une limite de requêtes par visiteur. Les deux niveaux freinent l'aspiration du catalogue par d'autres brokers.
 - Elle est construite **avant electronica**, pour montrer sur le stand qu'un stock validé est en ligne.
+- Tant que les promesses de la landing et l'avis du juriste ne sont pas arrêtés, la page n'est **pas indexée** (`noindex`, décision du 1er novembre 2026) et la landing ne la relie pas : elle reste accessible par lien direct.
 
 ### Ce qu'on promet aux fournisseurs
 
