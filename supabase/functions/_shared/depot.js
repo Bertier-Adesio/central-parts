@@ -68,6 +68,7 @@ export async function wechatSignatureOk(token, timestamp, nonce, signature) {
 }
 
 // Message XML de WeChat (mode clair) → champs simples, par exemple { MsgType, Event, EventKey, FromUserName }.
+/** @param {string} xml @returns {Record<string, string>} */
 export function parseWechatXml(xml) {
   const out = {};
   for (const m of String(xml || '').matchAll(/<(\w+)>(?:<!\[CDATA\[([\s\S]*?)\]\]>|([^<]*))<\/\1>/g)) out[m[1]] = m[2] ?? m[3];

@@ -1,0 +1,96 @@
+# Tests lancés sur chaque PR vers main (ADR 0016). Ils ne ralentissent pas les déploiements : ceux-ci partent
+# après la fusion, dans leurs propres workflows. Chaque groupe ne tourne que si la PR touche ce qu'il teste.
+#   base   : lecture des fichiers de stock, règles de la maquette, vérification de type des fonctions Edge (toujours)
+#   db     : schéma, RLS et fonctions SQL sur PostgreSQL 16 (migrations, contrôles, données de référence)
+#   pages  : parcours dans Chromium de la maquette, de l'espace fournisseurs et de la recherche (site/)
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      db: ${{ steps.f.outputs.db }}
+      pages: ${{ steps.f.outputs.pages }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: f
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then echo "db=true" >> "$GITHUB_OUTPUT"; echo "pages=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          echo "$FILES" | grep -qE '^(supabase/(migrations|checks)/|supabase/(seed|reference)\.sql|tools/test-db\.sh)' && echo "db=true" >> "$GITHUB_OUTPUT" || echo "db=false" >> "$GITHUB_OUTPUT"
+          echo "$FILES" | grep -qE '^(site/|tools/test-.*-ui\.mjs|\.github/workflows/tests\.yml)' && echo "pages=true" >> "$GITHUB_OUTPUT" || echo "pages=false" >> "$GITHUB_OUTPUT"
+
+  base:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Lecture des fichiers de stock et outils du dépôt
+        run: node tools/test-import.mjs
+      - name: Règles métier de la maquette
+        run: node tools/test-app.mjs
+      - name: Vérification de type des fonctions Edge
+        run: deno check supabase/functions/*/index.ts
+
+  db:
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Schéma, RLS et fonctions SQL
+        run: tools/test-db.sh localhost 5432
+
+  pages:
+    needs: changes
+    if: needs.changes.outputs.pages == 'true'
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: 1.56.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cache du navigateur
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}
+      - name: Playwright et Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@$PLAYWRIGHT_VERSION
+          npx playwright install --with-deps chromium
+      - name: Parcours dans Chromium
+        run: |
+          (cd site && python3 -m http.server 8765 >/dev/null 2>&1 &)
+          sleep 1
+          node tools/test-app-ui.mjs
+          node tools/test-depot-ui.mjs
+          node tools/test-search-ui.mjs

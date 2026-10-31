@@ -63,6 +63,7 @@ export function price(v) {
 
 // Lignes brutes (première ligne = en-têtes) → lignes normalisées pour apply_stock_import_batch.
 // Les contrôles de fond (MPN, quantité, devise) sont refaits par la base ; ici on rejette l'illisible.
+/** @returns {{ error?: string, rows: any[], rejected: any[], total: number }} */
 export function mapRows(table) {
   const rows = (table || []).map((r) => r.map((x) => (x == null ? '' : String(x).trim())));
   while (rows.length && !rows[0].some((x) => x)) rows.shift();

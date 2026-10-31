@@ -145,6 +145,16 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
+## Déployer les fonctions
+
+Automatique : à chaque push sur `main` qui touche `supabase/functions/`, seules les fonctions touchées sont redéployées (ADR 0016, secret GitHub `SUPABASE_ACCESS_TOKEN`). À la main, depuis la racine du dépôt :
+```bash
+tools/deploy-functions.sh                 # toutes
+tools/deploy-functions.sh depot search    # certaines
+SUPABASE_PROJECT_REF=<projet de test> tools/deploy-functions.sh   # un autre projet
+```
+Le script porte les options de chaque fonction (`--no-verify-jwt` pour `depot`, `order`, `search`, `wechat-events`). Les migrations ne sont jamais appliquées par le script ni par le workflow.
+
 ## Vérifier en local
 
 ```bash
