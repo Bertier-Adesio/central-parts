@@ -67,10 +67,11 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     later(tellAdmins(db, org, `您的公司未通过 Central.Parts 审核${reason ? '：' + reason : '。'}\n如有疑问，请直接回复此消息。`));
     return `已拒绝 ${org}`;
   }
-  m = /^(确认|无货|发票|收款|发货|取消|询单)\s*(PR-\d+)\s*$/i.exec(t);
+  m = /^(确认|无货|发票|收款|发货|取消|询单|confirm|unavailable|proforma|paid|shipped|cancel|request)\s*(PR-\d+)\s*$/i.exec(t);
   if (m) {
     const ref = m[2].toUpperCase();
-    const status = ({ 确认: 'confirmed', 无货: 'unavailable', 发票: 'proforma_sent', 收款: 'paid', 发货: 'shipped', 取消: 'cancelled' } as Record<string, string>)[m[1]];
+    const status = ({ 确认: 'confirmed', 无货: 'unavailable', 发票: 'proforma_sent', 收款: 'paid', 发货: 'shipped', 取消: 'cancelled',
+      confirm: 'confirmed', unavailable: 'unavailable', proforma: 'proforma_sent', paid: 'paid', shipped: 'shipped', cancel: 'cancelled' } as Record<string, string>)[m[1].toLowerCase()];
     const { data, error } = status
       ? await db.rpc('operator_set_request_status', { p_ref: ref, p_status: status, p_by: openid })
       : await db.rpc('request_for_operator', { p_ref: ref });
@@ -88,7 +89,22 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     later((async () => { for (const s of list.slice(0, 10)) await sendText(db, openid, await supplierCard(db, s)); })());
     return list.length ? `待审核：${list.length} 家${list.length > 10 ? '（显示前 10 家）' : ''}` : '没有待审核的公司。';
   }
-  return '命令：待审核 · 通过 ORG-0123 · 拒绝 ORG-0123 原因 · 链接\n询单：询单 / 确认 / 无货 / 发票 / 收款 / 发货 / 取消 PR-0001';
+  return [
+    '命令 · Commands:',
+    '待审核 · pending',
+    '通过 ORG-0123 · approve ORG-0123',
+    '拒绝 ORG-0123 原因 · reject ORG-0123 reason',
+    '链接 · link',
+    '',
+    '询单 · Purchase requests (PR-0001):',
+    '询单 · request',
+    '确认 · confirm',
+    '无货 · unavailable',
+    '发票 · proforma',
+    '收款 · paid',
+    '发货 · shipped',
+    '取消 · cancel',
+  ].join('\n');
 }
 
 const STATUS_ZH: Record<string, string> = { submitted: '待供应商确认', confirmed: '供应商已确认', unavailable: '无货',
@@ -96,9 +112,9 @@ const STATUS_ZH: Record<string, string> = { submitted: '待供应商确认', con
 
 // Réponse d'un fournisseur à une demande d'achat : 确认 PR-… (disponible) ou 无货 PR-… (indisponible).
 async function supplierCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
-  const m = /^(确认|无货)\s*(PR-\d+)\s*$/i.exec(text.trim());
+  const m = /^(确认|无货|confirm|unavailable)\s*(PR-\d+)\s*$/i.exec(text.trim());
   if (!m) return null;
-  const ok = m[1] === '确认';
+  const ok = m[1] === '确认' || m[1].toLowerCase() === 'confirm';
   const { data, error } = await db.rpc('supplier_answer', { p_openid: openid, p_ref: m[2], p_ok: ok });
   if (error) return `未找到询单 ${m[2].toUpperCase()}。`;
   later(notifyOperators(db, `【询单 ${data.ref}】供应商${ok ? '确认有货' : '回复无货'}：${data.mpn} × ${data.qty}。${ok ? '请发送形式发票（回复「发票 ' + data.ref + '」记录）。' : ''}`));

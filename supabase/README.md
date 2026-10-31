@@ -80,7 +80,7 @@ Un fournisseur sans API (ADR 0010) dépose ses fichiers CSV, XLS ou XLSX ; ils d
    insert into public.operators (openid, label)
    select openid, 'Bertier' from public.wechat_identities where org_id = 'ORG-0100' and role = 'admin';
    ```
-3. **Valider dans WeChat** : envoyer au compte de service `待审核`, `通过 ORG-0123` ou `拒绝 ORG-0123 motif`. Équivalent dans l'éditeur SQL : `select public.approve_supplier('ORG-0123');`.
+3. **Valider dans WeChat** : envoyer au compte de service `待审核`, `通过 ORG-0123` ou `拒绝 ORG-0123 motif`, ou leurs équivalents anglais `pending`, `approve ORG-0123`, `reject ORG-0123 motif` ; `链接` ou `link` donne un lien de connexion personnel. Tout autre message d'un opérateur renvoie la liste des commandes, en chinois et en anglais. Équivalent dans l'éditeur SQL : `select public.approve_supplier('ORG-0123');`.
 
 ### Recherche publique du catalogue (ADR 0013)
 
@@ -110,7 +110,7 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    supabase functions deploy order --project-ref tuhbzziqyisdnqzfvtkh --use-api --no-verify-jwt
    ```
    Redéployer aussi `depot` et `wechat-events`.
-2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` affiche la fiche, `发票 PR-0001` (proforma envoyée), `收款 PR-0001` (virement reçu), `发货 PR-0001` (expédiée), `取消 PR-0001` (annulée). Le fournisseur répond `确认 PR-0001` ou `无货 PR-0001`, ou sur `/depot/`.
+2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` (`request`) affiche la fiche, `发票 PR-0001` (`proforma`, proforma envoyée), `收款 PR-0001` (`paid`, virement reçu), `发货 PR-0001` (`shipped`, expédiée), `取消 PR-0001` (`cancel`, annulée). Le fournisseur répond `确认 PR-0001` (`confirm`) ou `无货 PR-0001` (`unavailable`), ou sur `/depot/`.
 3. **Équivalent SQL** : `select public.request_for_operator('PR-0001');`, `select public.operator_set_request_status('PR-0001', 'paid');`.
 
 ### Dépôt par le fournisseur lui-même, connecté par QR code WeChat
