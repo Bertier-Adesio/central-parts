@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Page de dépôt des fichiers de stock des fournisseurs, connexion par QR code WeChat (扫码登录, ADR 0010).
+<!-- Espace fournisseur : connexion par QR code WeChat (扫码登录) ou lien personnel reçu dans WeChat, inscription de
+     la société, licence, dépôt des fichiers de stock, collègues (ADR 0010, 0012).
      Écrite à la main, pas générée. Elle appelle la fonction Edge Supabase « depot » ; le QR code temporaire est une
      image du compte de service (mp.weixin.qq.com). Aucun secret dans la page. -->
 <html lang="zh-Hans">
@@ -49,6 +50,17 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 .qr-box{width:220px;height:220px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:var(--bg-sunken);border-radius:var(--radius-sm)}
 .qr-box img{width:220px;height:220px}
 #qr-refresh{margin:0 0 12px}
+form.fields label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+form.fields input[type=text],form.fields select,.row input[type=text]{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+form.fields .hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 0 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row input[type=text]{flex:1;min-width:0;margin:0}
+.link{font-family:var(--font-mono);font-size:var(--text-sm);overflow-wrap:anywhere;background:var(--bg-sunken);padding:8px;border-radius:var(--radius-sm);margin:8px 0}
+.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
+ul.plain{list-style:none;padding:0;margin:0}
+ul.plain li{border-top:1px solid var(--border-1);padding:8px 0;font-size:var(--text-sm);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+ul.plain li:first-child{border-top:0}
+h2{font-size:var(--text-lg);margin:0 0 8px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -65,8 +77,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 </header>
 
 <main class="wrap">
-  <h1 data-t="title">库存文件上传</h1>
-  <p class="lead" data-t="lead">供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
+  <h1 data-t="title">供应商中心</h1>
+  <p class="lead" data-t="lead">注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
   <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。</span> <a href="stock-template.csv" download data-t="tplLink">下载模板（CSV）</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
@@ -77,14 +89,51 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     <div class="qr-box"><img id="qr" alt="" width="220" height="220" hidden><span id="qr-wait" class="muted" data-t="loading">正在生成二维码…</span></div>
     <p class="muted" id="qr-hint" data-t="scanHint">请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。</p>
     <button class="btn btn-main" type="button" id="qr-refresh" hidden data-t="refresh">刷新二维码</button>
-    <p class="muted" data-t="loginNote">首次登录请使用 Central.Parts 发给您的邀请链接。</p>
+    <p class="muted" data-t="loginNote">首次使用？扫码后即可注册公司。</p>
   </section>
 
-  <!-- Dépôt -->
+  <!-- Inscription de la société -->
+  <section id="v-register" hidden>
+    <form class="card fields" id="reg">
+      <h2 data-t="regTitle">注册公司</h2>
+      <p class="muted" data-t="regLead">注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。</p>
+      <label><span data-t="fName">公司全称（与营业执照一致）</span><input type="text" id="r-name" required maxlength="120" autocomplete="organization"></label>
+      <label><span data-t="fCode">统一社会信用代码</span><input type="text" id="r-code" required maxlength="18" autocapitalize="characters" spellcheck="false"><span class="hint" data-t="fCodeHint">18 位，见营业执照。</span></label>
+      <label><span data-t="fCity">城市</span><input type="text" id="r-city" required maxlength="60"></label>
+      <label><span data-t="fProfile">公司类型</span>
+        <select id="r-profile" required>
+          <option value="" data-t="choose">请选择</option>
+          <option value="Manufacturer" data-t="pManufacturer">原厂</option>
+          <option value="Distributor" data-t="pDistributor">分销商</option>
+          <option value="Reseller" data-t="pReseller">贸易商</option>
+          <option value="Broker" data-t="pBroker">现货经纪商（Broker）</option>
+        </select></label>
+      <label><span data-t="fCurrency">报价货币</span>
+        <select id="r-currency"><option value="USD">USD</option><option value="CNH">CNH（人民币）</option><option value="EUR">EUR</option><option value="HKD">HKD</option></select></label>
+      <button class="btn btn-main" type="submit" id="r-send" data-t="regSend">提交注册</button>
+    </form>
+    <div class="card">
+      <h2 data-t="handTitle">不是公司负责人？</h2>
+      <p class="muted" data-t="handLead">把此页面转发给负责人：负责人用微信扫码登录后注册公司，再在「同事」中邀请您。</p>
+      <p class="link">https://central.parts/depot/</p>
+      <button class="btn btn-line" type="button" data-copy="https://central.parts/depot/" data-t="copy">复制链接</button>
+    </div>
+  </section>
+
+  <!-- Espace de la société -->
   <section id="v-app" hidden>
     <div class="card">
-      <div class="org"><strong id="org-name"></strong><span class="muted" id="org-alias"></span></div>
+      <div class="org"><strong id="org-name"></strong><span class="badge" id="org-alias"></span></div>
     </div>
+    <div id="status" class="msg" hidden></div>
+    <form class="card" id="lic" hidden>
+      <h2 data-t="licTitle">上传营业执照</h2>
+      <p class="muted" data-t="licLead">拍照或选择文件：JPG、PNG、PDF，最大 10 MB。仅用于审核，不会公开。</p>
+      <label class="file"><span data-t="licPick">选择营业执照照片</span>
+        <input type="file" id="lic-file" accept="image/*,.pdf" required>
+      </label>
+      <button class="btn btn-main" type="submit" id="lic-send" data-t="send">上传</button>
+    </form>
     <form class="card" id="form">
       <label class="file"><span data-t="pick">选择文件：CSV、XLS 或 XLSX，最大 50 MB</span>
         <input type="file" id="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
@@ -93,9 +142,24 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       <button class="btn btn-main" type="submit" id="send" data-t="send">上传</button>
       <progress id="prog" max="100" value="0" hidden></progress>
     </form>
-    <section class="card">
-      <h2 style="font-size:var(--text-lg);margin:0 0 8px" data-t="history">上传记录</h2>
+    <section class="card" id="req-card" hidden>
+      <h2 data-t="reqTitle">询单</h2>
+      <p class="muted" data-t="reqLead">欧洲买家的采购申请。请在 24 小时内确认是否有货；不显示买家信息。</p>
+      <ul class="plain" id="req-list"></ul>
+    </section>
+    <section class="card" id="imports-card">
+      <h2 data-t="history">上传记录</h2>
       <div id="imports"><p class="muted" data-t="none">暂无记录。</p></div>
+    </section>
+    <section class="card" id="team" hidden>
+      <h2 data-t="teamTitle">同事</h2>
+      <p class="muted" data-t="teamLead">邀请同事上传库存：每个链接仅限一人使用，14 天内有效。通过微信发送给同事。</p>
+      <ul class="plain" id="team-list"></ul>
+      <form class="row" id="inv" style="margin-top:12px">
+        <input type="text" id="inv-label" maxlength="40" required data-tp="invName" placeholder="同事姓名">
+        <button class="btn btn-main" type="submit" data-t="invSend">生成邀请链接</button>
+      </form>
+      <div id="inv-out" hidden><p class="link" id="inv-link"></p><button class="btn btn-line" type="button" id="inv-copy" data-t="copy">复制链接</button></div>
     </section>
   </section>
 </main>
@@ -107,45 +171,78 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/depot';
 
   var T = {
-    zh: { title: '库存文件上传', lead: '供应商专用：上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
+    zh: { title: '供应商中心', lead: '注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
       scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
-      refresh: '刷新二维码', loginNote: '首次登录请使用 Central.Parts 发给您的邀请链接。',
+      refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
       tpl: '推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。', tplLink: '下载模板（CSV）',
+      regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
+      fName: '公司全称（与营业执照一致）', fCode: '统一社会信用代码', fCodeHint: '18 位，见营业执照。', fCity: '城市', fProfile: '公司类型',
+      choose: '请选择', pManufacturer: '原厂', pDistributor: '分销商', pReseller: '贸易商', pBroker: '现货经纪商（Broker）',
+      fCurrency: '报价货币', regSend: '提交注册', handTitle: '不是公司负责人？',
+      handLead: '把此页面转发给负责人：负责人用微信扫码登录后注册公司，再在「同事」中邀请您。', copy: '复制链接', copied: '已复制。',
+      licTitle: '上传营业执照', licLead: '拍照或选择文件：JPG、PNG、PDF，最大 10 MB。仅用于审核，不会公开。', licPick: '选择营业执照照片',
+      licDone: '营业执照已上传，等待审核。',
+      pending: '审核中：Central.Parts 将核对营业执照，结果会通过微信通知您。您可以先上传库存，审核通过后才会展示。',
+      pendingLic: '请上传营业执照，以便 Central.Parts 审核您的公司。', rejectedMsg: '您的公司未通过审核：', statusPending: '审核中',
       pick: '选择文件：CSV、XLS 或 XLSX，最大 50 MB', complete: '这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。',
       send: '上传', history: '上传记录', none: '暂无记录。', uploading: '正在上传…', uploaded: '已上传，正在处理…',
+      reqTitle: '询单', reqLead: '欧洲买家的采购申请。请在 24 小时内确认是否有货；不显示买家信息。', reqYes: '确认有货', reqNo: '无货',
+      rs: { submitted: '待确认', confirmed: '已确认', unavailable: '无货', proforma_sent: '已发形式发票', paid: '已收款', shipped: '已发货', cancelled: '已取消' },
+      reqLine: '数量 {qty} · 单价 {price} · 交货国家 {country}',
+      teamTitle: '同事', teamLead: '邀请同事上传库存：每个链接仅限一人使用，14 天内有效。通过微信发送给同事。',
+      invName: '同事姓名', invSend: '生成邀请链接', admin: '管理员', member: '成员', me: '（您）', you: '您', invited: '已邀请，待接受',
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
       nums: function (i) { return '新增 ' + i.created + ' · 更新 ' + i.updated + ' · 拒绝 ' + i.rejected + ' · 可能重复 ' + i.duplicates + ' · 缺少日期码 ' + i.missing_date_code + (i.withdrawn ? ' · 归零 ' + i.withdrawn : ''); },
       rejected: '被拒绝的行', line: '第 {n} 行',
-      e: { not_bound: '此微信账号尚未绑定供应商账户。请使用 Central.Parts 发给您的邀请链接。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系 Central.Parts。',
-        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '仅支持 CSV、XLS、XLSX 文件。', size: '文件超过 50 MB。',
+      e: { invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
+        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
+        code_invalid: '统一社会信用代码有误，请核对营业执照。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
+        already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
         expired: '二维码已过期，请刷新。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
-    en: { title: 'Stock file upload', lead: 'For suppliers: upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
+    en: { title: 'Supplier centre', lead: 'Register your company and upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
       scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
-      refresh: 'Refresh the QR code', loginNote: 'For your first login, use the invitation link sent by Central.Parts.',
+      refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
       tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and up to five price breaks (USD).', tplLink: 'Download the template (CSV)',
+      regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
+      fName: 'Full company name (as on the business licence)', fCode: 'Unified social credit code', fCodeHint: '18 characters, on the business licence.', fCity: 'City', fProfile: 'Company type',
+      choose: 'Choose', pManufacturer: 'Manufacturer', pDistributor: 'Distributor', pReseller: 'Reseller', pBroker: 'Broker',
+      fCurrency: 'Quote currency', regSend: 'Register', handTitle: 'Not the person in charge?',
+      handLead: 'Send this page to the person in charge: they log in with WeChat, register the company, then invite you under "Colleagues".', copy: 'Copy the link', copied: 'Copied.',
+      licTitle: 'Upload the business licence', licLead: 'Take a photo or choose a file: JPG, PNG or PDF, up to 10 MB. Used only for the review, never published.', licPick: 'Choose the business licence photo',
+      licDone: 'Business licence uploaded, review pending.',
+      pending: 'Under review: Central.Parts checks your business licence and will notify you on WeChat. You can upload your stock now; it is shown once approved.',
+      pendingLic: 'Please upload your business licence so that Central.Parts can review your company.', rejectedMsg: 'Your company was not approved: ', statusPending: 'Under review',
       pick: 'Choose a file: CSV, XLS or XLSX, up to 50 MB', complete: 'This is my complete stock list: it replaces all stock uploaded before (parts missing from this file go to zero).',
       send: 'Upload', history: 'Uploads', none: 'No uploads yet.', uploading: 'Uploading…', uploaded: 'Uploaded, processing…',
+      reqTitle: 'Purchase requests', reqLead: 'Requests from European buyers. Please confirm availability within 24 hours; the buyer is not shown.', reqYes: 'Available', reqNo: 'Not available',
+      rs: { submitted: 'To confirm', confirmed: 'Confirmed', unavailable: 'Not available', proforma_sent: 'Proforma sent', paid: 'Paid', shipped: 'Shipped', cancelled: 'Cancelled' },
+      reqLine: 'Quantity {qty} · unit price {price} · delivery country {country}',
+      teamTitle: 'Colleagues', teamLead: 'Invite colleagues to upload stock: each link is for one person and valid for 14 days. Send it on WeChat.',
+      invName: 'Colleague name', invSend: 'Create an invitation link', admin: 'Admin', member: 'Member', me: ' (you)', you: 'You', invited: 'Invited, pending',
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
       nums: function (i) { return 'new ' + i.created + ' · updated ' + i.updated + ' · rejected ' + i.rejected + ' · possible duplicates ' + i.duplicates + ' · no date code ' + i.missing_date_code + (i.withdrawn ? ' · set to zero ' + i.withdrawn : ''); },
       rejected: 'Rejected lines', line: 'line {n}',
-      e: { not_bound: 'This WeChat account is not linked to a supplier account yet. Please use the invitation link sent by Central.Parts.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please contact Central.Parts.',
-        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'Only CSV, XLS and XLSX files are accepted.', size: 'The file is larger than 50 MB.',
+      e: { invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
+        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
+        code_invalid: 'The unified social credit code is not valid: please check the business licence.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
+        already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
         expired: 'The QR code has expired, please refresh it.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
   };
   var lang = 'zh';
   try { lang = localStorage.getItem('cp-depot-lang') || (/^zh/i.test(navigator.language) ? 'zh' : 'en'); } catch (e) {}
   var $ = function (id) { return document.getElementById(id); };
   var t = function () { return T[lang]; };
-  var token = null, imports = [], timer = null;
+  var token = null, imports = [], timer = null, org = null;
   try { token = sessionStorage.getItem('cp-depot-token'); } catch (e) {}
 
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
     $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
-    renderImports();
+    document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
+    renderImports(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests();
   }
-  function show(id) { ['v-login', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
+  function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
   function err(code) { say('err', t().e[code] || t().e.other); }
 
@@ -157,8 +254,24 @@ details{font-size:var(--text-sm);margin:6px 0 0}
             function () { throw 'network'; });
   }
   function setToken(v) { token = v; try { v ? sessionStorage.setItem('cp-depot-token', v) : sessionStorage.removeItem('cp-depot-token'); } catch (e) {} }
+  function lost(code) { if (code === 'session_expired' || code === 'not_bound') { setToken(null); startLogin(); } err(code); }
 
-  // Connexion par QR code : la page affiche un QR code temporaire, puis interroge la tentative toutes les 2 secondes.
+  // Envoi d'un fichier vers un lien de dépôt signé (Supabase Storage), avec barre de progression facultative.
+  function putFile(url, f, bar) {
+    return new Promise(function (resolve, reject) {
+      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
+      var x = new XMLHttpRequest();
+      x.open('PUT', url);
+      x.setRequestHeader('x-upsert', 'false');
+      if (bar) x.upload.onprogress = function (e) { if (e.lengthComputable) { bar.hidden = false; bar.value = Math.round(e.loaded / e.total * 100); } };
+      x.onload = function () { x.status < 300 ? resolve() : reject('other'); };
+      x.onerror = function () { reject('network'); };
+      x.send(fd);
+    });
+  }
+
+  // ---------------------------------------------------------------- connexion
+  // QR code temporaire du compte de service ; la page interroge la tentative toutes les 2 secondes.
   var scene = null, pollTimer = null, invite = null;
   function startLogin() {
     show('v-login'); clearTimeout(pollTimer);
@@ -170,7 +283,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       (function poll() {
         if (Date.now() > until) { $('qr-refresh').hidden = false; return err('expired'); }
         api('POST', '/qr/poll', { scene: scene }).then(function (r) {
-          if (r.status === 'ok') { invite = null; setToken(r.token); say('', ''); history.replaceState(null, '', '/depot/'); return enterApp(r.org); }
+          if (r.status === 'ok' || r.status === 'register') { invite = null; return loggedIn(r.token); }
           if (r.status === 'pending') { pollTimer = setTimeout(poll, 2000); return; }
           $('qr-refresh').hidden = false;
           err(r.status === 'consumed' ? 'other' : r.status);
@@ -184,23 +297,110 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   }
   $('qr-refresh').addEventListener('click', function () { say('', ''); startLogin(); });
 
-  function enterApp(org) {
-    if (org) { $('org-name').textContent = org.name; $('org-alias').textContent = org.alias; try { sessionStorage.setItem('cp-depot-org', JSON.stringify(org)); } catch (e) {} }
-    else { try { var o = JSON.parse(sessionStorage.getItem('cp-depot-org') || 'null'); if (o) { $('org-name').textContent = o.name; $('org-alias').textContent = o.alias; } } catch (e) {} }
-    show('v-app');
-    refresh();
+  // Lien personnel reçu dans WeChat (?login=dl_…) : connexion sans QR code, valable une fois.
+  function linkLogin(s) {
+    api('POST', '/qr/poll', { scene: s }).then(function (r) {
+      if (r.status === 'ok' || r.status === 'register') return loggedIn(r.token);
+      startLogin(); err('expired');
+    }, function () { startLogin(); });
   }
+
+  function loggedIn(tok) { setToken(tok); say('', ''); history.replaceState(null, '', '/depot/'); route(); }
+
+  // Société du compte : inscription si aucune, sinon espace de la société.
+  function route() {
+    api('GET', '/me').then(function (d) {
+      setToken(d.token);
+      if (!d.org) { org = null; show('v-register'); return; }
+      enterApp(d.org);
+    }, lost);
+  }
+
+  // ---------------------------------------------------------------- inscription
+  $('reg').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var code = $('r-code').value.trim().toUpperCase();
+    if (!creditCodeOk(code)) return err('code_invalid');
+    $('r-send').disabled = true;
+    api('POST', '/register', { name: $('r-name').value, code: code, city: $('r-city').value, profile: $('r-profile').value, currency: $('r-currency').value })
+      .then(function (d) { setToken(d.token); say('', ''); enterApp(d.org); }, err)
+      .then(function () { $('r-send').disabled = false; });
+  });
+  // 统一社会信用代码 (GB 32100-2015) : même contrôle que le serveur, pour signaler une faute de frappe tout de suite.
+  function creditCodeOk(c) {
+    var cs = '0123456789ABCDEFGHJKLMNPQRTUWXY', w = [1, 3, 9, 27, 19, 26, 16, 17, 20, 29, 25, 13, 8, 24, 10, 30, 28], s = 0;
+    if (!/^[0-9A-HJ-NPQRTUWXY]{18}$/.test(c)) return false;
+    for (var i = 0; i < 17; i++) s += cs.indexOf(c[i]) * w[i];
+    return cs[(31 - s % 31) % 31] === c[17];
+  }
+  document.querySelectorAll('[data-copy]').forEach(function (b) { b.addEventListener('click', function () { copy(b.getAttribute('data-copy')); }); });
+  function copy(text) {
+    var done = function () { say('ok', t().copied); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {});
+  }
+
+  // ---------------------------------------------------------------- espace de la société
+  function enterApp(o) {
+    org = o; renderOrg(); show('v-app');
+    if (o.status !== 'rejected') refresh();
+    if (o.role === 'admin') loadTeam();
+    if (o.status === 'validated') loadRequests();
+  }
+
+  // ---------------------------------------------------------------- demandes d'achat reçues (ADR 0014)
+  var requests = [];
+  function loadRequests() {
+    api('GET', '/requests').then(function (list) { requests = list; renderRequests(); }, function () {});
+  }
+  function renderRequests() {
+    $('req-card').hidden = !requests.length;
+    $('req-list').innerHTML = requests.map(function (r) {
+      var line = t().reqLine.replace('{qty}', r.qty).replace('{price}', r.unit_price == null ? '—' : r.unit_price + ' ' + r.currency).replace('{country}', r.delivery_country);
+      return '<li style="display:block"><div class="org"><strong>' + esc(r.ref) + ' · ' + esc(r.mpn) + '</strong><span class="badge">' + esc(t().rs[r.status] || r.status) + '</span></div>' +
+        '<p class="muted" style="margin:4px 0">' + esc(line) + '</p>' +
+        (r.status === 'submitted' ? '<div class="row"><button class="btn btn-main" type="button" data-ans="' + esc(r.ref) + '" data-ok="1">' + esc(t().reqYes) + '</button>' +
+          '<button class="btn btn-line" type="button" data-ans="' + esc(r.ref) + '" data-ok="">' + esc(t().reqNo) + '</button></div>' : '') + '</li>';
+    }).join('');
+    $('req-list').querySelectorAll('[data-ans]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        b.disabled = true;
+        api('POST', '/requests/answer', { ref: b.getAttribute('data-ans'), ok: !!b.getAttribute('data-ok') }).then(loadRequests, lost);
+      });
+    });
+  }
+  function renderOrg() {
+    $('org-name').textContent = org.name;
+    $('org-alias').textContent = org.status === 'validated' ? org.alias : org.status === 'pending' ? t().statusPending : '';
+    var st = $('status');
+    st.hidden = org.status === 'validated';
+    if (org.status === 'pending') { st.className = 'msg ' + (org.has_license ? 'info' : 'err'); st.textContent = org.has_license ? t().pending : t().pendingLic; }
+    if (org.status === 'rejected') { st.className = 'msg err'; st.textContent = t().rejectedMsg + (org.rejected_reason || ''); }
+    $('lic').hidden = !(org.status === 'pending' && !org.has_license);
+    $('form').hidden = $('imports-card').hidden = org.status === 'rejected';
+    $('team').hidden = org.role !== 'admin';
+  }
+
+  $('lic').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var f = $('lic-file').files[0];
+    if (!f) return;
+    if (f.size > 10485760) return err('size');
+    $('lic-send').disabled = true; say('info', t().uploading);
+    // Photo prise par le téléphone sans extension reconnue : nom déduit du type.
+    var name = /\.(jpe?g|png|heic|webp|pdf)$/i.test(f.name) ? f.name : 'licence.' + ((f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'));
+    api('POST', '/license-url', { file_name: name }).then(function (u) {
+      return putFile(u.signed_url, f).then(function () { return api('POST', '/license', { path: u.path }); });
+    }).then(function () { org.has_license = true; renderOrg(); say('ok', t().licDone); }, lost)
+      .then(function () { $('lic-send').disabled = false; });
+  });
 
   function refresh() {
     clearTimeout(timer);
     api('GET', '/imports').then(function (list) {
       imports = list; renderImports();
       if (list.some(function (i) { return i.status === 'received' || i.status === 'processing'; })) timer = setTimeout(refresh, 4000);
-      else if ($('msg').className === 'msg ok') say('', '');
-    }, function (code) {
-      if (code === 'session_expired' || code === 'not_bound') { setToken(null); startLogin(); }
-      err(code);
-    });
+      else if ($('msg').className === 'msg ok' && $('msg').textContent === t().uploaded) say('', '');
+    }, lost);
   }
 
   function renderImports() {
@@ -228,23 +428,32 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     if (f.size > 52428800) return err('size');
     $('send').disabled = true; say('info', t().uploading);
     api('POST', '/upload-url', { file_name: f.name, complete: $('complete').checked }).then(function (u) {
-      return new Promise(function (resolve, reject) {
-        var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
-        var x = new XMLHttpRequest();
-        x.open('PUT', u.signed_url);
-        x.setRequestHeader('x-upsert', 'false');
-        x.upload.onprogress = function (e) { if (e.lengthComputable) { $('prog').hidden = false; $('prog').value = Math.round(e.loaded / e.total * 100); } };
-        x.onload = function () { x.status < 300 ? resolve() : reject('other'); };
-        x.onerror = function () { reject('network'); };
-        x.send(fd);
-      });
+      return putFile(u.signed_url, f, $('prog'));
     }).then(function () {
       say('ok', t().uploaded); $('form').reset(); $('prog').hidden = true; refresh();
-    }, function (code) {
-      if (code === 'session_expired' || code === 'not_bound') { setToken(null); startLogin(); }
-      err(code); $('prog').hidden = true;
-    }).then(function () { $('send').disabled = false; });
+    }, function (code) { lost(code); $('prog').hidden = true; })
+      .then(function () { $('send').disabled = false; });
   });
+
+  // ---------------------------------------------------------------- collègues (administrateur)
+  function loadTeam() {
+    api('GET', '/contacts').then(function (d) {
+      var fmt = function (v) { return new Date(v).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-GB'); };
+      $('team-list').innerHTML = d.members.map(function (m) {
+        var who = m.label ? m.label + (m.me ? t().me : '') : (m.me ? t().you : '—');
+        return '<li><span>' + esc(who) + '</span><span class="muted">' + esc(t()[m.role]) + ' · ' + esc(fmt(m.bound_at)) + '</span></li>';
+      }).concat(d.invites.map(function (i) {
+        return '<li><span>' + esc(i.label || '—') + '</span><span class="muted">' + esc(t().invited) + '</span></li>';
+      })).join('');
+    }, function () {});
+  }
+  $('inv').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    api('POST', '/invite', { label: $('inv-label').value }).then(function (d) {
+      $('inv-link').textContent = d.link; $('inv-out').hidden = false; $('inv-label').value = ''; loadTeam();
+    }, lost);
+  });
+  $('inv-copy').addEventListener('click', function () { copy($('inv-link').textContent); });
 
   $('lang').addEventListener('click', function () {
     lang = lang === 'zh' ? 'en' : 'zh';
@@ -255,9 +464,10 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   // ---------------------------------------------------------------- démarrage
   applyLang();
   var q = new URLSearchParams(location.search);
-  var inv = q.get('invite');
+  var inv = q.get('invite'), login = q.get('login');
   invite = inv && /^[0-9a-f]{36}$/.test(inv) ? inv : null;
-  if (token && !invite) enterApp(null);
+  if (login && /^dl_[0-9a-f]{32}$/.test(login)) linkLogin(login);
+  else if (token && !invite) route();
   else startLogin();
 })();
 </script>

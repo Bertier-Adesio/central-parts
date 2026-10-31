@@ -1,0 +1,13 @@
+{
+  "button": [
+    { "type": "view", "name": "合作登记", "url": "https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" },
+    { "type": "view", "name": "关于我们", "url": "https://central.parts/zh/" },
+    {
+      "name": "供应商",
+      "sub_button": [
+        { "type": "view", "name": "上传库存", "url": "https://central.parts/depot/" },
+        { "type": "view", "name": "库存表模板", "url": "https://central.parts/depot/stock-template.csv" }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,8 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 ```
 supabase/
 ├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
-├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : QR code WeChat et liens de dépôt ; wechat-events : scans)
+├── wechat/       menu du compte de service WeChat (publié par l'API)
+├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : connexion, inscription et dépôt ; wechat-events : messages WeChat ; search : recherche publique ; order : demandes d'achat)
 ├── reference.sql données de référence (devises, niveaux de test, opérateur) : sur tout projet, après les migrations
 ├── seed.sql      données fictives de la maquette, pour un projet de démonstration uniquement
 └── checks/       contrôles sur un PostgreSQL local (simulation minimale de Supabase, RLS, intégrité)
@@ -32,7 +33,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, puis `20261030000006_depot_qr_wechat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
@@ -71,6 +72,41 @@ Un fournisseur sans API (ADR 0010) dépose ses fichiers CSV, XLS ou XLSX ; ils d
      -H "Content-Type: application/json" -d '{"q": "XC2S50"}'
    ```
 
+### Inscription des fournisseurs et validation dans WeChat (ADR 0012)
+
+1. **Migration** `20261031000007_inscription_fournisseurs.sql`, puis déployer les deux fonctions (`depot`, `wechat-events`).
+2. **Déclarer les opérateurs** : leur compte WeChat doit d'abord être connu (connexion à la page de dépôt, ou rattachement à une société). Par exemple, pour le contact rattaché à la société de test :
+   ```sql
+   insert into public.operators (openid, label)
+   select openid, 'Bertier' from public.wechat_identities where org_id = 'ORG-0100' and role = 'admin';
+   ```
+3. **Valider dans WeChat** : envoyer au compte de service `待审核`, `通过 ORG-0123` ou `拒绝 ORG-0123 motif`. Équivalent dans l'éditeur SQL : `select public.approve_supplier('ORG-0123');`.
+
+### Recherche publique du catalogue (ADR 0013)
+
+Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`.
+
+1. **Migration** `20261031000008_recherche_publique.sql`, puis :
+   ```bash
+   supabase functions deploy search --project-ref tuhbzziqyisdnqzfvtkh --use-api --no-verify-jwt
+   ```
+2. **Marges par catégorie de source** : sans règle, le prix est affiché « sur demande ». Les taux ne sont jamais dans ce dépôt public ; l'opérateur les saisit dans l'éditeur SQL :
+   ```sql
+   insert into app.price_rules (category, margin_pct) values ('manufacturer', <taux>), ('distributor', <taux>), ('broker', <taux>), ('surplus', <taux>)
+   on conflict (category) do update set margin_pct = excluded.margin_pct, updated_at = now();
+   ```
+3. **Vérifier** : `curl "https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search?q=NE555&cur=EUR"`. Seuls les fournisseurs validés apparaissent ; 30 recherches par minute et par adresse.
+
+### Demandes d'achat des visiteurs (ADR 0014)
+
+1. **Migration** `20261031000009_demandes_achat.sql`, puis :
+   ```bash
+   supabase functions deploy order --project-ref tuhbzziqyisdnqzfvtkh --use-api --no-verify-jwt
+   ```
+   Redéployer aussi `depot` et `wechat-events`.
+2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` affiche la fiche, `发票 PR-0001` (proforma envoyée), `收款 PR-0001` (virement reçu), `发货 PR-0001` (expédiée), `取消 PR-0001` (annulée). Le fournisseur répond `确认 PR-0001` ou `无货 PR-0001`, ou sur `/depot/`.
+3. **Équivalent SQL** : `select public.request_for_operator('PR-0001');`, `select public.operator_set_request_status('PR-0001', 'paid');`.
+
 ### Dépôt par le fournisseur lui-même, connecté par QR code WeChat
 
 Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR code du compte de service avec WeChat.
@@ -94,7 +130,14 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    select 'https://central.parts/depot/?invite=' || public.create_depot_invite('ORG-0100', 'Prénom du contact');
    ```
    Le lien sert une fois, 14 jours ; ensuite le contact rouvre simplement `https://central.parts/depot/` et scanne.
-5. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
+5. **Message d'accueil et menu** : une fois le 消息推送 activé, les réponses automatiques et le menu de la console ne s'appliquent plus. Le message d'accueil (abonnement, scan d'un QR code du compte autre que celui du dépôt) est envoyé par `wechat-events`. Le menu est défini dans `wechat/menu.json` et publié par l'API WeChat, depuis le Terminal (le secret est saisi sans s'afficher) :
+   ```bash
+   read -s WS; TOKEN=$(curl -s -X POST https://api.weixin.qq.com/cgi-bin/stable_token -H "Content-Type: application/json" \
+     -d "{\"grant_type\":\"client_credential\",\"appid\":\"wx90a9a7c046914f5e\",\"secret\":\"$WS\"}" | sed -E 's/.*"access_token":"([^"]+)".*/\1/'); unset WS
+   curl -s -X POST "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=$TOKEN" -H "Content-Type: application/json" --data-binary @supabase/wechat/menu.json; echo
+   ```
+   Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
+6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ## Vérifier en local
 
@@ -102,7 +145,7 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
 tools/test-db.sh        # PostgreSQL local sur /var/tmp:54329 ; crée puis supprime la base cp_test
 ```
 
-Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 127 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
+Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 198 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`), inscription des fournisseurs et validation (`checks/04_inscription.sql`), recherche publique (`checks/05_recherche.sql`), demandes d'achat (`checks/06_achat.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
 
 La lecture des fichiers (colonnes, séparateurs, prix, quantités), le jeton de session, les chemins de dépôt, la signature et les événements WeChat se testent sans base : `node tools/test-import.mjs`.
 

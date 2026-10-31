@@ -19,7 +19,7 @@ Les offres de brokers et de détenteurs de surplus ne passent pas par Inventory 
 
 EMS et OEM français et européens.
 
-**Points de contact** (API first) : plateformes de cotation et d'achat (Adesio, Luminovo, CalcuQuote), ERP des clients, site central.parts, sites des distributeurs et revendeurs qui référencent l'offre Central.Parts.
+**Points de contact** (API first) : plateformes de cotation et d'achat (Adesio, Luminovo, CalcuQuote), ERP des clients, site central.parts, sites des distributeurs et revendeurs qui référencent l'offre Central.Parts. Sur le site, la recherche est publique, avec un niveau de détail réduit sans compte (ADR 0013).
 
 ## Ce que fait l'offre
 
@@ -32,6 +32,7 @@ EMS et OEM français et européens.
 
 - Traçabilité jusqu'au fabricant ; certificat de conformité du fabricant ou du distributeur.
 - Paiement classique, éventuellement à terme, selon les conditions du client.
+- Import : l'acheteur importe et dédouane ; Central.Parts reste intermédiaire, pas importateur (ADR 0013).
 
 ## Partenaires données
 

@@ -1,7 +1,7 @@
 # 0012 — Inscription des fournisseurs chinois et invitation des collègues
 
 - Date : 2026-10-30
-- Statut : proposée
+- Statut : acceptée ; première version implémentée le 31 octobre 2026, avant electronica (voir « Mise en œuvre »)
 
 ## Contexte
 
@@ -79,3 +79,26 @@ Pour l'instant, Central.Parts ne recrute que des **fournisseurs chinois**, et ce
 - `site/depot/` devient l'espace du fournisseur : inscription, dépôt, collègues et, pour un fédérateur, ses sous-fournisseurs.
 - Le jour où des fournisseurs non chinois ou des acheteurs s'inscriront, il faudra une table des personnes avec plusieurs moyens de connexion (WeChat, e-mail). Elle fera l'objet d'un ADR à part ; le modèle ci-dessus est prévu pour être repris par cette table.
 - Les photos de licence sont des documents d'entreprise : compartiment privé, jamais dans le dépôt Git.
+
+## Mise en œuvre (31 octobre 2026)
+
+Livré pour electronica :
+
+- Le **message d'accueil** du compte de service (abonnement, scan du QR code du stand, tout message d'un fournisseur) contient un **lien de connexion personnel**, à usage unique et valable 15 minutes : `https://central.parts/depot/?login=dl_…`. Sur téléphone, on ne peut pas scanner un QR code affiché sur son propre écran ; le lien remplace ce second scan.
+- La page `/depot/` devient l'espace du fournisseur :
+  - un compte sans société voit le formulaire d'inscription (le numéro 统一社会信用代码 est contrôlé dans la page et en base) ;
+  - la société inscrite est en attente : elle dépose sa licence (photo prise par le téléphone ou fichier) puis son stock ;
+  - l'administrateur invite ses collègues et voit la liste des contacts.
+- **Validation par l'opérateur dans WeChat**, par commandes envoyées au compte de service :
+  - `待审核` : liste des sociétés en attente ;
+  - `通过 ORG-…` : validation ;
+  - `拒绝 ORG-… motif` : refus.
+
+  Les opérateurs sont les comptes WeChat de la table `operators`. À chaque licence déposée, ils reçoivent la fiche de la société, avec un lien de 7 jours vers la licence. L'administrateur de la société reçoit la décision. Ces messages sont des 客服消息, que WeChat ne délivre qu'aux comptes actifs dans les 48 dernières heures. La liste `待审核` reste toujours disponible ; le message modèle (模板消息) viendra s'il le faut.
+- Migration `20261031000007_inscription_fournisseurs.sql`, contrôles `checks/04_inscription.sql`, parcours de la page `tools/test-depot-ui.mjs`.
+
+Reporté après le salon :
+
+- La **transmission pré-remplie** au responsable : la page propose seulement de lui transférer le lien `central.parts/depot/`.
+- La **demande d'adhésion** à une société déjà inscrite : la page invite à demander une invitation à son administrateur.
+- La **fédération** (`转给 V-n`) et la vérification automatique du numéro auprès d'un registre.
