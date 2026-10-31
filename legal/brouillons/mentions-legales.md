@@ -18,7 +18,7 @@ Le site central.parts est édité par **Adesio SAS**, au titre de son établisse
 
 ### Hébergement
 - Site : OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.
-- Données des services en ligne (espace fournisseurs, recherche) : Supabase, projet hébergé dans la région de Francfort (Allemagne). [À VALIDER : raison sociale et adresse du prestataire Supabase à mentionner]
+- Données des services en ligne (espace fournisseurs, recherche) : Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513 ; projet hébergé dans la région de Francfort (Allemagne).
 
 ### Propriété intellectuelle
 Les contenus du site (textes, logo, éléments graphiques) sont la propriété d'Adesio SAS, sauf mention contraire. Toute reproduction sans autorisation est interdite.
@@ -47,7 +47,7 @@ The central.parts website is published by **Adesio SAS**, through its establishm
 
 ### Hosting
 - Website: OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.
-- Data of the online services (supplier space, search): Supabase, project hosted in the Frankfurt region (Germany). [TO BE VALIDATED: Supabase provider name and address]
+- Data of the online services (supplier space, search): Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapore 049513; project hosted in the Frankfurt region (Germany).
 
 ### Intellectual property
 The content of this website (texts, logo, graphics) belongs to Adesio SAS unless stated otherwise. Any reproduction without permission is prohibited.
@@ -76,7 +76,7 @@ central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的�
 
 ### 托管
 - 网站：OVH SAS, 2 rue Kellermann, 59100 Roubaix, France（法国鲁贝）。
-- 在线服务数据（供应商中心、搜索）：Supabase，项目托管于德国法兰克福区域。[待确认：Supabase 服务商名称与地址]
+- 在线服务数据（供应商中心、搜索）：Supabase Pte. Ltd.，65 Chulia Street #38-02/03, OCBC Centre, Singapore 049513（新加坡）；项目托管于德国法兰克福区域。
 
 ### 知识产权
 除另有说明外，本网站内容（文字、标志、图形）归 Adesio SAS 所有，未经许可不得转载。
