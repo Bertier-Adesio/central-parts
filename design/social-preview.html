@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Aperçu social 1200×630 (og:image). Rendu en PNG par tools/render-social.mjs : ?lang=fr ou ?lang=en. -->
+<!-- Aperçu social 1200×630 (og:image). Rendu en PNG par tools/render-social.mjs : ?lang=fr, ?lang=en ou ?lang=zh. -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -7,7 +7,7 @@
 @font-face { font-family: 'Space Grotesk'; src: url("/assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; }
 @font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; }
 html, body { margin: 0; }
-body { width: 1200px; height: 630px; overflow: hidden; position: relative; background: #F4F2EE; color: #15171C; font-family: 'Space Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+body { width: 1200px; height: 630px; overflow: hidden; position: relative; background: #F4F2EE; color: #15171C; font-family: 'Space Grotesk', 'Noto Sans SC', 'PingFang SC', 'WenQuanYi Zen Hei', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 .mark-bg { position: absolute; left: 600px; top: 15px; width: 600px; height: 600px; }
 .brand { position: absolute; left: 75px; top: 79px; display: flex; align-items: center; }
 .brand svg { width: 112px; height: 112px; flex: none; }
@@ -37,10 +37,12 @@ h1 { position: absolute; left: 75px; top: 370px; width: 900px; margin: 0; font-s
 // Mêmes textes que la landing (objet T de design/landing.dc.html : heroTitle, offices).
 var TXT = {
   fr: { title: 'Les fabricants chinois de composants, connectés aux acheteurs européens.', regions: 'Shenzhen · Paris · Denver' },
-  en: { title: 'Chinese component makers, connected to European buyers.', regions: 'Shenzhen · Paris · Denver' }
+  en: { title: 'Chinese component makers, connected to European buyers.', regions: 'Shenzhen · Paris · Denver' },
+  zh: { title: '中国元器件制造商，直连欧洲采购方。', regions: '深圳 · 巴黎 · 丹佛' }
 };
-var lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'fr';
-document.documentElement.lang = lang;
+var lang = new URLSearchParams(location.search).get('lang');
+if (!TXT[lang]) lang = 'fr';
+document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
 document.getElementById('title').textContent = TXT[lang].title;
 document.getElementById('regions').textContent = ' ' + TXT[lang].regions;
 </script>

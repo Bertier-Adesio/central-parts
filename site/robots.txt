@@ -1,0 +1,8 @@
+# central.parts : la landing est indexable ; les prototypes (maquette, espace fournisseur, recherche) ne le sont pas.
+User-agent: *
+Disallow: /app/
+Disallow: /proto/
+Disallow: /depot/
+Disallow: /recherche/
+
+Sitemap: https://central.parts/sitemap.xml
