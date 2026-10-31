@@ -24,6 +24,23 @@ Les fournisseurs chinois se connectent avec WeChat (ADR 0010, 0012), qui fonctio
 - La vérification de la société par l'INPI ou VIES (ADR 0015) reste requise : le domaine dit qui peut rejoindre la société, pas que la société existe.
 - Les fournisseurs chinois ne sont pas concernés : leur société est identifiée par le 统一社会信用代码 et leurs contacts par WeChat (ADR 0012).
 
+### E-mails envoyés par la plateforme
+Messages de service, liés à une action de l'utilisateur, sans consentement à recueillir ; aucun e-mail commercial (lettre d'information, relance) sans consentement explicite et lien de désinscription. Les fournisseurs chinois n'en reçoivent aucun : tout passe par WeChat. En français ou en anglais selon la langue du compte.
+
+| E-mail | Destinataire |
+|---|---|
+| Code de connexion à 6 chiffres | Acheteur ou fournisseur européen |
+| Invitation d'un collègue (même domaine) ; demande d'adhésion à valider | Collègue ; administrateur de la société |
+| Société validée ou refusée | Administrateur |
+| Demande d'achat : accusé de réception avec le lien de suivi, disponibilité confirmée ou non, proforma, virement reçu, expédition (ADR 0014) | Acheteur |
+| Nouvelle demande d'achat à confirmer ; rapport d'import du fichier de stock | Fournisseur européen |
+| Alertes en secours de WeChat (règle des 48 heures) : société à valider, demande d'achat, message d'un contact ; éventuellement un récapitulatif quotidien | Opérateur |
+
+### Deux expéditeurs séparés
+- **`contact@central.parts` reste la messagerie de Bertier, sur Google Workspace** : échanges personnels avec les fournisseurs et les acheteurs, réception des réponses. Elle n'envoie aucun e-mail automatique (limites d'envoi, et un envoi automatique jugé indésirable nuirait à sa réputation).
+- **Les e-mails automatiques partent d'un service d'envoi**, depuis une adresse dédiée, de préférence sur un sous-domaine (par exemple `notifications@mail.central.parts`), avec **« Répondre à : contact@central.parts »** : les réponses arrivent dans Workspace.
+- DNS (OVH) : SPF autorisant Google et le service d'envoi, une clé DKIM pour chacun, DMARC commun ; le sous-domaine isole la réputation des envois automatiques.
+
 ## Points ouverts
 - Le service d'envoi d'e-mails (SMTP) et l'adresse d'expédition des codes, avec SPF et DKIM du domaine central.parts. Ce service est un **sous-traitant** au sens du RGPD : le jour où il est retenu, il entre dans la politique de confidentialité (raison sociale, pays, encadrement d'un éventuel transfert hors UE), et son contrat de traitement des données est signé. Un service établi dans l'UE simplifie ce point.
 

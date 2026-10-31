@@ -21,10 +21,11 @@ Le responsable du traitement est **Adesio SAS**, au titre de son établissement 
 | Recherche (central.parts/recherche/) | Empreinte de l'adresse IP, calculée chaque jour, jamais l'adresse elle-même | Limiter les abus (30 recherches par minute) | Intérêt légitime | 1 heure |
 | Journaux techniques de l'hébergeur | Adresse IP, date, page demandée | Sécurité et fonctionnement du site | Intérêt légitime | [À VALIDER : durée des journaux OVH] |
 
-Le formulaire de contact ne transmet rien à nos serveurs : il ouvre votre messagerie avec un message préparé vers contact@central.parts. Le message est ensuite traité dans notre messagerie. [À VALIDER : prestataire de la messagerie contact@central.parts]
+Le formulaire de contact ne transmet rien à nos serveurs : il ouvre votre messagerie avec un message préparé vers contact@central.parts. Le message est ensuite traité dans notre messagerie professionnelle (Google Workspace, voir ci-dessous).
 
 ### Où sont vos données, et qui les reçoit
 - **OVH** (France) héberge le site.
+- **Google Cloud EMEA Limited** (Irlande), notre sous-traitant, fournit la messagerie professionnelle (Google Workspace) : les messages envoyés à contact@central.parts et nos réponses y sont conservés. Google et ses sous-traitants peuvent traiter ces données hors de l'Union européenne, notamment aux États-Unis ; ce transfert est encadré par l'accord de traitement des données de Google Workspace (clauses contractuelles types). [À VALIDER : accord de traitement des données accepté dans la console d'administration Google Workspace]
 - **Supabase Pte. Ltd.** (Singapour), notre sous-traitant, héberge les données de l'espace fournisseurs et de la recherche. Le projet est situé dans la région de Francfort (Allemagne), mais Supabase et ses propres sous-traitants peuvent y accéder ou les traiter hors de l'Union européenne : ce **transfert hors UE** est encadré par les clauses contractuelles types de la Commission européenne (modules 2 et 3), prévues par l'accord de traitement des données (DPA) de Supabase. [À VALIDER : accepter le DPA de Supabase pour ce projet et en garder une copie]
 - **Tencent** (Chine) héberge le formulaire de partenariat (Tencent Docs) et le service WeChat. Les données saisies dans ce formulaire, ou échangées par WeChat, sont donc **hébergées en Chine**, hors de l'Union européenne. [À VALIDER : fondement du transfert hors UE et information des utilisateurs européens ; proposer une autre voie de contact (e-mail) à ceux qui ne le souhaitent pas]
 - [À COMPLÉTER lors de l'ouverture des comptes européens (ADR 0017) : le **service d'envoi d'e-mails** qui envoie les codes de connexion et les alertes, sous-traitant, avec sa raison sociale, son pays et, s'il traite des données hors de l'UE, l'encadrement du transfert. Les données concernées : adresse e-mail professionnelle et contenu des messages envoyés.]
@@ -58,10 +59,11 @@ The controller is **Adesio SAS**, through its establishment Central.Parts: 8 rue
 | Search (central.parts/recherche/) | Daily hash of the IP address, never the address itself | Prevent abuse (30 searches per minute) | Legitimate interest | 1 hour |
 | Hosting provider technical logs | IP address, date, requested page | Security and operation of the website | Legitimate interest | [TO BE VALIDATED] |
 
-The contact form sends nothing to our servers: it opens your e-mail app with a prepared message to contact@central.parts.
+The contact form sends nothing to our servers: it opens your e-mail app with a prepared message to contact@central.parts, handled in our business e-mail (Google Workspace, see below).
 
 ### Where your data is, and who receives it
 - **OVH** (France) hosts the website.
+- **Google Cloud EMEA Limited** (Ireland), our processor, provides our business e-mail (Google Workspace): messages sent to contact@central.parts and our replies are stored there. Google and its sub-processors may process this data outside the European Union, including in the United States; this transfer is covered by the Google Workspace data processing agreement (standard contractual clauses). [TO BE VALIDATED: data processing agreement accepted in the Google Workspace admin console]
 - **Supabase Pte. Ltd.** (Singapore), our processor, hosts the supplier space and search data. The project is located in the Frankfurt region (Germany), but Supabase and its own sub-processors may access or process the data outside the European Union: this **transfer outside the EU** is covered by the European Commission's standard contractual clauses (modules 2 and 3) in Supabase's data processing agreement (DPA). [TO BE VALIDATED: accept Supabase's DPA for this project and keep a copy]
 - **Tencent** (China) hosts the partner form (Tencent Docs) and the WeChat service. Data entered in that form or exchanged on WeChat is therefore **hosted in China**, outside the European Union. [TO BE VALIDATED: basis for the transfer outside the EU; e-mail offered as an alternative]
 - [TO BE COMPLETED when European accounts open (ADR 0017): the **e-mail delivery service** sending login codes and alerts, as processor, with its name, country and, if it processes data outside the EU, the transfer safeguards.]
@@ -95,10 +97,11 @@ Last updated: [TO BE COMPLETED].
 | 搜索（central.parts/recherche/） | 每日计算的 IP 地址摘要（不保存 IP 地址本身） | 防止滥用（每分钟 30 次搜索） | 正当利益 | 1 小时 |
 | 托管服务商的技术日志 | IP 地址、时间、访问页面 | 网站安全与运行 | 正当利益 | [待确认] |
 
-网站联系表单不会向我们的服务器发送任何数据：它会打开您的邮件应用，并预先填写发往 contact@central.parts 的邮件。
+网站联系表单不会向我们的服务器发送任何数据：它会打开您的邮件应用，并预先填写发往 contact@central.parts 的邮件，由我们的企业邮箱（Google Workspace）处理。
 
 ### 数据存放位置及接收方
 - **OVH**（法国）托管本网站。
+- **Google Cloud EMEA Limited**（爱尔兰）作为我们的数据处理方，提供企业邮箱（Google Workspace）：发往 contact@central.parts 的邮件及我们的回复保存在其中，可能在欧盟以外（包括美国）处理，依据 Google Workspace 数据处理协议（标准合同条款）。[待确认]
 - **Supabase Pte. Ltd.**（新加坡）作为我们的数据处理方，托管供应商中心和搜索数据。项目位于德国法兰克福区域，但 Supabase 及其分处理方可能在欧盟以外访问或处理这些数据；该**跨境传输**依据 Supabase 数据处理协议（DPA）中欧盟委员会的标准合同条款（模块 2 和 3）。[待确认：为本项目签署 Supabase DPA 并保存副本]
 - **腾讯**（中国）提供合作登记表（腾讯文档）和微信服务，相关数据**存放在中国**。[待确认]
 - [待补充（欧洲账户开通时，ADR 0017）：发送登录验证码和通知的**邮件发送服务商**（数据处理方）的名称、所在国家及跨境传输保障。]
