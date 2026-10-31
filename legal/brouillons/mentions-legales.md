@@ -29,7 +29,7 @@ Les contenus du site (textes, logo, éléments graphiques) sont la propriété d
 Voir la [politique de confidentialité](/confidentialite/).
 
 ### Droit applicable
-Le présent site est soumis au droit français. [À VALIDER : juridiction compétente]
+Le présent site est soumis au droit français. Tout litige relève des tribunaux compétents du ressort de Saint-Malo (France).
 
 ---
 
@@ -58,7 +58,7 @@ The content of this website (texts, logo, graphics) belongs to Adesio SAS unless
 See the [privacy policy](/en/privacy/).
 
 ### Governing law
-This website is governed by French law. [TO BE VALIDATED: competent courts]
+This website is governed by French law. Any dispute falls under the jurisdiction of the competent courts of Saint-Malo, France.
 
 ---
 
@@ -87,4 +87,4 @@ central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的�
 请参阅[隐私政策](/zh/privacy/)。
 
 ### 适用法律
-本网站受法国法律管辖。[待确认：管辖法院]
+本网站受法国法律管辖。任何争议由法国圣马洛（Saint-Malo）有管辖权的法院处理。
