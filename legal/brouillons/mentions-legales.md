@@ -9,7 +9,7 @@
 ### Éditeur du site
 Le site central.parts est édité par **Adesio SAS**, au titre de son établissement **Central.Parts**.
 
-- Société par actions simplifiée au capital de [À COMPLÉTER] euros
+- Société par actions simplifiée au capital de 565 181,95 euros
 - Siège social : 8 rue du Point du Jour, 35400 Saint-Malo, France
 - SIREN : 922 282 876 · RCS Saint-Malo
 - N° de TVA intracommunautaire : FR76 922 282 876
@@ -38,7 +38,7 @@ Le présent site est soumis au droit français. [À VALIDER : juridiction compé
 ### Publisher
 The central.parts website is published by **Adesio SAS**, through its establishment **Central.Parts**.
 
-- French simplified joint-stock company (SAS) with a share capital of EUR [TO BE COMPLETED]
+- French simplified joint-stock company (SAS) with a share capital of EUR 565,181.95
 - Registered office: 8 rue du Point du Jour, 35400 Saint-Malo, France
 - SIREN: 922 282 876 · Saint-Malo Trade and Companies Register (RCS)
 - EU VAT number: FR76 922 282 876
@@ -67,7 +67,7 @@ This website is governed by French law. [TO BE VALIDATED: competent courts]
 ### 网站发布者
 central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的名义发布。
 
-- 法国简易股份有限公司（SAS），注册资本 [待补充] 欧元
+- 法国简易股份有限公司（SAS），注册资本 565,181.95 欧元
 - 注册地址：8 rue du Point du Jour, 35400 Saint-Malo, France（法国圣马洛）
 - 企业识别号（SIREN）：922 282 876 · 圣马洛商业及公司注册处（RCS Saint-Malo）
 - 欧盟增值税号：FR76 922 282 876
