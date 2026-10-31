@@ -33,7 +33,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`, `20261101000010_marges_par_vendeur.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
@@ -90,10 +90,16 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    ```bash
    supabase functions deploy search --project-ref tuhbzziqyisdnqzfvtkh --use-api --no-verify-jwt
    ```
-2. **Marges par catégorie de source** : sans règle, le prix est affiché « sur demande ». Les taux ne sont jamais dans ce dépôt public ; l'opérateur les saisit dans l'éditeur SQL :
+2. **Marges** (migration `20261101000010_marges_par_vendeur.sql`) : une marge par catégorie de source, et, si besoin, une marge propre à un vendeur, qui remplace celle de sa catégorie. Sans marge, le prix est affiché « sur demande ». Les taux ne sont jamais dans ce dépôt public ; l'opérateur les saisit dans l'éditeur SQL :
    ```sql
+   -- Par catégorie
    insert into app.price_rules (category, margin_pct) values ('manufacturer', <taux>), ('distributor', <taux>), ('broker', <taux>), ('surplus', <taux>)
    on conflict (category) do update set margin_pct = excluded.margin_pct, updated_at = now();
+   -- Par vendeur (remplace la catégorie)
+   insert into app.seller_margins (org_id, margin_pct) values ('ORG-0123', <taux>)
+   on conflict (org_id) do update set margin_pct = excluded.margin_pct, updated_at = now();
+   -- Revenir à la marge de la catégorie
+   delete from app.seller_margins where org_id = 'ORG-0123';
    ```
 3. **Vérifier** : `curl "https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search?q=NE555&cur=EUR"`. Seuls les fournisseurs validés apparaissent ; 30 recherches par minute et par adresse.
 
@@ -145,7 +151,7 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
 tools/test-db.sh        # PostgreSQL local sur /var/tmp:54329 ; crée puis supprime la base cp_test
 ```
 
-Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 198 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`), inscription des fournisseurs et validation (`checks/04_inscription.sql`), recherche publique (`checks/05_recherche.sql`), demandes d'achat (`checks/06_achat.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
+Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 200 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`), inscription des fournisseurs et validation (`checks/04_inscription.sql`), recherche publique (`checks/05_recherche.sql`), demandes d'achat (`checks/06_achat.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
 
 La lecture des fichiers (colonnes, séparateurs, prix, quantités), le jeton de session, les chemins de dépôt, la signature et les événements WeChat se testent sans base : `node tools/test-import.mjs`.
 

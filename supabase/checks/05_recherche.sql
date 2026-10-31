@@ -41,6 +41,18 @@ begin
 end $$;
 reset role;
 
+-- Marge propre à un vendeur : elle remplace celle de sa catégorie.
+insert into app.seller_margins (org_id, margin_pct) values ('S4', 20);
+set role service_role;
+do $$
+declare x jsonb;
+begin
+  select e into x from jsonb_array_elements(public.public_search('192.0.2.1', 'XC2S50', 'EUR')->'results') e where e->>'source' = 'surplus' and e->>'ship_from' = 'CN';
+  perform tests.eq('marge du vendeur : 300 CNH en EUR + 20 % au lieu de 10 %', (x->>'price_from')::numeric, 46.0800);
+end $$;
+reset role;
+delete from app.seller_margins;
+
 -- Fournisseur en attente de validation : invisible.
 update public.organizations set kyb = 'pending' where id = 'S2';
 set role service_role;

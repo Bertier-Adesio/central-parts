@@ -69,14 +69,29 @@ language sql stable security definer set search_path = '' as $$
    limit 1
 $$;
 
--- Prix tout compris pour l'acheteur : prix net converti, plus la marge de la catégorie (null sans règle ou sans prix).
+-- Marges par vendeur : mêmes définitions qu'en 20261101000010, pour que l'ordre d'application soit indifférent.
+create table if not exists app.seller_margins (
+  org_id     text primary key references public.organizations on delete cascade,
+  margin_pct numeric(6,2) not null check (margin_pct >= 0),
+  updated_at timestamptz not null default now()
+);
+revoke all on app.seller_margins from public, anon, authenticated;
+create or replace function app.margin_for(p_org text) returns numeric
+language sql stable security definer set search_path = '' as $$
+  select coalesce(
+    (select m.margin_pct from app.seller_margins m where m.org_id = p_org),
+    (select r.margin_pct from app.price_rules r join public.organizations o on r.category = app.source_category(o.profile) where o.id = p_org))
+$$;
+revoke execute on function app.margin_for(text) from public, anon, authenticated;
+
+-- Prix tout compris pour l'acheteur : prix net converti, plus la marge du vendeur ou de sa catégorie
+-- (null sans marge ou sans prix).
 create or replace function app.buyer_price(p_lot text, p_qty int, p_currency text) returns numeric
 language sql stable security definer set search_path = '' as $$
-  select round(app.lot_price_for(l.id, p_qty) * c.eur_rate / t.eur_rate * (1 + pr.margin_pct / 100), 4)
-    from public.lots l join public.organizations o on o.id = l.seller_id
+  select round(app.lot_price_for(l.id, p_qty) * c.eur_rate / t.eur_rate * (1 + app.margin_for(l.seller_id) / 100), 4)
+    from public.lots l
     join public.currencies c on c.code = l.currency
     join public.currencies t on t.code = p_currency
-    join app.price_rules pr on pr.category = app.source_category(o.profile)
    where l.id = p_lot
 $$;
 

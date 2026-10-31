@@ -58,6 +58,15 @@ begin
 end $$;
 reset role;
 
+-- Marge propre au vendeur S4 dans le devis.
+insert into app.seller_margins (org_id, margin_pct) values ('S4', 20);
+set role service_role;
+do $$ begin
+  perform tests.eq('devis : marge du vendeur (20 %)', (public.public_quote('XC2S50-5TQ144C', 'surplus', 'CN', 200, 'EUR')->>'unit_price')::numeric, 38.4000);
+end $$;
+reset role;
+delete from app.seller_margins;
+
 -- Fournisseur : voit la demande sans l'acheteur, confirme ; un autre fournisseur ne peut pas répondre.
 set role service_role;
 do $$
