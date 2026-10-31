@@ -1,7 +1,7 @@
 # 0014 — Achat par les visiteurs : demande d'achat, proforma et virement
 
 - Date : 2026-10-31
-- Statut : acceptée (la vente par Central.Parts en achat-revente, la TVA et les conditions de vente restent à valider par l'avocat et l'expert-comptable)
+- Statut : acceptée, **lancement après electronica 2026** : le parcours est construit et testé, mais le bouton « Acheter » reste masqué (`BUY_OPEN = false` dans `site/recherche/index.html`) jusqu'à l'ouverture (la vente par Central.Parts en achat-revente, la TVA et les conditions de vente restent à valider par l'avocat et l'expert-comptable)
 
 ## Contexte
 
@@ -39,3 +39,4 @@ Limite contre les abus : 5 demandes par heure et par adresse IP.
 - Migration `20261031000009_demandes_achat.sql`, fonction Edge `order`. Les commandes WeChat sont dans `wechat-events`, les demandes reçues sur `/depot/`. Pages `site/recherche/` (bouton « Acheter ») et `site/recherche/commande/` (suivi).
 - Contrôles : `checks/06_achat.sql`, `tools/test-search-ui.mjs`, `tools/test-depot-ui.mjs`.
 - Avant la première vente réelle : les marges (`app.price_rules`), le compte bancaire de réception, le modèle de proforma, et la validation juridique et fiscale de l'achat-revente.
+- Ouverture des achats : passer `BUY_OPEN` à `true`, appliquer la migration `…009` si ce n'est pas fait et déployer la fonction `order`.

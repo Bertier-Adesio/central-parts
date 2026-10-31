@@ -193,7 +193,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
         '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span>' +
         '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div>' +
-        '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button></div>';
+        (BUY_OPEN ? '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button>' : '') + '</div>';
     }).join('');
     $('list').querySelectorAll('.buy').forEach(function (b) { b.addEventListener('click', function () { openBuy(r[+b.getAttribute('data-i')], d.currency); }); });
   }
@@ -212,6 +212,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 
   // ---------------------------------------------------------------- demande d'achat (ADR 0014)
   var ORDER_FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
+  // Achats ouverts après electronica 2026 (ADR 0014) : passer à true pour afficher le bouton « Acheter ».
+  var BUY_OPEN = false;
   var COUNTRIES = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
   var offer = null, quoteTimer = null;
   function call(url, opts) {
