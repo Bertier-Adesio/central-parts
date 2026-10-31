@@ -22,13 +22,15 @@ const LANGS = {
   fr: {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
     headline: 'Fabricants chinois vers l’Europe',
-    description: 'Central.Parts, Supply Network Operator : les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Shenzhen, Paris, Denver. electronica 2026, Hall B4, stand 251/12.',
+    seoTitle: 'Composants électroniques chinois pour l’Europe — Central.Parts',
+    description: 'Les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Supply Network Operator. electronica 2026, hall B4, stand 251/12.',
     mailSubject: 'Demande de contact', mailProfile: 'Profil', mailOptIn: 'Espace client : informer et recontacter', mailYes: 'oui', mailNo: 'non',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
     headline: 'Chinese component makers to European buyers',
-    description: 'Central.Parts, Supply Network Operator: Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Shenzhen, Paris, Denver. electronica 2026, Hall B4, Booth 251/12.',
+    seoTitle: 'Chinese electronic components for Europe — Central.Parts',
+    description: 'Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Supply Network Operator. electronica 2026, Hall B4, Booth 251/12.',
     mailSubject: 'Contact request', mailProfile: 'Profile', mailOptIn: 'Customer area: notify and contact', mailYes: 'yes', mailNo: 'no',
   },
   zh: {
@@ -197,10 +199,10 @@ function page(lang) {
   // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,
   // il coupe la marque). Les aperçus sociaux n'affichent que l'accroche :
   // la marque y figure déjà via og:site_name, et le titre reste sous 60 caractères.
-  const title = `${L.headline} — Central.Parts`;
+  const title = L.seoTitle || `${L.headline} — Central.Parts`;
   const url = ORIGIN + L.path;
   const alt = Object.values(LANGS).map((o) => `<link rel="alternate" hreflang="${o.hreflang}" href="${ORIGIN + o.path}">`).join('\n')
-    + `\n<link rel="alternate" hreflang="x-default" href="${ORIGIN}/">`;
+    + `\n<link rel="alternate" hreflang="x-default" href="${ORIGIN + LANGS.en.path}">`;
   const img = `${ORIGIN}/${L.ogImage}`;
   const og = [
     ['og:type', 'website'], ['og:site_name', 'Central.Parts'], ['og:url', url], ['og:title', L.headline], ['og:description', L.description],
@@ -209,6 +211,15 @@ function page(lang) {
   ].map(([p, c]) => `<meta property="${p}" content="${esc(c)}">`).join('\n');
   const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.headline], ['twitter:description', L.description], ['twitter:image', img]]
     .map(([n, c]) => `<meta name="${n}" content="${esc(c)}">`).join('\n');
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'Organization', '@id': `${ORIGIN}/#organization`, name: 'Central.Parts', url: `${ORIGIN}/`, logo: `${ORIGIN}/assets/favicon.svg`,
+        email: CONTACT_EMAIL, description: L.description, areaServed: 'Europe' },
+      { '@type': 'WebSite', '@id': `${ORIGIN}/#website`, url: `${ORIGIN}/`, name: 'Central.Parts', inLanguage: L.htmlLang, publisher: { '@id': `${ORIGIN}/#organization` } },
+      { '@type': 'WebPage', '@id': `${url}#webpage`, url, name: title, description: L.description, inLanguage: L.htmlLang, isPartOf: { '@id': `${ORIGIN}/#website` } },
+    ],
+  }).replace(/</g, '\\u003c');
   const mail = JSON.stringify({ subject: L.mailSubject, profile: L.mailProfile, optin: L.mailOptIn, yes: L.mailYes, no: L.mailNo });
 
   return `<!DOCTYPE html>
@@ -219,6 +230,7 @@ function page(lang) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(L.description)}">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="${url}">
 ${alt}
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
@@ -228,6 +240,7 @@ ${alt}
 <meta http-equiv="Cache-Control" content="no-transform">
 ${og}
 ${tw}
+<script type="application/ld+json">${ld}</script>
 ${styles}
 <style>
 [hidden] { display: none !important; }
