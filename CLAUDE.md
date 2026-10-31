@@ -32,7 +32,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - Couleurs et typos : utiliser les variables de `brand/tokens.css` (alias sémantiques `--bg-*`, `--fg-*`, `--accent`…), pas de valeurs en dur.
 - Aucune ressource chargée depuis un CDN : tout est auto-hébergé dans `site/assets/`.
 - Le site doit rester accessible depuis la Chine : aucun lien ni ressource vers Google, LinkedIn ou un autre service tiers (le build échoue sinon), seule exception : le formulaire partenaire Tencent Docs. Voir `docs/decisions/0006-acces-depuis-la-chine.md`.
-- Une branche par sujet (`site/…`, `api/…`, `data/…`, `docs/…`), puis pull request vers `main`. Ne pas pousser directement sur `main` sans accord, car cela déploie le site en production.
+- Une branche par sujet (`fournisseurs/…`, `clients/…`, `site/…`, `api/…`, `data/…`, `docs/…`, voir ADR 0016), puis pull request vers `main`. Ne pas pousser directement sur `main` sans accord, car cela déploie le site et les fonctions Supabase touchées en production.
 - Toute décision structurante (stack API, modèle de données, hébergement) donne lieu à un ADR dans `docs/decisions/`.
 
 ## Vérifier le site
@@ -58,5 +58,8 @@ Toute modification du schéma passe par une nouvelle migration dans `supabase/mi
 Incrémenter `?v=N` dans `site/app/index.html` à chaque modification des fichiers de `site/app/`.
 
 ## Déploiement
+
+Fonctions Supabase : redéployées automatiquement à chaque push sur `main` qui les touche (`.github/workflows/deploy-supabase-functions.yml`, secret GitHub `SUPABASE_ACCESS_TOKEN`) ; à la main : `tools/deploy-functions.sh [fonction…]`. Les migrations restent manuelles, à appliquer avant de fusionner une PR qui en dépend (ADR 0016).
+
 
 Hébergement OVH `centryv.cluster129.hosting.ovh.net`, dossier `www/`, envoi en SFTP via `ssh.cluster129.hosting.ovh.net` (OVH refuse le FTPS), domaines `central.parts` et `www.central.parts`. Secrets GitHub requis : `OVH_FTP_USER`, `OVH_FTP_PASSWORD`. Le certificat SSL doit être actif avant le premier déploiement, car `site/.htaccess` force le HTTPS.
