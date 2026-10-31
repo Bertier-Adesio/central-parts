@@ -20,7 +20,7 @@
 //   WECHAT_APPID, WECHAT_SECRET (compte de service), DEPOT_SECRET (64 caractères aléatoires).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { licensePath, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
-import { notifyOperators, supplierCard, wechatPost } from '../_shared/wechat.ts';
+import { notifyOperators, requestAnswerNote, supplierCard, wechatPost } from '../_shared/wechat.ts';
 
 const ORIGINS = (Deno.env.get('DEPOT_ORIGINS') || 'https://central.parts').split(',');
 const SECRET = Deno.env.get('DEPOT_SECRET') || '';
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       const { ref, ok } = await body();
       const { data, error } = await db.rpc('supplier_answer', { p_openid: session.openid, p_ref: String(ref || ''), p_ok: !!ok });
       if (error) return json({ error: 'not_found' }, 404);
-      await notifyOperators(db, `【询单 ${data.ref}】供应商${ok ? '确认有货' : '回复无货'}：${data.mpn} × ${data.qty}。${ok ? '请发送形式发票（回复「发票 ' + data.ref + '」记录）。' : ''}`);
+      await notifyOperators(db, requestAnswerNote(data, !!ok));
       return json(data);
     }
 

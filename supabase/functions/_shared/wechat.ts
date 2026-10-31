@@ -46,18 +46,24 @@ export async function notifyOperators(db: SupabaseClient, content: string) {
   await Promise.all((data || []).map((o: { openid: string }) => sendText(db, o.openid, content)));
 }
 
-// Fiche d'une société en attente, pour les opérateurs : lien vers la licence valable 7 jours.
+// Fiche d'une société en attente, pour les opérateurs (en anglais) : lien vers la licence valable 7 jours.
 export async function supplierCard(db: SupabaseClient, s: Record<string, unknown>): Promise<string> {
-  let license = '未上传营业执照';
+  let license = 'Business licence: not uploaded';
   if (s.license_path) {
     const { data } = await db.storage.from('supplier-docs').createSignedUrl(String(s.license_path), 7 * 24 * 3600);
-    if (data?.signedUrl) license = '营业执照：' + data.signedUrl;
+    if (data?.signedUrl) license = 'Business licence: ' + data.signedUrl;
   }
   return [
-    `【待审核】${s.org_id} · ${s.name}`,
-    `信用代码：${s.code}`,
-    `${s.city} · ${s.profile}${s.lines ? ` · 库存 ${s.lines} 行` : ''}`,
+    `[Pending review] ${s.org_id} · ${s.name}`,
+    `Credit code: ${s.code}`,
+    `${s.city} · ${s.profile}${s.lines ? ` · ${s.lines} stock lines` : ''}`,
     license,
-    `回复「通过 ${s.org_id}」或「拒绝 ${s.org_id} 原因」`,
+    `Reply "approve ${s.org_id}" or "reject ${s.org_id} reason"`,
   ].join('\n');
+}
+
+// Avis aux opérateurs quand un fournisseur répond à une demande d'achat.
+export function requestAnswerNote(r: { ref: string; mpn: string; qty: number }, ok: boolean): string {
+  return `[Purchase request ${r.ref}] Supplier ${ok ? 'confirmed availability' : 'has no stock'}: ${r.mpn} × ${r.qty}.` +
+    (ok ? ` Send the proforma, then reply "proforma ${r.ref}".` : '');
 }

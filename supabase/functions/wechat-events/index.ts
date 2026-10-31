@@ -17,7 +17,7 @@
 // pour prévenir les fournisseurs de la décision.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
-import { notifyOperators, sendText, supplierCard } from '../_shared/wechat.ts';
+import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 
 const REPLIES: Record<string, string> = {
   ok: '已登录 Central.Parts 库存上传，请返回上传页面。\nLogged in to Central.Parts stock upload: go back to the upload page.',
@@ -57,7 +57,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     const { data: alias, error } = await db.rpc('approve_supplier', { p_org: org, p_by: openid });
     if (error) return `${org}：${error.message}`;
     later(tellAdmins(db, org, `您的公司已通过 Central.Parts 审核（编号 ${alias}），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (${alias}).`));
-    return `已通过 ${org} → ${alias}`;
+    return `Approved ${org} → ${alias}`;
   }
   m = /^(拒绝|reject)\s+(ORG-\d+)\s*(.*)$/is.exec(t);
   if (m) {
@@ -65,7 +65,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     const { error } = await db.rpc('reject_supplier', { p_org: org, p_reason: reason, p_by: openid });
     if (error) return `${org}：${error.message}`;
     later(tellAdmins(db, org, `您的公司未通过 Central.Parts 审核${reason ? '：' + reason : '。'}\n如有疑问，请直接回复此消息。`));
-    return `已拒绝 ${org}`;
+    return `Rejected ${org}`;
   }
   m = /^(确认|无货|发票|收款|发货|取消|询单|confirm|unavailable|proforma|paid|shipped|cancel|request)\s*(PR-\d+)\s*$/i.exec(t);
   if (m) {
@@ -75,19 +75,19 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     const { data, error } = status
       ? await db.rpc('operator_set_request_status', { p_ref: ref, p_status: status, p_by: openid })
       : await db.rpc('request_for_operator', { p_ref: ref });
-    if (error || !data) return `${ref}：${error?.message || '未找到'}`;
-    return `${data.ref} · ${STATUS_ZH[data.status] || data.status}\n${data.mpn} × ${data.qty} · ${data.unit_price ?? '待定'} ${data.currency}\n${data.buyer_company} · ${data.buyer_email}`;
+    if (error || !data) return `${ref}: ${error?.message || 'not found'}`;
+    return `${data.ref} · ${STATUS_EN[data.status] || data.status}\n${data.mpn} × ${data.qty} · ${data.unit_price ?? 'price to confirm'} ${data.currency}\n${data.buyer_company} · ${data.buyer_email}`;
   }
   // Lien de connexion personnel, pour tester la page comme un fournisseur (les opérateurs ne reçoivent pas l'accueil).
   if (/^(链接|link)$/i.test(t)) {
     const { data: scene, error } = await db.rpc('depot_login_link', { p_openid: openid });
-    return error ? `链接生成失败：${error.message}` : `登录链接（15 分钟内有效）：${SITE}?login=${scene}`;
+    return error ? `Login link failed: ${error.message}` : `Login link (valid 15 minutes): ${SITE}?login=${scene}`;
   }
   if (/^(待审核|pending)$/i.test(t)) {
     const { data } = await db.rpc('pending_suppliers');
     const list = (data || []) as Record<string, unknown>[];
     later((async () => { for (const s of list.slice(0, 10)) await sendText(db, openid, await supplierCard(db, s)); })());
-    return list.length ? `待审核：${list.length} 家${list.length > 10 ? '（显示前 10 家）' : ''}` : '没有待审核的公司。';
+    return list.length ? `Pending: ${list.length} compan${list.length > 1 ? 'ies' : 'y'}${list.length > 10 ? ' (first 10 shown)' : ''}` : 'No company pending.';
   }
   return [
     '命令 · Commands:',
@@ -107,8 +107,9 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   ].join('\n');
 }
 
-const STATUS_ZH: Record<string, string> = { submitted: '待供应商确认', confirmed: '供应商已确认', unavailable: '无货',
-  proforma_sent: '已发形式发票', paid: '已收款', shipped: '已发货', cancelled: '已取消' };
+// Messages aux opérateurs en anglais ; messages aux fournisseurs en chinois, avec une ligne en anglais.
+const STATUS_EN: Record<string, string> = { submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
+  proforma_sent: 'proforma sent', paid: 'paid', shipped: 'shipped', cancelled: 'cancelled' };
 
 // Réponse d'un fournisseur à une demande d'achat : 确认 PR-… (disponible) ou 无货 PR-… (indisponible).
 async function supplierCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
@@ -117,7 +118,7 @@ async function supplierCommand(db: SupabaseClient, openid: string, text: string)
   const ok = m[1] === '确认' || m[1].toLowerCase() === 'confirm';
   const { data, error } = await db.rpc('supplier_answer', { p_openid: openid, p_ref: m[2], p_ok: ok });
   if (error) return `未找到询单 ${m[2].toUpperCase()}。`;
-  later(notifyOperators(db, `【询单 ${data.ref}】供应商${ok ? '确认有货' : '回复无货'}：${data.mpn} × ${data.qty}。${ok ? '请发送形式发票（回复「发票 ' + data.ref + '」记录）。' : ''}`));
+  later(notifyOperators(db, requestAnswerNote(data, ok)));
   return ok ? `已确认询单 ${data.ref}，Central.Parts 将通知买方并安排后续。` : `已记录：询单 ${data.ref} 无货。`;
 }
 
