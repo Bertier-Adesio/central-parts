@@ -10,7 +10,7 @@ Les acheteurs doivent pouvoir créer eux-mêmes leur compte pour acheter et voir
 ## Décision
 
 - **Uniquement des comptes B2B.** Chaque compte est rattaché à une société identifiée par un numéro officiel. Aucun particulier.
-- **Connexion par lien envoyé par e-mail** (Supabase Auth, sans mot de passe), sur l'adresse professionnelle. Il faut brancher un service d'envoi d'e-mails (SMTP) à Supabase : l'envoi intégré est limité à quelques messages par heure. Le service reste à choisir.
+- **Connexion par code à 6 chiffres envoyé par e-mail** (Supabase Auth, sans mot de passe), sur l'adresse professionnelle ; une société acheteuse est limitée au domaine de son adresse (ADR 0017, qui remplace le lien initialement prévu). Il faut brancher un service d'envoi d'e-mails (SMTP) à Supabase : l'envoi intégré est limité à quelques messages par heure. Le service reste à choisir.
 - **Identification de la société** :
   - **France** : numéro SIREN, vérifié auprès de l'**API du Registre national des entreprises (INPI)**. La société doit être active ; on reprend sa dénomination et l'adresse de son siège.
   - **Autres pays de l'Union européenne** : numéro de TVA vérifié auprès de **VIES** (Commission européenne), qui donne la raison sociale et l'adresse quand le pays les fournit.
