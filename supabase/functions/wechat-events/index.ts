@@ -11,7 +11,9 @@
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
-//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat.
+//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ;
+//     - tout autre message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui
+//       répondent par « reply <n°> texte » ; accusé de réception au contact rattaché, accueil sinon.
 //
 // Secrets de la fonction : WECHAT_TOKEN (le « Token » saisi dans la console WeChat), WECHAT_APPID et WECHAT_SECRET
 // pour prévenir les fournisseurs de la décision.
@@ -78,6 +80,14 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     if (error || !data) return `${ref}: ${error?.message || 'not found'}`;
     return `${data.ref} · ${STATUS_EN[data.status] || data.status}\n${data.mpn} × ${data.qty} · ${data.unit_price ?? 'price to confirm'} ${data.currency}\n${data.buyer_company} · ${data.buyer_email}`;
   }
+  // Réponse à un message transféré : « reply 123 texte ».
+  m = /^(回复|reply)\s+#?(\d+)\s+([\s\S]+)$/i.exec(t);
+  if (m) {
+    const { data: to, error } = await db.rpc('reply_wechat_message', { p_id: Number(m[2]), p_content: m[3], p_by: openid });
+    if (error || !to) return `Message #${m[2]}: ${error?.message || 'not found'}`;
+    const sent = await sendText(db, to, m[3].trim());
+    return sent ? `Sent to #${m[2]}.` : `Not delivered: WeChat only delivers to people who wrote to the account in the last 48 hours.`;
+  }
   // Lien de connexion personnel, pour tester la page comme un fournisseur (les opérateurs ne reçoivent pas l'accueil).
   if (/^(链接|link)$/i.test(t)) {
     const { data: scene, error } = await db.rpc('depot_login_link', { p_openid: openid });
@@ -95,6 +105,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     '通过 ORG-0123 · approve ORG-0123',
     '拒绝 ORG-0123 原因 · reject ORG-0123 reason',
     '链接 · link',
+    '回复 123 内容 · reply 123 text  (answer forwarded message #123)',
     '',
     '询单 · Purchase requests (PR-0001):',
     '询单 · request',
@@ -159,7 +170,20 @@ Deno.serve(async (req) => {
     if (answer) return reply(answer);
   }
 
-  const greet = msg.MsgType === 'text' || (msg.MsgType === 'event' && (msg.Event === 'subscribe' || (msg.Event === 'SCAN' && scene)));
+  // Message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui répondent par « reply ».
+  if (['text', 'image', 'voice'].includes(msg.MsgType)) {
+    const content = msg.MsgType === 'text' ? msg.Content || '' : msg.MsgType === 'image' ? msg.PicUrl || '' : '(voice message)';
+    const { data: logged } = await db.rpc('log_wechat_message', { p_openid: msg.FromUserName, p_kind: msg.MsgType, p_content: content });
+    if (logged) {
+      const who = logged.org_id ? `${logged.org_id} · ${logged.name}` : 'not registered';
+      later(notifyOperators(db, `[Message #${logged.id}] ${who}\n${msg.MsgType === 'text' ? content : msg.MsgType + ': ' + content}\n\nReply: reply ${logged.id} your text`));
+    }
+    // Contact déjà rattaché : simple accusé de réception ; sinon, le message d'accueil avec le lien d'inscription.
+    if (logged?.org_id) return reply('已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.');
+  }
+
+  const greet = msg.MsgType === 'text' || msg.MsgType === 'image' || msg.MsgType === 'voice' ||
+    (msg.MsgType === 'event' && (msg.Event === 'subscribe' || (msg.Event === 'SCAN' && scene)));
   if (!greet) return new Response('success');
   const { data: link, error } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
   return reply(error ? welcome('').replace(/\?login=\S*/, '') : welcome(link));
