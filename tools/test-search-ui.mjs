@@ -77,7 +77,14 @@ await page.waitForSelector('.res');
 ok(calls[calls.length - 1] === '?q=NE555&cur=USD' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
 
-// Demande d'achat sur la première offre (fabricant, Chine).
+// Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
+ok((await page.$$('.res .buy')).length === 0, 'achats fermés : pas de bouton « Acheter »');
+
+// Demande d'achat sur la première offre (fabricant, Chine), achats ouverts pour le test.
+await page.route(BASE + '/recherche/?*', async (r) => {
+  const res = await r.fetch();
+  return r.fulfill({ response: res, body: (await res.text()).replace('var BUY_OPEN = false;', 'var BUY_OPEN = true;') });
+});
 await page.goto(BASE + '/recherche/?q=NE555&cur=EUR&lang=fr');
 await page.waitForSelector('.res');
 await page.click('.res .buy');
