@@ -1,4 +1,4 @@
-# 0017 — Accès des comptes européens : code par e-mail, un domaine par société acheteuse
+# 0017 — Accès des comptes européens : code par e-mail, un domaine par société
 
 - Date : 2026-11-01
 - Statut : acceptée ; construction après electronica 2026, avec les comptes clients (ADR 0015)
@@ -16,15 +16,15 @@ Les fournisseurs chinois se connectent avec WeChat (ADR 0010, 0012), qui fonctio
 - Un code plutôt qu'un lien : les antivirus des messageries d'entreprise ouvrent les liens des e-mails pour les analyser et les consomment avant l'utilisateur ; un code se tape aussi d'un appareil à l'autre.
 - Pas de connexion par Microsoft, Google ni SSO d'entreprise pour l'instant. Si un grand compte l'exige, on l'ajoutera (Microsoft d'abord), sans changer le reste.
 
-### Un domaine par société acheteuse
-- Une société acheteuse est rattachée au **domaine de l'adresse professionnelle** de la personne qui l'inscrit (par exemple `atelier-lumen.fr`). Seules des adresses de ce domaine peuvent ensuite rejoindre la société.
-- **Les messageries gratuites sont refusées** pour un compte acheteur (gmail.com, outlook.com, hotmail.*, yahoo.*, icloud.com, orange.fr, free.fr, laposte.net, gmx.*, web.de, qq.com, 163.com…) : la liste est tenue en base et complétable par l'opérateur.
+### Un domaine par société (acheteurs et fournisseurs européens)
+- Une société européenne, acheteuse ou fournisseur, est rattachée au **domaine de l'adresse professionnelle** de la personne qui l'inscrit (par exemple `atelier-lumen.fr`). Seules des adresses de ce domaine peuvent ensuite rejoindre la société.
+- **Les messageries gratuites sont refusées** pour un compte européen (gmail.com, outlook.com, hotmail.*, yahoo.*, icloud.com, orange.fr, free.fr, laposte.net, gmx.*, web.de, qq.com, 163.com…) : la liste est tenue en base et complétable par l'opérateur.
 - **Un domaine n'appartient qu'à une société.** Une nouvelle personne dont l'adresse correspond au domaine d'une société déjà inscrite ne crée pas de doublon : elle demande à rejoindre la société, et l'administrateur l'accepte. Les invitations envoyées par l'administrateur sont limitées au domaine.
 - **Exceptions par l'opérateur** : un groupe aux filiales sur plusieurs domaines, ou deux sociétés distinctes sur un même domaine, se règlent en ajoutant ou en déplaçant un domaine, depuis la base.
 - La vérification de la société par l'INPI ou VIES (ADR 0015) reste requise : le domaine dit qui peut rejoindre la société, pas que la société existe.
+- Les fournisseurs chinois ne sont pas concernés : leur société est identifiée par le 统一社会信用代码 et leurs contacts par WeChat (ADR 0012).
 
 ## Points ouverts
-- Appliquer la même règle de domaine aux **fournisseurs européens** (recommandé : même risque de rattachement abusif).
 - Le service d'envoi d'e-mails (SMTP) et l'adresse d'expédition des codes, avec SPF et DKIM du domaine central.parts.
 
 ## Conséquences
