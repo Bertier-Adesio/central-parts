@@ -23,19 +23,19 @@ const LANGS = {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
     headline: 'Fabricants chinois vers l’Europe',
     description: 'Central.Parts, Supply Network Operator : les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Shenzhen, Paris, Denver. electronica 2026, Hall B4, stand 251/12.',
-    mailSubject: 'Demande de contact', mailProfile: 'Profil',
+    mailSubject: 'Demande de contact', mailProfile: 'Profil', mailOptIn: 'Espace client : informer et recontacter', mailYes: 'oui', mailNo: 'non',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
     headline: 'Chinese component makers to European buyers',
     description: 'Central.Parts, Supply Network Operator: Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Shenzhen, Paris, Denver. electronica 2026, Hall B4, Booth 251/12.',
-    mailSubject: 'Contact request', mailProfile: 'Profile',
+    mailSubject: 'Contact request', mailProfile: 'Profile', mailOptIn: 'Customer area: notify and contact', mailYes: 'yes', mailNo: 'no',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-zh.png',
     headline: '中国元器件制造商，直连欧洲采购方',
     description: 'Central.Parts 供应网络运营商：连接中国电子元器件制造商与欧洲 EMS、OEM 采购方。深圳、巴黎、丹佛。electronica 2026，B4 馆 251/12 展位。',
-    mailSubject: '联系请求', mailProfile: '身份',
+    mailSubject: '联系请求', mailProfile: '身份', mailOptIn: '客户平台：通知并联系', mailYes: '是', mailNo: '否',
   },
 };
 
@@ -89,6 +89,7 @@ rewrite('<button type="button" sc-camel-on-click="{{ tb.pick }}" style="{{ tb.st
 rewrite('{{ t.fName }}<input required=""', '{{ t.fName }}<input name="nom" autocomplete="name" required=""');
 rewrite('{{ t.fCompany }}<input required=""', '{{ t.fCompany }}<input name="societe" autocomplete="organization" required=""');
 rewrite('{{ t.fEmail }}<input type="email" required=""', '{{ t.fEmail }}<input name="email" type="email" autocomplete="email" required=""');
+rewrite('<input type="checkbox" style=', '<input type="checkbox" name="espace_client" value="1" style=');
 rewrite('{{ msgLabel }}<textarea rows="4"', '<span id="msg-label" data-buyer="{{ t.fMsgBuyer }}" data-dist="{{ t.fMsgDist }}">{{ t.fMsgBuyer }}</span><textarea name="message" rows="4"');
 rewrite('<sc-if value="{{ sent }}" hint-placeholder-val="{{ false }}">\n<div role="status" style=', '<input type="hidden" name="profil" value="{{ t.tabBuyer }}">\n<div id="contact-sent" role="status" hidden style=');
 body = body.replace(/(<div id="contact-sent"[\s\S]*?<\/div>)\s*<\/sc-if>/, '$1');
@@ -165,7 +166,7 @@ const SCRIPT = `<script>
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var f = form.elements;
-    var lines = [label.textContent + ' :', f.message.value, '', f.nom.value, f.societe.value, f.email.value, MAIL.profile + ' : ' + f.profil.value];
+    var lines = [label.textContent + ' :', f.message.value, '', f.nom.value, f.societe.value, f.email.value, MAIL.profile + ' : ' + f.profil.value, MAIL.optin + ' : ' + (f.espace_client.checked ? MAIL.yes : MAIL.no)];
     location.href = 'mailto:${CONTACT_EMAIL}?subject=' + encodeURIComponent(MAIL.subject + ' — ' + f.societe.value) + '&body=' + encodeURIComponent(lines.join('\\n'));
     sent.hidden = false;
   });
@@ -208,7 +209,7 @@ function page(lang) {
   ].map(([p, c]) => `<meta property="${p}" content="${esc(c)}">`).join('\n');
   const tw = [['twitter:card', 'summary_large_image'], ['twitter:title', L.headline], ['twitter:description', L.description], ['twitter:image', img]]
     .map(([n, c]) => `<meta name="${n}" content="${esc(c)}">`).join('\n');
-  const mail = JSON.stringify({ subject: L.mailSubject, profile: L.mailProfile });
+  const mail = JSON.stringify({ subject: L.mailSubject, profile: L.mailProfile, optin: L.mailOptIn, yes: L.mailYes, no: L.mailNo });
 
   return `<!DOCTYPE html>
 <!-- Fichier généré par tools/build-site.mjs depuis design/landing.dc.html : ne pas modifier à la main. -->
