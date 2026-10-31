@@ -9,7 +9,7 @@
 ### Éditeur du site
 Le site central.parts est édité par **Adesio SAS**, au titre de son établissement **Central.Parts**.
 
-- Société par actions simplifiée au capital de [À COMPLÉTER] euros
+- Société par actions simplifiée au capital de 565 181,95 euros
 - Siège social : 8 rue du Point du Jour, 35400 Saint-Malo, France
 - SIREN : 922 282 876 · RCS Saint-Malo
 - N° de TVA intracommunautaire : FR76 922 282 876
@@ -18,7 +18,7 @@ Le site central.parts est édité par **Adesio SAS**, au titre de son établisse
 
 ### Hébergement
 - Site : OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.
-- Données des services en ligne (espace fournisseurs, recherche) : Supabase, projet hébergé dans la région de Francfort (Allemagne). [À VALIDER : raison sociale et adresse du prestataire Supabase à mentionner]
+- Données des services en ligne (espace fournisseurs, recherche) : Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513 ; projet hébergé dans la région de Francfort (Allemagne).
 
 ### Propriété intellectuelle
 Les contenus du site (textes, logo, éléments graphiques) sont la propriété d'Adesio SAS, sauf mention contraire. Toute reproduction sans autorisation est interdite.
@@ -29,7 +29,7 @@ Les contenus du site (textes, logo, éléments graphiques) sont la propriété d
 Voir la [politique de confidentialité](/confidentialite/).
 
 ### Droit applicable
-Le présent site est soumis au droit français. [À VALIDER : juridiction compétente]
+Le présent site est soumis au droit français. Tout litige relève des tribunaux compétents du ressort de Saint-Malo (France).
 
 ---
 
@@ -38,7 +38,7 @@ Le présent site est soumis au droit français. [À VALIDER : juridiction compé
 ### Publisher
 The central.parts website is published by **Adesio SAS**, through its establishment **Central.Parts**.
 
-- French simplified joint-stock company (SAS) with a share capital of EUR [TO BE COMPLETED]
+- French simplified joint-stock company (SAS) with a share capital of EUR 565,181.95
 - Registered office: 8 rue du Point du Jour, 35400 Saint-Malo, France
 - SIREN: 922 282 876 · Saint-Malo Trade and Companies Register (RCS)
 - EU VAT number: FR76 922 282 876
@@ -47,7 +47,7 @@ The central.parts website is published by **Adesio SAS**, through its establishm
 
 ### Hosting
 - Website: OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.
-- Data of the online services (supplier space, search): Supabase, project hosted in the Frankfurt region (Germany). [TO BE VALIDATED: Supabase provider name and address]
+- Data of the online services (supplier space, search): Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapore 049513; project hosted in the Frankfurt region (Germany).
 
 ### Intellectual property
 The content of this website (texts, logo, graphics) belongs to Adesio SAS unless stated otherwise. Any reproduction without permission is prohibited.
@@ -58,7 +58,7 @@ The content of this website (texts, logo, graphics) belongs to Adesio SAS unless
 See the [privacy policy](/en/privacy/).
 
 ### Governing law
-This website is governed by French law. [TO BE VALIDATED: competent courts]
+This website is governed by French law. Any dispute falls under the jurisdiction of the competent courts of Saint-Malo, France.
 
 ---
 
@@ -67,7 +67,7 @@ This website is governed by French law. [TO BE VALIDATED: competent courts]
 ### 网站发布者
 central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的名义发布。
 
-- 法国简易股份有限公司（SAS），注册资本 [待补充] 欧元
+- 法国简易股份有限公司（SAS），注册资本 565,181.95 欧元
 - 注册地址：8 rue du Point du Jour, 35400 Saint-Malo, France（法国圣马洛）
 - 企业识别号（SIREN）：922 282 876 · 圣马洛商业及公司注册处（RCS Saint-Malo）
 - 欧盟增值税号：FR76 922 282 876
@@ -76,7 +76,7 @@ central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的�
 
 ### 托管
 - 网站：OVH SAS, 2 rue Kellermann, 59100 Roubaix, France（法国鲁贝）。
-- 在线服务数据（供应商中心、搜索）：Supabase，项目托管于德国法兰克福区域。[待确认：Supabase 服务商名称与地址]
+- 在线服务数据（供应商中心、搜索）：Supabase Pte. Ltd.，65 Chulia Street #38-02/03, OCBC Centre, Singapore 049513（新加坡）；项目托管于德国法兰克福区域。
 
 ### 知识产权
 除另有说明外，本网站内容（文字、标志、图形）归 Adesio SAS 所有，未经许可不得转载。
@@ -87,4 +87,4 @@ central.parts 网站由 **Adesio SAS** 以其分支机构 **Central.Parts** 的�
 请参阅[隐私政策](/zh/privacy/)。
 
 ### 适用法律
-本网站受法国法律管辖。[待确认：管辖法院]
+本网站受法国法律管辖。任何争议由法国圣马洛（Saint-Malo）有管辖权的法院处理。
