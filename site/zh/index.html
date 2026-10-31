@@ -340,6 +340,7 @@ input,textarea,select{font-size:16px!important}
 </div>
 <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57">工作邮箱<input name="email" type="email" autocomplete="email" required="" style="height: 36px; padding: 0 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; color: #15171C; background: #FFFFFF" class="fc5"></label>
 <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; color: #4A4E57"><span id="msg-label" data-buyer="料号或需求" data-dist="产品线与主要元器件">料号或需求</span><textarea name="message" rows="4" style="padding: 10px 12px; border: 1px solid #C9C5BD; border-radius: 6px; font-size: 14px; line-height: 1.5; color: #15171C; background: #FFFFFF; resize: vertical" class="fc5"></textarea></label>
+<label style="display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.45; color: #4A4E57; cursor: pointer"><input type="checkbox" name="espace_client" value="1" style="margin-top: 2px; width: 16px; height: 16px; flex: none; accent-color: #15171C">我希望在 Central.Parts 客户平台上线时收到通知并被联系。</label>
 <button type="submit" style="align-self: flex-start; height: 44px; padding: 0 20px; border: 0; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500; cursor: pointer" class="hv6">发送</button>
 <input type="hidden" name="profil" value="采购方">
 <div id="contact-sent" role="status" hidden style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 6px; background: #15171C; color: #F4F2EE">
@@ -365,7 +366,7 @@ input,textarea,select{font-size:16px!important}
 </div>
 <script>
 (function () {
-  var MAIL = {"subject":"联系请求","profile":"身份"};
+  var MAIL = {"subject":"联系请求","profile":"身份","optin":"客户平台：通知并联系","yes":"是","no":"否"};
   // Navigation : fondu à droite seulement si des liens restent masqués à droite.
   var nav = document.querySelector('[data-nav]');
   function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
@@ -393,7 +394,7 @@ input,textarea,select{font-size:16px!important}
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var f = form.elements;
-    var lines = [label.textContent + ' :', f.message.value, '', f.nom.value, f.societe.value, f.email.value, MAIL.profile + ' : ' + f.profil.value];
+    var lines = [label.textContent + ' :', f.message.value, '', f.nom.value, f.societe.value, f.email.value, MAIL.profile + ' : ' + f.profil.value, MAIL.optin + ' : ' + (f.espace_client.checked ? MAIL.yes : MAIL.no)];
     location.href = 'mailto:contact@central.parts?subject=' + encodeURIComponent(MAIL.subject + ' — ' + f.societe.value) + '&body=' + encodeURIComponent(lines.join('\n'));
     sent.hidden = false;
   });
