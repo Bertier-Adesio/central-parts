@@ -89,13 +89,13 @@ Deno.serve(async (req) => {
           ].join('\n'));
         }
         await notifyOperators(db, [
-          `【询单 ${op.ref}】${op.mpn} × ${op.qty}`,
-          `买方：${op.buyer_company} · ${op.buyer_vat}${op.vat_checked ? '（VIES 已验证）' : '（未验证）'}`,
+          `[Purchase request ${op.ref}] ${op.mpn} × ${op.qty}`,
+          `Buyer: ${op.buyer_company} · ${op.buyer_vat}${op.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
           `${op.buyer_name} · ${op.buyer_email}${op.buyer_phone ? ' · ' + op.buyer_phone : ''}`,
-          `交货：${op.delivery}`,
-          `售价 ${op.unit_price ?? '待定'} ${op.currency}（合计 ${op.total ?? '待定'}）`,
-          `供应商 ${op.supplier}：${op.supplier_unit_price ?? '?'} ${op.supplier_currency}，库存 ${op.lot_qty}`,
-          op.message ? `留言：${op.message}` : '',
+          `Delivery: ${op.delivery}`,
+          `Price ${op.unit_price ?? 'to confirm'} ${op.currency} (total ${op.total ?? 'to confirm'})`,
+          `Supplier ${op.supplier}: ${op.supplier_unit_price ?? '?'} ${op.supplier_currency}, stock ${op.lot_qty}`,
+          op.message ? `Message: ${op.message}` : '',
         ].filter(Boolean).join('\n'));
       })().catch(() => {});
       const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
