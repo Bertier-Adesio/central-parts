@@ -1,6 +1,6 @@
 // Pages de recherche publique (site/recherche/) et de suivi (site/recherche/commande/) dans Chromium, avec les fonctions
 // « search » et « order » simulées : recherche, prix « à partir de » ou sur demande, demande d'achat, suivi,
-// trois langues, erreurs, 390 px sans défilement horizontal.
+// trois langues, erreurs, 340 px (petit téléphone) sans défilement horizontal.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-search-ui.mjs
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
 const { chromium } = pw.default || pw;
@@ -12,7 +12,7 @@ const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + l
 const calls = [];
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'fr-FR' });
+const page = await browser.newPage({ viewport: { width: 340, height: 844 }, locale: 'fr-FR' });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => { if (m.type() === 'error' && !/status of 4\d\d/.test(m.text())) errors.push(m.text()); });
@@ -75,7 +75,7 @@ ok((await page.textContent('#list')).includes('Aucune offre'), 'aucun résultat'
 await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
 ok(calls[calls.length - 1] === '?q=NE555&cur=USD' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé : recherche et langue relancées');
-ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
+ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 340 px');
 
 // Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
 ok((await page.$$('.res .buy')).length === 0, 'achats fermés : pas de bouton « Acheter »');
@@ -112,7 +112,7 @@ await page.click('#o-send');
 await page.waitForSelector('#done:not([hidden])');
 ok(sentOrder.mpn === 'NE555DR' && sentOrder.source === 'manufacturer' && sentOrder.ship_from === 'CN' && sentOrder.qty === '2000' && sentOrder.country === 'FR', 'achat : demande envoyée avec l\'offre et la quantité');
 ok((await page.textContent('#done-msg')).includes('PR-0001') && (await page.getAttribute('#done-link', 'href')).includes('k=tok'), 'achat : référence et lien de suivi');
-ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'achat : pas de défilement horizontal à 390 px');
+ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'achat : pas de défilement horizontal à 340 px');
 
 // Suivi de la demande.
 await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=tok&lang=fr');
