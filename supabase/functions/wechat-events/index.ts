@@ -125,7 +125,13 @@ Deno.serve(async (req) => {
 
   if (scene && scene.startsWith('dl_')) {
     const { data, error } = await db.rpc('depot_login_scan', { p_scene: scene, p_openid: msg.FromUserName, p_unionid: null });
-    const text = error ? null : REPLIES[data?.status];
+    let text = error ? null : REPLIES[data?.status];
+    // Sur téléphone, reconnaître le QR code de la page ouvre cette conversation et ferme souvent la page :
+    // un lien personnel (15 minutes) y ramène, déjà connecté. Sur ordinateur, la page se connecte seule.
+    if (text && (data.status === 'ok' || data.status === 'not_bound')) {
+      const { data: link } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
+      if (link) text += `\n\n手机上请点此返回 · On a phone, tap to go back:\n${SITE}?login=${link}`;
+    }
     return text ? reply(text) : new Response('success');
   }
 
