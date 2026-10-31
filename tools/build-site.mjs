@@ -32,7 +32,7 @@ const LANGS = {
     mailSubject: 'Contact request', mailProfile: 'Profile',
   },
   zh: {
-    path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-en.png',
+    path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-zh.png',
     headline: '中国元器件制造商，直连欧洲采购方',
     description: 'Central.Parts 供应网络运营商：连接中国电子元器件制造商与欧洲 EMS、OEM 采购方。深圳、巴黎、丹佛。electronica 2026，B4 馆 251/12 展位。',
     mailSubject: '联系请求', mailProfile: '身份',

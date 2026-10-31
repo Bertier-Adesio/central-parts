@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-// Rend design/social-preview.html en site/social-preview-fr.png et site/social-preview-en.png (1200×630).
+// Rend design/social-preview.html en site/social-preview-fr.png, -en.png et -zh.png (1200×630).
 // Prérequis : Playwright (npm i -D playwright) et un Chromium ; lancer depuis la racine du dépôt :
-//   node tools/render-social.mjs   (CHROMIUM=/chemin/vers/chrome pour un navigateur précis)
+//   node tools/render-social.mjs [fr en zh]   (toutes les langues par défaut ; CHROMIUM=/chemin/vers/chrome
+//   pour un navigateur précis, PLAYWRIGHT=/chemin/vers/playwright si le paquet n'est pas installé dans le dépôt)
 
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+const pw = await import(process.env.PLAYWRIGHT || 'playwright');
+const { chromium } = pw.default || pw;
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.woff2': 'font/woff2' };
@@ -26,7 +28,8 @@ const base = `http://127.0.0.1:${server.address().port}/`;
 
 const browser = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-for (const lang of ['fr', 'en']) {
+const LANGS = process.argv.slice(2).length ? process.argv.slice(2) : ['fr', 'en', 'zh'];
+for (const lang of LANGS) {
   await page.goto(`${base}?lang=${lang}`, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   const out = join(ROOT, `site/social-preview-${lang}.png`);
