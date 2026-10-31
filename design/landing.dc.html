@@ -425,6 +425,7 @@ input,textarea,select{font-size:16px!important}
 <sc-if value="{{ t.qrTop }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-direction: column; gap: 20px">
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
+<div style="display: flex; flex-wrap: wrap; gap: 12px"><a href="#qr-gzh" style="height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #FFFFFF; font-size: 15px; font-weight: 500; text-decoration: none">{{ t.wcFollow }}</a><a href="https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" target="_blank" rel="noopener" style="height: 44px; padding: 0 20px; display: inline-flex; align-items: center; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 15px; font-weight: 500; text-decoration: none">{{ t.qrOpenForm }}</a></div>
 </div></sc-if><sc-if value="{{ t.qrBottom }}" hint-placeholder-val="{{ true }}"><div style="grid-column: 1 / -1; max-width: 760px; display: flex; flex-direction: column; gap: 20px">
 <h2 style="margin: 0; font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; letter-spacing: -0.03em; line-height: 1.1">{{ t.contactTitle }}</h2>
 <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #4A4E57; text-wrap: pretty">{{ t.contactText }}</p>
@@ -573,7 +574,7 @@ zh: {
     { n: 2, title: '发布', text: '您的元器件将连同库存、阶梯价格与交期，出现在欧洲采购方查找料号的报价平台、ERP 与网站上。' },
     { n: 3, title: '销售', text: '采购方发起询价并下单，Central.Parts 全程处理交易并跟踪至交付。' }],
   contactTitle: '告诉我们您的需求',
-  contactText: '无论您是制造商还是采购方，请留下联系方式，我们会尽快与您联系。您也可以在微信上联系我们（Adesio Central.Parts），或发送邮件至 contact@central.parts。',
+  contactText: '推荐通过微信联系我们：关注公众号 Adesio Central.Parts，或直接填写合作登记表。也可以填写下表（将打开您的邮件应用），或发送邮件至 contact@central.parts。',
   wcFollow: '关注公众号',
   wcFollowSub: 'Adesio Central.Parts 官方公众号',
   wcFollowAlt: 'Adesio Central.Parts 微信公众号二维码',
