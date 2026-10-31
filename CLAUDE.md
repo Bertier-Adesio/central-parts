@@ -53,6 +53,8 @@ node tools/test-depot-ui.mjs           # espace fournisseur site/depot/ (même s
 node tools/test-search-ui.mjs          # recherche publique, achat et suivi site/recherche/ (même serveur), API simulée
 ```
 
+Ces tests tournent aussi sur chaque PR (`.github/workflows/tests.yml`, ADR 0016), avec la vérification de type des fonctions Edge (`deno check supabase/functions/*/index.ts`).
+
 Toute modification du schéma passe par une nouvelle migration dans `supabase/migrations/`, vérifiée par `tools/test-db.sh` (PostgreSQL local) ; la lecture des fichiers de stock par `node tools/test-import.mjs`.
 
 Incrémenter `?v=N` dans `site/app/index.html` à chaque modification des fichiers de `site/app/`.

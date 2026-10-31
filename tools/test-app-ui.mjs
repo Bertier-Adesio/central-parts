@@ -5,7 +5,8 @@
 // Usage : (cd site && python3 -m http.server 8765) puis node tools/test-app-ui.mjs [dossier-captures]
 // Playwright requis (comme tools/render-social.mjs).
 
-const { chromium } = await import(process.env.PLAYWRIGHT || 'playwright');
+const pw = await import(process.env.PLAYWRIGHT || 'playwright');
+const { chromium } = pw.default || pw;
 
 const BASE = process.env.APP_URL || 'http://localhost:8765/app/';
 const SHOTS = process.argv[2] || '';

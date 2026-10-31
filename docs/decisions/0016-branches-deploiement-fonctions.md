@@ -33,8 +33,16 @@ Les deux côtés partagent la même base, les mêmes migrations et le même code
 - Ses secrets de fonctions sont distincts de ceux de la production. Le compte WeChat de production n'y est pas branché : son 消息推送 pointe vers la production.
 - On y déploie depuis le Terminal (`SUPABASE_PROJECT_REF=<projet de test> tools/deploy-functions.sh`).
 
+### Tests sur chaque PR
+- Le workflow `.github/workflows/tests.yml` lance les tests sur chaque PR vers `main`, en parallèle, et seulement ceux que la PR concerne :
+  - **base** (toujours, quelques secondes) : lecture des fichiers de stock et outils (`test-import.mjs`), règles de la maquette (`test-app.mjs`), vérification de type des fonctions Edge (`deno check`) ;
+  - **db** (si la PR touche les migrations, les contrôles ou les données) : 200 contrôles sur PostgreSQL 16 (`test-db.sh`) ;
+  - **pages** (si la PR touche `site/`) : parcours dans Chromium de la maquette, de l'espace fournisseurs et de la recherche.
+- Les tests tournent **avant** la fusion : ils ne retardent pas les déploiements, qui partent après la fusion dans leurs propres workflows. En local, l'ensemble prend une trentaine de secondes ; dans GitHub, une à deux minutes, surtout pour installer Chromium (mis en cache).
+- Une PR rouge ne se fusionne pas. On peut rendre ces tests obligatoires dans GitHub (Settings, Branches, règle sur `main`).
+
 ## Conséquences
 
-- Fusionner une PR qui touche une fonction la met en production en quelques minutes : la relecture de la PR devient le dernier contrôle. Les tests (`tools/test-db.sh`, `test-import.mjs`, `test-depot-ui.mjs`, `test-search-ui.mjs`) sont lancés avant d'ouvrir chaque PR.
+- Fusionner une PR qui touche une fonction la met en production en quelques minutes : les tests de la PR et sa relecture sont les derniers contrôles.
 - Une PR qui contient une migration et une fonction qui en dépend : appliquer la migration **avant** de fusionner, sinon la fonction déployée appellerait une base qui n'est pas encore à jour.
 - Le jeton `SUPABASE_ACCESS_TOKEN` donne accès à tous les projets du compte Supabase : il ne vit que dans les secrets GitHub et dans Dashlane.
