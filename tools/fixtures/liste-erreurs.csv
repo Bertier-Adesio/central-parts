@@ -1,0 +1,9 @@
+manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;price-break-2;price-usd-2;price-break-3;price-usd-3;price-break-4;price-usd-4;price-break-5;price-usd-5;moq
+Texas Instruments;TLIN10283DRQ1;E-0001;;-50;1;1,85;10;1,72;;;;;;;1
+STMicroelectronics;M95M04-DWMN3TP/V;E-0002;;4000;100;2,88;10;3,05;;;;;;;1
+NXP;MC33FS4502NAE/R2;E-0003;;800;1;8,40;10;9,10;;;;;;;10
+Texas Instruments;;E-0004;;1200;1;4,75;;;;;;;;;1
+Analog Devices;AD5755-1ACPZ-REEL7;E-0005;;300;1;0;;;;;;;;;1
+Analog Devices;AD823ARZ-R7;E-0006;;5000;1;2,10;10;;;;;;;;1
+Analog Devices;ADG419BRZ-REEL7;E-0007;;3500;1;1,35;;;;;;;;;0
+Infineon;IRLML2502TRPBF;E-0008;;60000;100;0,062;1000;0,055;;;;;;;100

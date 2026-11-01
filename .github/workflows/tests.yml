@@ -94,3 +94,4 @@ jobs:
           node tools/test-app-ui.mjs
           node tools/test-depot-ui.mjs
           node tools/test-search-ui.mjs
+          node tools/test-listes-ui.mjs

@@ -33,7 +33,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`, `20261101000010_marges_par_vendeur.sql`, `20261101000011_messages_wechat.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`, `20261101000010_marges_par_vendeur.sql`, `20261101000011_messages_wechat.sql`, `20261102000012_listes_vendeurs.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
@@ -113,6 +113,38 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    Redéployer aussi `depot` et `wechat-events`.
 2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` (`request`) affiche la fiche, `发票 PR-0001` (`proforma`, proforma envoyée), `收款 PR-0001` (`paid`, virement reçu), `发货 PR-0001` (`shipped`, expédiée), `取消 PR-0001` (`cancel`, annulée). Le fournisseur répond `确认 PR-0001` (`confirm`) ou `无货 PR-0001` (`unavailable`), ou sur `/depot/`.
 3. **Équivalent SQL** : `select public.request_for_operator('PR-0001');`, `select public.operator_set_request_status('PR-0001', 'paid');`.
+
+### Listes des vendeurs par lien personnel (ADR 0021)
+
+Migration `20261102000012_listes_vendeurs.sql` (rejouable), fonctions `listes` (vendeur) et `offers` (acheteur), pages `/depot/lien/` et `/offres/`. Le vendeur charge sa liste sans connexion WeChat ; chaque dépôt remplace la précédente ; une offre non rechargée depuis 7 jours passe « à reconfirmer » et n'est plus montrée aux acheteurs.
+
+Gestes de l'opérateur, dans l'éditeur SQL (remplacer les valeurs entre chevrons, ne jamais les committer) :
+
+```sql
+-- 1. Vendeur absent de la base (pas inscrit par WeChat) : le créer, puis l'approuver.
+--    profile : Manufacturer, Distributor, Reseller ou Broker ; currency : USD, CNH ou EUR.
+insert into public.organizations (type, name, alias, city, country, currency, lang, profile, kyb)
+values ('seller', '<nom de la société>', 'tmp-' || gen_random_uuid(), '<ville>', 'HK', 'USD', 'en', 'Broker', 'pending')
+returning id;
+select public.approve_supplier('<ORG-…>', 'Bertier');      -- pseudonyme V-n et abonnement gratuit
+
+-- 2. Créer le lien personnel : le résultat est le jeton, à coller après « #k= ».
+select 'https://central.parts/depot/lien/#k=' || public.create_depot_link('<ORG-…>', 'electronica');
+
+-- 3. Suivi : dépôts, offres en ligne et à reconfirmer.
+select id, file_name, status, created, updated, rejected, withdrawn, received_at from public.stock_imports where org_id = '<ORG-…>' order by received_at desc;
+select public.seller_offer_status('<ORG-…>');
+
+-- 4. Révoquer les liens d'un vendeur (lien perdu ou transmis par erreur), puis en créer un nouveau.
+select public.revoke_depot_links('<ORG-…>');
+
+-- 5. Seuil d'expiration (7 jours par défaut).
+update app.settings set value = '10', updated_at = now() where name = 'offer_ttl_days';
+```
+
+Le lien ne s'affiche qu'une fois : la base n'en garde que l'empreinte. L'envoyer au vendeur par un canal privé (e-mail, WeChat), jamais dans ce dépôt.
+
+Si la migration `20261101000010_marges_par_vendeur.sql` est appliquée après celle-ci, rejouer `20261102000012_listes_vendeurs.sql` : sinon la recherche publique montrerait de nouveau les offres expirées.
 
 ### Dépôt par le fournisseur lui-même, connecté par QR code WeChat
 

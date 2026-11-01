@@ -15,6 +15,10 @@ manufacturer,mpn,sku,distributor-url,quantity,price-break-1,price-usd-1,…,pric
 - Séparateur virgule ou point-virgule, décimales à point ou à virgule, CSV, XLS ou XLSX.
 - Colonnes facultatives, ajoutées en fin de ligne : `date-code`, `packaging`.
 - Le `sku` sert de clé de mise à jour : il doit rester stable d'un fichier à l'autre.
+- `moq` (quantité minimale de commande, 1 ou plus) est gardé. `distributor-url` est ignorée et jamais gardée.
+- Contrôles ligne par ligne, chaque rejet avec un code traduit en chinois, anglais et français : `mpn` vide, quantité non entière ou non positive, MOQ inférieur à 1, prix nul ou illisible, palier incomplet (quantité sans prix ou l'inverse), quantités des paliers non croissantes (dans l'ordre 1 à 5), prix en hausse avec la quantité, devise non prise en charge.
+
+Vendeurs approuvés sans WeChat : lien personnel `https://central.parts/depot/lien/#k=…` ([ADR 0021](../docs/decisions/0021-listes-vendeurs-lien-expiration.md)), modèle à point-virgule et virgule décimale [`site/depot/lien/modele.csv`](../site/depot/lien/modele.csv). Chaque dépôt remplace la liste précédente ; une offre non rechargée depuis 7 jours n'est plus montrée aux acheteurs.
 
 Les autres formats décrits ci-dessous restent acceptés.
 
@@ -53,7 +57,7 @@ Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise 
 
 Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufacturer`, `quantity` / `Quantity Available`, `date_code` / `Date Code`, `packaging` / `Package Type`, `price` / `Unit Price`.
 
-**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. Les paramètres de suivi `utm_*` sont retirés du lien produit. La colonne `moq` n'est pas encore gardée.
+**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. La colonne `distributor-url` est ignorée ; `moq` est gardé.
 
 Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `年份` (date code), `包装`, `单价` / `价格`, `币种` / `货币`.
 

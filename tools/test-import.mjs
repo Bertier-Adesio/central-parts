@@ -1,7 +1,8 @@
 // Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
-import { cleanUrl, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
+import { cleanUrl, decode, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
+import { readFileSync } from 'node:fs';
 import { creditCodeOk, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 
@@ -46,7 +47,8 @@ const flux = 'manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-
 const fx = mapRows(parseCSV(flux)).rows[0];
 ok(fx && fx.price === 0.5195 && fx.currency === 'USD', 'flux Octopart : prix du palier 1 et devise lue dans l\'en-tête');
 ok(fx && JSON.stringify(fx.tiers) === '{"10":0.5039,"1000":0.4779}', 'flux Octopart : paliers 10 et 1000');
-ok(fx && fx.url === 'https://example.com/p/TPS62130RGTR?ref=7', 'lien produit sans paramètres utm');
+ok(fx && fx.url === '' && fx.moq === 1, 'flux Octopart : distributor-url ignorée, jamais gardée ; moq lu');
+ok(cleanUrl('https://example.com/p/X?utm_source=octopart&ref=7') === 'https://example.com/p/X?ref=7', 'lien produit sans paramètres utm');
 ok(cleanUrl('pas un lien') === 'pas un lien' && cleanUrl('') === '', 'lien illisible gardé tel quel');
 
 // En-têtes chinois.
@@ -57,6 +59,32 @@ ok(zh && zh.mpn === 'STM32F103C8T6' && zh.mfr === 'ST' && zh.qty === 5000 && zh.
 ok(mapRows(parseCSV('MPN,Quantity\n')).error.startsWith('Fichier vide'), 'fichier sans ligne de données');
 ok(mapRows(parseCSV('Reference,Stock\nA,1\n')).error.startsWith('Colonnes obligatoires'), 'colonnes MPN ou quantité absentes');
 ok(price('$12.5') === 12.5 && price('') === null && price('0') === null, 'prix : symbole, vide, zéro');
+
+// ---------------------------------------------------------------- listes des vendeurs (tools/fixtures)
+const fixture = (n) => mapRows(parseCSV(decode(readFileSync(new URL('./fixtures/' + n, import.meta.url)))));
+const good = fixture('liste-partenaire.csv');
+ok(good.rows.length === 10 && good.rejected.length === 0, 'liste de test : 10 références acceptées');
+ok(good.rows.every((r) => r.url === '' && r.currency === 'USD'), 'liste de test : distributor-url jamais gardée, devise USD');
+const mt = good.rows.find((r) => r.mpn === 'MT41K128M16JT-107 IT:K');
+ok(mt && mt.price === 3.9 && mt.tiers[1000] === 3.2 && mt.moq === 1, 'liste de test : référence avec espace et deux-points, paliers à virgule');
+const ir = good.rows.find((r) => r.mpn === 'IRLML2502TRPBF');
+ok(ir && ir.moq === 100 && ir.price === 0.062 && JSON.stringify(ir.tiers) === '{"100":0.062,"1000":0.055,"10000":0.048}', 'liste de test : premier palier à 100 gardé, MOQ 100');
+const wrong = fixture('liste-erreurs.csv');
+const codes = Object.fromEntries(wrong.rejected.map((r) => [r.line, r.code]));
+ok(wrong.rows.length === 1 && wrong.rows[0].sku === 'E-0008', 'liste fausse : une seule ligne acceptée');
+ok(codes[2] === 'qty_invalid', 'liste fausse : quantité négative');
+ok(codes[3] === 'breaks_qty_order', 'liste fausse : paliers non croissants en quantité');
+ok(codes[4] === 'breaks_price_order', 'liste fausse : prix en hausse avec la quantité');
+ok(codes[5] === 'mpn_missing', 'liste fausse : MPN vide');
+ok(codes[6] === 'price_invalid', 'liste fausse : prix nul');
+ok(codes[7] === 'break_incomplete', 'liste fausse : palier sans prix');
+ok(codes[8] === 'moq_invalid', 'liste fausse : MOQ à 0');
+ok(wrong.rejected.every((r) => r.reason && r.code), 'liste fausse : code et libellé sur chaque rejet');
+// GBK / GB18030 : en-têtes chinois enregistrés par Excel sur un poste chinois.
+const gbk = Uint8Array.from([...Buffer.from('MPN,', 'latin1'), 0xca, 0xfd, 0xc1, 0xbf, ...Buffer.from('\nNE555DR,100\n', 'latin1')]);
+const g = mapRows(parseCSV(decode(gbk)));
+ok(g.rows.length === 1 && g.rows[0].qty === 100, 'fichier GBK : en-tête 数量 lu');
+ok(decode(new TextEncoder().encode('型号,数量')) === '型号,数量', 'fichier UTF-8 : lu tel quel');
 
 // ---------------------------------------------------------------- page de dépôt : jeton de session et chemin
 const secret = 'x'.repeat(64);

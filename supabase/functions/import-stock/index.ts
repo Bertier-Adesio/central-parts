@@ -6,7 +6,7 @@
 // La fonction utilise la clé service_role fournie par Supabase à l'exécution : jamais de clé dans le code.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import * as XLSX from 'npm:xlsx@0.18.5';
-import { mapRows, parseCSV } from './parse.js';
+import { decode, mapRows, parseCSV } from './parse.js';
 
 const BATCH = 2000; // lignes par appel à apply_stock_import_batch
 
@@ -59,15 +59,6 @@ Deno.serve(async (req) => {
     return json({ id, status: 'failed', error: message }, 422);
   }
 });
-
-// UTF-8 par défaut ; repli en GB18030 (fichiers Excel enregistrés en CSV sur un poste chinois).
-function decode(buf: Uint8Array): string {
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
-  } catch {
-    return new TextDecoder('gb18030').decode(buf);
-  }
-}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });

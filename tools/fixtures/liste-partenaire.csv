@@ -1,0 +1,11 @@
+manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;price-break-2;price-usd-2;price-break-3;price-usd-3;price-break-4;price-usd-4;price-break-5;price-usd-5;moq
+Texas Instruments;TLIN10283DRQ1;T-0001;https://example.com/p/1?utm_source=octopart;2500;1;1,85;10;1,72;100;1,58;1000;1,41;;;1
+STMicroelectronics;M95M04-DWMN3TP/V;T-0002;https://example.com/p/2;4000;1;3,20;10;3,05;100;2,88;1000;2,70;;;1
+NXP;MC33FS4502NAE/R2;T-0003;https://example.com/p/3;800;1;9,60;10;9,10;100;8,40;;;;;10
+Texas Instruments;TPS25990ARQPR;T-0004;https://example.com/p/4;1200;1;4,75;10;4,52;100;4,20;1000;3,95;;;1
+Analog Devices;AD5755-1ACPZ-REEL7;T-0005;https://example.com/p/5;300;1;21,40;10;20,15;100;18,90;;;;;1
+Analog Devices;AD823ARZ-R7;T-0006;https://example.com/p/6;5000;1;2,10;10;1,98;100;1,82;1000;1,65;5000;1,52;1
+Analog Devices;ADG419BRZ-REEL7;T-0007;https://example.com/p/7;3500;1;1,35;10;1,27;100;1,15;1000;1,02;;;1
+Infineon;IRLML2502TRPBF;T-0008;https://example.com/p/8;60000;100;0,062;1000;0,055;10000;0,048;;;;;100
+SK hynix;H5AG46DXNDX117N;T-0009;https://example.com/p/9;1500;1;6,30;100;5,85;1000;5,40;;;;;1
+Micron;MT41K128M16JT-107 IT:K;T-0010;https://example.com/p/10;2200;1;3,90;10;3,70;100;3,45;1000;3,20;;;1

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<!-- Offres des fournisseurs partenaires, pour les acheteurs (ADR 0021). Écrite à la main, pas générée.
+     Lit la fonction Edge « offers » : vendeur toujours anonyme (« Fournisseur partenaire »), date de mise à jour sur
+     chaque offre, offres non reconfirmées retirées. Page de démonstration, non indexée.
+     Textes chinois nouveaux (hors 合作供应商) : à faire relire. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offres · Offers · 报价 — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
+main.wrap{padding:32px 16px 64px}
+.eyebrow{font-size:var(--text-sm);color:var(--fg-3);margin:0 0 8px;letter-spacing:.02em}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+.lead{color:var(--fg-2);margin:0 0 24px;max-width:720px}
+form.search{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
+form.search input,form.search select{min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+form.search input{flex:1;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none;background:var(--bg-inverse);color:var(--fg-inverse)}
+.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2);min-height:var(--control-h-md, 32px);padding:0 12px;font-size:var(--text-sm)}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:16px 0;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+.count{margin:24px 0 8px;font-size:var(--text-sm);color:var(--fg-2)}
+table.offers{width:100%;border-collapse:collapse;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);overflow:hidden}
+table.offers th,table.offers td{text-align:left;padding:12px;border-top:1px solid var(--border-1);vertical-align:top;font-size:var(--text-sm)}
+table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-medium);background:var(--bg-sunken)}
+.mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);font-size:var(--text-base);overflow-wrap:anywhere}
+.mfr{color:var(--fg-2)}
+.tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
+.price{font-weight:var(--weight-semibold);white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+/* Téléphone : une carte par offre. */
+@media (max-width:720px){
+  table.offers,table.offers tbody,table.offers tr,table.offers td{display:block;width:100%;box-sizing:border-box}
+  table.offers{background:none;border:0}
+  table.offers thead{display:none}
+  table.offers tr{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);margin:0 0 12px;padding:8px 0}
+  table.offers td{border:0;padding:4px 16px;display:flex;justify-content:space-between;gap:12px}
+  table.offers td::before{content:attr(data-label);color:var(--fg-3)}
+  table.offers td.first{display:block}
+  table.offers td.first::before{content:none}
+}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/" id="home">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <div class="langs" role="group" aria-label="Langue / Language / 语言">
+      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow" data-t="eyebrow">Supply Network Operator · Chaque offre, tracée jusqu’à sa source.</p>
+  <h1 data-t="title">Nos offres</h1>
+  <p class="lead" data-t="lead">Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.</p>
+
+  <form class="search" id="form" action="" method="get">
+    <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence fabricant, par exemple TPS25990">
+    <select name="cur" id="cur" aria-label="Devise"><option>EUR</option><option>USD</option></select>
+    <button class="btn" type="submit" data-t="go">Rechercher</button>
+  </form>
+  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris, hors droits et TVA à l’import.</p>
+  <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
+
+  <p class="msg" id="msg" role="status" hidden></p>
+  <p class="count" id="count" hidden></p>
+  <table class="offers" id="table" hidden>
+    <thead><tr>
+      <th data-t="thPart">Référence</th><th data-t="thSupplier">Fournisseur</th><th data-t="thAvail">Disponible</th>
+      <th data-t="thMoq">MOQ</th><th data-t="thPrice">Prix unitaire</th><th data-t="thUpdated">Mis à jour le</th><th></th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <p class="muted" id="ttl" hidden></p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/offers';
+  var T = {
+    fr: { eyebrow: 'Supply Network Operator · Chaque offre, tracée jusqu’à sa source.', title: 'Nos offres',
+      lead: 'Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.',
+      placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
+      hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris, hors droits et TVA à l’import.',
+      thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
+      partner: 'Fournisseur partenaire', from: 'à partir de', onRequest: 'Sur demande', ask: 'Demander',
+      count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
+      ttl: 'Les fournisseurs mettent leurs listes à jour ; une offre non reconfirmée depuis {n} jours est retirée.',
+      mail: 'Demande de prix', home: '/',
+      e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'Les offres sont indisponibles, réessayez plus tard.' } },
+    en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
+      lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
+      placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
+      hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices, excluding import duties and VAT.',
+      thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
+      partner: 'Partner Supplier', from: 'from', onRequest: 'On request', ask: 'Ask',
+      count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
+      ttl: 'Suppliers keep their lists up to date; an offer not reconfirmed for {n} days is withdrawn.',
+      mail: 'Price request', home: '/en/',
+      e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Offers are unavailable, please try again later.' } },
+    zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
+      lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
+      placeholder: '制造商型号，例如 TPS25990', go: '搜索',
+      hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，不含进口关税和增值税。',
+      thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
+      partner: '合作供应商', from: '起', onRequest: '请询价', ask: '询价',
+      count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
+      ttl: '供应商定期更新库存表；超过 {n} 天未重新确认的报价将被撤下。',
+      mail: '询价', home: '/zh/',
+      e: { too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '报价暂不可用，请稍后再试。' } }
+  };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var nav = (navigator.language || 'fr').slice(0, 2);
+  var lang = T[params.get('lang')] ? params.get('lang') : T[nav] ? nav : 'en';
+  try { var saved = localStorage.getItem('cp-lang-offres'); if (!params.get('lang') && T[saved]) lang = saved; } catch (e) {}
+  var data = null;
+  var t = function () { return T[lang]; };
+  var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    $('home').setAttribute('href', t().home);
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
+    render();
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} applyLang(); });
+  });
+
+  function money(v, cur) {
+    return new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: cur, minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(v);
+  }
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind === 'err' ? ' err' : ''); m.textContent = text || ''; }
+
+  function render() {
+    if (!data) return;
+    var list = data.offers || [], q = data.query;
+    $('count').hidden = !list.length;
+    $('count').textContent = q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length });
+    $('table').hidden = !list.length;
+    $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days });
+    if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
+    $('rows').innerHTML = list.map(function (o) {
+      var price = o.price_from != null ? '<span class="muted">' + esc(t().from) + '</span> <span class="price">' + esc(money(o.price_from, data.currency)) + '</span>' : esc(t().onRequest);
+      var subject = encodeURIComponent(t().mail + ' — ' + o.mpn);
+      var body = encodeURIComponent(o.mpn + (o.manufacturer ? ' (' + o.manufacturer + ')' : '') + '\n' + t().thAvail + ' : ' + o.availability + '\n' + t().thUpdated + ' : ' + new Date(o.updated_at).toLocaleDateString(LOCALE[lang]) + '\n\n');
+      return '<tr>' +
+        '<td class="first"><div class="mpn">' + esc(o.mpn) + '</div><div class="mfr">' + esc(o.manufacturer) + '</div></td>' +
+        '<td data-label="' + esc(t().thSupplier) + '"><span class="tag">' + esc(t().partner) + '</span></td>' +
+        '<td data-label="' + esc(t().thAvail) + '" class="num">' + esc(o.availability) + '</td>' +
+        '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + '</td>' +
+        '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
+        '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
+        '<td data-label=""><a class="btn btn-line" href="mailto:contact@central.parts?subject=' + subject + '&amp;body=' + body + '">' + esc(t().ask) + '</a></td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function load() {
+    var q = $('q').value.trim(), cur = $('cur').value;
+    var url = new URL(location.href);
+    q ? url.searchParams.set('q', q) : url.searchParams.delete('q');
+    url.searchParams.set('cur', cur);
+    history.replaceState(null, '', url);
+    return fetch(FN + '?q=' + encodeURIComponent(q) + '&cur=' + encodeURIComponent(cur))
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
+            function () { throw 'network'; })
+      .then(function (d) { data = d; render(); }, function (c) { data = null; $('table').hidden = $('count').hidden = true; say('err', t().e[c] || t().e.other); });
+  }
+
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); load(); });
+  $('cur').addEventListener('change', load);
+  $('q').value = params.get('q') || '';
+  if (params.get('cur') === 'USD') $('cur').value = 'USD';
+  applyLang();
+  load();
+})();
+</script>
+</body>
+</html>
