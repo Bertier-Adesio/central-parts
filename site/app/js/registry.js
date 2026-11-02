@@ -10,6 +10,7 @@ var CP_GROUPS = [
   ['boms', 'Nomenclatures'],
   ['inventory', 'Offre Inventory'],
   ['demands', 'Demandes et enchères (Opportunity)'],
+  ['rfq', 'Route RFQ des plateformes (Adesio, Luminovo, CalcuQuote ; ADR 0023)'],
   ['lots', 'Stock vendeur et questionnaire'],
   ['supplier', 'API fournisseur (intégration des brokers et distributeurs)'],
   ['channels', 'Notifications : e-mail, WeCom, WeChat'],
@@ -31,6 +32,12 @@ var CP_ENDPOINTS = [
   { id: 'org.decide', group: 'accounts', method: 'POST', path: '/v1/organizations/{id}/kyb/decision', roles: ['ops'], summary: 'Validation ou refus du KYB, contrôle des listes de sanctions' },
 
   // Recherche
+  // API d'offres en direct des plateformes (ADR 0024), servie par la fonction Edge « rfq » ; formats compatibles
+  // DigiKey et TI sous /compat/… (hors registre : même contenu, autre forme).
+  { id: 'cat.offers', group: 'catalog', method: 'GET', path: '/v1/offers', roles: ['buyer', 'ops'], summary: 'Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : produits (référence, fabricant {id, name}, description, boîtier, cycle de vie, ECCN, HTS) et leurs offres (stock, MOQ, conditionnement complet, paliers {quantity, unit_price} tout compris, délai, conditionnement, date code, catégorie de source, pays d\'expédition et d\'origine, identifiant opaque) ; fournisseur jamais nommé' },
+  { id: 'cat.search', group: 'catalog', method: 'POST', path: '/v1/offers/search', roles: ['buyer', 'ops'], summary: 'Offres en direct pour une nomenclature (500 lignes au plus, une réponse par ligne)' },
+  { id: 'cat.offer', group: 'catalog', method: 'GET', path: '/v1/offers/{id}', roles: ['buyer', 'ops'], summary: 'Détail d\'une offre (cpo_…) et prix à la quantité, durée de validité du prix' },
+  { id: 'cat.mfrs', group: 'catalog', method: 'GET', path: '/v1/manufacturers', roles: ['buyer', 'ops'], summary: 'Fabricants présents dans le stock publiable' },
   { id: 'search', group: 'catalog', method: 'GET', path: '/v1/search', roles: ['public', 'buyer', 'seller', 'lab', 'ops'], summary: 'Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes)' },
   { id: 'advice', group: 'catalog', method: 'GET', path: '/v1/pricing/advice', roles: ['seller', 'ops'], summary: 'Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur' },
 
@@ -44,13 +51,26 @@ var CP_ENDPOINTS = [
   { id: 'inv.orders', group: 'inventory', method: 'GET', path: '/v1/inventory/orders', roles: ['buyer', 'ops'], summary: 'Commandes Inventory et leur suivi' },
 
   // Demandes et enchères
-  { id: 'dem.create', group: 'demands', method: 'POST', path: '/v1/demands', roles: ['buyer'], summary: 'Création d\'une demande Opportunity, anonymisée puis diffusée aux vendeurs dont le stock correspond' },
+  { id: 'dem.create', group: 'demands', method: 'POST', path: '/v1/demands', roles: ['buyer'], summary: 'Création d\'une demande Opportunity, anonymisée puis diffusée aux vendeurs dont le stock correspond. Avec lines[] (plateforme, clé d\'API, Idempotency-Key obligatoire) : RFQ de 1 à 50 lignes, une demande par ligne, en attente de validation par un administrateur (202), rien n\'est diffusé avant (ADR 0023)' },
   { id: 'dem.list', group: 'demands', method: 'GET', path: '/v1/demands', roles: ['buyer', 'seller', 'ops'], summary: 'Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops)' },
   { id: 'dem.get', group: 'demands', method: 'GET', path: '/v1/demands/{id}', roles: ['buyer', 'seller', 'ops'], summary: 'Détail d\'une demande ; le vendeur ne voit ni l\'acheteur ni l\'adresse' },
   { id: 'dem.close', group: 'demands', method: 'POST', path: '/v1/demands/{id}/close', roles: ['ops', 'system'], summary: 'Clôture de l\'enchère et calcul des offres consolidées (net + marge + frais)' },
   { id: 'bid.create', group: 'demands', method: 'POST', path: '/v1/demands/{id}/bids', roles: ['seller'], summary: 'Offre scellée d\'un vendeur vérifié : lot, prix net et devise, date code (donné à la consultation s\'il manque au stock), délai. Questionnaire du lot complet exigé' },
   { id: 'bid.mine', group: 'demands', method: 'GET', path: '/v1/demands/{id}/bids/mine', roles: ['seller'], summary: 'Offre du vendeur et son rang, sans les offres concurrentes' },
   { id: 'offer.list', group: 'demands', method: 'GET', path: '/v1/demands/{id}/offers', roles: ['buyer', 'ops'], summary: 'Offres consolidées, prix tout compris, questionnaire et documents' },
+  // Route RFQ des plateformes (ADR 0023) : mêmes chemins que la fonction Edge « rfq » et le futur service API.
+  { id: 'rfq.cancel', group: 'rfq', method: 'POST', path: '/v1/demands/{id}/cancel', roles: ['buyer'], summary: 'Annulation d\'une RFQ par la plateforme, tant qu\'aucune offre n\'est acceptée ; les fournisseurs déjà prévenus sont informés' },
+  { id: 'rfq.whk.create', group: 'rfq', method: 'POST', path: '/v1/webhooks', roles: ['buyer'], summary: 'Abonnement de la plateforme : demand.validated, demand.rejected, demand.offers_ready, demand.no_offer, offer.expired ; secret de signature affiché une fois (HMAC-SHA256, CP-Signature, CP-Timestamp)' },
+  { id: 'rfq.whk.list', group: 'rfq', method: 'GET', path: '/v1/webhooks', roles: ['buyer'], summary: 'Abonnements de la plateforme et dernières livraisons' },
+  { id: 'rfq.whk.delete', group: 'rfq', method: 'DELETE', path: '/v1/webhooks/{id}', roles: ['buyer'], summary: 'Suppression d\'un abonnement' },
+  { id: 'rfq.me', group: 'rfq', method: 'GET', path: '/v1/me', roles: ['buyer', 'seller', 'ops'], summary: 'Société et clé appelantes : environnement (test ou live), portées' },
+  { id: 'rfq.health', group: 'rfq', method: 'GET', path: '/v1/health', roles: ['buyer', 'seller', 'ops'], summary: 'État du service (avec une clé, comme les autres endpoints)' },
+  { id: 'rfq.admin.list', group: 'rfq', method: 'GET', path: '/v1/admin/demands', roles: ['ops'], summary: 'RFQ à valider (status=pending_validation par défaut), fiche complète : plateforme, référence client, fournisseurs appariés' },
+  { id: 'rfq.admin.approve', group: 'rfq', method: 'POST', path: '/v1/admin/demands/{id}/approve', roles: ['ops'], summary: 'Validation : enchère ouverte, fournisseurs appariés prévenus dans WeChat (sellers facultatif : restreindre). Délai de réponse : 48 h après l\'envoi réussi. Robot : « approve DEM-… »' },
+  { id: 'rfq.admin.reject', group: 'rfq', method: 'POST', path: '/v1/admin/demands/{id}/reject', roles: ['ops'], summary: 'Refus, motif obligatoire, transmis à la plateforme (webhook demand.rejected) ; aucun fournisseur contacté. Robot : « reject DEM-… motif »' },
+  { id: 'rfq.admin.resend', group: 'rfq', method: 'POST', path: '/v1/admin/demands/{id}/resend', roles: ['ops'], summary: 'Renvoi aux fournisseurs non joints (fenêtre WeChat de 48 h) ; leur délai démarre à l\'envoi réussi. Robot : « resend DEM-… [ORG-…] »' },
+  { id: 'rfq.sbx.approve', group: 'rfq', method: 'POST', path: '/v1/sandbox/demands/{id}/approve', roles: ['buyer'], summary: 'Bac à sable (clé cp_test_) : simule la validation par l\'administrateur ; aucun message ne part' },
+  { id: 'rfq.sbx.respond', group: 'rfq', method: 'POST', path: '/v1/sandbox/demands/{id}/respond', roles: ['buyer'], summary: 'Bac à sable : simule la réponse du fournisseur de test (quote ou decline), puis la clôture et les offres consolidées' },
   { id: 'offer.accept', group: 'demands', method: 'POST', path: '/v1/offers/{id}/accept', roles: ['buyer'], summary: 'Choix d\'une offre, du niveau de test et des délais : crée la fiche transaction' },
 
   // Stock vendeur
@@ -120,7 +140,7 @@ var CP_ENDPOINTS = [
   // Plateforme
   { id: 'notif.list', group: 'platform', method: 'GET', path: '/v1/notifications', roles: ['buyer', 'seller', 'lab', 'bank', 'ops'], summary: 'Notifications et relances de la partie appelante' },
   { id: 'events.list', group: 'platform', method: 'GET', path: '/v1/events', roles: ['ops'], summary: 'Journal d\'audit de la plateforme' },
-  { id: 'jobs.deadlines', group: 'platform', method: 'POST', path: '/v1/jobs/deadlines', roles: ['system'], summary: 'Tâche planifiée : expirations, relances, réputé accepté' },
+  { id: 'jobs.deadlines', group: 'platform', method: 'POST', path: '/v1/jobs/deadlines', roles: ['system'], summary: 'Tâche planifiée : expirations, relances, réputé accepté ; RFQ : rappel 24 h à l\'administrateur, rappel 36 h et expiration 48 h des fournisseurs, clôtures, livraison des webhooks (fonction rfq : /jobs/tick)' },
 ];
 
 var CP_ROUTES = [

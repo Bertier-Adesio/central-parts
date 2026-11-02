@@ -1,0 +1,39 @@
+{
+  "_source": "Exemple de réponse « prix et stock » du TI store (camelCase), fourni le 2 novembre 2026, non capturé sur l'API (il faut les identifiants tistore d'un client) ; valeurs remplacées. À remplacer par une capture réelle. Sert à vérifier que le format compatible garde les mêmes champs et les mêmes types.",
+  "tiPartNumber": "EXEMPLE358DR",
+  "genericPartNumber": "EXEMPLE358",
+  "description": "Amplificateur opérationnel double (exemple)",
+  "buyNowUrl": "https://example.com/produit",
+  "quantity": 125000,
+  "limit": 50000,
+  "minimumOrderQuantity": 1,
+  "standardPackQuantity": 2500,
+  "packageType": "SOIC-8",
+  "packageCarrier": "CUT TAPE",
+  "customReel": true,
+  "lifeCycle": "ACTIVE",
+  "pinCount": 8,
+  "exportControlClassificationNumber": "EAR99",
+  "htsCode": "8542330001",
+  "pricing": [
+    {
+      "currency": "USD",
+      "priceBreaks": [
+        {
+          "priceBreakQuantity": 1,
+          "price": 0.42
+        },
+        {
+          "priceBreakQuantity": 100,
+          "price": 0.21
+        }
+      ]
+    }
+  ],
+  "futureInventory": [
+    {
+      "forecastQuantity": 50000,
+      "forecastDate": "2026-12-15"
+    }
+  ]
+}

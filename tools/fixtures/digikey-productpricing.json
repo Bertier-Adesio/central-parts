@@ -1,0 +1,26 @@
+{
+  "_source": "Structure d'une réponse réelle de DigiKey Product Information v4, ProductPricing (GET /products/v4/search/{productNumber}/pricing), transmise le 2 novembre 2026 ; valeurs remplacées par des exemples. Sert à vérifier que le format compatible garde les mêmes champs et les mêmes types.",
+  "ProductPricings": [
+    {
+      "ManufacturerProductNumber": "EXEMPLE-0603",
+      "Manufacturer": { "Id": 1, "Name": "Fabricant exemple" },
+      "Description": { "ProductDescription": "CAP CER 0.1UF 100V X7R 0603" },
+      "ProductUrl": "https://example.com/produit",
+      "ManufacturerLeadWeeks": "10",
+      "StandardPackage": 4000,
+      "ProductVariations": [
+        {
+          "DigiKeyProductNumber": "EXEMPLE-ND",
+          "PackageType": { "Id": 1, "Name": "Bobine" },
+          "MinimumOrderQuantity": 0,
+          "QuantityAvailableforPackageType": 4200,
+          "StandardPricing": [
+            { "BreakQuantity": 1, "UnitPrice": 0.36, "TotalPrice": 0.36 },
+            { "BreakQuantity": 100, "UnitPrice": 0.1351, "TotalPrice": 13.51 }
+          ],
+          "MyPricing": []
+        }
+      ]
+    }
+  ]
+}

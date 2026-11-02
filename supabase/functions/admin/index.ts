@@ -13,12 +13,19 @@
 //   POST /admin/pending   {org, reason?}    → remet en attente (aucun message au fournisseur)
 //   GET  /admin/stock                       → par fournisseur : références, dernier import, sources, devise
 //   GET  /admin/lots?org=&q=&offset=        → références et paliers de prix, 50 par page (lecture seule)
+//   GET  /admin/rfq?status=pending_validation → RFQ des plateformes (ADR 0023) ; status vide : toutes (100 dernières)
+//   POST /admin/rfq/approve {id, only?}     → valide et diffuse (même fonction que « approve DEM-… » du robot)
+//   POST /admin/rfq/reject  {id, reason}    → refuse, motif obligatoire (même fonction que « reject DEM-… motif »)
+//   GET  /admin/supplier-score?org=ORG-0107 → taux de traitement des RFQ d'un fournisseur (jamais montré à une plateforme)
+//   GET  /admin/offer-views?org=ORG-0107    → consultations de ses offres par l'API d'offres, 8 semaines (ADR 0024)
+//   GET  /admin/data-quality?org=ORG-0107   → complétude de ses fiches produit (future composante de sa notation)
 //
 // Secrets et variables (jamais dans le dépôt) : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournis
 // par Supabase), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot), ADMIN_ORIGINS et ADMIN_SITE (facultatifs).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { approvedNotice, rejectedNotice } from '../_shared/robot-texts.js';
 import { sendText } from '../_shared/wechat.ts';
+import { deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
 
 const ORIGINS = (Deno.env.get('ADMIN_ORIGINS') || 'https://central.parts,https://www.central.parts').split(',');
 const SITE = Deno.env.get('ADMIN_SITE') || 'https://central.parts/admin/';
@@ -30,6 +37,8 @@ const ERRORS: Record<string, [string, number]> = {
   '42501': ['forbidden', 403],
   CP005: ['reason_required', 422],
   CP006: ['already_pending', 409],
+  CP409: ['already_decided', 409], // RFQ déjà validée ou refusée
+  '22023': ['invalid', 422],       // RFQ : société hors appariement (only)
   P0002: ['not_allowed', 409],     // société inconnue, ou refus d'une société déjà approuvée
   PGRST301: ['session_expired', 401],
 };
@@ -114,9 +123,35 @@ Deno.serve(async (req) => {
       }
       if (path === '/supplier') return send('admin_supplier', { p_org: q('org') });
       if (path === '/stock') return send('admin_stock_summary');
+      if (path === '/rfq') return send('admin_rfq_list', { p_status: url.searchParams.has('status') ? q('status') : 'pending_validation' });
+      if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
+      if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
+      if (path === '/data-quality') return send('admin_supplier_data_quality', { p_org: q('org') });
       if (path === '/lots') {
         return send('admin_lots', { p_org: q('org'), p_q: q('q') || '', p_limit: 50, p_offset: Number(q('offset')) || 0 });
       }
+    }
+
+    // RFQ des plateformes : la décision passe par la base avec le jeton de l'administrateur ; la diffusion aux
+    // fournisseurs (WeChat) se fait ensuite avec la clé de service, comme pour le robot.
+    if (req.method === 'POST' && (path === '/rfq/approve' || path === '/rfq/reject')) {
+      const { id, only, reason } = await body();
+      if (typeof id !== 'string' || !/^DEM-\d{1,8}$/i.test(id)) return json({ error: 'id' }, 422);
+      if (path === '/rfq/reject') {
+        const why = typeof reason === 'string' ? reason.trim() : '';
+        if (!why) return json({ error: 'reason_required' }, 422);
+        const r = await call('admin_rfq_reject', { p_id: id, p_reason: why });
+        if (r.res) return r.res;
+        later(deliverWebhooks(createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } })));
+        return json(r.data);
+      }
+      const list = Array.isArray(only) && only.length ? only.map((x: unknown) => String(x).toUpperCase()) : null;
+      const r = await call('admin_rfq_approve', { p_id: id, p_only: list });
+      if (r.res) return r.res;
+      const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+      const dispatch = r.data.status === 'auction' ? await dispatchRfq(svc, r.data.id) : null;
+      later(deliverWebhooks(svc));
+      return json({ ...r.data, dispatch });
     }
 
     if (req.method === 'POST') {

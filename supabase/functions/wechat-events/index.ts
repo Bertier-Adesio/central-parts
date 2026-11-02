@@ -14,7 +14,10 @@
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
-//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ;
+//     - commandes RFQ des plateformes (ADR 0023), opérateurs seulement : rfq, rfq DEM-…, rfq stats ORG-…,
+//       approve DEM-… [only ORG-…], reject DEM-… motif, resend DEM-… [ORG-…] ;
+//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ; 报价 DEM-… prix devise
+//       délai date code [lot LOT-…] ou 无货 DEM-… pour répondre à une RFQ (refusé après l'échéance de 48 h) ;
 //     - tout autre message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui
 //       répondent par « reply <n°> texte » ; accusé de réception au contact rattaché, accueil sinon.
 //
@@ -27,6 +30,12 @@ import {
   phoneBackLine, receivedText, rejectedNotice, scanReply, STATUS_EN, welcomeText,
 } from '../_shared/robot-texts.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
+import {
+  rfqAnswerErrorText, rfqDeclineOkText, rfqDispatchText, rfqHelpText, rfqOperatorCard, rfqOperatorListText,
+  rfqDataQualityLine, rfqQuoteOkText, rfqStatsText,
+} from '../_shared/robot-texts.js';
+import { parseOperatorRfq, parseSupplierRfq } from '../_shared/rfq.js';
+import { closeRfq, deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
 
 // Textes du robot : _shared/robot-texts.js. Opérateur : anglais seul ; fournisseur ou inconnu : chinois et anglais.
 const SITE = 'https://central.parts/depot/';
@@ -43,9 +52,57 @@ const later = (p: Promise<unknown>) => {
   if (rt) rt.waitUntil(p.catch(() => {})); else p.catch(() => {});
 };
 
+// Commandes RFQ de l'administrateur (ADR 0023), en anglais : rfq, rfq DEM-…, rfq stats ORG-…, approve DEM-… [only ORG-…],
+// reject DEM-… motif, resend DEM-… [ORG-…]. Même contrôle que approve ORG-… : l'appelant est dans la table operators.
+async function operatorRfqCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
+  const c = parseOperatorRfq(text);
+  if (!c) return null;
+  const ref = String((c as { ref?: string }).ref || '');
+  if (c.cmd === 'list') {
+    const { data, error } = await db.rpc('list_pending_rfq');
+    return error ? `RFQ: ${error.message}` : rfqOperatorListText((data || []) as Record<string, unknown>[] as never);
+  }
+  if (c.cmd === 'stats') {
+    const { data, error } = await db.rpc('supplier_score', { p_org: c.org });
+    if (error) return `${c.org}: ${error.message}`;
+    // Complétude des fiches produit : future composante de la notation, sans effet aujourd'hui.
+    const { data: dq } = await db.rpc('supplier_data_quality', { p_org: c.org });
+    return rfqStatsText(data) + rfqDataQualityLine(dq);
+  }
+  if (c.cmd === 'show') {
+    const { data, error } = await db.rpc('rfq_for_operator', { p_id: c.ref });
+    return error || !data ? `${c.ref}: not found` : rfqOperatorCard(data);
+  }
+  if (c.cmd === 'approve') {
+    const { data, error } = await db.rpc('approve_rfq', { p_id: c.ref, p_by: openid, p_only: c.only });
+    if (error) return operatorErrorText(c.ref, error.message);
+    if (data.status === 'no_offer') { later(deliverWebhooks(db)); return `Approved ${c.ref}: no matching supplier, closed as "no offer".`; }
+    // Envoi après la réponse (WeChat attend 5 secondes au plus) ; le résumé arrive en message séparé.
+    later((async () => { await sendText(db, openid, rfqDispatchText(ref, await dispatchRfq(db, ref))); await deliverWebhooks(db); })());
+    return `Approved ${c.ref}: notifying ${(data.sellers || []).length} supplier(s)…`;
+  }
+  if (c.cmd === 'reject') {
+    if (!c.reason) return `A reason is required: reject ${c.ref} reason`;
+    const { error } = await db.rpc('reject_rfq', { p_id: c.ref, p_reason: c.reason, p_by: openid });
+    if (error) return operatorErrorText(c.ref, error.message);
+    later(deliverWebhooks(db));
+    return `Rejected ${c.ref}. The platform is told the reason; no supplier was contacted.`;
+  }
+  // resend
+  if (c.org) {
+    const { error } = await db.rpc('resend_rfq', { p_id: c.ref, p_seller: c.org, p_by: openid });
+    if (error) return operatorErrorText(c.ref + ' ' + c.org, error.message);
+  }
+  const org = c.org || null;
+  later((async () => sendText(db, openid, rfqDispatchText(ref, await dispatchRfq(db, ref, org))))());
+  return `Resending ${c.ref}${c.org ? ' to ' + c.org : ''}…`;
+}
+
 // Commandes des opérateurs. Renvoie la réponse immédiate ; les fiches et les avis aux fournisseurs partent en messages.
 async function operatorCommand(db: SupabaseClient, openid: string, text: string): Promise<string> {
   const t = text.trim();
+  const rfq = await operatorRfqCommand(db, openid, t);
+  if (rfq !== null) return rfq;
   let m = /^(通过|ok|approve)\s+(ORG-\d+)\s*$/i.exec(t);
   if (m) {
     const org = m[2].toUpperCase();
@@ -71,7 +128,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
       ? await db.rpc('operator_set_request_status', { p_ref: ref, p_status: status, p_by: openid })
       : await db.rpc('request_for_operator', { p_ref: ref });
     if (error || !data) return `${ref}: ${error?.message || 'not found'}`;
-    return `${data.ref} · ${STATUS_EN[data.status] || data.status}\n${data.mpn} × ${data.qty} · ${data.unit_price ?? 'price to confirm'} ${data.currency}\n${data.buyer_company} · ${data.buyer_email}`;
+    return `${data.ref} · ${(STATUS_EN as Record<string, string>)[data.status] || data.status}\n${data.mpn} × ${data.qty} · ${data.unit_price ?? 'price to confirm'} ${data.currency}\n${data.buyer_company} · ${data.buyer_email}`;
   }
   // Réponse à un message transféré : « reply 123 texte ».
   m = /^(回复|reply)\s+#?(\d+)\s+([\s\S]+)$/i.exec(t);
@@ -102,8 +159,34 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   return operatorHelpText();
 }
 
+// Réponse d'un fournisseur à une RFQ de plateforme (ADR 0023) : 报价 DEM-… prix devise délai date code, ou 无货 DEM-….
+// La base contrôle le contact (wechat_identities), l'échéance de 48 h, la réponse unique et la devise.
+async function supplierRfqCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
+  const q = parseSupplierRfq(text);
+  if (!q) return null;
+  if (q.kind === 'help') return rfqHelpText(q.ref);
+  const { data, error } = await db.rpc('supplier_rfq_answer', q.kind === 'quote'
+    ? { p_openid: openid, p_ref: q.ref, p_kind: 'quote', p_net: q.price, p_currency: q.currency, p_lead: q.lead, p_date_code: q.dateCode, p_lot: q.lot }
+    : { p_openid: openid, p_ref: q.ref, p_kind: 'decline' });
+  if (error) return rfqAnswerErrorText(q.ref, error.code || '', error.details || '');
+  later((async () => {
+    const { data: card } = await db.rpc('rfq_for_operator', { p_id: q.ref });
+    const { data: me } = await db.from('wechat_identities').select('org_id').eq('openid', openid).maybeSingle();
+    if (card && !card.sandbox) {
+      const waiting = (card.sellers || []).filter((s: { response: string }) => s.response === 'pending').length;
+      await notifyOperators(db, `[RFQ ${q.ref}] ${me?.org_id || '?'}: ${q.kind === 'quote' ? `quote ${q.price} ${q.currency}, ${q.lead} d` : 'no stock'}` +
+        ` · ${waiting} supplier(s) still pending`);
+    }
+    if (data.all_done) await closeRfq(db, q.ref);
+    await deliverWebhooks(db);
+  })());
+  return q.kind === 'quote' ? rfqQuoteOkText(data, q) : rfqDeclineOkText(data.ref);
+}
+
 // Réponse d'un fournisseur à une demande d'achat : 确认 PR-… (disponible) ou 无货 PR-… (indisponible).
 async function supplierCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
+  const rfq = await supplierRfqCommand(db, openid, text);
+  if (rfq !== null) return rfq;
   const m = /^(确认|无货|confirm|unavailable)\s*(PR-\d+)\s*$/i.exec(text.trim());
   if (!m) return null;
   const ok = m[1] === '确认' || m[1].toLowerCase() === 'confirm';

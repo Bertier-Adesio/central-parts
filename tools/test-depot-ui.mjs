@@ -36,10 +36,19 @@ async function api(route) {
     state.uploadCurrency = body.currency;
     return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/y', path: 'ORG-0107/f-devise-' + body.currency + '.csv' });
   }
-  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [] }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
+  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [], completeness: { lines: 3, manufacturer: 3, description: 2, datasheet: 3, package_case: 3, lifecycle: 0, eccn: 1, hts_code: 0, unknown_manufacturers: ['ACME Semi'] } }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
+  if (path === '/quality') return reply(state.uploaded ? { lots: 3, completeness: 0.571, rates: {} } : {});
   if (path === '/contacts') return reply(state.contacts);
   if (path === '/requests') return reply(state.requests || []);
   if (path === '/requests/answer') { state.answer = body; state.requests[0].status = body.ok ? 'confirmed' : 'unavailable'; return reply(state.requests[0]); }
+  if (path === '/rfqs') return reply(state.rfqs || { demands: [], score: null });
+  if (path === '/rfqs/answer') {
+    state.rfqAnswer = body;
+    if (body.ref === 'DEM-1043') return reply({ error: 'expired' }, 409);
+    const d = state.rfqs.demands.find((x) => x.ref === body.ref);
+    Object.assign(d, body.kind === 'quote' ? { response: 'quoted', my_net: body.price, my_currency: body.currency, my_lead_days: body.lead_days, my_date_code: body.date_code } : { response: 'declined' });
+    return reply({ ...d, all_done: true });
+  }
   if (path === '/invite') { state.contacts.invites.push({ label: body.label }); return reply({ link: 'https://central.parts/depot/?invite=' + 'c'.repeat(36) }); }
   return reply({ error: 'not_found' }, 404);
 }
@@ -47,7 +56,8 @@ async function api(route) {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 const errors = [];
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+// Le 409 (réponse RFQ après l'échéance) est provoqué par le test : le navigateur le journalise.
+page.on('console', (m) => { if (m.type() === 'error' && !/status of 409/.test(m.text())) errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.route(FN + '/**', api);
 await page.route('https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/**', (r) => { if (r.request().url().endsWith('/y')) state.uploaded = true; return r.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' }); });
@@ -114,6 +124,12 @@ await page.waitForSelector('.imp');
 ok(state.uploadCurrency === 'USD', 'devise choisie transmise au dépôt');
 ok((await page.textContent('#imports')).includes('币种：USD (上传时选择)'), 'rapport : devise et provenance affichées');
 ok((await page.textContent('#imports')).includes('新增 3'), 'dépôt pendant l\'examen : rapport affiché');
+await page.waitForSelector('#quality:not([hidden])');
+ok((await page.textContent('#imports')).includes('资料完整度：品牌（已识别）100 % · 描述 67 % · 规格书 100 % · 封装 100 % · 生命周期 0 % · ECCN 33 % · HS 编码 0 %'),
+  'rapport : complétude des fiches produit, champ par champ (ADR 0024)');
+ok((await page.textContent('#imports')).includes('未识别的品牌') && (await page.textContent('#imports')).includes('ACME Semi'), 'rapport : marques non reconnues signalées');
+ok((await page.textContent('#quality')) === '您的资料完整度（在售库存）：57 %', 'complétude globale de la société affichée');
+ok((await page.textContent('[data-t=tpl]')).includes('今后也将计入供应商评分'), 'aide : champs recommandés, comptés plus tard dans la notation');
 
 // 6. Collègues : l'administrateur génère une invitation.
 ok(await page.isVisible('#team'), 'administrateur : section « 同事 » visible');
@@ -138,6 +154,39 @@ ok((await page.textContent('#req-list')).includes('PR-0001') && !(await page.tex
 await page.click('#req-list [data-ok="1"]');
 await page.waitForFunction(() => !document.querySelector('#req-list [data-ans]'));
 ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.textContent('#req-list')).includes('已确认'), 'demande confirmée depuis la page');
+
+// 7 ter. RFQ des plateformes : liste, taux propre, réponse avant l'échéance, refus après.
+{
+  const soon = new Date(Date.now() + 20 * 3600e3).toISOString();
+  state.requests = [];
+  state.rfqs = { score: { received: 4, quoted: 2, declined: 1, expired: 1, treatment_rate: 0.75 }, demands: [
+    { ref: 'DEM-1042', mpn: 'NE555DR', qty: 2000, dc_min: '2420', ship_to: 'DE', status: 'auction', response: 'pending', deadline_at: soon },
+    { ref: 'DEM-1043', mpn: 'LM358DR', qty: 500, ship_to: 'FR', status: 'auction', response: 'pending', deadline_at: soon },
+    { ref: 'DEM-1001', mpn: 'TL431', qty: 100, ship_to: 'FR', status: 'offers', response: 'expired', deadline_at: '2026-10-30T09:00:00Z' },
+  ] };
+  await page.reload();
+  await page.waitForSelector('#rfq-card:not([hidden])');
+  const txt = await page.textContent('#rfq-card');
+  ok(txt.includes('DEM-1042') && txt.includes('最低批号 2420') && txt.includes('北京时间'), 'RFQ : demande, date code minimum, échéance (heure de Pékin)');
+  ok(txt.includes('您的处理率：75 %') && txt.includes('逾期 1'), 'RFQ : taux de traitement du fournisseur seulement');
+  ok(!/Adesio|Plateforme|ADS-|client/i.test(txt), 'RFQ : ni plateforme, ni référence client');
+  ok((await page.$$('form[data-rfq]')).length === 2 && txt.includes('已逾期'), 'RFQ : formulaire seulement pour les demandes ouvertes');
+  await page.fill('form[data-rfq="DEM-1042"] [name=price]', '0,52');
+  await page.selectOption('form[data-rfq="DEM-1042"] [name=currency]', 'USD');
+  await page.fill('form[data-rfq="DEM-1042"] [name=lead]', '7');
+  await page.fill('form[data-rfq="DEM-1042"] [name=dc]', '2425');
+  await page.click('form[data-rfq="DEM-1042"] [type=submit]');
+  await page.waitForFunction(() => !document.querySelector('form[data-rfq="DEM-1042"]'));
+  ok(JSON.stringify(state.rfqAnswer) === JSON.stringify({ ref: 'DEM-1042', kind: 'quote', price: 0.52, currency: 'USD', lead_days: 7, date_code: '2425' }), 'RFQ : prix envoyé (virgule acceptée) ' + JSON.stringify(state.rfqAnswer));
+  ok((await page.textContent('#rfq-card')).includes('您的报价：0.52 USD，交期 7 天，批号 2425'), 'RFQ : prix affiché après envoi');
+  await page.click('[data-none="DEM-1043"]');
+  await page.waitForSelector('[data-rfq-err="DEM-1043"]:not([hidden])');
+  ok((await page.textContent('[data-rfq-err="DEM-1043"]')).includes('已过截止时间'), 'RFQ : réponse après l\'échéance refusée, motif affiché');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'RFQ : pas de défilement horizontal à 390 px');
+  await page.click('#lang');
+  ok((await page.textContent('#rfq-card')).includes('Platform RFQs') && (await page.textContent('#rfq-card')).includes('Your handling rate: 75 %'), 'RFQ : anglais');
+  await page.click('#lang');
+}
 
 // 8. Société refusée : motif affiché, dépôt masqué.
 state.org = { ...ORG, status: 'rejected', has_license: true, rejected_reason: '营业执照不清晰' };

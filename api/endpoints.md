@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-75 endpoints et 25 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+91 endpoints et 25 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -28,6 +28,10 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
+| GET | `/v1/offers` | Acheteur, Central.Parts | Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : produits (référence, fabricant {id, name}, description, boîtier, cycle de vie, ECCN, HTS) et leurs offres (stock, MOQ, conditionnement complet, paliers {quantity, unit_price} tout compris, délai, conditionnement, date code, catégorie de source, pays d'expédition et d'origine, identifiant opaque) ; fournisseur jamais nommé | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/offers/search` | Acheteur, Central.Parts | Offres en direct pour une nomenclature (500 lignes au plus, une réponse par ligne) | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/offers/{id}` | Acheteur, Central.Parts | Détail d'une offre (cpo_…) et prix à la quantité, durée de validité du prix | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/manufacturers` | Acheteur, Central.Parts | Fabricants présents dans le stock publiable | Hors écran : intégration, webhook ou tâche |
 | GET | `/v1/search` | Public, Acheteur, Vendeur, Laboratoire, Central.Parts | Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes) | `/recherche` |
 | GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur | `/vendeur/demandes/:id` |
 
@@ -50,7 +54,7 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| POST | `/v1/demands` | Acheteur | Création d'une demande Opportunity, anonymisée puis diffusée aux vendeurs dont le stock correspond | `/recherche`, `/acheteur/nomenclatures/:id` |
+| POST | `/v1/demands` | Acheteur | Création d'une demande Opportunity, anonymisée puis diffusée aux vendeurs dont le stock correspond. Avec lines[] (plateforme, clé d'API, Idempotency-Key obligatoire) : RFQ de 1 à 50 lignes, une demande par ligne, en attente de validation par un administrateur (202), rien n'est diffusé avant (ADR 0023) | `/recherche`, `/acheteur/nomenclatures/:id` |
 | GET | `/v1/demands` | Acheteur, Vendeur, Central.Parts | Demandes : les siennes (acheteur), celles qui correspondent à son stock (vendeur, anonymisées), toutes (ops) | `/acheteur`, `/vendeur`, `/ops`, `/ops/demandes` |
 | GET | `/v1/demands/{id}` | Acheteur, Vendeur, Central.Parts | Détail d'une demande ; le vendeur ne voit ni l'acheteur ni l'adresse | `/acheteur/demandes/:id`, `/vendeur/demandes/:id` |
 | POST | `/v1/demands/{id}/close` | Central.Parts, Système | Clôture de l'enchère et calcul des offres consolidées (net + marge + frais) | `/ops/demandes` |
@@ -58,6 +62,23 @@
 | GET | `/v1/demands/{id}/bids/mine` | Vendeur | Offre du vendeur et son rang, sans les offres concurrentes | `/vendeur/demandes/:id` |
 | GET | `/v1/demands/{id}/offers` | Acheteur, Central.Parts | Offres consolidées, prix tout compris, questionnaire et documents | `/acheteur/demandes/:id`, `/ops/demandes` |
 | POST | `/v1/offers/{id}/accept` | Acheteur | Choix d'une offre, du niveau de test et des délais : crée la fiche transaction | `/acheteur/demandes/:id` |
+
+## Route RFQ des plateformes (Adesio, Luminovo, CalcuQuote ; ADR 0023)
+
+| Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
+|---|---|---|---|---|
+| POST | `/v1/demands/{id}/cancel` | Acheteur | Annulation d'une RFQ par la plateforme, tant qu'aucune offre n'est acceptée ; les fournisseurs déjà prévenus sont informés | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/webhooks` | Acheteur | Abonnement de la plateforme : demand.validated, demand.rejected, demand.offers_ready, demand.no_offer, offer.expired ; secret de signature affiché une fois (HMAC-SHA256, CP-Signature, CP-Timestamp) | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/webhooks` | Acheteur | Abonnements de la plateforme et dernières livraisons | Hors écran : intégration, webhook ou tâche |
+| DELETE | `/v1/webhooks/{id}` | Acheteur | Suppression d'un abonnement | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/me` | Acheteur, Vendeur, Central.Parts | Société et clé appelantes : environnement (test ou live), portées | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/health` | Acheteur, Vendeur, Central.Parts | État du service (avec une clé, comme les autres endpoints) | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/admin/demands` | Central.Parts | RFQ à valider (status=pending_validation par défaut), fiche complète : plateforme, référence client, fournisseurs appariés | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/admin/demands/{id}/approve` | Central.Parts | Validation : enchère ouverte, fournisseurs appariés prévenus dans WeChat (sellers facultatif : restreindre). Délai de réponse : 48 h après l'envoi réussi. Robot : « approve DEM-… » | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/admin/demands/{id}/reject` | Central.Parts | Refus, motif obligatoire, transmis à la plateforme (webhook demand.rejected) ; aucun fournisseur contacté. Robot : « reject DEM-… motif » | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/admin/demands/{id}/resend` | Central.Parts | Renvoi aux fournisseurs non joints (fenêtre WeChat de 48 h) ; leur délai démarre à l'envoi réussi. Robot : « resend DEM-… [ORG-…] » | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/sandbox/demands/{id}/approve` | Acheteur | Bac à sable (clé cp_test_) : simule la validation par l'administrateur ; aucun message ne part | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/sandbox/demands/{id}/respond` | Acheteur | Bac à sable : simule la réponse du fournisseur de test (quote ou decline), puis la clôture et les offres consolidées | Hors écran : intégration, webhook ou tâche |
 
 ## Stock vendeur et questionnaire
 
@@ -150,7 +171,7 @@
 |---|---|---|---|---|
 | GET | `/v1/notifications` | Acheteur, Vendeur, Laboratoire, Banque, Central.Parts | Notifications et relances de la partie appelante | `/acheteur`, `/vendeur`, `/labo` |
 | GET | `/v1/events` | Central.Parts | Journal d'audit de la plateforme | `/ops` |
-| POST | `/v1/jobs/deadlines` | Système | Tâche planifiée : expirations, relances, réputé accepté | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/jobs/deadlines` | Système | Tâche planifiée : expirations, relances, réputé accepté ; RFQ : rappel 24 h à l'administrateur, rappel 36 h et expiration 48 h des fournisseurs, clôtures, livraison des webhooks (fonction rfq : /jobs/tick) | Hors écran : intégration, webhook ou tâche |
 
 ## Routes des écrans
 
