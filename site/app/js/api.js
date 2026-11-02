@@ -311,6 +311,7 @@
 
   // Demandes et enchères
   H['dem.create'] = function (c) {
+    if (Array.isArray(c.body.lines)) return rfqCreate(c);
     var b = c.body, buyer = S().orgs[c.actor.org];
     if (buyer.kyb !== 'validated') fail(403, 'KYB non validé');
     var qty = parseInt(b.qty, 10);
@@ -1183,6 +1184,133 @@
       done.push(t.id + ' : ' + k);
     });
     return { day: day, processed: done };
+  };
+
+  // ------------------------------------------------------------ route RFQ des plateformes (ADR 0023)
+  // La plateforme est une société acheteuse appelée par clé d'API. Une RFQ attend la validation d'un administrateur ;
+  // rien n'est diffusé avant. Le délai des fournisseurs (48 h après l'envoi réussi) est vérifié par la vraie base.
+  function rfqState() { var s = S(); s.rfqWebhooks = s.rfqWebhooks || {}; s.rfqIdem = s.rfqIdem || {}; return s; }
+  var RFQ_STATUS = { auction: 'open', offers: 'offers_ready' };
+  function rfqView(d) {
+    return { id: d.id, rfq_id: d.rfqId, line_id: d.lineId, customer_reference: d.customerReference || null, status: RFQ_STATUS[d.status] || d.status,
+      mpn: d.mpn, manufacturer: d.mfr || null, quantity: d.qty, currency: d.currency, ship_to_country: d.zone, rejected_reason: d.rejectedReason || null, sandbox: !!d.sandbox };
+  }
+  function rfqDemand(c) {
+    var d = S().demands[c.params.id];
+    if (!d || !d.rfqId || (c.actor.role === 'buyer' && d.buyerId !== c.actor.org)) fail(404, 'Demande inconnue');
+    return d;
+  }
+  function rfqCreate(c) {
+    var b = c.body, s = rfqState(), key = c.body.idempotencyKey || c.query.idempotency_key;
+    if (!key) fail(422, 'En-tête Idempotency-Key obligatoire');
+    var hash = JSON.stringify(b.lines) + '|' + b.currency + '|' + b.ship_to_country + '|' + (b.customer_reference || '');
+    var prev = s.rfqIdem[c.actor.org + '|' + key];
+    if (prev) { if (prev.hash !== hash) fail(409, 'Idempotency-Key déjà utilisée avec un autre corps'); return CP.clone(prev.res); }
+    if (!b.lines.length || b.lines.length > 50) fail(422, 'De 1 à 50 lignes');
+    var cur = CP.currency(b.currency, null);
+    if (!cur) fail(422, 'Devise non acceptée');
+    if (!/^[A-Za-z]{2}$/.test(b.ship_to_country || '')) fail(422, 'Pays de livraison invalide');
+    var pending = CP.values(S().demands).filter(function (d) { return d.buyerId === c.actor.org && d.status === 'pending_validation'; }).length;
+    if (pending + b.lines.length > 50) fail(429, 'Plus de 50 demandes en attente de validation');
+    var rfqId = next('RFQ');
+    var out = b.lines.map(function (l, i) {
+      var qty = parseInt(l.quantity, 10);
+      if (!l.mpn || !(qty > 0)) fail(422, 'Ligne ' + (l.line_id || i + 1) + ' : référence et quantité requises');
+      var id = next('DEM');
+      S().demands[id] = { id: id, buyerId: c.actor.org, rfqId: rfqId, lineId: String(l.line_id || i + 1), customerReference: b.customer_reference || null,
+        mpn: String(l.mpn).toUpperCase().replace(/\s+/g, ''), mfr: l.manufacturer || '', qty: qty, dcMin: l.date_code_min || '', pack: l.packaging || 'Indifférent',
+        zone: String(b.ship_to_country).toUpperCase(), delivery: '', leadDays: parseInt(l.lead_days_max, 10) || null, target: l.target_price ? Number(l.target_price) : null,
+        currency: cur, status: 'pending_validation', day: S().day, closesDay: S().day + 2, sellers: [], sandbox: !!b.sandbox };
+      return { line_id: S().demands[id].lineId, id: id, status: 'pending_validation' };
+    });
+    var res = { rfq_id: rfqId, demands: out };
+    event('RFQ ' + rfqId + ' reçue de ' + S().orgs[c.actor.org].name + ' : ' + out.length + ' ligne(s), en attente de validation.', rfqId);
+    s.rfqIdem[c.actor.org + '|' + key] = { hash: hash, res: { rfq_id: rfqId, demands: out } };
+    return res;
+  }
+  // Validation : mêmes fournisseurs que pour une demande Opportunity (vérifiés, lot de la référence) ; bac à sable :
+  // fournisseurs de test seulement.
+  function rfqApprove(d, only) {
+    if (d.status !== 'pending_validation') fail(409, 'Demande déjà traitée');
+    var sellers = [];
+    CP.values(S().lots).forEach(function (l) {
+      var o = S().orgs[l.sellerId];
+      if (l.mpn.toUpperCase() === d.mpn && l.qty > 0 && sellers.indexOf(l.sellerId) < 0 && (d.sandbox ? o.sandbox : verified(o))) sellers.push(l.sellerId);
+    });
+    if (only && only.length) {
+      only.forEach(function (x) { if (sellers.indexOf(x) < 0) fail(422, 'Hors appariement : ' + x); });
+      sellers = only;
+    }
+    d.sellers = sellers; d.status = sellers.length ? 'auction' : 'no_offer';
+    sellers.forEach(function (sid) { notify(sid, 'Nouvelle demande ' + d.id + ' : ' + d.mpn + ' × ' + d.qty + ' (réponse sous 48 h).', '/vendeur/demandes/' + d.id); });
+    event('RFQ ' + d.id + ' validée : ' + sellers.length + ' fournisseur(s) prévenu(s).', d.id);
+    return rfqView(d);
+  }
+  H['rfq.cancel'] = function (c) {
+    var d = rfqDemand(c);
+    if (['ordered', 'cancelled', 'rejected'].indexOf(d.status) >= 0) fail(409, 'Annulation impossible');
+    d.status = 'cancelled';
+    d.sellers.forEach(function (sid) { notify(sid, 'Demande ' + d.id + ' annulée : aucune réponse attendue.', '/vendeur/demandes/' + d.id); });
+    return Object.assign(rfqView(d), { __ok200: true });
+  };
+  H['rfq.whk.create'] = function (c) {
+    var u = String(c.body.url || ''), ev = c.body.events || [];
+    if (!/^https:\/\//.test(u)) fail(422, 'URL invalide (https obligatoire)');
+    var allowed = ['demand.validated', 'demand.rejected', 'demand.offers_ready', 'demand.no_offer', 'offer.expired'];
+    if (!ev.length || ev.some(function (e) { return allowed.indexOf(e) < 0; })) fail(422, 'Événements invalides');
+    var id = next('WHK');
+    rfqState().rfqWebhooks[id] = { id: id, org: c.actor.org, url: u, events: ev };
+    return { id: id, url: u, events: ev, signing_secret: 'whsec_maquette_' + id };
+  };
+  H['rfq.whk.list'] = function (c) {
+    return CP.values(rfqState().rfqWebhooks).filter(function (w) { return w.org === c.actor.org; }).map(function (w) { return { id: w.id, url: w.url, events: w.events }; });
+  };
+  H['rfq.whk.delete'] = function (c) {
+    var w = rfqState().rfqWebhooks[c.params.id];
+    if (!w || w.org !== c.actor.org) fail(404, 'Abonnement inconnu');
+    delete rfqState().rfqWebhooks[c.params.id];
+    return { deleted: c.params.id };
+  };
+  H['rfq.me'] = function (c) { return { client: { id: c.actor.org, name: S().orgs[c.actor.org].name }, key: { environment: 'test' } }; };
+  H['rfq.health'] = function () { return { status: 'ok' }; };
+  H['rfq.admin.list'] = function (c) {
+    var st = c.query.status || 'pending_validation';
+    return CP.values(S().demands).filter(function (d) { return d.rfqId && d.status === st; }).map(function (d) {
+      return Object.assign(rfqView(d), { client: S().orgs[d.buyerId].name, target_price: d.target });
+    });
+  };
+  H['rfq.admin.approve'] = function (c) { return Object.assign(rfqApprove(rfqDemand(c), c.body.sellers), { __ok200: true }); };
+  H['rfq.admin.reject'] = function (c) {
+    var d = rfqDemand(c), why = String(c.body.reason || '').trim();
+    if (!why) fail(422, 'Motif obligatoire');
+    if (d.status !== 'pending_validation') fail(409, 'Demande déjà traitée');
+    d.status = 'rejected'; d.rejectedReason = why;
+    event('RFQ ' + d.id + ' refusée : ' + why, d.id);
+    return Object.assign(rfqView(d), { __ok200: true });
+  };
+  H['rfq.admin.resend'] = function (c) {
+    var d = rfqDemand(c);
+    if (d.status !== 'auction') fail(409, 'Enchère fermée');
+    return { id: d.id, resent: d.sellers, __ok200: true };
+  };
+  H['rfq.sbx.approve'] = function (c) {
+    var d = rfqDemand(c);
+    if (!d.sandbox) fail(403, 'Réservé aux demandes du bac à sable');
+    return Object.assign(rfqApprove(d, null), { __ok200: true });
+  };
+  H['rfq.sbx.respond'] = function (c) {
+    var d = rfqDemand(c), b = c.body;
+    if (!d.sandbox) fail(403, 'Réservé aux demandes du bac à sable');
+    if (d.status !== 'auction') fail(409, 'Aucun fournisseur de test n\'attend de réponse');
+    if (b.kind !== 'decline') {
+      var sid = d.sellers[0], lot = CP.values(S().lots).filter(function (l) { return l.sellerId === sid && l.mpn.toUpperCase() === d.mpn; })[0];
+      var cur = CP.currency(b.currency, 'USD'), net = Number(b.price);
+      if (!(net > 0) || !cur) fail(422, 'Prix ou devise invalide');
+      var id = next('BID');
+      S().bids[id] = { id: id, demandId: d.id, sellerId: sid, lotId: lot.id, net: round(net), currency: cur, netEur: CP.toEur(net, cur), dc: b.date_code || lot.dc || '', leadDays: parseInt(b.lead_days, 10) || 5, day: S().day };
+    }
+    H['dem.close']({ params: { id: d.id }, actor: SYSTEM, body: {} });
+    return Object.assign(rfqView(d), { __ok200: true });
   };
 
   CP.implemented = function (id) { return typeof H[id] === 'function'; };

@@ -4,7 +4,7 @@ Instructions pour Claude Code dans ce dépôt.
 
 ## Projet
 
-Central.Parts est un Supply Network Operator (SNO) de composants électroniques : distributeur sans stock, ni entrepôt, ni camion, qui relie fournisseurs et acheteurs (EMS, OEM, bureaux d'études européens). Une seule plateforme, deux offres :
+Central.Parts est un Supply Network Operator (SNO) de composants électroniques : une seule API d'offres et une seule plateforme qui relient fournisseurs et acheteurs (EMS, OEM, bureaux d'études européens), chaque offre tracée jusqu'à sa source, avec des prix comparables palier par palier. Deux offres :
 
 - **Inventory** : réseau de fabricants (Chine, Asie-Pacifique) et de distributeurs, offre courante agrégée et exposée par API.
 - **Opportunity** : surplus, obsolètes et brokers, par enchère anonyme, questionnaire d'état, laboratoires partenaires sur demande et paiement à l'acceptation (fonds de l'acheteur sur un compte dédié jusqu'à l'acceptation). Le mot « escrow » n'apparaît pas sur le site public tant que le montage juridique n'est pas validé.
@@ -17,8 +17,8 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/depot/` : espace fournisseur (connexion WeChat, inscription, dépôt des fichiers de stock ; ADR 0010 et 0012, écrit à la main). `site/recherche/` : recherche publique du catalogue et demande d'achat, FR/EN/中文, suivi dans `site/recherche/commande/` (ADR 0013 et 0014, écrites à la main). `site/depot/lien/` : dépôt des listes par lien personnel, sans WeChat ; `site/offres/` : offres des fournisseurs partenaires, vendeur anonyme, date de mise à jour (ADR 0021, écrites à la main, non indexées). `site/admin/` : back office des administrateurs (approbation des fournisseurs, stocks en lecture seule ; connexion Supabase Auth, ADR 0018, écrit à la main, `noindex`). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
-- `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock) et données fictives du projet dev, voir ADR 0008 et 0010.
-- `api/`, `data/`, `legal/` : à concevoir, voir leur README.
+- `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock ; `rfq` : API des plateformes, route RFQ validée par un administrateur et diffusée dans WeChat, ADR 0023) et données fictives du projet dev (`seed.sql`) et du bac à sable des plateformes (`sandbox-rfq.sql`), voir ADR 0008 et 0010.
+- `api/` : contrats d'API : `endpoints.md` (généré), `fournisseurs.md` (API fournisseur), `plateformes.md` (route RFQ des plateformes, ADR 0023). `data/`, `legal/` : à concevoir, voir leur README.
 - `docs/decisions/` : ADR numérotés (`000N-titre.md`).
 - `.github/workflows/deploy-site-ovh.yml` : publie `site/` sur l'hébergement OVH à chaque push sur `main` qui touche `site/` ou le workflow, puis retire de `www/` une liste explicite de fichiers qui ne doivent plus être publiés (design system, ancien runtime).
 
@@ -53,6 +53,9 @@ node tools/test-depot-ui.mjs           # espace fournisseur site/depot/ (même s
 node tools/test-search-ui.mjs          # recherche publique, achat et suivi site/recherche/ (même serveur), API simulée
 node tools/test-listes-ui.mjs          # dépôt par lien site/depot/lien/ et offres site/offres/ (même serveur), API simulée
 node tools/test-admin-ui.mjs           # back office site/admin/ (même serveur), API simulée ; démonstration : node tools/demo-admin.mjs
+node tools/test-rfq.mjs                # route RFQ : commandes WeChat, textes, erreurs, signature des webhooks
+deno run --allow-env tools/test-rfq-dispatch.ts   # route RFQ : diffusion avec WeChat simulé
+node tools/test-rfq-e2e.mjs            # route RFQ de bout en bout : fonctions rfq et wechat-events sous Deno, base locale (comme test-db.sh), module pg
 ```
 
 Ces tests tournent aussi sur chaque PR (`.github/workflows/tests.yml`, ADR 0016), avec la vérification de type des fonctions Edge (`deno check supabase/functions/*/index.ts`).
@@ -62,6 +65,8 @@ Toute modification du schéma passe par une nouvelle migration dans `supabase/mi
 Incrémenter `?v=N` dans `site/app/index.html` à chaque modification des fichiers de `site/app/`.
 
 ## Déploiement
+
+Route RFQ des plateformes (Adesio) : migration, secrets (`RFQ_WEBHOOK_KEY`, `RFQ_JOBS_SECRET`, `RFQ_WECHAT_OPEN`), clés d'API (`tools/create-api-key.mjs`, empreinte seule en base) et tâche planifiée : `docs/route-rfq-mise-en-service.md`. Diffusion aux fournisseurs réels fermée tant que `RFQ_WECHAT_OPEN` n'est pas `true`.
 
 Fonctions Supabase : redéployées automatiquement à chaque push sur `main` qui les touche (`.github/workflows/deploy-supabase-functions.yml`, secret GitHub `SUPABASE_ACCESS_TOKEN`) ; à la main : `tools/deploy-functions.sh [fonction…]`. Les migrations restent manuelles, à appliquer avant de fusionner une PR qui en dépend (ADR 0016).
 

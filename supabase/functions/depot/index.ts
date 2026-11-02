@@ -15,6 +15,9 @@
 //   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport
 //   GET  /depot/requests    → demandes d'achat reçues par la société (90 jours), sans l'acheteur
 //   POST /depot/requests/answer {ref, ok} → confirme ou refuse une demande d'achat (ADR 0014)
+//   GET  /depot/rfqs        → RFQ des plateformes reçues (90 jours) et taux de traitement de la société (ADR 0023)
+//   POST /depot/rfqs/answer {ref, kind: quote|decline, price, currency, lead_days, date_code} → réponse, refusée après
+//                           l'échéance de 48 h (même fonction que 报价 / 无货 DEM-… dans WeChat)
 //   GET  /depot/contacts    → contacts et invitations en cours (administrateur)
 //   POST /depot/invite      {label}      → lien d'invitation d'un collègue (administrateur)
 //
@@ -23,6 +26,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { licensePath, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
 import { notifyOperators, requestAnswerNote, supplierCard, wechatPost } from '../_shared/wechat.ts';
+import { closeRfq, deliverWebhooks } from '../_shared/rfq-dispatch.ts';
 
 // Devises proposées au dépôt (mêmes codes que public.currencies et l'inscription).
 const CURRENCIES = ['USD', 'CNH', 'EUR', 'HKD'];
@@ -156,6 +160,38 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('supplier_answer', { p_openid: session.openid, p_ref: String(ref || ''), p_ok: !!ok });
       if (error) return json({ error: 'not_found' }, 404);
       await notifyOperators(db, requestAnswerNote(data, !!ok));
+      return json(data);
+    }
+
+    if (req.method === 'GET' && path.endsWith('/rfqs')) {
+      const { data, error } = await db.rpc('supplier_rfqs', { p_openid: session.openid });
+      if (error) return json({ error: 'database', detail: error.message }, 500);
+      return json(data);
+    }
+
+    if (req.method === 'POST' && path.endsWith('/rfqs/answer')) {
+      const b = await body();
+      const kind = b.kind === 'decline' ? 'decline' : 'quote';
+      const { data, error } = await db.rpc('supplier_rfq_answer', {
+        p_openid: session.openid, p_ref: String(b.ref || ''), p_kind: kind, p_net: kind === 'quote' ? Number(b.price) || null : null,
+        p_currency: b.currency ?? null, p_lead: Number.isInteger(b.lead_days) ? b.lead_days : null, p_date_code: b.date_code ?? null, p_lot: null,
+      });
+      if (error) {
+        const code = error.code === 'CP410' ? 'expired' : error.code === 'CP409' ? (/quoted|declined/.test(error.details || '') ? 'answered' : 'closed')
+          : error.code === '22023' ? 'invalid' : 'not_found';
+        return json({ error: code, field: error.details || null }, code === 'not_found' ? 404 : 409);
+      }
+      const done = (async () => {
+        const { data: card } = await db.rpc('rfq_for_operator', { p_id: data.ref });
+        if (card && !card.sandbox) {
+          const waiting = (card.sellers || []).filter((s: { response: string }) => s.response === 'pending').length;
+          await notifyOperators(db, `[RFQ ${data.ref}] answered on /depot/: ${kind === 'quote' ? `quote ${b.price} ${b.currency}` : 'no stock'} · ${waiting} supplier(s) still pending`);
+        }
+        if (data.all_done) await closeRfq(db, data.ref);
+        await deliverWebhooks(db);
+      })().catch(() => {});
+      const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+      if (rt) rt.waitUntil(done); else await done;
       return json(data);
     }
 
