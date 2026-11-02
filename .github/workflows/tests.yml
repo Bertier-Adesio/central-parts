@@ -2,7 +2,7 @@
 # après la fusion, dans leurs propres workflows. Chaque groupe ne tourne que si la PR touche ce qu'il teste.
 #   base   : lecture des fichiers de stock, règles de la maquette, vérification de type des fonctions Edge (toujours)
 #   db     : schéma, RLS et fonctions SQL sur PostgreSQL 16 (migrations, contrôles, données de référence)
-#   pages  : parcours dans Chromium de la maquette, de l'espace fournisseurs, de la recherche et du back office (site/)
+#   pages  : parcours dans Chromium de la maquette, de l'espace fournisseurs, de la recherche, de la page API et du back office (site/)
 name: Tests
 
 on:
@@ -96,4 +96,5 @@ jobs:
           node tools/test-depot-ui.mjs
           node tools/test-search-ui.mjs
           node tools/test-listes-ui.mjs
+          node tools/test-api-page-ui.mjs
           node tools/test-admin-ui.mjs

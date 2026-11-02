@@ -14,7 +14,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 ## Arborescence
 
 - `site/` : landing page statique trilingue (FR `/`, EN `/en/`, 中文 `/zh/`), publiée telle quelle. Les pages HTML sont **générées** par `node tools/build-site.mjs` depuis `design/landing.dc.html`.
-- `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/depot/` : espace fournisseur (connexion WeChat, inscription, dépôt des fichiers de stock ; ADR 0010 et 0012, écrit à la main). `site/recherche/` : recherche publique du catalogue et demande d'achat, FR/EN/中文, suivi dans `site/recherche/commande/` (ADR 0013 et 0014, écrites à la main). `site/depot/lien/` : dépôt des listes par lien personnel, sans WeChat ; `site/offres/` : offres des fournisseurs partenaires, vendeur anonyme, date de mise à jour (ADR 0021, écrites à la main, non indexées). `site/admin/` : back office des administrateurs (approbation des fournisseurs, stocks en lecture seule ; connexion Supabase Auth, ADR 0018, écrit à la main, `noindex`). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
+- `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/depot/` : espace fournisseur (connexion WeChat, inscription, dépôt des fichiers de stock ; ADR 0010 et 0012, écrit à la main). `site/recherche/` : recherche publique du catalogue et demande d'achat, FR/EN/中文, suivi dans `site/recherche/commande/` (ADR 0013 et 0014, écrites à la main). `site/depot/lien/` : dépôt des listes par lien personnel, sans WeChat ; `site/offres/` : offres des fournisseurs partenaires, vendeur anonyme, date de mise à jour (ADR 0021, écrites à la main, non indexées). `site/api/` : documentation publique de l'API d'offres pour les plateformes de chiffrage (ADR 0011, spécification v1, écrite à la main, `noindex`, hors sitemap). `site/admin/` : back office des administrateurs (approbation des fournisseurs, stocks en lecture seule ; connexion Supabase Auth, ADR 0018, écrit à la main, `noindex`). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
 - `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock) et données fictives du projet dev, voir ADR 0008 et 0010.
@@ -52,6 +52,7 @@ node tools/build-api-map.mjs            # régénère api/endpoints.md après to
 node tools/test-depot-ui.mjs           # espace fournisseur site/depot/ (même serveur), API simulée
 node tools/test-search-ui.mjs          # recherche publique, achat et suivi site/recherche/ (même serveur), API simulée
 node tools/test-listes-ui.mjs          # dépôt par lien site/depot/lien/ et offres site/offres/ (même serveur), API simulée
+node tools/test-api-page-ui.mjs        # documentation de l'API d'offres site/api/ (même serveur) : langues, endpoints, mots interdits, noindex
 node tools/test-admin-ui.mjs           # back office site/admin/ (même serveur), API simulée ; démonstration : node tools/demo-admin.mjs
 ```
 
