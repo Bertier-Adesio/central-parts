@@ -26,7 +26,7 @@ const ENDPOINTS = [
   'POST /v1/inventory/orders', 'POST /v1/offers/{id}/accept', 'GET /v1/transactions', 'GET /v1/transactions/{id}',
   'POST /v1/transactions/{id}/signatures', 'POST /v1/transactions/{id}/inspection',
 ];
-const FORBIDDEN = [/sans stock/i, /ni entrep/i, /without stock/i, /stockless/i, /escrow/i, /s[ée]questre/i, /IC ?Superman/i,
+const FORBIDDEN = [/digi.?key/i, /\/compat\//, /TI store/i, /sans stock/i, /ni entrep/i, /without stock/i, /stockless/i, /escrow/i, /s[ée]questre/i, /IC ?Superman/i,
   /Concentric/i, /Octopart/i, /SiliconExpert/i, /\bCGU\b/, /conditions g[ée]n[ée]rales/i, /terms of (use|service)/i, /无库存/, /托管/];
 
 const html = readFileSync(new URL('../site/api/index.html', import.meta.url), 'utf8');
@@ -64,7 +64,7 @@ for (const width of [1280, 390]) {
   ok(/"products": \[/.test(code) && /"unit_price"/.test(code) && !/"price":/.test(code) && !/: null/.test(code), width + ' px : exemples dans la forme actuelle (products, unit_price, aucun null)');
   ok(/"manufacturer": \{ "id": "MFR-TI"/.test(code) && /"standard_pack_quantity"/.test(code) && /"country_of_origin"/.test(code), width + ' px : fabricant normalisé, conditionnement complet, pays d\'origine');
   ok(/pending_validation/.test(code) && /ship_to_country/.test(fr), width + ' px : RFQ (lignes, validation, ship_to_country)');
-  ok(fr.includes('/compat/digikey/products/v4/search/{mpn}/pricing'), width + ' px : formats compatibles documentés');
+  ok(!/digi.?key|\/compat\/|TI store/i.test(await page.content()), width + ' px : aucun format compatible ni distributeur nommé (DigiKey, TI store)');
   ok(fr.includes('Adresse de base prévue') && !(await page.$('a[href*="api.central.parts"]')), width + ' px : adresse de base prévue, sans lien');
   ok(fr.includes('Adesio compris'), width + ' px : mêmes données pour tous les clients, Adesio compris');
   for (const e of ENDPOINTS) ok(await page.$(`[data-endpoint="${e}"]`), width + ' px : endpoint ' + e);

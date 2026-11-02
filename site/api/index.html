@@ -462,26 +462,6 @@ Content-Type: application/json
   "customer_reference": "BOM-4711", "status": "offers_ready", "offers_count": 2 }</code></pre></div>
   </section>
 
-  <!-- Formats compatibles -->
-  <section class="ep" id="ep-compat">
-    <h3><span data-l="fr">Formats compatibles</span><span data-l="en">Compatible formats</span><span data-l="zh">兼容格式</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Pour brancher un connecteur existant sans développement, les mêmes offres sont aussi servies dans la forme des API produit les plus courantes, avec la même clé :</p>
-    <p data-l="en">To plug in an existing connector without development, the same offers are also served in the shape of the most common product APIs, with the same key:</p>
-    <p data-l="zh">为了无需开发即可接入现有连接器，同样的报价也以最常见的产品 API 格式提供，使用同一密钥：</p>
-    <div class="tbl"><table>
-      <thead><tr><th><span data-l="fr">Format</span><span data-l="en">Format</span><span data-l="zh">格式</span></th><th><span data-l="fr">Chemin</span><span data-l="en">Path</span><span data-l="zh">路径</span></th></tr></thead>
-      <tbody>
-        <tr><td>DigiKey ProductPricing</td><td class="p">GET /compat/digikey/products/v4/search/{mpn}/pricing</td></tr>
-        <tr><td>DigiKey ProductDetails</td><td class="p">GET /compat/digikey/products/v4/search/{mpn}/productdetails</td></tr>
-        <tr><td>DigiKey KeywordSearch</td><td class="p">POST /compat/digikey/products/v4/search/keyword</td></tr>
-        <tr><td>Texas Instruments store</td><td class="p">GET /compat/ti/v2/store/products/{mpn}</td></tr>
-      </tbody>
-    </table></div>
-    <p data-l="fr">Le fournisseur y vaut toujours « Central.Parts » ; ce que ces formats ne prévoient pas (catégorie de source, date code, pays d’expédition, validité du prix) figure dans une extension <code>CentralParts</code>.</p>
-    <p data-l="en">The supplier there is always “Central.Parts”; what these formats do not provide (source category, date code, ship-from country, price validity) is in a <code>CentralParts</code> extension.</p>
-    <p data-l="zh">其中供应商始终显示为“Central.Parts”；这些格式没有的信息（来源类别、批号、发货国家、价格有效期）放在 <code>CentralParts</code> 扩展字段中。</p>
-  </section>
-
   <!-- Phase 2 : commande -->
   <h2 id="commande"><span data-l="fr">Commande</span><span data-l="en">Ordering</span><span data-l="zh">下单</span> <span class="badge later"><span data-l="fr">Après le chiffrage</span><span data-l="en">After costing</span><span data-l="zh">报价之后</span></span></h2>
   <p data-l="fr">La commande passe par Central.Parts (fiche transaction) ; le détail est à définir avec chaque plateforme.</p>
