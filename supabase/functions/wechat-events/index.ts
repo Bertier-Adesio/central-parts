@@ -21,30 +21,20 @@
 // pour prévenir les fournisseurs de la décision.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { depotLinkText, isDepotMenuClick, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
+import {
+  approvedNotice, linkErrorText, operatorErrorText, operatorHelpText, operatorReplyText, phoneBackLine, receivedText,
+  rejectedNotice, scanReply, welcomeText,
+} from '../_shared/robot-texts.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 
-const REPLIES: Record<string, string> = {
-  ok: '已登录 Central.Parts 库存上传，请返回上传页面。\nLogged in to Central.Parts stock upload: go back to the upload page.',
-  not_bound: '已登录。请返回网页，注册您的公司。\nLogged in: go back to the web page to register your company.',
-  invite_invalid: '邀请链接无效、已过期或已被其他账号使用，请联系 Central.Parts。\nThe invitation link is invalid, expired or already used: please contact Central.Parts.',
-  expired: '二维码已过期，请在上传页面刷新二维码。\nThis QR code has expired: refresh it on the upload page.',
-};
-
+// Textes du robot : _shared/robot-texts.js. Opérateur : anglais seul ; fournisseur ou inconnu : chinois et anglais.
 const SITE = 'https://central.parts/depot/';
 
-// Message d'accueil (texte, liens cliquables dans WeChat ; 2 048 octets au plus).
-const welcome = (scene: string) => [
-  '感谢关注 Central.Parts！',
-  '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。',
-  '',
-  `1. 注册公司、上传库存（15 分钟内有效，过期请发送任意消息获取新链接）：${SITE}?login=${scene}`,
-  '2. 库存表模板：https://central.parts/depot/stock-template.csv',
-  '3. 了解我们：https://central.parts/zh/',
-  '',
-  'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。',
-  '',
-  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Meet us at electronica 2026, Hall B4, Booth 251/12.',
-].join('\n');
+// Opérateur = openid présent dans la table operators : même identification que pour les commandes.
+async function isOperator(db: SupabaseClient, openid: string): Promise<boolean> {
+  const { data } = await db.from('operators').select('openid').eq('openid', openid).maybeSingle();
+  return !!data;
+}
 
 // WeChat attend la réponse en 5 secondes au plus : les messages envoyés en plus partent après la réponse.
 const later = (p: Promise<unknown>) => {
@@ -59,16 +49,16 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   if (m) {
     const org = m[2].toUpperCase();
     const { data: alias, error } = await db.rpc('approve_supplier', { p_org: org, p_by: openid });
-    if (error) return `${org}：${error.message}`;
-    later(tellAdmins(db, org, `您的公司已通过 Central.Parts 审核（编号 ${alias}），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (${alias}).`));
+    if (error) return operatorErrorText(org, error.message);
+    later(tellAdmins(db, org, approvedNotice(alias)));
     return `Approved ${org} → ${alias}`;
   }
   m = /^(拒绝|reject)\s+(ORG-\d+)\s*(.*)$/is.exec(t);
   if (m) {
     const org = m[2].toUpperCase(), reason = m[3].trim();
     const { error } = await db.rpc('reject_supplier', { p_org: org, p_reason: reason, p_by: openid });
-    if (error) return `${org}：${error.message}`;
-    later(tellAdmins(db, org, `您的公司未通过 Central.Parts 审核${reason ? '：' + reason : '。'}\n如有疑问，请直接回复此消息。`));
+    if (error) return operatorErrorText(org, error.message);
+    later(tellAdmins(db, org, rejectedNotice(reason)));
     return `Rejected ${org}`;
   }
   m = /^(确认|无货|发票|收款|发货|取消|询单|confirm|unavailable|proforma|paid|shipped|cancel|request)\s*(PR-\d+)\s*$/i.exec(t);
@@ -87,7 +77,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   if (m) {
     const { data: to, error } = await db.rpc('reply_wechat_message', { p_id: Number(m[2]), p_content: m[3], p_by: openid });
     if (error || !to) return `Message #${m[2]}: ${error?.message || 'not found'}`;
-    const sent = await sendText(db, to, m[3].trim());
+    const sent = await sendText(db, to, operatorReplyText(m[3].trim()));
     return sent ? `Sent to #${m[2]}.` : `Not delivered: WeChat only delivers to people who wrote to the account in the last 48 hours.`;
   }
   // Lien de connexion personnel, pour tester la page comme un fournisseur (les opérateurs ne reçoivent pas l'accueil).
@@ -101,26 +91,10 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     later((async () => { for (const s of list.slice(0, 10)) await sendText(db, openid, await supplierCard(db, s)); })());
     return list.length ? `Pending: ${list.length} compan${list.length > 1 ? 'ies' : 'y'}${list.length > 10 ? ' (first 10 shown)' : ''}` : 'No company pending.';
   }
-  return [
-    '命令 · Commands:',
-    '待审核 · pending',
-    '通过 ORG-0123 · approve ORG-0123',
-    '拒绝 ORG-0123 原因 · reject ORG-0123 reason',
-    '链接 · link',
-    '回复 123 内容 · reply 123 text  (answer forwarded message #123)',
-    '',
-    '询单 · Purchase requests (PR-0001):',
-    '询单 · request',
-    '确认 · confirm',
-    '无货 · unavailable',
-    '发票 · proforma',
-    '收款 · paid',
-    '发货 · shipped',
-    '取消 · cancel',
-  ].join('\n');
+  return operatorHelpText();
 }
 
-// Messages aux opérateurs en anglais ; messages aux fournisseurs en chinois, avec une ligne en anglais.
+// Messages aux opérateurs en anglais seul ; messages aux fournisseurs en chinois, avec l'anglais (robot-texts.js).
 const STATUS_EN: Record<string, string> = { submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
   proforma_sent: 'proforma sent', paid: 'paid', shipped: 'shipped', cancelled: 'cancelled' };
 
@@ -155,25 +129,26 @@ Deno.serve(async (req) => {
 
   if (scene && scene.startsWith('dl_')) {
     const { data, error } = await db.rpc('depot_login_scan', { p_scene: scene, p_openid: msg.FromUserName, p_unionid: null });
-    let text = error ? null : REPLIES[data?.status];
+    const op = await isOperator(db, msg.FromUserName);
+    let text = error ? null : scanReply(data?.status, op);
     // Sur téléphone, reconnaître le QR code de la page ouvre cette conversation et ferme souvent la page :
     // un lien personnel (15 minutes) y ramène, déjà connecté. Sur ordinateur, la page se connecte seule.
     if (text && (data.status === 'ok' || data.status === 'not_bound')) {
       const { data: link } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
-      if (link) text += `\n\n手机上请点此返回 · On a phone, tap to go back:\n${SITE}?login=${link}`;
+      if (link) text += phoneBackLine(`${SITE}?login=${link}`, op);
     }
     return text ? reply(text) : new Response('success');
   }
 
   // Bouton « 上传库存 » du menu : lien personnel vers la page de dépôt, déjà connecté (inscription si pas de société).
   if (isDepotMenuClick(msg)) {
+    const op = await isOperator(db, msg.FromUserName);
     const { data: link, error } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
-    return reply(error ? '暂时无法生成登录链接，请稍后再试。\nThe login link could not be created, please try again later.' : depotLinkText(`${SITE}?login=${link}`));
+    return reply(error ? linkErrorText(op) : depotLinkText(`${SITE}?login=${link}`, op));
   }
 
   if (msg.MsgType === 'text') {
-    const { data: op } = await db.from('operators').select('openid').eq('openid', msg.FromUserName).maybeSingle();
-    if (op) return reply(await operatorCommand(db, msg.FromUserName, msg.Content || ''));
+    if (await isOperator(db, msg.FromUserName)) return reply(await operatorCommand(db, msg.FromUserName, msg.Content || ''));
     const answer = await supplierCommand(db, msg.FromUserName, msg.Content || '');
     if (answer) return reply(answer);
   }
@@ -187,12 +162,13 @@ Deno.serve(async (req) => {
       later(notifyOperators(db, `[Message #${logged.id}] ${who}\n${msg.MsgType === 'text' ? content : msg.MsgType + ': ' + content}\n\nReply: reply ${logged.id} your text`));
     }
     // Contact déjà rattaché : simple accusé de réception ; sinon, le message d'accueil avec le lien d'inscription.
-    if (logged?.org_id) return reply('已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.');
+    if (logged?.org_id) return reply(receivedText(await isOperator(db, msg.FromUserName)));
   }
 
   const greet = msg.MsgType === 'text' || msg.MsgType === 'image' || msg.MsgType === 'voice' ||
     (msg.MsgType === 'event' && (msg.Event === 'subscribe' || (msg.Event === 'SCAN' && scene)));
   if (!greet) return new Response('success');
+  const op = await isOperator(db, msg.FromUserName);
   const { data: link, error } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
-  return reply(error ? welcome('').replace(/\?login=\S*/, '') : welcome(link));
+  return reply(welcomeText(error ? '' : link, op));
 });

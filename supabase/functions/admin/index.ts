@@ -17,6 +17,7 @@
 // Secrets et variables (jamais dans le dépôt) : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournis
 // par Supabase), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot), ADMIN_ORIGINS et ADMIN_SITE (facultatifs).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { approvedNotice, rejectedNotice } from '../_shared/robot-texts.js';
 import { sendText } from '../_shared/wechat.ts';
 
 const ORIGINS = (Deno.env.get('ADMIN_ORIGINS') || 'https://central.parts,https://www.central.parts').split(',');
@@ -33,12 +34,10 @@ const ERRORS: Record<string, [string, number]> = {
   PGRST301: ['session_expired', 401],
 };
 
-// Messages au fournisseur : mêmes textes que le robot WeChat (wechat-events, commandes approve / reject), pour que
-// le fournisseur reçoive exactement la même chose quel que soit le canal de la décision. À garder identiques.
-const APPROVED = (alias: string) =>
-  `您的公司已通过 Central.Parts 审核（编号 ${alias}），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (${alias}).`;
-const REJECTED = (reason: string) =>
-  `您的公司未通过 Central.Parts 审核${reason ? '：' + reason : '。'}\n如有疑问，请直接回复此消息。`;
+// Messages au fournisseur : mêmes textes que le robot WeChat (wechat-events, commandes approve / reject), pris dans
+// _shared/robot-texts.js, pour que le fournisseur reçoive exactement la même chose quel que soit le canal de la décision.
+const APPROVED = approvedNotice;
+const REJECTED = rejectedNotice;
 
 // WeChat n'a pas à retarder la réponse à la page : l'avis part après.
 const later = (p: Promise<unknown>) => {

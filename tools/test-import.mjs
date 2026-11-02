@@ -1,11 +1,13 @@
 // Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
-// et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
+// et des outils de la page de dépôt (supabase/functions/_shared/depot.js), et langue des messages du robot WeChat
+// (supabase/functions/_shared/robot-texts.js).
 // Usage : node tools/test-import.mjs
 import { cleanUrl, decode, leadDays, mapRows, parseCSV, price, tierCell } from '../supabase/functions/import-stock/parse.js';
 import { readFileSync } from 'node:fs';
 import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
+import * as R from '../supabase/functions/_shared/robot-texts.js';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -178,6 +180,69 @@ ok(linkText.includes('?login=dl_' + 'a'.repeat(32)) && linkText.includes('15 分
 const menu = JSON.parse((await import('node:fs')).readFileSync(new URL('../supabase/wechat/menu.json', import.meta.url), 'utf8'));
 const upload = menu.button.flatMap((b) => b.sub_button || [b]).find((b) => b.name === '上传库存');
 ok(upload && upload.type === 'click' && upload.key === DEPOT_MENU_KEY, 'menu.json : « 上传库存 » est un bouton clic, clé DEPOT_LOGIN');
+
+// Langue des messages du robot WeChat (_shared/robot-texts.js) : opérateur → anglais seul ; fournisseur → inchangé.
+const HAN = /[　-〿㐀-鿿豈-﫿＀-￯]/; // idéogrammes et ponctuation pleine chasse
+const en = (t, label) => ok(typeof t === 'string' && t.length > 0 && !HAN.test(t), 'opérateur, anglais seul : ' + label);
+const fakeUrl = 'https://central.parts/depot/?login=dl_xxxxxxxx';
+for (const st of ['ok', 'not_bound', 'invite_invalid', 'expired']) en(R.scanReply(st, true), 'scan du QR code (' + st + ')');
+ok(R.scanReply('inconnu', true) === null && R.scanReply('inconnu') === null, 'scan : statut inconnu, pas de réponse');
+en(R.phoneBackLine(fakeUrl, true), 'lien de retour sur téléphone');
+en(R.depotLinkText(fakeUrl, true), 'lien de connexion au centre fournisseurs (menu)');
+ok(R.depotLinkText(fakeUrl, true).includes(fakeUrl), 'opérateur : le lien de connexion est bien dans le message');
+en(R.linkErrorText(true), 'erreur de création du lien');
+en(R.welcomeText('dl_xxxxxxxx', true), 'accueil');
+ok(R.welcomeText('dl_xxxxxxxx', true).includes(fakeUrl) && !R.welcomeText('', true).includes('?login='), 'opérateur : accueil avec lien, ou sans lien si sa création échoue');
+en(R.receivedText(true), 'accusé de réception');
+en(R.operatorHelpText(), 'aide des commandes');
+for (const c of ['pending', 'approve ORG-', 'reject ORG-', 'link', 'reply 123', 'request PR-', 'confirm PR-', 'unavailable PR-', 'proforma PR-', 'paid PR-', 'shipped PR-', 'cancel PR-'])
+  ok(R.operatorHelpText().includes(c), 'aide : commande « ' + c + ' » listée');
+en(R.operatorErrorText('ORG-0123', 'company not found'), 'erreur de commande approve / reject');
+en(registrationLine({ region: 'HK', code: '12345678' }), 'ligne de numéro de la fiche [Pending review]');
+
+// Messages écrits dans les fonctions (wechat-events, wechat.ts) pour les opérateurs : aucun caractère chinois hors
+// des mots-clés de commande reconnus (expressions régulières et table des statuts).
+const src = (f) => readFileSync(new URL('../supabase/functions/' + f, import.meta.url), 'utf8');
+const ev = src('wechat-events/index.ts');
+const opCmd = ev.slice(ev.indexOf('async function operatorCommand'), ev.indexOf('\n}\n', ev.indexOf('async function operatorCommand')));
+const opLines = opCmd.split('\n').filter((l) => !/\.(exec|test)\(|^\s*\/\/|确认: 'confirmed'/.test(l));
+ok(opLines.length > 20 && !opLines.some((l) => HAN.test(l)), 'opérateur, anglais seul : réponses aux commandes (Approved, Rejected, PR-…, Sent, Not delivered, Login link, Pending)');
+const wt = src('_shared/wechat.ts');
+const fn = (name) => wt.slice(wt.indexOf('export ' + (name === 'requestAnswerNote' ? 'function ' : 'async function ') + name), wt.indexOf('\n}\n', wt.indexOf(name)));
+ok(!HAN.test(fn('supplierCard')) && fn('supplierCard').includes('[Pending review]'), 'opérateur, anglais seul : fiche [Pending review]');
+ok(!HAN.test(fn('requestAnswerNote')) && fn('requestAnswerNote').includes('[Purchase request'), 'opérateur, anglais seul : avis [Purchase request]');
+const fwd = ev.split('\n').find((l) => l.includes('[Message #'));
+ok(fwd && !HAN.test(fwd), 'opérateur, anglais seul : message transféré [Message #n]');
+ok(/if \(await isOperator\(db, msg\.FromUserName\)\) return reply\(await operatorCommand/.test(ev) && (ev.match(/from\('operators'\)/g) || []).length === 1,
+  'opérateur : une seule identification (table operators), la même que pour les commandes');
+
+// Fournisseur ou inconnu : textes d'avant, au caractère près (copiés de la version précédente de wechat-events).
+const OLD = {
+  ok: '已登录 Central.Parts 库存上传，请返回上传页面。\nLogged in to Central.Parts stock upload: go back to the upload page.',
+  not_bound: '已登录。请返回网页，注册您的公司。\nLogged in: go back to the web page to register your company.',
+  invite_invalid: '邀请链接无效、已过期或已被其他账号使用，请联系 Central.Parts。\nThe invitation link is invalid, expired or already used: please contact Central.Parts.',
+  expired: '二维码已过期，请在上传页面刷新二维码。\nThis QR code has expired: refresh it on the upload page.',
+};
+for (const st of Object.keys(OLD)) ok(R.scanReply(st) === OLD[st] && R.scanReply(st, false) === OLD[st], 'fournisseur, inchangé : scan du QR code (' + st + ')');
+ok(R.phoneBackLine(fakeUrl) === '\n\n手机上请点此返回 · On a phone, tap to go back:\n' + fakeUrl, 'fournisseur, inchangé : lien de retour sur téléphone');
+const both = (t) => HAN.test(t) && /[A-Za-z]{4,} [A-Za-z]{2,}/.test(t);
+ok(both(R.depotLinkText(fakeUrl)) && R.depotLinkText(fakeUrl).startsWith('点此登录 Central.Parts 供应商中心'), 'fournisseur, bilingue : lien de connexion au centre fournisseurs');
+ok(R.linkErrorText() === '暂时无法生成登录链接，请稍后再试。\nThe login link could not be created, please try again later.', 'fournisseur, inchangé : erreur de création du lien');
+const oldWelcome = (scene) => ['感谢关注 Central.Parts！', '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。', '',
+  `1. 注册公司、上传库存（15 分钟内有效，过期请发送任意消息获取新链接）：https://central.parts/depot/?login=${scene}`,
+  '2. 库存表模板：https://central.parts/depot/stock-template.csv', '3. 了解我们：https://central.parts/zh/', '',
+  'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。', '',
+  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Meet us at electronica 2026, Hall B4, Booth 251/12.'].join('\n');
+ok(R.welcomeText('dl_xxxxxxxx') === oldWelcome('dl_xxxxxxxx'), 'fournisseur, inchangé : accueil avec lien');
+ok(R.welcomeText('') === oldWelcome('').replace(/\?login=\S*/, ''), 'fournisseur, inchangé : accueil sans lien');
+ok(Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32))) < 2048 && Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32), true)) < 2048, 'accueil : sous 2 048 octets');
+ok(R.receivedText() === '已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.', 'fournisseur, inchangé : accusé de réception');
+ok(R.approvedNotice('CP-S-0042') === '您的公司已通过 Central.Parts 审核（编号 CP-S-0042），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (CP-S-0042).', 'fournisseur, inchangé : avis de validation');
+ok(R.rejectedNotice('licence illisible').startsWith('您的公司未通过 Central.Parts 审核：licence illisible\n如有疑问，请直接回复此消息。\n') && both(R.rejectedNotice('x')), 'fournisseur, bilingue : avis de refus (chinois d\'origine, puis anglais)');
+ok(R.rejectedNotice('').startsWith('您的公司未通过 Central.Parts 审核。\n') && !R.rejectedNotice('').includes('reason above'), 'fournisseur : refus sans motif');
+ok(R.operatorReplyText('Please send your stock list.') === 'Central.Parts 回复 · Reply from Central.Parts:\nPlease send your stock list.', 'fournisseur, bilingue : réponse d\'un opérateur (en-tête chinois et anglais, texte tel quel)');
+const adm = src('admin/index.ts');
+ok(/const APPROVED = approvedNotice;/.test(adm) && /const REJECTED = rejectedNotice;/.test(adm), 'back office : mêmes avis au fournisseur que le robot (robot-texts.js)');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);
