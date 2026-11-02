@@ -321,6 +321,14 @@ export function rfqStatsText(s) {
     s.expired_demands?.length ? `Expired: ${s.expired_demands.slice(0, 10).join(', ')}` : ''].filter(Boolean).join('\n');
 }
 
+// Complétude des fiches produit d'un fournisseur (supplier_data_quality), pour « rfq stats ORG-… ».
+export function rfqDataQualityLine(q) {
+  if (!q || !q.lots) return '';
+  const r = q.rates || {}, pc = (k) => Math.round((r[k] || 0) * 100) + ' %';
+  return `\nProduct data ${Math.round((q.completeness || 0) * 100)} % on ${q.lots} lot(s): manufacturer ${pc('manufacturer')}, description ${pc('description')}, ` +
+    `datasheet ${pc('datasheet')}, case ${pc('package_case')}, lifecycle ${pc('lifecycle')}, ECCN ${pc('eccn')}, HTS ${pc('hts_code')} (not used for ranking yet)`;
+}
+
 export function rfqClosedText(r) {
   return r.status === 'offers'
     ? `[RFQ ${r.id}] closed: ${r.offers} offer(s) sent to the platform.` + (r.no_margin ? ` ${r.no_margin} quote(s) skipped: no margin set for the supplier.` : '')

@@ -1,10 +1,10 @@
-# Route RFQ : mise en service avec une plateforme (Adesio)
+# API des plateformes (offres en direct et route RFQ) : mise en service avec Adesio
 
-Procédure pour Bertier, dans l'ordre. Décision : [ADR 0023](decisions/0023-route-rfq-plateformes-validation-wechat.md) ; contrat d'API : [`api/plateformes.md`](../api/plateformes.md). Aucune étape n'envoie de message à un fournisseur réel tant que l'étape 6 n'est pas faite.
+Procédure pour Bertier, dans l'ordre. Décisions : [ADR 0023](decisions/0023-route-rfq-plateformes-validation-wechat.md) (RFQ), [ADR 0024](decisions/0024-api-offres-en-direct-formats-compatibles.md) (offres en direct) ; contrat d'API : [`api/plateformes.md`](../api/plateformes.md). Aucune étape n'envoie de message à un fournisseur réel tant que l'étape 6 n'est pas faite.
 
 ## 1. Appliquer la migration (avant la fusion)
 
-SQL Editor de Supabase, projet de production : coller et exécuter `supabase/migrations/20261102000020_route_rfq.sql`. Prérequis : migrations jusqu'à `20261102000019` déjà appliquées. Rejouable ; n'efface aucune donnée.
+SQL Editor de Supabase, projet de production : coller et exécuter `supabase/migrations/20261102000020_route_rfq.sql`, puis `supabase/migrations/20261102000021_api_offres.sql`. Prérequis : migrations jusqu'à `20261102000019` déjà appliquées. Rejouables ; elles n'effacent aucune donnée.
 
 Puis `supabase/sandbox-rfq.sql` : le fournisseur de test du bac à sable (fictif, jamais public, jamais contacté).
 
@@ -24,15 +24,23 @@ Supabase › Edge Functions › Secrets (partagés par toutes les fonctions) :
 
 La fusion sur `main` déploie automatiquement les fonctions `rfq`, `wechat-events`, `admin` et `depot` (`deploy-supabase-functions.yml`) et publie `/depot/`. À la main sinon : `tools/deploy-functions.sh rfq wechat-events admin depot`.
 
-Vérification : `curl -s https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rfq/v1/health` répond `401` (clé requise) : la fonction est en ligne.
+Vérification : `curl -s https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rfq/v1/health` répond `401` (clé requise) : la fonction est en ligne. Avec la clé de test (étape 4) :
+
+```bash
+curl -s -H "Authorization: Bearer cp_test_…" "https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rfq/v1/offers?mpn=NE555DR&qty=1000"
+```
+
+renvoie l'offre du fournisseur de test ; même chose au format DigiKey : `…/rfq/compat/digikey/products/v4/search/NE555DR/productdetails`.
 
 ## 4. Organisation et clés d'Adesio
 
 Sur ton poste, dans le dépôt :
 
 ```bash
-node tools/create-api-key.mjs --new-org "Adesio" --env test
+node tools/create-api-key.mjs --new-org "Adesio" --env test --calls-per-minute 600
 ```
+
+`--calls-per-minute` : si le connecteur d'Adesio interroge une référence par appel (comme pour DigiKey ou TI), une nomenclature de 300 lignes demande 300 appels ; 60 par minute par défaut ne suffisent pas.
 
 Coller le SQL affiché dans le SQL Editor ; noter l'identifiant `ORG-…` renvoyé. La clé `cp_test_…` affichée n'existe nulle part ailleurs : la transmettre à Adesio par un canal sûr. Clé de production, plus tard :
 

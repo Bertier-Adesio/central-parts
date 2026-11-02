@@ -1,0 +1,47 @@
+# 0024 — API d'offres en direct, formats compatibles DigiKey et TI
+
+- Date : 2026-11-02
+- Statut : proposée (migration 20261102000021 à appliquer après 20261102000020 ; fonction Edge `rfq` déployée à la fusion)
+
+## Contexte
+
+Sur Adesio, les autres fournisseurs ont une API produit (ou catalogue) interrogée en direct : pour chaque référence d'une nomenclature, la plateforme affiche leur stock, leurs paliers de prix et leur délai. Central.Parts doit apparaître de la même façon (ADR 0011 : une seule API fournisseur, qui agrège tous ses fournisseurs sans les nommer). La route RFQ (ADR 0023) couvre le prix « sur demande », en 48 heures ; il manquait la réponse immédiate. Décision de Bertier (2 novembre 2026) : les formats de référence sont ceux de **DigiKey** et de **Texas Instruments**, les plus répandus ; l'API montre les noms de fabricants et masque les fournisseurs.
+
+## Décision
+
+### Une API d'offres en direct, dans la fonction `rfq`
+- `GET /v1/offers` (une référence), `POST /v1/offers/search` (nomenclature, 500 lignes), `GET /v1/offers/{offer_id}` (prix à la quantité), `GET /v1/manufacturers`. Même clé d'API, même bac à sable, mêmes en-têtes `X-RateLimit-*` que la route RFQ.
+- Réponse en quelques millisecondes depuis la base : lots à jour (reconfirmés dans le délai, ADR 0021), quantité positive, fournisseur approuvé. Les API produit des brokers (connecteurs, ADR 0007) viendront s'y ajouter.
+- Chaque offre : identifiant opaque `cpo_…` (stable pour un lot, ne révèle rien), référence, fabricant, catégorie de source (`manufacturer`, `authorized_distributor`, `broker_surplus`), stock, MOQ, paliers tout compris, prix à la quantité, délai, conditionnement, date code, pays d'expédition, fiche technique, validité du prix (24 h, jamais au-delà de la reconfirmation du lot). Jamais : fournisseur, pseudonyme, SKU, lien de sa fiche, prix net.
+- Sans marge applicable ou sans prix : offre « sur demande » (`price_status: on_request`), qui se chiffre par une RFQ (ADR 0023).
+- **Devise** : celle du lot, comme sur le site depuis le 2 novembre (la conversion sera traitée plus tard). Un réglage (`app.settings` `api_convert_currency`) convertit dans la devise demandée au taux de `public.currencies`, quand les taux seront tenus à jour.
+
+### Forme de la réponse : le meilleur des API DigiKey et TI
+Tri des champs validé par Bertier le 2 novembre 2026, à partir d'une réponse réelle de DigiKey et d'un exemple de TI :
+- **Gardé** : produit (référence + fabricant) et ses offres, comme Product / ProductVariations chez DigiKey ; fabricant normalisé `{ id, name }` par un référentiel avec alias (`app.manufacturers`) ; paliers `{ quantity, unit_price }` ; MOQ ; stock ; quantité d'un conditionnement complet (`standard_pack_quantity`) ; conditionnement en liste fermée (`tape_reel`, `cut_tape`, `tray`, `tube`, `bulk`) ; boîtier ; cycle de vie ; ECCN ; code HTS ; pays d'origine ; lien vers la page Central.Parts.
+- **Écarté** : prix propres au client (mêmes prix pour tous, ADR 0011), fournisseur (anonymat), frais et options de bobine, quantité maximale par commande, total calculable, nombre de broches, prévisions de stock, référence générique.
+- **Règles d'écriture** (leçon des deux API, l'une en camelCase, l'autre en PascalCase) : snake_case partout ; un champ absent veut dire « inconnu », jamais `null`.
+- Les nouveaux champs viennent des fichiers de stock (colonnes facultatives, `data/formats.md`).
+
+### Formats compatibles, pour réutiliser un connecteur existant
+- `GET /compat/digikey/products/v4/search/{mpn}/productdetails`, `GET …/{mpn}/pricing` et `POST /compat/digikey/products/v4/search/keyword` : forme de DigiKey Product Information v4 (`Product`, `ProductVariations`, `StandardPricing` avec `BreakQuantity`, `UnitPrice`, `TotalPrice`…). Une variante par offre ; `DigiKeyProductNumber` porte l'identifiant opaque ; `Supplier` vaut toujours Central.Parts ; `MarketPlace` vrai pour une offre de broker ou de surplus.
+- `GET /compat/ti/v2/store/products/{mpn}?currency=` : forme du TI store (`tiPartNumber`, `quantity`, `pricing[].priceBreaks[]`…), meilleure offre chiffrée.
+- Ces formats n'ont qu'une devise par réponse : sans conversion, ils ne gardent que les offres dans la devise demandée (USD par défaut) et les offres sur demande. Ce que ces formats ne prévoient pas (catégorie de source, date code, pays d'expédition, validité) est dans une extension `CentralParts` / `centralParts`.
+- DigiKey : structure vérifiée sur une réponse réelle de ProductPricing transmise par Bertier le 2 novembre (test automatique de forme). TI : structure d'un exemple de la réponse « prix et stock » du store (camelCase), à remplacer par une capture réelle faite avec les identifiants tistore d'un client. La fiche produit TI `/v1` (PascalCase, fusionnée sous `productInformation` par les connecteurs) n'est pas servie, faute d'exemple. `ProductUrl` pointe vers la recherche publique de Central.Parts.
+
+### Fiches produit demandées aux fabricants et distributeurs agréés
+- Décision de Bertier (2 novembre) : on demande aux fabricants et aux distributeurs agréés le fabricant normalisé (nom complet), la description, la fiche technique, le boîtier, le cycle de vie, l'ECCN et le code HTS. **Facultatif, mais apprécié**, et **constitutif de la notation du fournisseur quand on saura le faire**.
+- Mesure dès maintenant : complétude par import (`stock_imports.report.completeness`, marques non reconnues comprises) et par fournisseur sur son stock en ligne (`supplier_data_quality` : sept taux et leur moyenne). Le fournisseur voit les siens sur `/depot/` ; l'administrateur dans le back office et le robot.
+- Aujourd'hui sans effet sur le classement (`counts_for_ranking: false`), comme le taux de traitement des RFQ sous son seuil (ADR 0023).
+
+### Limite d'appels par clé
+- Un connecteur « une référence par appel » dépasse vite 60 appels par minute sur une nomenclature : la limite se règle par clé (`api_keys.calls_per_minute`, `tools/create-api-key.mjs --calls-per-minute`).
+
+### Compteur de consultations
+- Chaque réponse qui contient une offre compte une consultation pour son fournisseur, par référence et par semaine (`app.offer_views`) ; aucune identité de l'appelant n'est gardée. Lecture par l'administrateur (`/admin/offer-views`). L'affichage au fournisseur (sur `/depot/`, récapitulatif WeChat) reste à décider : il montre la demande, ce qui peut pousser un fournisseur à monter son prix.
+
+## Conséquences
+
+- Migration 20261102000021, après 20261102000020.
+- À valider avec Adesio en bac à sable : quel format son connecteur lit (natif, DigiKey ou TI), la devise, la limite d'appels.
+- À trancher : conversion des devises dans l'API ; affichage du compteur au fournisseur ; durée de validité du prix (24 h retenues).

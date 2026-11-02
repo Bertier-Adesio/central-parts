@@ -17,6 +17,8 @@
 //   POST /admin/rfq/approve {id, only?}     → valide et diffuse (même fonction que « approve DEM-… » du robot)
 //   POST /admin/rfq/reject  {id, reason}    → refuse, motif obligatoire (même fonction que « reject DEM-… motif »)
 //   GET  /admin/supplier-score?org=ORG-0107 → taux de traitement des RFQ d'un fournisseur (jamais montré à une plateforme)
+//   GET  /admin/offer-views?org=ORG-0107    → consultations de ses offres par l'API d'offres, 8 semaines (ADR 0024)
+//   GET  /admin/data-quality?org=ORG-0107   → complétude de ses fiches produit (future composante de sa notation)
 //
 // Secrets et variables (jamais dans le dépôt) : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournis
 // par Supabase), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot), ADMIN_ORIGINS et ADMIN_SITE (facultatifs).
@@ -123,6 +125,8 @@ Deno.serve(async (req) => {
       if (path === '/stock') return send('admin_stock_summary');
       if (path === '/rfq') return send('admin_rfq_list', { p_status: url.searchParams.has('status') ? q('status') : 'pending_validation' });
       if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
+      if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
+      if (path === '/data-quality') return send('admin_supplier_data_quality', { p_org: q('org') });
       if (path === '/lots') {
         return send('admin_lots', { p_org: q('org'), p_q: q('q') || '', p_limit: 50, p_offset: Number(q('offset')) || 0 });
       }

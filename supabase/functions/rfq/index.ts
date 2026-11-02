@@ -11,10 +11,19 @@
 //   POST   /v1/webhooks {url, events}      secret de signature affiché une seule fois
 //   GET    /v1/webhooks
 //   DELETE /v1/webhooks/{id}
+//   GET    /v1/offers?mpn=&manufacturer=&qty=&currency=&source_category=   offres en direct (ADR 0024)
+//   POST   /v1/offers/search {lines: [{line_id, mpn, manufacturer?, quantity?}], currency?}   nomenclature (500 lignes)
+//   GET    /v1/offers/{offer_id}?qty=&currency=                          détail et prix à la quantité
+//   GET    /v1/manufacturers?q=
+//   Formats compatibles, pour réutiliser un connecteur existant (même clé, mêmes données) :
+//   GET    /compat/digikey/products/v4/search/{mpn}/productdetails       (devise : en-tête X-DIGIKEY-Locale-Currency)
+//   GET    /compat/digikey/products/v4/search/{mpn}/pricing?excludeMarketplace=&inStock=&limit=&offset=
+//   POST   /compat/digikey/products/v4/search/keyword {Keywords, Limit?, Offset?}
+//   GET    /compat/ti/v2/store/products/{mpn}?currency=USD
 //   GET    /v1/me, GET /v1/health
 //   Bac à sable seulement (clé cp_test_) : simulent l'administrateur et le fournisseur de test, sans aucun envoi.
 //   POST   /v1/sandbox/demands/{id}/approve
-//   POST   /v1/sandbox/demands/{id}/respond {kind: "quote"|"decline", price, currency, lead_days, date_code}
+//   POST   /v1/sandbox/demands/{id}/respond {kind: "quote"|"decline", unit_price, currency, lead_time_days, date_code}
 //   Tâche planifiée (en-tête X-CP-Jobs-Secret = RFQ_JOBS_SECRET), toutes les 5 minutes :
 //   POST   /jobs/tick                      rappels, expirations, clôtures, livraison des webhooks
 //
@@ -24,6 +33,10 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { rfqOperatorCard } from '../_shared/robot-texts.js';
 import { API_STATUSES, apiError, bearerKey, sha256Hex, webhookSecret } from '../_shared/rfq.js';
+import {
+  digiKeyError, digiKeyLocale, flattenProducts, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyPricing, toDigiKeyProduct,
+  toTiProduct,
+} from '../_shared/catalog.js';
 import { closeRfq, deliverWebhooks, dispatchRfq, tellCancelled, tick } from '../_shared/rfq-dispatch.ts';
 import { notifyOperators } from '../_shared/wechat.ts';
 
@@ -134,6 +147,72 @@ Deno.serve(async (req) => {
       return ok(data.demand);
     }
 
+    // ---------------------------------------------------------------- offres en direct (ADR 0024)
+    if (path === '/v1/offers' && req.method === 'GET') {
+      const q = parseOffersQuery(url.searchParams);
+      if (q.error) return reply({ error: { code: 'invalid', message: q.error, field: q.field } }, 422, rl);
+      const { data, error } = await db.rpc('catalog_offers', { p_org: org, ...q.args, p_sandbox: a.sandbox });
+      return error ? ko(error) : ok(data);
+    }
+    if (path === '/v1/offers/search' && req.method === 'POST') {
+      const b = await body();
+      if (!b.json || typeof b.json !== 'object' || Array.isArray(b.json)) return failWith(422, 'invalid', 'Body must be a JSON object', rl);
+      const { data, error } = await db.rpc('catalog_search', { p_org: org, p: b.json, p_sandbox: a.sandbox });
+      return error ? ko(error) : ok(data);
+    }
+    if ((m = /^\/v1\/offers\/(cpo_[0-9a-f]{20})$/.exec(path)) && req.method === 'GET') {
+      const qty = url.searchParams.get('qty');
+      if (qty && !/^\d{1,9}$/.test(qty)) return failWith(422, 'invalid', 'qty must be a positive integer', rl);
+      const { data, error } = await db.rpc('catalog_offer', { p_org: org, p_offer_id: m[1], p_qty: qty ? Number(qty) : null,
+        p_currency: url.searchParams.get('currency'), p_sandbox: a.sandbox });
+      return error ? ko(error) : ok(data);
+    }
+    if (path === '/v1/manufacturers' && req.method === 'GET') {
+      const { data, error } = await db.rpc('catalog_manufacturers', { p_q: url.searchParams.get('q') || '', p_sandbox: a.sandbox });
+      return error ? ko(error) : ok(data);
+    }
+
+    // Formats compatibles : une seule devise par réponse (celle demandée, USD par défaut) ; sans conversion activée,
+    // seules les offres dans cette devise (et les offres sur demande) y figurent.
+    const compatOffers = async (mpn: string, currency: string) => {
+      const { data, error } = await db.rpc('catalog_offers', { p_org: org, p_mpn: mpn, p_currency: currency, p_sandbox: a.sandbox });
+      if (error) return { error };
+      return { mpn: data.mpn as string, offers: offersInCurrency(flattenProducts(data.products), currency) };
+    };
+    if ((m = /^\/compat\/digikey\/products\/v4\/search\/(.+)\/productdetails$/.exec(path)) && req.method === 'GET') {
+      const currency = (req.headers.get('x-digikey-locale-currency') || 'USD').toUpperCase();
+      const r = await compatOffers(decodeURIComponent(m[1]), currency);
+      if (r.error) return ko(r.error);
+      if (!r.offers.length) return reply(digiKeyError(404, 'Product not found'), 404, rl);
+      return ok({ Product: toDigiKeyProduct(r.mpn, groupByManufacturer(r.offers)[0]), SearchLocaleUsed: digiKeyLocale(currency) });
+    }
+    if ((m = /^\/compat\/digikey\/products\/v4\/search\/(.+)\/pricing$/.exec(path)) && req.method === 'GET') {
+      const currency = (req.headers.get('x-digikey-locale-currency') || 'USD').toUpperCase();
+      const r = await compatOffers(decodeURIComponent(m[1]), currency);
+      if (r.error) return ko(r.error);
+      const sp = url.searchParams, yes = (k: string) => /^true$/i.test(sp.get(k) || '');
+      const out = toDigiKeyPricing(r.mpn, r.offers, { excludeMarketplace: yes('excludeMarketplace'), inStock: yes('inStock'),
+        limit: Math.min(Math.max(Number(sp.get('limit')) || 5, 1), 10), offset: Math.max(Number(sp.get('offset')) || 0, 0) });
+      return out.ProductsCount ? ok(out) : reply(digiKeyError(404, 'Product not found'), 404, rl);
+    }
+    if (path === '/compat/digikey/products/v4/search/keyword' && req.method === 'POST') {
+      const b = await body();
+      const kw = String(b.json?.Keywords || '').trim();
+      if (!kw) return reply(digiKeyError(400, 'Keywords is required'), 400, rl);
+      const currency = (req.headers.get('x-digikey-locale-currency') || 'USD').toUpperCase();
+      const r = await compatOffers(kw, currency);
+      if (r.error) return ko(r.error);
+      const limit = Math.min(Math.max(Number(b.json?.Limit) || 50, 1), 50), offset = Math.max(Number(b.json?.Offset) || 0, 0);
+      return ok(toDigiKeyKeyword(r.mpn, r.offers, currency, limit, offset));
+    }
+    if ((m = /^\/compat\/ti\/v2\/store\/products\/(.+)$/.exec(path)) && req.method === 'GET') {
+      const currency = (url.searchParams.get('currency') || 'USD').toUpperCase();
+      const r = await compatOffers(decodeURIComponent(m[1]), currency);
+      if (r.error) return ko(r.error);
+      const p = toTiProduct(r.mpn, r.offers, currency);
+      return p ? ok(p) : reply({ errors: [{ message: 'Product not found' }] }, 404, rl);
+    }
+
     // ---------------------------------------------------------------- webhooks de la plateforme
     if (path === '/v1/webhooks' && req.method === 'POST') {
       const b = await body();
@@ -173,8 +252,9 @@ Deno.serve(async (req) => {
       if (!c?.openids?.length) return failWith(409, 'conflict', 'No sandbox supplier is waiting for an answer', rl);
       const kind = b.json?.kind === 'decline' ? 'decline' : 'quote';
       const { data: ans, error } = await db.rpc('supplier_rfq_answer', {
-        p_openid: c.openids[0], p_ref: ref, p_kind: kind, p_net: b.json?.price ?? null, p_currency: b.json?.currency ?? null,
-        p_lead: b.json?.lead_days ?? null, p_date_code: b.json?.date_code ?? null, p_lot: null,
+        // Mêmes noms que l'API d'offres (unit_price, lead_time_days) ; price et lead_days restent acceptés.
+        p_openid: c.openids[0], p_ref: ref, p_kind: kind, p_net: b.json?.unit_price ?? b.json?.price ?? null, p_currency: b.json?.currency ?? null,
+        p_lead: b.json?.lead_time_days ?? b.json?.lead_days ?? null, p_date_code: b.json?.date_code ?? null, p_lot: null,
       });
       if (error) return ko(error);
       if (ans.all_done) await closeRfq(db, ref);

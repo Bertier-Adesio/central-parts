@@ -80,6 +80,37 @@ Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufactu
 
 Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `批次` / `年份` (date code), `包装` / `封装`, `单价` / `价格`, `币种` / `货币`, `产品编号` / `商品编号` / `物料编号` (SKU), `货期` / `交期` / `交货期` (délai), `产品描述` / `描述` / `说明`, `规格书` / `规格书链接` / `数据手册`, `产品链接` / `链接`.
 
+## Ce qu'on demande aux fabricants et aux distributeurs agréés
+
+Facultatif, mais apprécié : ces champs font des offres directement comparables dans les outils de chiffrage, et ils compteront dans la notation du fournisseur quand elle saura en tenir compte (aujourd'hui, aucun effet sur le classement).
+
+| Champ | Colonne | Pourquoi |
+|---|---|---|
+| Fabricant normalisé | `manufacturer` / `品牌`, avec le **nom complet** du fabricant | Reconnu par le référentiel (`MFR-…`, alias compris) ; un nom non reconnu est signalé dans le rapport d'import |
+| Description | `description` / `产品描述` | Affichée à l'acheteur |
+| Fiche technique | `datasheet-url` / `规格书链接` | Lien vers le PDF du fabricant |
+| Boîtier | `case` / `封装` | SOIC-8, 0603… |
+| Cycle de vie | `lifecycle` / `生命周期` | Active, NRND, LTB, Obsolete |
+| ECCN | `eccn` / `ECCN` | Contrôle à l'export |
+| Code HTS | `hts-code` / `海关编码` | Nomenclature douanière |
+
+Les modèles de `/depot/` (`stock-template.csv`, `modele-fabricant.csv`) et de `/depot/lien/` (`modele.csv`) contiennent ces colonnes. Chaque rapport d'import donne la **complétude** (part des lignes qui renseignent chaque champ) et les marques non reconnues ; le fournisseur voit aussi la complétude de son stock en ligne. L'administrateur la lit dans le back office (`/admin/data-quality`) et dans `rfq stats ORG-…` (`supplier_data_quality`).
+
+## Colonnes facultatives (API d'offres, ADR 0024)
+
+Reprises des meilleures pratiques des API DigiKey et TI ; vides ou illisibles, elles sont ignorées (jamais un motif de rejet). En-têtes reconnus, entre autres :
+
+| Champ | En-têtes | Valeurs |
+|---|---|---|
+| Quantité d'un conditionnement complet | `SPQ`, `Standard pack`, `Reel qty`, `标准包装`, `整盘数量` | Entier |
+| Boîtier | `Case`, `Package case`, `封装` | SOIC-8, 0603… (« 封装 » reste aussi lu comme conditionnement, pour les fichiers déjà déposés) |
+| Cycle de vie | `Lifecycle`, `Part status`, `生命周期` | Active, NRND, LTB / EOL, Obsolete, 量产, 停产 |
+| ECCN | `ECCN` | EAR99, 3A991… |
+| Code HTS | `HTS`, `HTS code`, `HS code`, `海关编码` | Chiffres seulement (points retirés) |
+| Pays d'origine | `Country of origin`, `COO`, `原产地` | Code ISO (CN, MY…) ou nom courant (China, Malaisie, 中国…) |
+
+Le conditionnement (`Packaging`, `包装`) est présenté aux plateformes en liste fermée : `tape_reel`, `cut_tape`, `tray`, `tube`, `bulk`, avec le libellé déposé.
+
 ## Règles d'import
 
 - Mise à jour : même SKU chez le même vendeur, ou à défaut même MPN et même date code.

@@ -36,7 +36,8 @@ async function api(route) {
     state.uploadCurrency = body.currency;
     return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/y', path: 'ORG-0107/f-devise-' + body.currency + '.csv' });
   }
-  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [] }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
+  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [], completeness: { lines: 3, manufacturer: 3, description: 2, datasheet: 3, package_case: 3, lifecycle: 0, eccn: 1, hts_code: 0, unknown_manufacturers: ['ACME Semi'] } }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
+  if (path === '/quality') return reply(state.uploaded ? { lots: 3, completeness: 0.571, rates: {} } : {});
   if (path === '/contacts') return reply(state.contacts);
   if (path === '/requests') return reply(state.requests || []);
   if (path === '/requests/answer') { state.answer = body; state.requests[0].status = body.ok ? 'confirmed' : 'unavailable'; return reply(state.requests[0]); }
@@ -123,6 +124,12 @@ await page.waitForSelector('.imp');
 ok(state.uploadCurrency === 'USD', 'devise choisie transmise au dépôt');
 ok((await page.textContent('#imports')).includes('币种：USD (上传时选择)'), 'rapport : devise et provenance affichées');
 ok((await page.textContent('#imports')).includes('新增 3'), 'dépôt pendant l\'examen : rapport affiché');
+await page.waitForSelector('#quality:not([hidden])');
+ok((await page.textContent('#imports')).includes('资料完整度：品牌（已识别）100 % · 描述 67 % · 规格书 100 % · 封装 100 % · 生命周期 0 % · ECCN 33 % · HS 编码 0 %'),
+  'rapport : complétude des fiches produit, champ par champ (ADR 0024)');
+ok((await page.textContent('#imports')).includes('未识别的品牌') && (await page.textContent('#imports')).includes('ACME Semi'), 'rapport : marques non reconnues signalées');
+ok((await page.textContent('#quality')) === '您的资料完整度（在售库存）：57 %', 'complétude globale de la société affichée');
+ok((await page.textContent('[data-t=tpl]')).includes('今后也将计入供应商评分'), 'aide : champs recommandés, comptés plus tard dans la notation');
 
 // 6. Collègues : l'administrateur génère une invitation.
 ok(await page.isVisible('#team'), 'administrateur : section « 同事 » visible');
