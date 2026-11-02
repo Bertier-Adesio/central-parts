@@ -90,13 +90,8 @@ export const DEPOT_MENU_KEY = 'DEPOT_LOGIN';
 export function isDepotMenuClick(msg) {
   return msg.MsgType === 'event' && String(msg.Event || '').toUpperCase() === 'CLICK' && msg.EventKey === DEPOT_MENU_KEY;
 }
-export function depotLinkText(url) {
-  return [
-    '点此登录 Central.Parts 供应商中心（15 分钟内有效）：', url, '',
-    '尚未注册的公司可在页面上注册。链接过期后，请再次点击菜单「供应商」→「上传库存」。', '',
-    'Tap to log in to the Central.Parts supplier centre (valid 15 minutes). Companies not yet registered can register on the page. If the link has expired, tap the menu again.',
-  ].join('\n');
-}
+// Texte de la réponse : supabase/functions/_shared/robot-texts.js (anglais seul pour un opérateur).
+export { depotLinkText } from './robot-texts.js';
 
 // Réponse texte immédiate dans la conversation WeChat du fournisseur.
 export function replyText(toUser, fromUser, content, now = Date.now()) {
