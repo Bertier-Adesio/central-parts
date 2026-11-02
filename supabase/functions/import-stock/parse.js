@@ -27,6 +27,15 @@ export const COLUMNS = {
   currency: ['currency', 'devise', '币种', '货币'],
   // Délai : « 1-3day », « 2 weeks », « 7天 », « 2周 » ; gardé en jours (le plus long de la fourchette).
   lead: ['lead time', 'leadtime', 'lead', 'delivery time', '货期', '交期', '交货期'],
+  // Champs facultatifs repris des API DigiKey et TI (ADR 0024). Le boîtier est lu ici en plus de « pack » (qui garde
+  // son contenu, pour les fichiers déjà déposés) ; l'API ne le présente pas comme un conditionnement.
+  case: ['case', 'package case', 'case/package', 'package / case', '封装', '封装形式'],
+  spq: ['spq', 'standard pack', 'standard pack quantity', 'standard package', 'standard package quantity', 'reel quantity', 'reel qty',
+    'full reel', '标准包装', '标准包装数量', '整包数量', '整盘数量', '包装数量'],
+  lifecycle: ['lifecycle', 'life cycle', 'lifecycle status', 'part status', 'product status', '生命周期', '产品状态'],
+  eccn: ['eccn', 'export control classification number', '出口管制分类'],
+  hts: ['hts', 'hts code', 'htsus', 'hs code', 'customs code', 'tariff code', '海关编码', 'hs编码'],
+  coo: ['country of origin', 'coo', 'origin', 'made in', '原产地', '产地', '原产国'],
 };
 
 // Octets du fichier → texte : UTF-8 par défaut ; repli en GB18030, qui couvre GBK (Excel « CSV » sur un poste chinois).
@@ -164,9 +173,14 @@ export function mapRows(table) {
     let unit = cellTiers ? null : price(cell);
     const mins = Object.keys(tiers).map(Number).sort((a, b) => a - b);
     if (unit == null && mins.length) { unit = tiers[mins[0]]; if (mins[0] === 1) delete tiers[1]; }
+    const spq = int(get(f, 'spq'));
     out.push({ line, mpn, mfr: get(f, 'mfr'), sku: get(f, 'sku'), url: cleanUrl(get(f, 'url')),
       datasheet: cleanUrl(get(f, 'datasheet')), desc: cleanText(get(f, 'desc')), lead: leadDays(get(f, 'lead')), qty, dc: get(f, 'dc'),
-      pack: get(f, 'pack'), price: unit, currency: (get(f, 'currency') || pairCurrency).toUpperCase(), moq, tiers });
+      pack: get(f, 'pack'), price: unit, currency: (get(f, 'currency') || pairCurrency).toUpperCase(), moq, tiers,
+      // Facultatifs : vides ou illisibles, ils sont simplement ignorés (jamais un motif de rejet).
+      case: cleanText(get(f, 'case')).slice(0, 60), spq: spq >= 1 ? spq : null, lifecycle: lifecycle(get(f, 'lifecycle')),
+      eccn: cleanText(get(f, 'eccn')).toUpperCase().slice(0, 20), hts: get(f, 'hts').replace(/[^0-9]/g, '').slice(0, 20),
+      coo: country(get(f, 'coo')) });
   });
   return { rows: out, rejected, total: rows.length };
 }
@@ -208,6 +222,29 @@ export function leadDays(v) {
   if (!m) return null;
   const n = parseInt(m[2], 10) * (/^(week|weeks|wk|w|周|星期)$/.test(m[3] || '') ? 7 : 1);
   return n <= 365 ? n : null;
+}
+
+// Cycle de vie normalisé : active, nrnd (déconseillé pour les nouvelles conceptions), last_time_buy, obsolete ; null sinon.
+export function lifecycle(v) {
+  const t = String(v || '').toLowerCase().trim();
+  if (!t) return null;
+  if (/nrnd|not recommended|不推荐/.test(t)) return 'nrnd';
+  if (/\bltb\b|last.?time|\beol\b|end of life|最后购买/.test(t)) return 'last_time_buy';
+  if (/obsolete|discontinued|停产|淘汰/.test(t)) return 'obsolete';
+  if (/^(active|production|in production|preview)$|量产|在产|生产中/.test(t)) return 'active';
+  return null;
+}
+
+// Pays d'origine en code ISO 3166 alpha-2 : code de deux lettres, ou nom courant (anglais, français, chinois).
+const COUNTRIES = { china: 'CN', chine: 'CN', 中国: 'CN', prc: 'CN', taiwan: 'TW', 台湾: 'TW', malaysia: 'MY', malaisie: 'MY', 马来西亚: 'MY',
+  philippines: 'PH', 菲律宾: 'PH', thailand: 'TH', thaïlande: 'TH', 泰国: 'TH', vietnam: 'VN', 越南: 'VN', japan: 'JP', japon: 'JP', 日本: 'JP',
+  korea: 'KR', 'south korea': 'KR', corée: 'KR', 韩国: 'KR', 'united states': 'US', usa: 'US', 'états-unis': 'US', 美国: 'US',
+  mexico: 'MX', mexique: 'MX', 墨西哥: 'MX', germany: 'DE', allemagne: 'DE', 德国: 'DE', 'hong kong': 'HK', 香港: 'HK',
+  singapore: 'SG', singapour: 'SG', 新加坡: 'SG', india: 'IN', inde: 'IN', 印度: 'IN', indonesia: 'ID', 印度尼西亚: 'ID' };
+export function country(v) {
+  const t = String(v || '').trim();
+  if (/^[A-Za-z]{2}$/.test(t)) return t.toUpperCase();
+  return COUNTRIES[t.toLowerCase()] || null;
 }
 
 // Description : espaces et retours à la ligne réduits à une espace, 500 caractères au plus.

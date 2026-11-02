@@ -22,6 +22,19 @@ const offers = [
     price_status: 'priced', stock: 800, moq: 1, currency: 'CNH', price_breaks: [{ quantity: 1, price: 3.3 }], ship_from: 'CN' },
 ];
 
+// ---------------------------------------------------------------- réponse native → offres à plat
+const native = [{ mpn: 'NE555DR', manufacturer: { id: 'MFR-TI', name: 'Texas Instruments' }, description: 'Minuterie', package_case: 'SOIC-8',
+  lifecycle: 'nrnd', eccn: 'EAR99', hts_code: '8542390001',
+  offers: [{ offer_id: 'cpo_eeeeeeeeeeeeeeeeeeee', source_category: 'manufacturer', price_status: 'priced', stock: 2500, moq: 1, currency: 'USD',
+    standard_pack_quantity: 2500, packaging: 'tape_reel', packaging_label: 'Tape & Reel', price_breaks: [{ quantity: 1, unit_price: 0.3 }], ship_from: 'CN' }] }];
+const flat = C.flattenProducts(native);
+ok(flat.length === 1 && flat[0].manufacturer === 'Texas Instruments' && flat[0].price_breaks[0].price === 0.3 && flat[0].package_case === 'SOIC-8', 'offres à plat : champs du produit repris, paliers unit_price → price');
+const fdk = C.toDigiKeyProduct('NE555DR', flat);
+ok(fdk.ProductStatus.Status === 'Not For New Designs' && fdk.ProductVariations[0].PackageType.Name === 'Tape & Reel' && fdk.ProductVariations[0].StandardPackage === 2500, 'DigiKey : cycle de vie, conditionnement, bobine complète');
+const fti = C.toTiProduct('NE555DR', flat, 'USD');
+ok(fti.packageType === 'SOIC-8' && fti.packageCarrier === 'Tape & Reel' && fti.standardPackQuantity === 2500 && fti.lifeCycle === 'NRND' && fti.exportControlClassificationNumber === 'EAR99' && fti.htsCode === '8542390001', 'TI : boîtier, conditionnement, bobine complète, cycle de vie, ECCN, HTS');
+ok(C.toTiProduct('NE555DR', [{ ...flat[0], lifecycle: undefined }], 'USD').lifeCycle === '', 'TI : cycle de vie inconnu laissé vide (jamais « ACTIVE » supposé)');
+
 // ---------------------------------------------------------------- paramètres
 const q = (s) => C.parseOffersQuery(new URLSearchParams(s));
 ok(q('').error && q('').field === 'mpn', 'paramètres : mpn obligatoire');

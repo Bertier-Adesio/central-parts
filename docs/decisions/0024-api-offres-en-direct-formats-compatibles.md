@@ -16,6 +16,13 @@ Sur Adesio, les autres fournisseurs ont une API produit (ou catalogue) interrog�
 - Sans marge applicable ou sans prix : offre « sur demande » (`price_status: on_request`), qui se chiffre par une RFQ (ADR 0023).
 - **Devise** : celle du lot, comme sur le site depuis le 2 novembre (la conversion sera traitée plus tard). Un réglage (`app.settings` `api_convert_currency`) convertit dans la devise demandée au taux de `public.currencies`, quand les taux seront tenus à jour.
 
+### Forme de la réponse : le meilleur des API DigiKey et TI
+Tri des champs validé par Bertier le 2 novembre 2026, à partir d'une réponse réelle de DigiKey et d'un exemple de TI :
+- **Gardé** : produit (référence + fabricant) et ses offres, comme Product / ProductVariations chez DigiKey ; fabricant normalisé `{ id, name }` par un référentiel avec alias (`app.manufacturers`) ; paliers `{ quantity, unit_price }` ; MOQ ; stock ; quantité d'un conditionnement complet (`standard_pack_quantity`) ; conditionnement en liste fermée (`tape_reel`, `cut_tape`, `tray`, `tube`, `bulk`) ; boîtier ; cycle de vie ; ECCN ; code HTS ; pays d'origine ; lien vers la page Central.Parts.
+- **Écarté** : prix propres au client (mêmes prix pour tous, ADR 0011), fournisseur (anonymat), frais et options de bobine, quantité maximale par commande, total calculable, nombre de broches, prévisions de stock, référence générique.
+- **Règles d'écriture** (leçon des deux API, l'une en camelCase, l'autre en PascalCase) : snake_case partout ; un champ absent veut dire « inconnu », jamais `null`.
+- Les nouveaux champs viennent des fichiers de stock (colonnes facultatives, `data/formats.md`).
+
 ### Formats compatibles, pour réutiliser un connecteur existant
 - `GET /compat/digikey/products/v4/search/{mpn}/productdetails`, `GET …/{mpn}/pricing` et `POST /compat/digikey/products/v4/search/keyword` : forme de DigiKey Product Information v4 (`Product`, `ProductVariations`, `StandardPricing` avec `BreakQuantity`, `UnitPrice`, `TotalPrice`…). Une variante par offre ; `DigiKeyProductNumber` porte l'identifiant opaque ; `Supplier` vaut toujours Central.Parts ; `MarketPlace` vrai pour une offre de broker ou de surplus.
 - `GET /compat/ti/v2/store/products/{mpn}?currency=` : forme du TI store (`tiPartNumber`, `quantity`, `pricing[].priceBreaks[]`…), meilleure offre chiffrée.

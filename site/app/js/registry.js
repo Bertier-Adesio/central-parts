@@ -34,7 +34,7 @@ var CP_ENDPOINTS = [
   // Recherche
   // API d'offres en direct des plateformes (ADR 0024), servie par la fonction Edge « rfq » ; formats compatibles
   // DigiKey et TI sous /compat/… (hors registre : même contenu, autre forme).
-  { id: 'cat.offers', group: 'catalog', method: 'GET', path: '/v1/offers', roles: ['buyer', 'ops'], summary: 'Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : stock, MOQ, paliers tout compris, délai, date code, catégorie de source, pays d\'expédition, identifiant opaque ; fournisseur jamais nommé' },
+  { id: 'cat.offers', group: 'catalog', method: 'GET', path: '/v1/offers', roles: ['buyer', 'ops'], summary: 'Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : produits (référence, fabricant {id, name}, description, boîtier, cycle de vie, ECCN, HTS) et leurs offres (stock, MOQ, conditionnement complet, paliers {quantity, unit_price} tout compris, délai, conditionnement, date code, catégorie de source, pays d\'expédition et d\'origine, identifiant opaque) ; fournisseur jamais nommé' },
   { id: 'cat.search', group: 'catalog', method: 'POST', path: '/v1/offers/search', roles: ['buyer', 'ops'], summary: 'Offres en direct pour une nomenclature (500 lignes au plus, une réponse par ligne)' },
   { id: 'cat.offer', group: 'catalog', method: 'GET', path: '/v1/offers/{id}', roles: ['buyer', 'ops'], summary: 'Détail d\'une offre (cpo_…) et prix à la quantité, durée de validité du prix' },
   { id: 'cat.mfrs', group: 'catalog', method: 'GET', path: '/v1/manufacturers', roles: ['buyer', 'ops'], summary: 'Fabricants présents dans le stock publiable' },

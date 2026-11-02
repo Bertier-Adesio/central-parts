@@ -4,6 +4,7 @@
 // Usage : node tools/test-import.mjs
 import { cleanUrl, decode, leadDays, mapRows, parseCSV, price, tierCell } from '../supabase/functions/import-stock/parse.js';
 import { readFileSync } from 'node:fs';
+import * as P from '../supabase/functions/import-stock/parse.js';
 import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
@@ -88,6 +89,21 @@ const fab = mapRows([['产品编号', '型号', '品牌', '封装', '包装数�
   ['A3', 'B3', 'Marque fictive', 'SOT-23', '3000', '5000', '10~90 abc', '25+', '1-3day']]);
 const f1 = fab.rows[0];
 ok(f1 && f1.sku === 'A1' && f1.pack === 'SOT-223' && f1.dc === '25+' && f1.lead === 3 && f1.qty === 120000, 'fichier fabricant : code produit, boîtier, lot, délai, stock');
+ok(f1 && f1.case === 'SOT-223', 'fichier fabricant : « 封装 » lu aussi comme boîtier (ADR 0024)');
+{
+  // Champs facultatifs repris des API DigiKey et TI (ADR 0024).
+  const t = P.mapRows([
+    ['MPN', 'Quantity', 'Packaging', 'Case', 'SPQ', 'Lifecycle', 'ECCN', 'HTS code', 'Country of origin'],
+    ['LM358DR', '5000', 'Tape & Reel', 'SOIC-8', '2,500', 'NRND', 'ear99', '8542.33.0001', 'Malaysia'],
+    ['NE555DR', '100', 'Tube', '', 'x', 'peut-être', '', '', '中国'],
+  ]);
+  const [a, b] = t.rows;
+  ok(a.case === 'SOIC-8' && a.spq === 2500 && a.lifecycle === 'nrnd' && a.eccn === 'EAR99' && a.hts === '8542330001' && a.coo === 'MY',
+    'champs facultatifs : boîtier, conditionnement complet, cycle de vie, ECCN, HTS, pays d\'origine ' + JSON.stringify(a));
+  ok(b && b.spq === null && b.lifecycle === null && b.coo === 'CN' && t.rejected.length === 0, 'champs facultatifs illisibles : ignorés, jamais un rejet');
+  ok(P.lifecycle('Obsolete') === 'obsolete' && P.lifecycle('LTB') === 'last_time_buy' && P.lifecycle('Active') === 'active' && P.lifecycle('量产') === 'active', 'cycle de vie normalisé');
+  ok(P.country('fr') === 'FR' && P.country('Taiwan') === 'TW' && P.country('Atlantide') === null, 'pays d\'origine normalisé');
+}
 ok(f1 && f1.price === 0.04 && JSON.stringify(f1.tiers) === '{"10":0.04,"100":0.03,"1000":0.02}', 'fichier fabricant : prix unitaire et paliers tirés de la cellule');
 ok(fab.rejected.map((r) => r.code).join() === 'breaks_price_order,price_invalid', 'fichier fabricant : prix en hausse et cellule illisible rejetés');
 for (const f of ['../site/depot/modele-fabricant.csv', '../site/depot/stock-template.csv', '../site/depot/lien/modele.csv']) {

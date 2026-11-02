@@ -28,7 +28,7 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
-| GET | `/v1/offers` | Acheteur, Central.Parts | Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : stock, MOQ, paliers tout compris, délai, date code, catégorie de source, pays d'expédition, identifiant opaque ; fournisseur jamais nommé | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/offers` | Acheteur, Central.Parts | Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : produits (référence, fabricant {id, name}, description, boîtier, cycle de vie, ECCN, HTS) et leurs offres (stock, MOQ, conditionnement complet, paliers {quantity, unit_price} tout compris, délai, conditionnement, date code, catégorie de source, pays d'expédition et d'origine, identifiant opaque) ; fournisseur jamais nommé | Hors écran : intégration, webhook ou tâche |
 | POST | `/v1/offers/search` | Acheteur, Central.Parts | Offres en direct pour une nomenclature (500 lignes au plus, une réponse par ligne) | Hors écran : intégration, webhook ou tâche |
 | GET | `/v1/offers/{id}` | Acheteur, Central.Parts | Détail d'une offre (cpo_…) et prix à la quantité, durée de validité du prix | Hors écran : intégration, webhook ou tâche |
 | GET | `/v1/manufacturers` | Acheteur, Central.Parts | Fabricants présents dans le stock publiable | Hors écran : intégration, webhook ou tâche |

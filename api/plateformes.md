@@ -22,25 +22,57 @@ Central.Parts y est **un fournisseur unique** : la plateforme ne voit jamais le 
 | `POST` | `/compat/digikey/products/v4/search/keyword` | Format compatible DigiKey : `{ "Keywords": "<référence>", "Limit"?, "Offset"? }` |
 | `GET` | `/compat/ti/v2/store/products/{mpn}?currency=USD` | Format compatible TI store |
 
-Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives) :
+Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives). Un **produit** par fabricant (référence + fabricant du référentiel), chacun avec ses **offres** triées par prix :
 
 ```json
 {
-  "mpn": "NE555DR", "quantity": 2000, "currency_requested": null,
-  "offers": [
+  "mpn": "NE555DR", "quantity": 2000,
+  "products": [
     {
-      "offer_id": "cpo_5f0c2a9e41d7b3a08c6e", "mpn": "NE555DR", "manufacturer": "Texas Instruments",
-      "source_category": "broker_surplus", "price_status": "priced", "stock": 5000, "moq": 100, "order_multiple": 1,
-      "currency": "USD",
-      "price_breaks": [ { "quantity": 100, "price": 0.22 }, { "quantity": 1000, "price": 0.198 }, { "quantity": 5000, "price": 0.165 } ],
-      "quote": { "quantity": 2000, "unit_price": 0.198, "extended_price": 396.0, "covered": true },
-      "lead_time_days": 3, "packaging": "Bande et bobine", "date_code": "2430", "ship_from": "HK",
-      "datasheet_url": "https://…", "price_valid_until": "2026-11-03T10:00:00Z", "updated_at": "2026-11-02T08:12:00Z"
-    },
-    { "offer_id": "cpo_…", "source_category": "authorized_distributor", "price_status": "on_request", "stock": 300, "moq": 1, "price_breaks": [], "ship_from": "CN" }
+      "mpn": "NE555DR",
+      "manufacturer": { "id": "MFR-TI", "name": "Texas Instruments" },
+      "description": "Minuterie de précision", "datasheet_url": "https://…",
+      "product_url": "https://central.parts/recherche/?q=NE555DR",
+      "package_case": "SOIC-8", "lifecycle": "active", "eccn": "EAR99", "hts_code": "8542390001",
+      "offers": [
+        {
+          "offer_id": "cpo_5f0c2a9e41d7b3a08c6e", "source_category": "broker_surplus", "price_status": "priced",
+          "stock": 5000, "moq": 100, "order_multiple": 1, "standard_pack_quantity": 2500, "currency": "USD",
+          "price_breaks": [ { "quantity": 100, "unit_price": 0.22 }, { "quantity": 1000, "unit_price": 0.198 }, { "quantity": 5000, "unit_price": 0.165 } ],
+          "quote": { "quantity": 2000, "unit_price": 0.198, "extended_price": 396.0, "covered": true },
+          "lead_time_days": 3, "packaging": "tape_reel", "packaging_label": "Bande et bobine", "date_code": "2430",
+          "ship_from": "HK", "country_of_origin": "MY",
+          "price_valid_until": "2026-11-03T10:00:00Z", "updated_at": "2026-11-02T08:12:00Z"
+        },
+        { "offer_id": "cpo_…", "source_category": "authorized_distributor", "price_status": "on_request", "stock": 300, "moq": 1, "order_multiple": 1, "price_breaks": [], "ship_from": "CN" }
+      ]
+    }
   ]
 }
 ```
+
+Règles d'écriture : champs en snake_case partout (API, webhooks, RFQ) ; **un champ absent veut dire « inconnu »**, jamais `null`.
+
+| Champ | Niveau | Sens |
+|---|---|---|
+| `manufacturer` | produit | `{ id, name }` du référentiel (`MFR-…`, alias compris : « TI », « 德州仪器 ») ; sans `id` pour un fabricant hors référentiel |
+| `description`, `datasheet_url`, `product_url` | produit | Description, fiche technique du fabricant, page de la référence chez Central.Parts |
+| `package_case` | produit | Boîtier (SOIC-8, 0603…) |
+| `lifecycle` | produit | `active`, `nrnd`, `last_time_buy`, `obsolete` |
+| `eccn`, `hts_code` | produit | Contrôle à l'export, nomenclature douanière |
+| `offer_id` | offre | Identifiant opaque `cpo_…`, stable |
+| `source_category` | offre | `manufacturer`, `authorized_distributor`, `broker_surplus` |
+| `price_status` | offre | `priced` ou `on_request` |
+| `stock`, `moq`, `order_multiple` | offre | Quantité disponible, minimum, multiple |
+| `standard_pack_quantity` | offre | Quantité d'un conditionnement complet (bobine, plateau) |
+| `price_breaks[]` | offre | `{ quantity, unit_price }`, tout compris, à partir du MOQ |
+| `quote` | offre | Prix à la quantité demandée (`qty`) |
+| `packaging` | offre | `tape_reel`, `cut_tape`, `tray`, `tube`, `bulk` ; `packaging_label` : libellé déposé |
+| `lead_time_days`, `date_code` | offre | Délai en jours, date code |
+| `ship_from`, `country_of_origin` | offre | Pays d'expédition, pays d'origine (ISO 3166 alpha-2) |
+| `price_valid_until`, `updated_at` | offre | Validité du prix (24 h au plus), dernière reconfirmation du stock |
+
+Champs des API DigiKey et TI volontairement écartés : prix propres au client (mêmes prix pour tous), fournisseur (anonymat), frais de bobine, bobine sur mesure, quantité maximale par commande, total (il se calcule), nombre de broches (fiche technique), prévisions de stock et référence générique (pas encore de données).
 
 - **Prix** : tout compris, aucune marge n'est ajoutée après. **Devise** : celle de l'offre (`currency`), sans conversion pour l'instant ; le paramètre `currency` sera appliqué quand la conversion sera ouverte.
 - **Offre « sur demande »** : pas de prix ; la chiffrer par une RFQ (`POST /v1/demands`).
@@ -49,14 +81,18 @@ Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives) :
 | Natif | Compatible DigiKey | Compatible TI |
 |---|---|---|
 | `mpn` | `Product.ManufacturerProductNumber` | `tiPartNumber` |
-| `manufacturer` | `Product.Manufacturer.Name` | — |
+| `manufacturer.name` | `Product.Manufacturer.Name` | — |
 | `offer_id` | `ProductVariations[].DigiKeyProductNumber` | `centralParts.offerId` |
 | `stock` | `ProductVariations[].QuantityAvailableforPackageType` (total : `Product.QuantityAvailable`) | `quantity` |
 | `moq` | `ProductVariations[].MinimumOrderQuantity` | `minimumOrderQuantity` |
-| `price_breaks[]` | `ProductVariations[].StandardPricing[]` (`BreakQuantity`, `UnitPrice`, `TotalPrice`) | `pricing[0].priceBreaks[]` (`priceBreakQuantity`, `price`) |
-| `packaging` | `ProductVariations[].PackageType.Name` | `packageCarrier` |
+| `price_breaks[]` (`quantity`, `unit_price`) | `ProductVariations[].StandardPricing[]` (`BreakQuantity`, `UnitPrice`, `TotalPrice`) | `pricing[0].priceBreaks[]` (`priceBreakQuantity`, `price`) |
+| `packaging_label` (sinon `packaging`) | `ProductVariations[].PackageType.Name` | `packageCarrier` |
+| `standard_pack_quantity` | `ProductVariations[].StandardPackage`, `StandardPackage` | `standardPackQuantity` |
+| `package_case` | — | `packageType` |
+| `lifecycle` | `Product.ProductStatus.Status`, `Discontinued`, `EndOfLife` | `lifeCycle` |
+| `eccn`, `hts_code` | — | `exportControlClassificationNumber`, `htsCode` |
 | `source_category` | `ProductVariations[].MarketPlace` (vrai pour `broker_surplus`) et `CentralParts.sourceCategory` | `centralParts.sourceCategory` |
-| `date_code`, `ship_from`, `lead_time_days`, `price_valid_until` | `ProductVariations[].CentralParts.*` | `centralParts.*` |
+| `date_code`, `ship_from`, `country_of_origin`, `packaging`, `lead_time_days`, `price_valid_until`, `manufacturer.id` | `ProductVariations[].CentralParts.*` | `centralParts.*` |
 | fournisseur | `Supplier.Name` = « Central.Parts » | — |
 
 Le format compatible DigiKey reprend la structure d'une réponse réelle de ProductPricing (v4), vérifiée par `tools/test-catalog.mjs` (`tools/fixtures/digikey-productpricing.json`) ; `ProductUrl` renvoie vers la recherche publique de Central.Parts, jamais vers le fournisseur. Le format compatible TI reprend la structure d'un exemple de la réponse « prix et stock » du TI store, en camelCase (`tools/fixtures/ti-product.json`), pas encore d'une capture réelle ; `buyNowUrl` renvoie vers la recherche publique de Central.Parts. La fiche produit TI `/v1` (PascalCase, que les connecteurs rangent sous `productInformation`) n'est pas servie.
@@ -154,10 +190,10 @@ Idempotence : le même appel rejoué dans les 24 h (même `Idempotency-Key`, mê
   "currency": "EUR",
   "offers": [
     {
-      "offer_id": "OFF-3007", "rank": 1, "mpn": "NE555DR", "manufacturer": "Texas Instruments",
+      "offer_id": "OFF-3007", "rank": 1, "mpn": "NE555DR", "manufacturer": { "id": "MFR-TI", "name": "Texas Instruments" },
       "source_category": "broker_surplus", "price_status": "priced", "quantity": 2000, "stock": 25000,
       "currency": "EUR", "unit_price": 0.1012, "extended_price": 202.4, "lead_time_days": 3,
-      "date_code": "2430", "packaging": "Bande et bobine", "ship_from": "HK",
+      "date_code": "2430", "packaging": "tape_reel", "packaging_label": "Bande et bobine", "ship_from": "HK",
       "price_valid_until": "2026-11-12T09:00:00Z"
     }
   ]
@@ -217,7 +253,7 @@ Avec une clé `cp_test_`, tout le cycle se teste seul, sans aucun message WeChat
 0. `GET /v1/offers?mpn=NE555DR` (ou un format compatible) : offre du fournisseur de test, en direct ;
 1. `POST /v1/demands` (références du fournisseur de test : `NE555DR`, `LM358DR`, `STM32F103C8T6`, `GRM188R71H104KA93D`) ;
 2. `POST /v1/sandbox/demands/{id}/approve` : la demande passe à `open` (webhook `demand.validated`) ;
-3. `POST /v1/sandbox/demands/{id}/respond` avec `{ "kind": "quote", "price": 0.10, "currency": "USD", "lead_days": 3, "date_code": "2430" }` (ou `{ "kind": "decline" }`) : la demande est close (`offers_ready` ou `no_offer`, webhook) ;
+3. `POST /v1/sandbox/demands/{id}/respond` avec `{ "kind": "quote", "unit_price": 0.10, "currency": "USD", "lead_time_days": 3, "date_code": "2430" }` (ou `{ "kind": "decline" }`) : la demande est close (`offers_ready` ou `no_offer`, webhook) ;
 4. `GET /v1/demands/{id}/offers`.
 
 Les demandes du bac à sable portent `"sandbox": true` et ne sont jamais montrées à un fournisseur réel.

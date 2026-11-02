@@ -211,7 +211,7 @@ begin
   r := public.rfq_offers_for_client('PLAT', d1, t0 + interval '50 hours');
   perform tests.eq('offre : prix tout compris dans la devise demandée', (r->'offers'->0->>'unit_price')::numeric, 0.3846);
   perform tests.eq('offre : fabricant affiché, catégorie broker_surplus, expédition HK',
-    (r->'offers'->0->>'manufacturer') || ' ' || (r->'offers'->0->>'source_category') || ' ' || (r->'offers'->0->>'ship_from'),
+    (r->'offers'->0->'manufacturer'->>'name') || ' ' || (r->'offers'->0->>'source_category') || ' ' || (r->'offers'->0->>'ship_from'),
     'Texas Instruments broker_surplus HK');
   perform tests.eq('offre : ni fournisseur, ni pseudonyme, ni SKU, ni lot, ni prix net',
     r::text ~ '(RS1|V-901|SKU-SECRET|LOT-RS|Fournisseur partenaire|"net"|0\.38[^0-9]|seller)', false);

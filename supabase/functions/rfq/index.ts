@@ -23,7 +23,7 @@
 //   GET    /v1/me, GET /v1/health
 //   Bac à sable seulement (clé cp_test_) : simulent l'administrateur et le fournisseur de test, sans aucun envoi.
 //   POST   /v1/sandbox/demands/{id}/approve
-//   POST   /v1/sandbox/demands/{id}/respond {kind: "quote"|"decline", price, currency, lead_days, date_code}
+//   POST   /v1/sandbox/demands/{id}/respond {kind: "quote"|"decline", unit_price, currency, lead_time_days, date_code}
 //   Tâche planifiée (en-tête X-CP-Jobs-Secret = RFQ_JOBS_SECRET), toutes les 5 minutes :
 //   POST   /jobs/tick                      rappels, expirations, clôtures, livraison des webhooks
 //
@@ -34,7 +34,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.4
 import { rfqOperatorCard } from '../_shared/robot-texts.js';
 import { API_STATUSES, apiError, bearerKey, sha256Hex, webhookSecret } from '../_shared/rfq.js';
 import {
-  digiKeyError, digiKeyLocale, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyPricing, toDigiKeyProduct,
+  digiKeyError, digiKeyLocale, flattenProducts, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyPricing, toDigiKeyProduct,
   toTiProduct,
 } from '../_shared/catalog.js';
 import { closeRfq, deliverWebhooks, dispatchRfq, tellCancelled, tick } from '../_shared/rfq-dispatch.ts';
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     const compatOffers = async (mpn: string, currency: string) => {
       const { data, error } = await db.rpc('catalog_offers', { p_org: org, p_mpn: mpn, p_currency: currency, p_sandbox: a.sandbox });
       if (error) return { error };
-      return { mpn: data.mpn as string, offers: offersInCurrency(data.offers, currency) };
+      return { mpn: data.mpn as string, offers: offersInCurrency(flattenProducts(data.products), currency) };
     };
     if ((m = /^\/compat\/digikey\/products\/v4\/search\/(.+)\/productdetails$/.exec(path)) && req.method === 'GET') {
       const currency = (req.headers.get('x-digikey-locale-currency') || 'USD').toUpperCase();
@@ -252,8 +252,9 @@ Deno.serve(async (req) => {
       if (!c?.openids?.length) return failWith(409, 'conflict', 'No sandbox supplier is waiting for an answer', rl);
       const kind = b.json?.kind === 'decline' ? 'decline' : 'quote';
       const { data: ans, error } = await db.rpc('supplier_rfq_answer', {
-        p_openid: c.openids[0], p_ref: ref, p_kind: kind, p_net: b.json?.price ?? null, p_currency: b.json?.currency ?? null,
-        p_lead: b.json?.lead_days ?? null, p_date_code: b.json?.date_code ?? null, p_lot: null,
+        // Mêmes noms que l'API d'offres (unit_price, lead_time_days) ; price et lead_days restent acceptés.
+        p_openid: c.openids[0], p_ref: ref, p_kind: kind, p_net: b.json?.unit_price ?? b.json?.price ?? null, p_currency: b.json?.currency ?? null,
+        p_lead: b.json?.lead_time_days ?? b.json?.lead_days ?? null, p_date_code: b.json?.date_code ?? null, p_lot: null,
       });
       if (error) return ko(error);
       if (ans.all_done) await closeRfq(db, ref);

@@ -31,7 +31,8 @@ export function parseOffersQuery(sp) {
 const extension = (o) => ({
   offerId: o.offer_id, sourceCategory: o.source_category, priceStatus: o.price_status, shipFrom: o.ship_from,
   dateCode: o.date_code ?? null, leadTimeDays: o.lead_time_days ?? null, currency: o.currency ?? null,
-  priceValidUntil: o.price_valid_until ?? null,
+  priceValidUntil: o.price_valid_until ?? null, packaging: o.packaging ?? null, countryOfOrigin: o.country_of_origin ?? null,
+  manufacturerId: o.manufacturer_id ?? null,
 });
 
 const round2 = (x) => Math.round(x * 100) / 100;
@@ -42,7 +43,7 @@ export const productUrl = (mpn) => 'https://central.parts/recherche/?q=' + encod
 // Variante DigiKey d'une offre (champs vérifiés sur ProductPricing), avec l'extension CentralParts.
 const digiKeyVariation = (o) => ({
   DigiKeyProductNumber: o.offer_id,
-  PackageType: { Id: 0, Name: o.packaging || '' },
+  PackageType: { Id: 0, Name: packLabel(o) },
   MinimumOrderQuantity: o.moq,
   QuantityAvailableforPackageType: o.stock,
   StandardPricing: (o.price_breaks || []).map((b) => ({ BreakQuantity: b.quantity, UnitPrice: b.price, TotalPrice: round2(b.quantity * b.price) })),
@@ -51,14 +52,35 @@ const digiKeyVariation = (o) => ({
   TariffActive: false,
   Supplier: { Id: 0, Name: 'Central.Parts' },
   MaxQuantityForDistribution: 0,
-  StandardPackage: 0,
+  StandardPackage: o.standard_pack_quantity || 0,
   DigiReelFee: 0,
   CentralParts: extension(o),
 });
+const standardPackage = (offers) => Math.max(0, ...offers.map((o) => o.standard_pack_quantity || 0));
 const leadWeeks = (offers) => {
   const lead = offers.map((o) => o.lead_time_days).filter((d) => d != null);
   return lead.length ? String(Math.ceil(Math.min(...lead) / 7)) : '';
 };
+
+// Réponse native (products[].offers[]) → liste d'offres à plat, avec les champs du produit, pour les formats
+// compatibles. Les paliers natifs {quantity, unit_price} deviennent {quantity, price}.
+export function flattenProducts(products) {
+  const out = [];
+  for (const p of products || []) {
+    for (const o of p.offers || []) {
+      out.push({ ...o, mpn: p.mpn, manufacturer: p.manufacturer?.name || '', manufacturer_id: p.manufacturer?.id || null,
+        description: p.description, datasheet_url: p.datasheet_url, package_case: p.package_case, lifecycle: p.lifecycle,
+        eccn: p.eccn, hts_code: p.hts_code,
+        price_breaks: (o.price_breaks || []).map((b) => ({ quantity: b.quantity, price: b.unit_price ?? b.price })) });
+    }
+  }
+  return out;
+}
+
+// Cycle de vie : libellés DigiKey (ProductStatus) et TI (lifeCycle) ; inconnu : texte vide.
+const DK_STATUS = { active: 'Active', nrnd: 'Not For New Designs', last_time_buy: 'Last Time Buy', obsolete: 'Obsolete' };
+const TI_LIFECYCLE = { active: 'ACTIVE', nrnd: 'NRND', last_time_buy: 'LIFEBUY', obsolete: 'OBSOLETE' };
+const packLabel = (o) => o.packaging_label || o.packaging || '';
 
 // Offres utilisables dans un format à devise unique : sur demande, ou dans la devise de la réponse.
 export function offersInCurrency(offers, currency) {
@@ -91,11 +113,11 @@ export function toDigiKeyProduct(mpn, offers) {
     PhotoUrl: null,
     ProductVariations: offers.map(digiKeyVariation),
     QuantityAvailable: offers.reduce((s, o) => s + o.stock, 0),
-    ProductStatus: { Id: 0, Status: 'Active' },
+    ProductStatus: { Id: 0, Status: DK_STATUS[first.lifecycle] || '' },
     BackOrderNotAllowed: true,
     NormallyStocking: true,
-    Discontinued: false,
-    EndOfLife: false,
+    Discontinued: first.lifecycle === 'obsolete',
+    EndOfLife: first.lifecycle === 'obsolete' || first.lifecycle === 'last_time_buy',
     Ncnr: false,
     ManufacturerLeadWeeks: leadWeeks(offers),
     ManufacturerPublicQuantity: 0,
@@ -120,7 +142,7 @@ export function toDigiKeyPricing(mpn, offers, { excludeMarketplace = false, inSt
     Description: { ProductDescription: g[0].description || mpn },
     ProductUrl: productUrl(mpn),
     ManufacturerLeadWeeks: leadWeeks(g),
-    StandardPackage: 0,
+    StandardPackage: standardPackage(g),
     ProductVariations: g.map(digiKeyVariation),
   }));
   return { ProductPricings: items.slice(offset, offset + limit), ProductsCount: items.length };
@@ -147,14 +169,14 @@ export function toTiProduct(mpn, offers, currency) {
     quantity: o.stock,
     limit: o.stock,
     minimumOrderQuantity: o.moq,
-    standardPackQuantity: 0, // « standardPackQuantity », et non « standardPackageQuantity »
-    packageType: '',
-    packageCarrier: o.packaging || '',
+    standardPackQuantity: o.standard_pack_quantity || 0, // « standardPackQuantity », et non « standardPackageQuantity »
+    packageType: o.package_case || '',
+    packageCarrier: packLabel(o),
     customReel: false,
-    lifeCycle: 'ACTIVE',
+    lifeCycle: TI_LIFECYCLE[o.lifecycle] || '',
     pinCount: 0,
-    exportControlClassificationNumber: '',
-    htsCode: '',
+    exportControlClassificationNumber: o.eccn || '',
+    htsCode: o.hts_code || '',
     pricing: o.price_status === 'priced'
       ? [{ currency, priceBreaks: o.price_breaks.map((b) => ({ priceBreakQuantity: b.quantity, price: b.price })) }]
       : [],
