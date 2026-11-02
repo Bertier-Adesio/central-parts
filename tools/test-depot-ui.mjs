@@ -1,6 +1,7 @@
 // Parcours de la page fournisseur (site/depot/) dans Chromium, avec une fonction « depot » simulée :
 // lien personnel reçu dans WeChat, inscription, licence, dépôt d'un fichier, invitation d'un collègue ; puis compte refusé.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-depot-ui.mjs
+import { registrationNumberOk } from '../supabase/functions/_shared/depot.js';
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
 const { chromium } = pw.default || pw;
 
@@ -23,7 +24,8 @@ async function api(route) {
   if (path === '/qr') return reply({ scene: 'dl_' + 'b'.repeat(32), expires_in: 300, image: BASE + '/assets/favicon.svg' });
   if (path === '/me') return reply({ org: state.org, token: 'T1' });
   if (path === '/register') {
-    if (body.code !== '91350100M000100Y43') return reply({ error: 'code_invalid' }, 422);
+    // Même règle que la base (app.registration_number_ok) ; région CN par défaut, comme register_supplier.
+    if (!registrationNumberOk(body.region || 'CN', body.code)) return reply({ error: 'code_invalid' }, 422);
     state.org = { ...ORG }; state.registered = body;
     return reply({ org: state.org, token: 'T2' });
   }
@@ -53,11 +55,15 @@ await page.waitForSelector('#v-register:not([hidden])');
 ok(new URL(page.url()).search === '', 'lien personnel retiré de l\'adresse après connexion');
 ok(await page.isVisible('text=注册公司'), 'formulaire d\'inscription en chinois');
 
-// 2. Numéro mal saisi : refusé dans la page, sans appel au serveur.
+// 2. Pays / région obligatoire, puis numéro mal saisi : refusés dans la page, sans appel au serveur.
 await page.fill('#r-name', '深圳测试电子有限公司');
 await page.fill('#r-code', '91350100M000100Y44');
 await page.fill('#r-city', '深圳');
 await page.selectOption('#r-profile', 'Distributor');
+await page.click('#r-send');
+ok(await page.evaluate(() => !document.getElementById('r-region').checkValidity()) && !state.calls.includes('POST /register'), 'pays / région obligatoire : envoi bloqué');
+ok((await page.textContent('#r-code-label')) === '统一社会信用代码', 'sans choix : libellé du 统一社会信用代码');
+await page.selectOption('#r-region', 'CN');
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('统一社会信用代码有误'), 'numéro invalide signalé tout de suite');
 ok(!state.calls.includes('POST /register'), 'numéro invalide : aucun appel au serveur');
@@ -67,7 +73,7 @@ await page.fill('#r-code', '91350100m000100y43');
 await page.selectOption('#r-currency', 'CNH');
 await page.click('#r-send');
 await page.waitForSelector('#v-app:not([hidden])');
-ok(state.registered.code === '91350100M000100Y43' && state.registered.currency === 'CNH' && state.registered.profile === 'Distributor', 'inscription envoyée : numéro en majuscules, devise, type');
+ok(state.registered.code === '91350100M000100Y43' && state.registered.region === 'CN' && state.registered.currency === 'CNH' && state.registered.profile === 'Distributor', 'inscription envoyée : région CN, numéro en majuscules, devise, type');
 ok(await page.isVisible('#lic') && (await page.textContent('#org-alias')) === '审核中', 'société en attente : licence demandée, statut « 审核中 »');
 
 // 4. Licence (photo de téléphone sans extension) : le statut passe à « en cours d'examen ».
@@ -117,6 +123,40 @@ await page.evaluate(() => sessionStorage.clear());
 await page.goto(BASE + '/depot/?login=dl_' + 'd'.repeat(32));
 await page.waitForSelector('#v-login:not([hidden])');
 ok(await page.isVisible('#qr'), 'lien déjà utilisé : QR code proposé');
+
+// 10. Société de Hong Kong : numéro de 15 caractères, libellé et aide adaptés, en chinois puis en anglais.
+state.org = null; state.registered = null; state.calls = [];
+for (const width of [390, 1280]) {
+  const p2 = await browser.newPage({ viewport: { width, height: 900 }, locale: 'zh-CN' });
+  p2.on('pageerror', (e) => errors.push(String(e)));
+  await p2.route(FN + '/**', api);
+  await p2.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
+  await p2.goto(BASE + '/depot/?login=dl_' + 'a'.repeat(32));
+  await p2.waitForSelector('#v-register:not([hidden])');
+  await p2.fill('#r-name', 'HK TEST COMPANY LIMITED');
+  await p2.fill('#r-city', 'Hong Kong');
+  await p2.selectOption('#r-profile', 'Manufacturer');
+  await p2.selectOption('#r-region', 'CN');
+  await p2.fill('#r-code', '123456789012345');
+  await p2.click('#r-send');
+  ok((await p2.textContent('#msg')).includes('统一社会信用代码有误') && !state.calls.includes('POST /register'), width + ' px : 15 caractères refusés pour la Chine continentale');
+  await p2.selectOption('#r-region', 'HK');
+  ok((await p2.textContent('#r-code-label')) === '公司注册号码' && (await p2.textContent('#r-code-hint')).includes('香港商业登记证') && await p2.getAttribute('#r-code', 'maxlength') === '30', width + ' px : Hong Kong : libellé, aide et longueur adaptés');
+  await p2.click('#lang');
+  ok((await p2.textContent('#r-code-label')) === 'Company registration number' && (await p2.textContent('#r-code-hint')).includes('Hong Kong business registration'), width + ' px : libellé et aide en anglais');
+  await p2.fill('#r-code', '12');
+  await p2.click('#r-send');
+  ok((await p2.textContent('#msg')).includes('Invalid registration number'), width + ' px : numéro trop court refusé, message adapté');
+  ok(await p2.evaluate(() => document.documentElement.scrollWidth <= innerWidth), width + ' px : pas de défilement horizontal');
+  if (width === 1280) {
+    await p2.fill('#r-code', ' 1234 5678  90123 ');
+    await p2.click('#r-send');
+    await p2.waitForSelector('#v-app:not([hidden])');
+    ok(state.registered.region === 'HK' && state.registered.code === '1234 5678 90123', 'Hong Kong : inscription envoyée, région HK, numéro normalisé');
+  }
+  await p2.close();
+  state.org = null; state.calls = [];
+}
 
 ok(errors.length === 0, 'aucune erreur ni requête externe : ' + errors.join(' | '));
 await browser.close();
