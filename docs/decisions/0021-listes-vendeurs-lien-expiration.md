@@ -16,7 +16,7 @@ Les vendeurs approuvés doivent charger leurs listes de composants simplement, �
 - `/depot/` (WeChat) reste inchangée et utilisable en parallèle.
 
 ### Format et contrôle
-- Format recommandé : flux Octopart (`manufacturer;mpn;sku;quantity;price-break-1..5;price-usd-1..5;moq`), CSV à point-virgule et virgule décimale, ou `.xlsx` aux mêmes en-têtes ; UTF-8 ou GBK/GB18030. Modèle : `/depot/lien/modele.csv`. La colonne `distributor-url` est ignorée et jamais gardée.
+- Format recommandé : flux Octopart (`manufacturer;mpn;sku;quantity;price-break-1..5;price-usd-1..5;moq`), CSV à point-virgule et virgule décimale, ou `.xlsx` aux mêmes en-têtes ; UTF-8 ou GBK/GB18030. Modèle : `/depot/lien/modele.csv`. La colonne `distributor-url` est ignorée et jamais gardée (remplacé le 2 novembre 2026 par l'ADR 0022 : gardée pour usage interne, jamais montrée aux acheteurs).
 - Chaque ligne est acceptée ou « à corriger », avec un **code de raison** traduit par la page (中文, EN, FR) : MPN vide, quantité non entière ou non positive, MOQ inférieur à 1, prix nul ou illisible, palier incomplet, quantités des paliers non croissantes, prix en hausse avec la quantité, devise non prise en charge. Ces contrôles s'appliquent aussi aux dépôts par `/depot/`.
 - Le rapport s'affiche quelques secondes après le dépôt (traitement par la fonction `import-stock`, par paquets de 2 000 lignes) ; le vendeur corrige et recharge.
 

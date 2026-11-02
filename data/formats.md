@@ -7,18 +7,33 @@ Comment un fournisseur transmet son stock à Central.Parts. La maquette (`/app/`
 Format recommandé à tout broker sans API : le **flux distributeur Octopart**, tel que le produit déjà un broker partenaire. Modèle téléchargeable sur la page de dépôt : [`site/depot/stock-template.csv`](../site/depot/stock-template.csv), publié à `https://central.parts/depot/stock-template.csv`.
 
 ```
-manufacturer,mpn,sku,distributor-url,quantity,price-break-1,price-usd-1,…,price-break-5,price-usd-5,moq
+manufacturer,mpn,sku,description,datasheet-url,distributor-url,quantity,price-break-1,price-usd-1,…,price-break-5,price-usd-5,moq,lead-time
 ```
 
 - Une ligne par référence ; `mpn` et `quantity` obligatoires.
 - Jusqu'à cinq paliers : quantité minimale (`price-break-N`) et prix unitaire en USD (`price-usd-N`). Une autre devise s'écrit dans l'en-tête (`price-cnh-N`, `price-eur-N`).
 - Séparateur virgule ou point-virgule, décimales à point ou à virgule, CSV, XLS ou XLSX.
-- Colonnes facultatives, ajoutées en fin de ligne : `date-code`, `packaging`.
+- Colonnes facultatives : `date-code`, `packaging`, `lead-time` (délai : « 3 days », « 2 weeks »), et, appréciées : `description` (500 caractères au plus), `datasheet-url` (fiche technique ou page du produit chez le fabricant), `distributor-url` (page du produit chez le vendeur).
 - Le `sku` sert de clé de mise à jour : il doit rester stable d'un fichier à l'autre.
-- `moq` (quantité minimale de commande, 1 ou plus) est gardé. `distributor-url` est ignorée et jamais gardée.
+- `moq` (quantité minimale de commande, 1 ou plus) est gardé. Les liens sont gardés sans paramètres de suivi (`utm_…`), seulement s'ils commencent par `http://` ou `https://`. Le lien du vendeur, la fiche technique et la description sont visibles des administrateurs (back office) et jamais des acheteurs ([ADR 0022](../docs/decisions/0022-liens-descriptions-fabricants.md)).
 - Contrôles ligne par ligne, chaque rejet avec un code traduit en chinois, anglais et français : `mpn` vide, quantité non entière ou non positive, MOQ inférieur à 1, prix nul ou illisible, palier incomplet (quantité sans prix ou l'inverse), quantités des paliers non croissantes (dans l'ordre 1 à 5), prix en hausse avec la quantité, devise non prise en charge.
 
 Vendeurs approuvés sans WeChat : lien personnel `https://central.parts/depot/lien/#k=…` ([ADR 0021](../docs/decisions/0021-listes-vendeurs-lien-expiration.md)), modèle à point-virgule et virgule décimale [`site/depot/lien/modele.csv`](../site/depot/lien/modele.csv). Chaque dépôt remplace la liste précédente ; une offre non rechargée depuis 7 jours n'est plus montrée aux acheteurs.
+
+## Format attendu des fabricants chinois
+
+Modèle à en-têtes chinois, sur le modèle des fichiers de prix des fabricants (UMW) : [`site/depot/modele-fabricant.csv`](../site/depot/modele-fabricant.csv), publié à `https://central.parts/depot/modele-fabricant.csv` et proposé dans l'espace fournisseur.
+
+```
+型号,品牌,产品编号,产品描述,封装,库存,批次,货期,最小起订量,币种,价格,规格书链接,产品链接
+```
+
+- `型号` (MPN) et `库存` (stock) obligatoires ; `产品编号` (code produit du fabricant) sert de SKU, donc de clé de mise à jour.
+- `价格` contient tous les paliers dans une cellule : `10~99 0.040|100~999 0.032|1000以上 0.028` (quantité minimale, prix ; « 以上 » ou « + » pour le dernier palier ; séparateurs `|`, `;` ou retour à la ligne). Un simple prix unitaire est aussi accepté.
+- `封装` (boîtier) va dans « Boîtier / emballage », `批次` dans le date code, `货期` dans le délai en jours (« 1-3day », « 7天 », « 2周 »).
+- `币种` : USD, CNH (ou CNY, RMB), EUR, HKD ; sans cette colonne, la devise de la société s'applique.
+- `产品描述`, `规格书链接`, `产品链接` : facultatifs mais appréciés, mêmes règles que ci-dessus.
+- `包装数量` (quantité par conditionnement) est accepté dans le fichier mais pas encore gardé.
 
 Les autres formats décrits ci-dessous restent acceptés.
 
@@ -57,9 +72,9 @@ Les prix acceptent `1,250.00` comme `1250,00`. Sans colonne Currency, la devise 
 
 Reconnus par les mêmes règles : `mpn` / `Manufacturer Part Number`, `manufacturer`, `quantity` / `Quantity Available`, `date_code` / `Date Code`, `packaging` / `Package Type`, `price` / `Unit Price`.
 
-**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. La colonne `distributor-url` est ignorée ; `moq` est gardé.
+**Flux distributeur Octopart** (point-virgule, décimales à virgule) : `manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-usd-1;…;price-break-5;price-usd-5;moq`. Chaque paire `price-break-N` / `price-<devise>-N` donne un palier (quantité minimale, prix) ; la devise est lue dans l'en-tête (`usd`) ; le prix du plus petit palier devient le prix unitaire. La colonne `distributor-url` est gardée pour usage interne (ADR 0022) ; `moq` est gardé.
 
-Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `年份` (date code), `包装`, `单价` / `价格`, `币种` / `货币`.
+Les en-têtes sont comparés sans casse, tirets, soulignés ni espaces répétés. **En-têtes chinois** reconnus : `型号` / `料号` / `规格型号` (MPN), `品牌` / `厂商` / `厂家` / `制造商`, `数量` / `库存` / `库存数量` / `现货数量`, `批号` / `批次` / `年份` (date code), `包装` / `封装`, `单价` / `价格`, `币种` / `货币`, `产品编号` / `商品编号` / `物料编号` (SKU), `货期` / `交期` / `交货期` (délai), `产品描述` / `描述` / `说明`, `规格书` / `规格书链接` / `数据手册`, `产品链接` / `链接`.
 
 ## Règles d'import
 

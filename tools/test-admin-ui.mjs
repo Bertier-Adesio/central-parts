@@ -152,6 +152,18 @@ await page.waitForFunction(() => / sur 1\.$/.test(document.getElementById('lot-c
 const row = norm(await page.textContent('#lot-list tr'));
 ok(row.includes('AMS1117-3.3') && row.includes('SOT-223') && row.includes('150 000') && row.includes('5 j'), 'recherche par boîtier : référence, stock, délai');
 ok(/1 à 49/.test(row) && /2 000 et plus/.test(row), 'paliers « de … à … » et dernier palier « et plus »');
+// Lien du vendeur, fiche technique et description (ADR 0022) ; un lien qui n'est pas http(s) n'est jamais cliquable.
+await page.fill('#lot-q', 'cortex');
+await page.click('#lot-form button[type=submit]');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('STM32G071RBT6'));
+const st = await page.$('#lot-list tr');
+ok((await st.textContent()).includes('Microcontrôleur Arm Cortex-M0+'), 'description affichée et cherchable');
+ok(await st.$eval('a[href="https://fabricant.example/ds/STM32G071RBT6.pdf"]', (a) => a.target === '_blank' && a.rel.includes('noreferrer')), 'fiche technique : lien externe, sans transmettre l\'adresse');
+ok(await st.$('a[href="https://vendeur.example/p/STM32G071RBT6"]') !== null, 'page chez le vendeur : lien visible des administrateurs');
+await page.fill('#lot-q', 'TPS62130');
+await page.click('#lot-form button[type=submit]');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('TPS62130RGTR'));
+ok((await page.$$('#lot-list a[href^="javascript"]')).length === 0, 'lien « javascript: » jamais rendu cliquable');
 ok((await page.$$('#p-stock button[data-act], #p-stock input:not([type=search])')).length === 0, 'stocks : aucune action de modification');
 
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));

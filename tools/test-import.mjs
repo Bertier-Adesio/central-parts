@@ -1,7 +1,7 @@
 // Tests de lecture des fichiers de stock (supabase/functions/import-stock/parse.js)
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
-import { cleanUrl, decode, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
+import { cleanUrl, decode, leadDays, mapRows, parseCSV, price, tierCell } from '../supabase/functions/import-stock/parse.js';
 import { readFileSync } from 'node:fs';
 import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
@@ -48,9 +48,19 @@ const flux = 'manufacturer;mpn;sku;distributor-url;quantity;price-break-1;price-
 const fx = mapRows(parseCSV(flux)).rows[0];
 ok(fx && fx.price === 0.5195 && fx.currency === 'USD', 'flux Octopart : prix du palier 1 et devise lue dans l\'en-tête');
 ok(fx && JSON.stringify(fx.tiers) === '{"10":0.5039,"1000":0.4779}', 'flux Octopart : paliers 10 et 1000');
-ok(fx && fx.url === '' && fx.moq === 1, 'flux Octopart : distributor-url ignorée, jamais gardée ; moq lu');
+ok(fx && fx.url === 'https://example.com/p/TPS62130RGTR?ref=7' && fx.moq === 1, 'flux Octopart : distributor-url gardée sans suivi utm (usage interne, ADR 0022) ; moq lu');
 ok(cleanUrl('https://example.com/p/X?utm_source=octopart&ref=7') === 'https://example.com/p/X?ref=7', 'lien produit sans paramètres utm');
-ok(cleanUrl('pas un lien') === 'pas un lien' && cleanUrl('') === '', 'lien illisible gardé tel quel');
+ok(cleanUrl('pas un lien') === '' && cleanUrl('') === '', 'texte qui n\'est pas un lien : écarté');
+ok(cleanUrl('javascript:alert(1)') === '' && cleanUrl('ftp://example.com/a') === '', 'seuls les liens http(s) sont gardés');
+ok(cleanUrl('https://example.com/' + 'a'.repeat(2100)) === '', 'lien de plus de 2 048 caractères écarté');
+
+// Fiche technique et description (ADR 0022).
+const ds = mapRows(parseCSV('mpn;quantity;datasheet;description\nNE555DR;100;https://www.ti.com/lit/ds/symlink/ne555.pdf?utm_campaign=x;"  Minuterie\n de précision   SOIC-8 "\n')).rows[0];
+ok(ds && ds.datasheet === 'https://www.ti.com/lit/ds/symlink/ne555.pdf' && ds.desc === 'Minuterie de précision SOIC-8', 'fiche technique sans suivi, description nettoyée');
+const dz = mapRows(parseCSV('型号,数量,规格书,产品描述\nSTM32F103C8T6,10,https://www.st.com/ds.pdf,32位单片机\n')).rows[0];
+ok(dz && dz.datasheet === 'https://www.st.com/ds.pdf' && dz.desc === '32位单片机', 'en-têtes chinois : 规格书 et 产品描述');
+ok(mapRows(parseCSV('mpn;quantity;description\nA1;1;' + 'x'.repeat(600) + '\n')).rows[0].desc.length === 500, 'description limitée à 500 caractères');
+ok(mapRows(parseCSV('mpn;quantity\nA1;1\n')).rows[0].url === '' && mapRows(parseCSV('mpn;quantity\nA1;1\n')).rows[0].desc === '', 'sans colonnes : lien et description vides');
 
 // En-têtes chinois.
 const zh = mapRows(parseCSV('型号,品牌,数量,单价,批号,币种\nSTM32F103C8T6,ST,5000,1.2,2024+,RMB\n')).rows[0];
@@ -61,11 +71,32 @@ ok(mapRows(parseCSV('MPN,Quantity\n')).error.startsWith('Fichier vide'), 'fichie
 ok(mapRows(parseCSV('Reference,Stock\nA,1\n')).error.startsWith('Colonnes obligatoires'), 'colonnes MPN ou quantité absentes');
 ok(price('$12.5') === 12.5 && price('') === null && price('0') === null, 'prix : symbole, vide, zéro');
 
+// Fichiers de prix de fabricants chinois (ADR 0022) : paliers dans une seule cellule, boîtier, délai, code produit.
+ok(JSON.stringify(tierCell('10~90 0.0379|100~290 0.03|10000以上 0.0185')) === '[[10,0.0379],[100,0.03],[10000,0.0185]]', 'cellule de paliers : fourchettes et « 以上 »');
+ok(JSON.stringify(tierCell('1-99: 0.5; 100+ 0.4')) === '[[1,0.5],[100,0.4]]', 'cellule de paliers : tirets, deux-points, « + », point-virgule');
+ok(tierCell('0.25') === null && tierCell('') === null, 'simple prix : pas une cellule de paliers');
+ok(tierCell('10~90 abc|100~290 0.03') === false, 'cellule de paliers illisible : signalée');
+ok(leadDays('1-3day') === 3 && leadDays('2 weeks') === 14 && leadDays('7天') === 7 && leadDays('2-3周') === 21, 'délais : jours, semaines, chinois');
+ok(leadDays('现货') === null && leadDays('') === null && leadDays('400 days') === null, 'délai illisible ou au-delà d\'un an : vide');
+const fab = mapRows([['产品编号', '型号', '品牌', '封装', '包装数量', '库存', '价格', '批次', '货期'],
+  ['A1', 'AMS1117-3.3', 'Marque fictive', 'SOT-223', '2500', '120000', '10~90 0.04|100~990 0.03|1000以上 0.02', '25+', '1-3day'],
+  ['A2', 'B2', 'Marque fictive', 'SOT-23', '3000', '5000', '10~90 0.04|100~990 0.05', '25+', '1-3day'],
+  ['A3', 'B3', 'Marque fictive', 'SOT-23', '3000', '5000', '10~90 abc', '25+', '1-3day']]);
+const f1 = fab.rows[0];
+ok(f1 && f1.sku === 'A1' && f1.pack === 'SOT-223' && f1.dc === '25+' && f1.lead === 3 && f1.qty === 120000, 'fichier fabricant : code produit, boîtier, lot, délai, stock');
+ok(f1 && f1.price === 0.04 && JSON.stringify(f1.tiers) === '{"10":0.04,"100":0.03,"1000":0.02}', 'fichier fabricant : prix unitaire et paliers tirés de la cellule');
+ok(fab.rejected.map((r) => r.code).join() === 'breaks_price_order,price_invalid', 'fichier fabricant : prix en hausse et cellule illisible rejetés');
+for (const f of ['../site/depot/modele-fabricant.csv', '../site/depot/stock-template.csv', '../site/depot/lien/modele.csv']) {
+  const m = mapRows(parseCSV(decode(readFileSync(new URL(f, import.meta.url))))).rows[0];
+  ok(m && m.desc && m.datasheet.startsWith('https://') && m.url.startsWith('https://') && m.lead === 3 && Object.keys(m.tiers).length >= 2,
+    'modèle ' + f.split('/').pop() + ' : lu en entier (description, fiche technique, lien, délai, paliers)');
+}
+
 // ---------------------------------------------------------------- listes des vendeurs (tools/fixtures)
 const fixture = (n) => mapRows(parseCSV(decode(readFileSync(new URL('./fixtures/' + n, import.meta.url)))));
 const good = fixture('liste-partenaire.csv');
 ok(good.rows.length === 10 && good.rejected.length === 0, 'liste de test : 10 références acceptées');
-ok(good.rows.every((r) => r.url === '' && r.currency === 'USD'), 'liste de test : distributor-url jamais gardée, devise USD');
+ok(good.rows.every((r) => /^https:\/\/example\.com\//.test(r.url) && !r.url.includes('utm_') && r.currency === 'USD'), 'liste de test : distributor-url gardée sans suivi utm, devise USD');
 const mt = good.rows.find((r) => r.mpn === 'MT41K128M16JT-107 IT:K');
 ok(mt && mt.price === 3.9 && mt.tiers[1000] === 3.2 && mt.moq === 1, 'liste de test : référence avec espace et deux-points, paliers à virgule');
 const ir = good.rows.find((r) => r.mpn === 'IRLML2502TRPBF');

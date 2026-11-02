@@ -7,17 +7,26 @@
 export const COLUMNS = {
   mpn: ['mpn', 'manufacturer part number', 'part number', 'mfr part number', '型号', '料号', '规格型号'],
   mfr: ['manufacturer', 'mfr', 'manufacturer name', 'brand', '品牌', '厂商', '厂家', '制造商'],
-  sku: ['sku', 'seller sku', 'distributor part number'],
-  url: ['product url', 'url', 'link'],          // « distributor-url » (flux Octopart) volontairement ignorée : jamais gardée
+  sku: ['sku', 'seller sku', 'distributor part number', 'product code', '产品编号', '商品编号', '物料编号'],
+  // Lien vers la page du produit chez le vendeur (flux Octopart : « distributor-url »). Gardé pour les opérateurs
+  // seulement (back office), jamais montré aux acheteurs : il révèle le vendeur (ADR 0022).
+  url: ['distributor url', 'product url', 'product page', 'url', 'link', '产品链接', '链接'],
+  // Fiche technique ou page du produit chez le fabricant (ADR 0022) ; gardée à part du lien du vendeur.
+  datasheet: ['datasheet', 'datasheet url', 'datasheet link', 'data sheet', 'pdf', '规格书', '规格书链接', '数据手册', '技术资料'],
+  // Description courte du produit, donnée par le vendeur (ADR 0022).
+  desc: ['description', 'product description', 'part description', 'desc', '描述', '产品描述', '说明'],
   moq: ['moq', 'minimum order quantity', 'min order qty', 'min qty', '最小起订量', '起订量', '最小包装'],
   qty: ['quantity', 'qty', 'stock', 'quantity available', '数量', '库存', '库存数量', '现货数量'],
-  dc: ['date code', 'datecode', 'dc', 'd/c', '批号', '年份'],
-  pack: ['packaging', 'package type', 'pack', '包装'],
+  dc: ['date code', 'datecode', 'dc', 'd/c', '批号', '批次', '年份'],
+  // Boîtier ou emballage : « 封装 » (boîtier : SOT-23, SOP-8…) comme « 包装 » (emballage) vont dans le même champ.
+  pack: ['packaging', 'package type', 'pack', 'package', 'case', '包装', '封装'],
   price: ['unit price', 'price', '单价', '价格'],
   p10: ['price per 10 pcs', 'price 10', 'price break 10'],
   p100: ['price per 100 pcs', 'price 100', 'price break 100'],
   p1000: ['price per 1,000 pcs', 'price per 1000 pcs', 'price 1000', 'price break 1000'],
   currency: ['currency', 'devise', '币种', '货币'],
+  // Délai : « 1-3day », « 2 weeks », « 7天 », « 2周 » ; gardé en jours (le plus long de la fourchette).
+  lead: ['lead time', 'leadtime', 'lead', 'delivery time', '货期', '交期', '交货期'],
 };
 
 // Octets du fichier → texte : UTF-8 par défaut ; repli en GB18030, qui couvre GBK (Excel « CSV » sur un poste chinois).
@@ -123,9 +132,13 @@ export function mapRows(table) {
     if (!(qty > 0)) { rejected.push(reject(line, 'qty_invalid')); return; }
     let moq = null;
     if (filled(get(f, 'moq'))) { moq = int(get(f, 'moq')); if (!(moq >= 1)) { rejected.push(reject(line, 'moq_invalid')); return; } }
-    if (filled(get(f, 'price')) && price(get(f, 'price')) == null) { rejected.push(reject(line, 'price_invalid')); return; }
+    // Colonne de prix qui contient tous les paliers (fichiers de fabricants chinois) : « 10~90 0.0379|…|10000以上 0.0185 ».
+    const cell = get(f, 'price');
+    const cellTiers = tierCell(cell);
+    if (cellTiers === false) { rejected.push(reject(line, 'price_invalid')); return; }
+    if (!cellTiers && filled(cell) && price(cell) == null) { rejected.push(reject(line, 'price_invalid')); return; }
     // Paliers : quantité minimale et prix, tous deux présents et valides ; quantités croissantes, prix stables ou en baisse.
-    const list = [];
+    const list = cellTiers ? [...cellTiers] : [];
     for (const [k, q] of [['p10', 10], ['p100', 100], ['p1000', 1000]]) {
       if (!filled(get(f, k))) continue;
       const v = price(get(f, k));
@@ -148,21 +161,56 @@ export function mapRows(table) {
     const tiers = {};
     for (const [q, v] of list) tiers[q] = v;
     // Sans colonne de prix unitaire : le prix du plus petit palier.
-    let unit = price(get(f, 'price'));
+    let unit = cellTiers ? null : price(cell);
     const mins = Object.keys(tiers).map(Number).sort((a, b) => a - b);
     if (unit == null && mins.length) { unit = tiers[mins[0]]; if (mins[0] === 1) delete tiers[1]; }
-    out.push({ line, mpn, mfr: get(f, 'mfr'), sku: get(f, 'sku'), url: cleanUrl(get(f, 'url')), qty, dc: get(f, 'dc'),
+    out.push({ line, mpn, mfr: get(f, 'mfr'), sku: get(f, 'sku'), url: cleanUrl(get(f, 'url')),
+      datasheet: cleanUrl(get(f, 'datasheet')), desc: cleanText(get(f, 'desc')), lead: leadDays(get(f, 'lead')), qty, dc: get(f, 'dc'),
       pack: get(f, 'pack'), price: unit, currency: (get(f, 'currency') || pairCurrency).toUpperCase(), moq, tiers });
   });
   return { rows: out, rejected, total: rows.length };
 }
 
-// Lien produit sans paramètres de suivi (utm_*).
+// Lien sans paramètres de suivi (utm_*) ; seuls les liens http(s) de 2 048 caractères au plus sont gardés,
+// pour qu'un texte ou un lien « javascript: » ne devienne jamais un lien cliquable dans le back office.
 export function cleanUrl(v) {
   if (!v) return '';
   try {
-    const u = new URL(v);
+    const u = new URL(String(v).trim());
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
     for (const k of [...u.searchParams.keys()]) if (k.startsWith('utm_')) u.searchParams.delete(k);
-    return u.toString();
-  } catch { return v; }
+    const out = u.toString();
+    return out.length <= 2048 ? out : '';
+  } catch { return ''; }
+}
+
+// Cellule de paliers « quantité~quantité prix », séparés par « | », « ; » ou un retour à la ligne ; le dernier
+// palier peut s'écrire « 10000以上 0.0185 » ou « 10000+ 0.0185 ». Renvoie [[quantité minimale, prix]…],
+// null si la cellule n'est pas une liste de paliers (simple prix), false si elle en est une mais illisible.
+export function tierCell(v) {
+  const t = String(v || '').trim();
+  if (!t || !(/[~|]|以上/.test(t) || /^\d[\d,]*\s*(?:[-–+]|至|到)/.test(t))) return null;
+  const list = [];
+  for (const part of t.split(/[|;\n]+/).map((x) => x.trim()).filter(Boolean)) {
+    const m = part.match(/^(\d[\d,]*)\s*(?:(?:~|-|–|至|到)\s*\d[\d,]*|以上|及以上|\+)?\s*[:：]?\s*([^\s:：]+)$/);
+    if (!m) return false;
+    const q = int(m[1]), p = price(m[2]);
+    if (!(q > 0) || p == null) return false;
+    list.push([q, p]);
+  }
+  return list.length ? list : false;
+}
+
+// Délai en jours : « 1-3day » → 3, « 2 weeks » → 14, « 7天 » → 7, « 2-3周 » → 21 ; null si illisible ou au-delà d'un an.
+export function leadDays(v) {
+  const t = String(v || '').toLowerCase().replace(/\s+/g, '');
+  const m = t.match(/^(?:(\d+)(?:-|~|–|至|到))?(\d+)(day|days|d|天|日|工作日|week|weeks|wk|w|周|星期)?$/);
+  if (!m) return null;
+  const n = parseInt(m[2], 10) * (/^(week|weeks|wk|w|周|星期)$/.test(m[3] || '') ? 7 : 1);
+  return n <= 365 ? n : null;
+}
+
+// Description : espaces et retours à la ligne réduits à une espace, 500 caractères au plus.
+export function cleanText(v) {
+  return String(v || '').replace(/\s+/g, ' ').trim().slice(0, 500);
 }
