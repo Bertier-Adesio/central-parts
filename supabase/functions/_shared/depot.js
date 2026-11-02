@@ -102,6 +102,30 @@ export function creditCodeOk(code) {
   return CREDIT_CHARS[k] === c[17];
 }
 
+// Numéro d'immatriculation selon le pays / région (migration 20261102000013, même règle que
+// app.registration_number_ok) : Chine continentale (CN) : 统一社会信用代码 ; Hong Kong (HK) et autre pays (OTHER) :
+// 5 à 30 caractères, lettres, chiffres, tirets, espaces, barres obliques. Le numéro est d'abord normalisé.
+export const REGIONS = ['CN', 'HK', 'OTHER'];
+export function normalizeRegistrationNumber(region, code) {
+  const c = String(code || '').trim().toUpperCase();
+  return region === 'CN' ? c : c.replace(/\s+/g, ' ');
+}
+export function registrationNumberOk(region, code) {
+  const c = normalizeRegistrationNumber(region, code);
+  if (region === 'CN') return creditCodeOk(c);
+  if (region === 'HK' || region === 'OTHER') return /^[A-Z0-9 /-]{5,30}$/.test(c) && /[A-Z0-9]/.test(c);
+  return false;
+}
+
+// Ligne « numéro » de la fiche d'une société en attente, pour les opérateurs (en anglais).
+// Région absente (sociétés inscrites avant la migration 20261102000013) : Chine continentale.
+const REGION_LABEL = { CN: 'Mainland China', HK: 'Hong Kong', OTHER: 'other country' };
+export function registrationLine(s) {
+  const region = s.region || 'CN';
+  const kind = region === 'CN' ? 'Credit code' : 'Registration no.';
+  return `${kind} (${REGION_LABEL[region] || region}): ${s.code || '—'}`;
+}
+
 // Chemin de la photo de la licence : <société>/licence-<horodatage>.<ext> ; null si le format n'est pas accepté.
 export function licensePath(org, fileName, now = new Date()) {
   const m = /\.(jpe?g|png|heic|webp|pdf)$/i.exec(String(fileName || ''));

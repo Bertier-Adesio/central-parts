@@ -6,7 +6,8 @@
 //   POST /depot/qr/poll     {scene}    → en attente, ou jeton de session une fois le QR code scanné
 //                                        (status « ok » : société connue ; « register » : compte à inscrire)
 //   GET  /depot/me          → société du compte (null s'il doit s'inscrire), et jeton de session à jour
-//   POST /depot/register    {name, code, city, profile, currency}  → enregistre la société, en attente de validation
+//   POST /depot/register    {name, region, code, city, profile, currency} → enregistre la société, en attente de validation
+//                           (region : CN, HK ou OTHER ; CN par défaut pour une page restée en cache)
 //   POST /depot/license-url {file_name}  → lien de dépôt signé pour la photo de la licence (营业执照)
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?}  → lien de dépôt signé vers le dossier de la société
@@ -85,7 +86,7 @@ Deno.serve(async (req) => {
       if (who) return json({ error: 'already_bound' }, 409);
       const b = await body();
       const { data, error } = await db.rpc('register_supplier', {
-        p_openid: session.openid, p_name: b.name, p_code: b.code, p_city: b.city, p_profile: b.profile, p_currency: b.currency || 'USD',
+        p_openid: session.openid, p_name: b.name, p_code: b.code, p_city: b.city, p_profile: b.profile, p_currency: b.currency || 'USD', p_region: b.region || 'CN',
       });
       if (error) return json({ error: REGISTER_ERRORS[error.code] || 'database', detail: error.message }, error.code in REGISTER_ERRORS ? 422 : 500);
       return json({ org: data, token: await signSession(SECRET, { org: data.org_id, openid: session.openid }) });

@@ -2,7 +2,7 @@
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
 import { cleanUrl, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
-import { creditCodeOk, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
+import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 
 let n = 0, bad = 0;
@@ -96,6 +96,15 @@ ok(back.ToUserName === 'oFOURNISSEUR' && back.MsgType === 'text' && back.CreateT
 // ---------------------------------------------------------------- inscription des fournisseurs
 ok(creditCodeOk('91350100M000100Y43') && creditCodeOk(' 91350100m000100y43 '), '统一社会信用代码 : exemple de la norme, minuscules et espaces');
 ok(!creditCodeOk('91350100M000100Y44') && !creditCodeOk('91350100M00010OY43') && !creditCodeOk(''), '统一社会信用代码 : clé fausse, lettre O, vide');
+// Numéro selon le pays / région (inscription hors de Chine continentale).
+ok(registrationNumberOk('CN', '91350100M000100Y43') && !registrationNumberOk('CN', '123456789012345'), 'Chine : 18 caractères acceptés, 15 refusés');
+ok(registrationNumberOk('HK', '123456789012345') && registrationNumberOk('HK', ' 1234 5678 ') && registrationNumberOk('OTHER', 'hrb-2026/77'), 'Hong Kong et autre pays : numéro libre de 5 à 30 caractères');
+ok(!registrationNumberOk('HK', '') && !registrationNumberOk('HK', '1234') && !registrationNumberOk('HK', '1'.repeat(31)) && !registrationNumberOk('HK', '12345#') && !registrationNumberOk('HK', '-----'), 'Hong Kong : vide, trop court, trop long, caractère interdit refusés');
+ok(!registrationNumberOk('', '12345678') && !registrationNumberOk('FR', '12345678'), 'pays / région obligatoire et connu');
+ok(normalizeRegistrationNumber('HK', ' ab  12 ') === 'AB 12' && normalizeRegistrationNumber('CN', ' 9135 ') === '9135', 'numéro normalisé');
+ok(registrationLine({ region: 'HK', code: '123456789012345' }) === 'Registration no. (Hong Kong): 123456789012345', 'message WeChat : numéro de Hong Kong de 15 caractères');
+ok(registrationLine({ region: 'OTHER', code: 'HRB-2026/77' }) === 'Registration no. (other country): HRB-2026/77', 'message WeChat : autre pays');
+ok(registrationLine({ region: null, code: '91350100M000100Y43' }) === 'Credit code (Mainland China): 91350100M000100Y43' && registrationLine({}) === 'Credit code (Mainland China): —', 'message WeChat : société inscrite avant la migration, numéro absent');
 ok(licensePath('ORG-0105', '营业执照.JPEG', d) === 'ORG-0105/licence-20261030-142501.jpg' && licensePath('ORG-0105', 'a.pdf', d).endsWith('.pdf'), 'licence : chemin horodaté dans le dossier de la société');
 ok(licensePath('ORG-0105', 'a.exe', d) === null, 'licence : format refusé');
 ok(JSON.stringify(await readSession(secret, await signSession(secret, { org: null, openid: 'oNEW' }, 3600, now), now)) === '{"org":null,"openid":"oNEW"}', 'jeton : compte sans société, pour l\'inscription');
