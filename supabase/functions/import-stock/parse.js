@@ -8,7 +8,8 @@ export const COLUMNS = {
   mpn: ['mpn', 'manufacturer part number', 'part number', 'mfr part number', '型号', '料号', '规格型号'],
   mfr: ['manufacturer', 'mfr', 'manufacturer name', 'brand', '品牌', '厂商', '厂家', '制造商'],
   sku: ['sku', 'seller sku', 'distributor part number'],
-  url: ['product url', 'url', 'link', 'distributor url'],
+  url: ['product url', 'url', 'link'],          // « distributor-url » (flux Octopart) volontairement ignorée : jamais gardée
+  moq: ['moq', 'minimum order quantity', 'min order qty', 'min qty', '最小起订量', '起订量', '最小包装'],
   qty: ['quantity', 'qty', 'stock', 'quantity available', '数量', '库存', '库存数量', '现货数量'],
   dc: ['date code', 'datecode', 'dc', 'd/c', '批号', '年份'],
   pack: ['packaging', 'package type', 'pack', '包装'],
@@ -18,6 +19,16 @@ export const COLUMNS = {
   p1000: ['price per 1,000 pcs', 'price per 1000 pcs', 'price 1000', 'price break 1000'],
   currency: ['currency', 'devise', '币种', '货币'],
 };
+
+// Octets du fichier → texte : UTF-8 par défaut ; repli en GB18030, qui couvre GBK (Excel « CSV » sur un poste chinois).
+/** @param {Uint8Array} buf @returns {string} */
+export function decode(buf) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder('gb18030').decode(buf);
+  }
+}
 
 const norm = (h) => String(h).toLowerCase().replace(/[\s_-]+/g, ' ').trim();
 
@@ -61,8 +72,23 @@ export function price(v) {
   return n > 0 ? n : null;
 }
 
+// Raisons de rejet : un code stable (traduit par les pages en anglais et en chinois) et un libellé français
+// gardé pour la page /depot/ existante.
+export const REASONS = {
+  mpn_missing: 'MPN manquant',
+  qty_invalid: 'Quantité invalide',
+  moq_invalid: 'MOQ invalide',
+  price_invalid: 'Prix invalide',
+  break_incomplete: 'Palier incomplet : quantité ou prix manquant',
+  breaks_qty_order: 'Paliers non croissants en quantité',
+  breaks_price_order: 'Prix des paliers en hausse',
+};
+const reject = (line, code) => ({ line, code, reason: REASONS[code] });
+const int = (v) => { const t = String(v ?? '').replace(/[\s,.'’]/g, ''); return /^\d+$/.test(t) ? parseInt(t, 10) : NaN; };
+const filled = (v) => v != null && String(v).trim() !== '';
+
 // Lignes brutes (première ligne = en-têtes) → lignes normalisées pour apply_stock_import_batch.
-// Les contrôles de fond (MPN, quantité, devise) sont refaits par la base ; ici on rejette l'illisible.
+// Chaque ligne est acceptée ou rejetée avec sa raison ; la base refait les contrôles de fond (MPN, quantité, devise).
 /** @returns {{ error?: string, rows: any[], rejected: any[], total: number }} */
 export function mapRows(table) {
   const rows = (table || []).map((r) => r.map((x) => (x == null ? '' : String(x).trim())));
@@ -74,7 +100,8 @@ export function mapRows(table) {
     ix[k] = -1;
     for (const n of COLUMNS[k]) if (ix[k] < 0) ix[k] = head.indexOf(norm(n));
   }
-  // Paliers en paires de colonnes (flux distributeur Octopart) : « price-break-N » (quantité) et « price-usd-N » (prix).
+  // Paliers en paires de colonnes (flux distributeur Octopart) : « price-break-N » (quantité) et « price-usd-N » (prix),
+  // pris dans l'ordre de N.
   const breaks = {}, pairs = [];
   let pairCurrency = '';
   head.forEach((h, i) => {
@@ -83,7 +110,7 @@ export function mapRows(table) {
     m = h.match(/^price ([a-z]{3}) (\d+)$/);
     if (m) { (breaks[m[2]] ||= {}).p = i; pairCurrency ||= m[1].toUpperCase(); }
   });
-  for (const b of Object.values(breaks)) if (b.q != null && b.p != null) pairs.push(b);
+  for (const k of Object.keys(breaks).sort((a, b) => a - b)) if (breaks[k].q != null && breaks[k].p != null) pairs.push(breaks[k]);
   if (ix.mpn < 0 || ix.qty < 0) return { error: 'Colonnes obligatoires absentes : référence fabricant (MPN) et quantité' };
   const get = (f, k) => (ix[k] >= 0 ? f[ix[k]] || '' : '');
   const out = [], rejected = [];
@@ -91,22 +118,41 @@ export function mapRows(table) {
     const line = n + 2;
     if (!f.some((x) => x)) return;
     const mpn = get(f, 'mpn').toUpperCase();
-    const qtyText = get(f, 'qty').replace(/[\s,.'’]/g, '');
-    const qty = /^\d+$/.test(qtyText) ? parseInt(qtyText, 10) : NaN;
-    if (!mpn) { rejected.push({ line, reason: 'MPN manquant' }); return; }
-    if (!(qty > 0)) { rejected.push({ line, reason: 'Quantité invalide' }); return; }
-    const tiers = {};
-    for (const [k, q] of [['p10', 10], ['p100', 100], ['p1000', 1000]]) { const v = price(get(f, k)); if (v) tiers[q] = v; }
-    for (const b of pairs) {
-      const q = parseInt(String(f[b.q] || '').replace(/[\s,.'’]/g, ''), 10), v = price(f[b.p]);
-      if (q > 0 && v) tiers[q] = v;
+    const qty = int(get(f, 'qty'));
+    if (!mpn) { rejected.push(reject(line, 'mpn_missing')); return; }
+    if (!(qty > 0)) { rejected.push(reject(line, 'qty_invalid')); return; }
+    let moq = null;
+    if (filled(get(f, 'moq'))) { moq = int(get(f, 'moq')); if (!(moq >= 1)) { rejected.push(reject(line, 'moq_invalid')); return; } }
+    if (filled(get(f, 'price')) && price(get(f, 'price')) == null) { rejected.push(reject(line, 'price_invalid')); return; }
+    // Paliers : quantité minimale et prix, tous deux présents et valides ; quantités croissantes, prix stables ou en baisse.
+    const list = [];
+    for (const [k, q] of [['p10', 10], ['p100', 100], ['p1000', 1000]]) {
+      if (!filled(get(f, k))) continue;
+      const v = price(get(f, k));
+      if (v == null) { rejected.push(reject(line, 'price_invalid')); return; }
+      list.push([q, v]);
     }
+    for (const b of pairs) {
+      const hasQ = filled(f[b.q]), hasP = filled(f[b.p]);
+      if (!hasQ && !hasP) continue;
+      if (!hasQ || !hasP) { rejected.push(reject(line, 'break_incomplete')); return; }
+      const q = int(f[b.q]), v = price(f[b.p]);
+      if (!(q > 0)) { rejected.push(reject(line, 'break_incomplete')); return; }
+      if (v == null) { rejected.push(reject(line, 'price_invalid')); return; }
+      list.push([q, v]);
+    }
+    for (let i = 1; i < list.length; i++) {
+      if (list[i][0] <= list[i - 1][0]) { rejected.push(reject(line, 'breaks_qty_order')); return; }
+      if (list[i][1] > list[i - 1][1]) { rejected.push(reject(line, 'breaks_price_order')); return; }
+    }
+    const tiers = {};
+    for (const [q, v] of list) tiers[q] = v;
     // Sans colonne de prix unitaire : le prix du plus petit palier.
     let unit = price(get(f, 'price'));
     const mins = Object.keys(tiers).map(Number).sort((a, b) => a - b);
     if (unit == null && mins.length) { unit = tiers[mins[0]]; if (mins[0] === 1) delete tiers[1]; }
     out.push({ line, mpn, mfr: get(f, 'mfr'), sku: get(f, 'sku'), url: cleanUrl(get(f, 'url')), qty, dc: get(f, 'dc'),
-      pack: get(f, 'pack'), price: unit, currency: (get(f, 'currency') || pairCurrency).toUpperCase(), tiers });
+      pack: get(f, 'pack'), price: unit, currency: (get(f, 'currency') || pairCurrency).toUpperCase(), moq, tiers });
   });
   return { rows: out, rejected, total: rows.length };
 }

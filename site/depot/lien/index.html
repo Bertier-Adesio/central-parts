@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<!-- Dépôt des listes de stock par lien personnel, sans connexion WeChat (ADR 0021). Écrite à la main, pas générée.
+     Le jeton du lien est dans le fragment de l'adresse (#k=…) : il n'est envoyé ni au serveur de la page ni dans
+     l'en-tête Referer, seulement à la fonction Edge « listes ». Chaque dépôt remplace la liste précédente du vendeur.
+     Textes chinois nouveaux : à faire relire. -->
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>上传库存表 · Stock list — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
+main.wrap{padding:32px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+h2{font-size:var(--text-lg);margin:0 0 8px}
+.lead{color:var(--fg-2);margin:0 0 24px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none;background:var(--bg-inverse);color:var(--fg-inverse)}
+.btn[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:12px 0 0}
+.stat{background:var(--bg-sunken);border-radius:var(--radius-sm);padding:12px}
+.stat b{display:block;font-size:var(--text-xl);font-variant-numeric:tabular-nums}
+.stat span{font-size:var(--text-sm);color:var(--fg-2)}
+.stat.warn b{color:var(--status-warning)}
+label.file{display:block;border:2px dashed var(--border-2);border-radius:var(--radius-md);padding:24px 16px;text-align:center;cursor:pointer;margin:0 0 12px;background:var(--bg-sunken)}
+label.file input{display:block;margin:12px auto 0;max-width:100%}
+progress{width:100%;height:8px;margin:12px 0 0}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+.msg.ok{background:var(--status-success-bg);color:var(--status-success)}
+.msg.info{background:var(--status-info-bg);color:var(--status-info)}
+.imp{border-top:1px solid var(--border-1);padding:12px 0}
+.imp:first-child{border-top:0;padding-top:0}
+.imp-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;overflow-wrap:anywhere}
+.badge{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
+.badge.done{background:var(--status-success-bg);color:var(--status-success)}
+.badge.failed{background:var(--status-danger-bg);color:var(--status-danger)}
+.badge.processing,.badge.received{background:var(--status-warning-bg);color:var(--status-warning)}
+.nums{font-size:var(--text-sm);color:var(--fg-2);margin:4px 0 0}
+table.rej{width:100%;border-collapse:collapse;font-size:var(--text-sm);margin:8px 0 0}
+table.rej th,table.rej td{text-align:left;padding:6px 8px 6px 0;border-top:1px solid var(--border-1);vertical-align:top}
+table.rej th{color:var(--fg-3);font-weight:var(--weight-medium)}
+table.rej td:first-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+details{font-size:var(--text-sm);margin:6px 0 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/zh/">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 data-t="title">上传库存表</h1>
+  <p class="lead" data-t="lead">每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。</p>
+  <noscript><p class="msg err">本页面需要启用 JavaScript。This page needs JavaScript. Cette page a besoin de JavaScript.</p></noscript>
+  <p class="msg info" id="msg" role="status" hidden></p>
+
+  <section class="card" id="status-card" hidden>
+    <h2 id="org-name"></h2>
+    <p class="muted" id="ttl-text"></p>
+    <div class="stats">
+      <div class="stat"><b id="n-live">0</b><span data-t="live">在线报价</span></div>
+      <div class="stat warn"><b id="n-old">0</b><span data-t="toReconfirm">待重新确认</span></div>
+      <div class="stat"><b id="d-last">—</b><span data-t="lastUpload">最近更新</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="upload-card" hidden>
+    <h2 data-t="uploadTitle">上传新的库存表</h2>
+    <p class="muted"><span data-t="format">格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq。</span>
+      <a href="modele.csv" download data-t="template">下载模板</a></p>
+    <form id="form">
+      <label class="file"><span data-t="pick">选择文件：CSV 或 XLSX，最大 50 MB</span><input type="file" id="file" accept=".csv,.xlsx,.xls" required></label>
+      <button class="btn" type="submit" id="send" data-t="send">上传</button>
+      <progress id="bar" max="100" value="0" hidden></progress>
+    </form>
+  </section>
+
+  <section class="card" id="report-card" hidden>
+    <h2 data-t="reportTitle">上传报告</h2>
+    <div id="imports"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/listes';
+  var T = {
+    zh: { title: '上传库存表', lead: '每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。',
+      live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新',
+      ttl: '报价在最后一次上传后 {n} 天内向采购方展示，之后变为“待重新确认”，不再展示。请定期重新上传。',
+      uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq。',
+      template: '下载模板', pick: '选择文件：CSV 或 XLSX，最大 50 MB', send: '上传', reportTitle: '上传报告',
+      sending: '正在上传…', checking: '正在逐行检查…', done: '已处理：{a} 行通过，{r} 行需修改。', none: '暂无上传记录。',
+      status: { received: '已接收', processing: '处理中', done: '已完成', failed: '失败' },
+      nums: '通过 {a} · 需修改 {r} · 下架 {w}', rejTitle: '需修改的行', line: '行', reason: '原因', more: '仅显示前 200 行。',
+      e: { link_invalid: '链接无效或已停用。请联系 Central.Parts 获取新链接。', format: '仅接受 CSV、XLS 或 XLSX 文件。', too_big: '文件超过 50 MB。',
+        network: '网络错误，请重试。', other: '出现错误，请重试。', slow: '处理时间较长，请稍后刷新本页查看报告。' },
+      r: { mpn_missing: '型号（mpn）为空', qty_invalid: '数量无效：须为正整数', moq_invalid: '最小起订量无效：须大于或等于 1',
+        price_invalid: '价格无效：须大于 0', break_incomplete: '价格阶梯不完整：数量和价格须同时填写',
+        breaks_qty_order: '价格阶梯：数量须递增', breaks_price_order: '价格阶梯：数量越大，价格不得上涨', currency: '不支持该币种' },
+      f: { empty: '文件为空：需要一行表头和至少一行数据。', columns: '缺少必填列：mpn 和 quantity。', other: '无法读取文件。' } },
+    en: { title: 'Upload your stock list', lead: 'Each upload replaces your previous list. Rejected lines are listed with the reason: correct them and upload again.',
+      live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update',
+      ttl: 'Offers are shown to buyers for {n} days after your last upload, then marked “to reconfirm” and hidden. Upload again regularly.',
+      uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq.',
+      template: 'Download the template', pick: 'Choose a file: CSV or XLSX, up to 50 MB', send: 'Upload', reportTitle: 'Upload report',
+      sending: 'Uploading…', checking: 'Checking each line…', done: 'Processed: {a} line(s) accepted, {r} to correct.', none: 'No upload yet.',
+      status: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
+      nums: 'accepted {a} · to correct {r} · withdrawn {w}', rejTitle: 'Lines to correct', line: 'Line', reason: 'Reason', more: 'Only the first 200 lines are shown.',
+      e: { link_invalid: 'This link is invalid or no longer active. Please ask Central.Parts for a new link.', format: 'Only CSV, XLS or XLSX files are accepted.', too_big: 'The file is larger than 50 MB.',
+        network: 'Network error, please try again.', other: 'Something went wrong, please try again.', slow: 'Processing is taking longer: reload this page in a moment to see the report.' },
+      r: { mpn_missing: 'Part number (mpn) is empty', qty_invalid: 'Invalid quantity: a positive whole number is expected', moq_invalid: 'Invalid MOQ: must be 1 or more',
+        price_invalid: 'Invalid price: must be greater than 0', break_incomplete: 'Incomplete price break: quantity and price are both required',
+        breaks_qty_order: 'Price breaks: quantities must increase', breaks_price_order: 'Price breaks: the price must not rise with quantity', currency: 'Currency not supported' },
+      f: { empty: 'Empty file: a header line and at least one data line are expected.', columns: 'Required columns missing: mpn and quantity.', other: 'The file could not be read.' } },
+    fr: { title: 'Charger votre liste de stock', lead: 'Chaque chargement remplace votre liste précédente. Les lignes refusées sont listées avec leur raison : corrigez-les et rechargez le fichier.',
+      live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour',
+      ttl: 'Les offres sont montrées aux acheteurs pendant {n} jours après votre dernier chargement, puis passent « à reconfirmer » et ne sont plus montrées. Rechargez votre liste régulièrement.',
+      uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq.',
+      template: 'Télécharger le modèle', pick: 'Choisir un fichier : CSV ou XLSX, 50 Mo au plus', send: 'Charger', reportTitle: 'Rapport de chargement',
+      sending: 'Envoi en cours…', checking: 'Contrôle ligne par ligne…', done: 'Traité : {a} ligne(s) acceptée(s), {r} à corriger.', none: 'Aucun chargement pour l’instant.',
+      status: { received: 'Reçu', processing: 'En cours', done: 'Terminé', failed: 'Échec' },
+      nums: 'acceptées {a} · à corriger {r} · retirées {w}', rejTitle: 'Lignes à corriger', line: 'Ligne', reason: 'Raison', more: 'Seules les 200 premières lignes sont affichées.',
+      e: { link_invalid: 'Ce lien n’est pas valable ou n’est plus actif. Demandez un nouveau lien à Central.Parts.', format: 'Seuls les fichiers CSV, XLS ou XLSX sont acceptés.', too_big: 'Le fichier dépasse 50 Mo.',
+        network: 'Erreur réseau, réessayez.', other: 'Une erreur est survenue, réessayez.', slow: 'Le traitement prend plus de temps : rechargez la page dans un instant pour voir le rapport.' },
+      r: { mpn_missing: 'Référence (mpn) vide', qty_invalid: 'Quantité invalide : nombre entier positif attendu', moq_invalid: 'MOQ invalide : 1 ou plus',
+        price_invalid: 'Prix invalide : supérieur à 0 attendu', break_incomplete: 'Palier incomplet : quantité et prix requis',
+        breaks_qty_order: 'Paliers : les quantités doivent augmenter', breaks_price_order: 'Paliers : le prix ne doit pas augmenter avec la quantité', currency: 'Devise non prise en charge' },
+      f: { empty: 'Fichier vide : une ligne d’en-têtes et au moins une ligne de données sont attendues.', columns: 'Colonnes obligatoires absentes : mpn et quantity.', other: 'Le fichier n’a pas pu être lu.' } }
+  };
+  var LOCALE = { zh: 'zh-CN', en: 'en-GB', fr: 'fr-FR' };
+  var $ = function (id) { return document.getElementById(id); };
+  var lang = 'zh', me = null, imports = [];
+  try { var saved = localStorage.getItem('cp-lang-depot'); if (T[saved]) lang = saved; } catch (e) {}
+  var token = (/[#&]k=([0-9a-f]{20,})/.exec(location.hash) || [])[1] || '';
+  var t = function () { return T[lang]; };
+  var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var date = function (v) { return v ? new Date(v).toLocaleString(LOCALE[lang], { dateStyle: 'medium', timeStyle: 'short' }) : '—'; };
+
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
+  function err(code) { say('err', t().e[code] || t().e.other); }
+
+  function api(method, path, body) {
+    return fetch(FN + path, { method: method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
+            function () { throw 'network'; });
+  }
+
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    renderStatus(); renderImports();
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-depot', lang); } catch (e) {} applyLang(); });
+  });
+
+  function renderStatus() {
+    if (!me) return;
+    $('org-name').textContent = me.name;
+    $('ttl-text').textContent = fill(t().ttl, { n: me.ttl_days });
+    var s = me.status || {};
+    $('n-live').textContent = s.live || 0;
+    $('n-old').textContent = s.to_reconfirm || 0;
+    $('d-last').textContent = s.last_confirmed ? new Date(s.last_confirmed).toLocaleDateString(LOCALE[lang]) : '—';
+  }
+
+  // Raison d'un rejet de fichier entier (message de la base, en français) → texte de la langue choisie.
+  function fileError(msg) {
+    if (/^Fichier vide/.test(msg || '')) return t().f.empty;
+    if (/^Colonnes obligatoires/.test(msg || '')) return t().f.columns;
+    return t().f.other;
+  }
+
+  function renderImports() {
+    var box = $('imports');
+    if (!imports.length) { box.innerHTML = '<p class="muted">' + esc(t().none) + '</p>'; return; }
+    box.innerHTML = imports.map(function (i, n) {
+      var rej = (i.report && i.report.rejected) || [];
+      var accepted = (i.created || 0) + (i.updated || 0);
+      var rows = rej.map(function (r) {
+        return '<tr><td>' + esc(r.line) + '</td><td>' + esc(t().r[r.code] || r.reason) + '</td></tr>';
+      }).join('');
+      var table = rej.length ? '<table class="rej"><thead><tr><th>' + esc(t().line) + '</th><th>' + esc(t().reason) + '</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+        (i.rejected > rej.length ? '<p class="muted">' + esc(t().more) + '</p>' : '') : '';
+      return '<div class="imp"><div class="imp-h"><strong>' + esc(i.file_name) + '</strong><span class="badge ' + esc(i.status) + '">' + esc(t().status[i.status] || i.status) + '</span></div>' +
+        '<p class="muted">' + esc(date(i.received_at)) + '</p>' +
+        (i.status === 'failed' ? '<p class="msg err">' + esc(fileError(i.error)) + '</p>' :
+          '<p class="nums">' + esc(fill(t().nums, { a: accepted, r: i.rejected || 0, w: i.withdrawn || 0 })) + '</p>') +
+        (rej.length ? (n === 0 ? '<h3 class="muted">' + esc(t().rejTitle) + '</h3>' + table : '<details><summary>' + esc(t().rejTitle) + ' (' + i.rejected + ')</summary>' + table + '</details>') : '') +
+        '</div>';
+    }).join('');
+  }
+
+  function load() {
+    return Promise.all([api('GET', '/me'), api('GET', '/imports')]).then(function (d) {
+      me = d[0]; imports = d[1];
+      $('status-card').hidden = $('upload-card').hidden = $('report-card').hidden = false;
+      renderStatus(); renderImports();
+    });
+  }
+
+  // Après l'envoi : le rapport arrive en quelques secondes (traitement par la fonction import-stock).
+  function waitReport(path, tries) {
+    return api('GET', '/imports').then(function (list) {
+      imports = list; renderImports();
+      var i = list.filter(function (x) { return path.indexOf(x.file_name) >= 0; })[0];
+      if (i && (i.status === 'done' || i.status === 'failed')) return i;
+      if (tries <= 0) throw 'slow';
+      return new Promise(function (ok) { setTimeout(ok, 2000); }).then(function () { return waitReport(path, tries - 1); });
+    });
+  }
+
+  function putFile(url, f) {
+    return new Promise(function (resolve, reject) {
+      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
+      var x = new XMLHttpRequest(), bar = $('bar');
+      x.open('PUT', url);
+      x.setRequestHeader('x-upsert', 'false');
+      x.upload.onprogress = function (e) { if (e.lengthComputable) { bar.hidden = false; bar.value = Math.round(e.loaded / e.total * 100); } };
+      x.onload = function () { x.status < 300 ? resolve() : reject('other'); };
+      x.onerror = function () { reject('network'); };
+      x.send(fd);
+    });
+  }
+
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var f = $('file').files[0];
+    if (!f) return;
+    if (!/\.(csv|xlsx?)$/i.test(f.name)) return err('format');
+    if (f.size > 52428800) return err('too_big');
+    $('send').disabled = true; say('info', t().sending);
+    api('POST', '/upload-url', { file_name: f.name })
+      .then(function (u) { return putFile(u.signed_url, f).then(function () { return u.path; }); })
+      .then(function (path) { say('info', t().checking); $('bar').hidden = true; return waitReport(path, 30); })
+      .then(function (i) {
+        if (i.status === 'failed') say('err', fileError(i.error));
+        else say(i.rejected ? 'info' : 'ok', fill(t().done, { a: (i.created || 0) + (i.updated || 0), r: i.rejected || 0 }));
+        $('form').reset();
+        return api('GET', '/me').then(function (m) { me = m; renderStatus(); });
+      })
+      .catch(function (c) { $('bar').hidden = true; err(c); })
+      .then(function () { $('send').disabled = false; });
+  });
+
+  // Nouveau lien collé dans la barre d'adresse : seul le fragment change, la page est rechargée pour le lire.
+  window.addEventListener('hashchange', function () { location.reload(); });
+  applyLang();
+  if (!token) err('link_invalid');
+  else load().catch(err);
+})();
+</script>
+</body>
+</html>
