@@ -130,6 +130,13 @@ ok(norm(await page.textContent('#d-log li')).includes('Motif : Numéro d\'immatr
 ok(mock.state.notified.at(-1)?.reason === 'Numéro d\'immatriculation à vérifier', 'refus : motif transmis au fournisseur comme avec le robot');
 ok(!(await page.$$eval('#sup-list button[data-org]', (b) => b.map((x) => x.dataset.org))).includes('ORG-0108'), 'liste « en attente » mise à jour');
 
+// 8 bis. Devise du dernier import et sa provenance (migration 20261102000017).
+await page.click('#filters button[data-s=validated]');
+await page.waitForSelector('button[data-org="ORG-0110"]');
+await page.click('button[data-org="ORG-0110"]');
+await page.waitForSelector('#d-org:text("ORG-0110")');
+ok(norm(await page.textContent('#d-cur')) === 'USD (lue dans le fichier, 8 lignes) · USD (choisie au dépôt, 2 lignes)', 'fiche : devise du dernier import et provenance');
+
 // 9. Stocks et offres : résumé, 1 812 références paginées, recherche, paliers ; aucune action d'écriture.
 await page.click('#tab-stock');
 await page.waitForSelector('#stock-sum tr[data-org]');

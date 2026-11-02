@@ -20,6 +20,10 @@ manufacturer,mpn,sku,description,datasheet-url,distributor-url,quantity,price-br
 
 Vendeurs approuvés sans WeChat : lien personnel `https://central.parts/depot/lien/#k=…` ([ADR 0021](../docs/decisions/0021-listes-vendeurs-lien-expiration.md)), modèle à point-virgule et virgule décimale [`site/depot/lien/modele.csv`](../site/depot/lien/modele.csv). Chaque dépôt remplace la liste précédente ; une offre non rechargée depuis 7 jours n'est plus montrée aux acheteurs.
 
+## Devise des prix
+
+Pour chaque ligne, dans cet ordre ([ADR 0022](../docs/decisions/0022-liens-descriptions-fabricants.md)) : la colonne `currency` / `币种`, ou la devise des en-têtes de prix (`price-usd-N`) ; sinon la devise choisie au dépôt (obligatoire dans l'espace fournisseur et sur la page du lien personnel) ; sinon la devise de la société. Le rapport d'import indique la devise appliquée et sa provenance.
+
 ## Format attendu des fabricants chinois
 
 Modèle à en-têtes chinois, sur le modèle des fichiers de prix des fabricants (UMW) : [`site/depot/modele-fabricant.csv`](../site/depot/modele-fabricant.csv), publié à `https://central.parts/depot/modele-fabricant.csv` et proposé dans l'espace fournisseur.
@@ -31,7 +35,7 @@ Modèle à en-têtes chinois, sur le modèle des fichiers de prix des fabricants
 - `型号` (MPN) et `库存` (stock) obligatoires ; `产品编号` (code produit du fabricant) sert de SKU, donc de clé de mise à jour.
 - `价格` contient tous les paliers dans une cellule : `10~99 0.040|100~999 0.032|1000以上 0.028` (quantité minimale, prix ; « 以上 » ou « + » pour le dernier palier ; séparateurs `|`, `;` ou retour à la ligne). Un simple prix unitaire est aussi accepté.
 - `封装` (boîtier) va dans « Boîtier / emballage », `批次` dans le date code, `货期` dans le délai en jours (« 1-3day », « 7天 », « 2周 »).
-- `币种` : USD, CNH (ou CNY, RMB), EUR, HKD ; sans cette colonne, la devise de la société s'applique.
+- `币种` : USD, CNH (ou CNY, RMB), EUR, HKD ; sans cette colonne, la devise choisie au dépôt s'applique.
 - `产品描述`, `规格书链接`, `产品链接` : facultatifs mais appréciés, mêmes règles que ci-dessus.
 - `包装数量` (quantité par conditionnement) est accepté dans le fichier mais pas encore gardé.
 

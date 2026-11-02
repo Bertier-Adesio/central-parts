@@ -237,6 +237,15 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (!s) return '—';
     return new Date(s).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
   }
+  // Devise des lignes du dernier import et sa provenance (stock_imports.currency_used, migration 20261102000017).
+  var CUR_SRC = { file: 'lue dans le fichier', upload: 'choisie au dépôt', company: 'réglage de la société' };
+  function curText(imp) {
+    var u = imp.currency_used || {}, keys = Object.keys(u);
+    return keys.map(function (k) {
+      var p = k.split('|');
+      return p[0] + ' (' + (CUR_SRC[p[1]] || p[1]) + (keys.length > 1 ? ', ' + num(u[k]) + ' lignes' : '') + ')';
+    }).join(' · ');
+  }
   function num(n) { return n == null ? '—' : Number(n).toLocaleString('fr-FR'); }
   function price(p, cur) { return p == null ? 'sur demande' : Number(p).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) + ' ' + esc(cur || ''); }
   function show(text, kind) {
@@ -382,6 +391,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (o.status === 'rejected' ? '<dt>Motif du refus</dt><dd id="d-reason">' + esc(o.rejected_reason || '—') + '</dd>' : '') +
         '<dt>Stock</dt><dd>' + num(st.lines) + ' référence(s) en stock' + (st.sources && st.sources.length ? ' · ' + st.sources.map(function (s) { return esc(SOURCE[s] || s); }).join(', ') : '') + '</dd>' +
         '<dt>Dernier import</dt><dd>' + (imp ? esc(imp.file_name) + ' · ' + esc(dt(imp.received_at)) : '—') + '</dd>' +
+        (imp && curText(imp) ? '<dt>Devise du dernier import</dt><dd id="d-cur">' + esc(curText(imp)) + '</dd>' : '') +
         '</dl>' +
         '<div class="actions" id="d-actions">' + acts + '</div>' +
         '<h3>Journal des décisions</h3>' +

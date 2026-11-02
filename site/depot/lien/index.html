@@ -37,6 +37,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 .stat.warn b{color:var(--status-warning)}
 label.file{display:block;border:2px dashed var(--border-2);border-radius:var(--radius-md);padding:24px 16px;text-align:center;cursor:pointer;margin:0 0 12px;background:var(--bg-sunken)}
 label.file input{display:block;margin:12px auto 0;max-width:100%}
+.cur{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+.cur select{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+.cur .hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 0 0}
 progress{width:100%;height:8px;margin:12px 0 0}
 .msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
 .msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
@@ -92,10 +95,13 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 
   <section class="card" id="upload-card" hidden>
     <h2 data-t="uploadTitle">上传新的库存表</h2>
-    <p class="muted"><span data-t="format">格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq。</span>
+    <p class="muted"><span data-t="format">格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写：description、datasheet-url、distributor-url。</span>
       <a href="modele.csv" download data-t="template">下载模板</a></p>
     <form id="form">
       <label class="file"><span data-t="pick">选择文件：CSV 或 XLSX，最大 50 MB</span><input type="file" id="file" accept=".csv,.xlsx,.xls" required></label>
+      <label class="cur"><span data-t="curLabel">报价币种</span>
+        <select id="cur"><option value="" data-t="choose">请选择</option><option>USD</option><option>CNH</option><option>EUR</option><option>HKD</option></select>
+        <span class="hint" data-t="curHint">文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。</span></label>
       <button class="btn" type="submit" id="send" data-t="send">上传</button>
       <progress id="bar" max="100" value="0" hidden></progress>
     </form>
@@ -115,12 +121,14 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     zh: { title: '上传库存表', lead: '每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。',
       live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新',
       ttl: '报价在最后一次上传后 {n} 天内向采购方展示，之后变为“待重新确认”，不再展示。请定期重新上传。',
-      uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq。',
+      uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写：description、datasheet-url、distributor-url。',
       template: '下载模板', pick: '选择文件：CSV 或 XLSX，最大 50 MB', send: '上传', reportTitle: '上传报告',
       sending: '正在上传…', checking: '正在逐行检查…', done: '已处理：{a} 行通过，{r} 行需修改。', none: '暂无上传记录。',
       status: { received: '已接收', processing: '处理中', done: '已完成', failed: '失败' },
+      choose: '请选择', curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
+      curSrc: { file: '读取自文件', upload: '上传时选择', company: '公司设置' }, curLine: '币种：',
       nums: '通过 {a} · 需修改 {r} · 下架 {w}', rejTitle: '需修改的行', line: '行', reason: '原因', more: '仅显示前 200 行。',
-      e: { link_invalid: '链接无效或已停用。请联系 Central.Parts 获取新链接。', format: '仅接受 CSV、XLS 或 XLSX 文件。', too_big: '文件超过 50 MB。',
+      e: { currency: '请选择报价币种。', link_invalid: '链接无效或已停用。请联系 Central.Parts 获取新链接。', format: '仅接受 CSV、XLS 或 XLSX 文件。', too_big: '文件超过 50 MB。',
         network: '网络错误，请重试。', other: '出现错误，请重试。', slow: '处理时间较长，请稍后刷新本页查看报告。' },
       r: { mpn_missing: '型号（mpn）为空', qty_invalid: '数量无效：须为正整数', moq_invalid: '最小起订量无效：须大于或等于 1',
         price_invalid: '价格无效：须大于 0', break_incomplete: '价格阶梯不完整：数量和价格须同时填写',
@@ -129,12 +137,14 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     en: { title: 'Upload your stock list', lead: 'Each upload replaces your previous list. Rejected lines are listed with the reason: correct them and upload again.',
       live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update',
       ttl: 'Offers are shown to buyers for {n} days after your last upload, then marked “to reconfirm” and hidden. Upload again regularly.',
-      uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq.',
+      uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency; optional but appreciated: description, datasheet-url, distributor-url.',
       template: 'Download the template', pick: 'Choose a file: CSV or XLSX, up to 50 MB', send: 'Upload', reportTitle: 'Upload report',
       sending: 'Uploading…', checking: 'Checking each line…', done: 'Processed: {a} line(s) accepted, {r} to correct.', none: 'No upload yet.',
       status: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
+      choose: 'Choose', curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
+      curSrc: { file: 'read from the file', upload: 'chosen at upload', company: 'company setting' }, curLine: 'Currency: ',
       nums: 'accepted {a} · to correct {r} · withdrawn {w}', rejTitle: 'Lines to correct', line: 'Line', reason: 'Reason', more: 'Only the first 200 lines are shown.',
-      e: { link_invalid: 'This link is invalid or no longer active. Please ask Central.Parts for a new link.', format: 'Only CSV, XLS or XLSX files are accepted.', too_big: 'The file is larger than 50 MB.',
+      e: { currency: 'Please choose the price currency.', link_invalid: 'This link is invalid or no longer active. Please ask Central.Parts for a new link.', format: 'Only CSV, XLS or XLSX files are accepted.', too_big: 'The file is larger than 50 MB.',
         network: 'Network error, please try again.', other: 'Something went wrong, please try again.', slow: 'Processing is taking longer: reload this page in a moment to see the report.' },
       r: { mpn_missing: 'Part number (mpn) is empty', qty_invalid: 'Invalid quantity: a positive whole number is expected', moq_invalid: 'Invalid MOQ: must be 1 or more',
         price_invalid: 'Invalid price: must be greater than 0', break_incomplete: 'Incomplete price break: quantity and price are both required',
@@ -143,12 +153,14 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     fr: { title: 'Charger votre liste de stock', lead: 'Chaque chargement remplace votre liste précédente. Les lignes refusées sont listées avec leur raison : corrigez-les et rechargez le fichier.',
       live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour',
       ttl: 'Les offres sont montrées aux acheteurs pendant {n} jours après votre dernier chargement, puis passent « à reconfirmer » et ne sont plus montrées. Rechargez votre liste régulièrement.',
-      uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq.',
+      uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency ; facultatives mais appréciées : description, datasheet-url, distributor-url.',
       template: 'Télécharger le modèle', pick: 'Choisir un fichier : CSV ou XLSX, 50 Mo au plus', send: 'Charger', reportTitle: 'Rapport de chargement',
       sending: 'Envoi en cours…', checking: 'Contrôle ligne par ligne…', done: 'Traité : {a} ligne(s) acceptée(s), {r} à corriger.', none: 'Aucun chargement pour l’instant.',
       status: { received: 'Reçu', processing: 'En cours', done: 'Terminé', failed: 'Échec' },
+      choose: 'Choisir', curLabel: 'Devise des prix', curHint: 'Appliquée aux lignes dont la devise n’est pas dans le fichier ; une colonne de devise (currency / 币种) ou des en-têtes de prix (price-usd-1…) sont prioritaires.',
+      curSrc: { file: 'lue dans le fichier', upload: 'choisie au dépôt', company: 'réglage de la société' }, curLine: 'Devise : ',
       nums: 'acceptées {a} · à corriger {r} · retirées {w}', rejTitle: 'Lignes à corriger', line: 'Ligne', reason: 'Raison', more: 'Seules les 200 premières lignes sont affichées.',
-      e: { link_invalid: 'Ce lien n’est pas valable ou n’est plus actif. Demandez un nouveau lien à Central.Parts.', format: 'Seuls les fichiers CSV, XLS ou XLSX sont acceptés.', too_big: 'Le fichier dépasse 50 Mo.',
+      e: { currency: 'Choisissez la devise des prix.', link_invalid: 'Ce lien n’est pas valable ou n’est plus actif. Demandez un nouveau lien à Central.Parts.', format: 'Seuls les fichiers CSV, XLS ou XLSX sont acceptés.', too_big: 'Le fichier dépasse 50 Mo.',
         network: 'Erreur réseau, réessayez.', other: 'Une erreur est survenue, réessayez.', slow: 'Le traitement prend plus de temps : rechargez la page dans un instant pour voir le rapport.' },
       r: { mpn_missing: 'Référence (mpn) vide', qty_invalid: 'Quantité invalide : nombre entier positif attendu', moq_invalid: 'MOQ invalide : 1 ou plus',
         price_invalid: 'Prix invalide : supérieur à 0 attendu', break_incomplete: 'Palier incomplet : quantité et prix requis',
@@ -201,6 +213,14 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     return t().f.other;
   }
 
+  // Devise des lignes et sa provenance, plusieurs entrées si le fichier mélange les devises.
+  function curText(i) {
+    var u = i.currency_used || {}, keys = Object.keys(u);
+    return keys.map(function (k) {
+      var p = k.split('|');
+      return p[0] + ' (' + (t().curSrc[p[1]] || p[1]) + (keys.length > 1 ? ' · ' + u[k] : '') + ')';
+    }).join(' · ');
+  }
   function renderImports() {
     var box = $('imports');
     if (!imports.length) { box.innerHTML = '<p class="muted">' + esc(t().none) + '</p>'; return; }
@@ -216,6 +236,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
         '<p class="muted">' + esc(date(i.received_at)) + '</p>' +
         (i.status === 'failed' ? '<p class="msg err">' + esc(fileError(i.error)) + '</p>' :
           '<p class="nums">' + esc(fill(t().nums, { a: accepted, r: i.rejected || 0, w: i.withdrawn || 0 })) + '</p>') +
+        (curText(i) ? '<p class="muted cur-used">' + esc(t().curLine + curText(i)) + '</p>' : '') +
         (rej.length ? (n === 0 ? '<h3 class="muted">' + esc(t().rejTitle) + '</h3>' + table : '<details><summary>' + esc(t().rejTitle) + ' (' + i.rejected + ')</summary>' + table + '</details>') : '') +
         '</div>';
     }).join('');
@@ -259,14 +280,15 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     if (!f) return;
     if (!/\.(csv|xlsx?)$/i.test(f.name)) return err('format');
     if (f.size > 52428800) return err('too_big');
+    if (!$('cur').value) { $('cur').focus(); return err('currency'); }
     $('send').disabled = true; say('info', t().sending);
-    api('POST', '/upload-url', { file_name: f.name })
+    api('POST', '/upload-url', { file_name: f.name, currency: $('cur').value })
       .then(function (u) { return putFile(u.signed_url, f).then(function () { return u.path; }); })
       .then(function (path) { say('info', t().checking); $('bar').hidden = true; return waitReport(path, 30); })
       .then(function (i) {
         if (i.status === 'failed') say('err', fileError(i.error));
         else say(i.rejected ? 'info' : 'ok', fill(t().done, { a: (i.created || 0) + (i.updated || 0), r: i.rejected || 0 }));
-        $('form').reset();
+        var keep = $('cur').value; $('form').reset(); $('cur').value = keep; // la devise reste choisie pour le dépôt suivant
         return api('GET', '/me').then(function (m) { me = m; renderStatus(); });
       })
       .catch(function (c) { $('bar').hidden = true; err(c); })
