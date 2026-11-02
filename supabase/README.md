@@ -144,6 +144,7 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    curl -s -X POST "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=$TOKEN" -H "Content-Type: application/json" --data-binary @supabase/wechat/menu.json; echo
    ```
    Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
+   Le bouton « 供应商 › 上传库存 » est de type « click » (clé `DEPOT_LOGIN`) : WeChat prévient `wechat-events`, qui répond dans la conversation par un lien de connexion personnel (15 minutes) vers `/depot/`, pour tout le monde, inscrit ou non. Sur téléphone, c'est le moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran. Publier le menu **après** le déploiement de `wechat-events` qui gère ce clic : sinon le bouton ne répondrait rien.
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ## Déployer les fonctions

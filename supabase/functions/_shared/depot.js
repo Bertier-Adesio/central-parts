@@ -83,6 +83,21 @@ export function sceneOf(msg) {
   return null;
 }
 
+// Bouton « 供应商 › 上传库存 » du menu (type « click », clé DEPOT_LOGIN, supabase/wechat/menu.json) : WeChat prévient
+// le serveur de qui l'a touché ; le robot répond par un lien de connexion personnel. Sur téléphone, c'est le seul
+// moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran.
+export const DEPOT_MENU_KEY = 'DEPOT_LOGIN';
+export function isDepotMenuClick(msg) {
+  return msg.MsgType === 'event' && String(msg.Event || '').toUpperCase() === 'CLICK' && msg.EventKey === DEPOT_MENU_KEY;
+}
+export function depotLinkText(url) {
+  return [
+    '点此登录 Central.Parts 供应商中心（15 分钟内有效）：', url, '',
+    '尚未注册的公司可在页面上注册。链接过期后，请再次点击菜单「供应商」→「上传库存」。', '',
+    'Tap to log in to the Central.Parts supplier centre (valid 15 minutes). Companies not yet registered can register on the page. If the link has expired, tap the menu again.',
+  ].join('\n');
+}
+
 // Réponse texte immédiate dans la conversation WeChat du fournisseur.
 export function replyText(toUser, fromUser, content, now = Date.now()) {
   const cdata = (s) => '<![CDATA[' + String(s).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>';
