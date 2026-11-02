@@ -55,6 +55,14 @@ export function readOpenids(text) {
   return [...new Set(list)];
 }
 
+// Réponse de menu/trymatch : boutons au premier niveau ({ button }) ou sous « menu » ({ menu: { button } }).
+// Sans bouton reconnu, on affiche seulement les noms des champs reçus (jamais de valeur).
+export function trymatchVerdict(r, menu) {
+  const buttons = r?.button || r?.menu?.button;
+  if (!Array.isArray(buttons)) return `à vérifier dans WeChat (réponse sans boutons : ${Object.keys(r || {}).join(', ') || 'vide'})`;
+  return buttons[0]?.name === menu.button[0].name ? 'menu anglais' : `menu par défaut (« ${buttons[0]?.name} ») : étiquette pas encore prise en compte, réessayer dans quelques minutes`;
+}
+
 export const mask = (openid) => String(openid).slice(0, 4) + '…' + String(openid).slice(-3);
 
 async function call(token, path, body) {
@@ -128,8 +136,7 @@ async function main() {
   // 4. Vérification : premier bouton vu par chaque opérateur.
   for (const o of openids) {
     const r = await call(token, '/cgi-bin/menu/trymatch', { user_id: o });
-    const first = r.button?.[0]?.name;
-    console.log(`${mask(o)} : ${first === menu.button[0].name ? 'menu anglais' : `menu inattendu (« ${first} »)`}`);
+    console.log(`${mask(o)} : ${trymatchVerdict(r, menu)}`);
   }
   console.log('Fait. Le menu apparaît après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).');
 }
