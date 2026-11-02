@@ -84,7 +84,7 @@ ok(t.centralParts.offerId === 'cpo_aaaaaaaaaaaaaaaaaaaa' && t.centralParts.other
 ok(C.toTiProduct('NE555DR', [], 'USD') === null, 'TI : aucune offre');
 const realTi = JSON.parse(readFileSync(new URL('./fixtures/ti-product.json', import.meta.url), 'utf8'));
 const tiDiff = sameShape(realTi, t, '', []);
-ok(!tiDiff.length, 'TI : mêmes champs et mêmes types que la réponse réelle du TI store ' + tiDiff.join(', '));
+ok(!tiDiff.length, 'TI : mêmes champs et mêmes types que l\'exemple de réponse du TI store ' + tiDiff.join(', '));
 ok(t.buyNowUrl === 'https://central.parts/recherche/?q=NE555DR' && !('buyNowURL' in t), 'TI : buyNowUrl vers la recherche Central.Parts');
 ok(Array.isArray(t.futureInventory) && t.futureInventory.length === 0, 'TI : aucune prévision de stock annoncée');
 ok(C.toTiProduct('NE555DR', [offers[2]], 'USD').pricing.length === 0, 'TI : offre sur demande sans prix');

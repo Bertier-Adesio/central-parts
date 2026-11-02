@@ -4,8 +4,10 @@
 //   - format natif : celui de la base (offer_id, stock, moq, price_breaks, source_category, ship_from…), page /api/ ;
 //   - format compatible DigiKey (Product Information v4 : ProductDetails, KeywordSearch) ;
 //   - format compatible Texas Instruments (TI store, inventory and pricing v2).
-// Formats vérifiés sur des réponses réelles transmises le 2 novembre 2026 : DigiKey ProductPricing (v4) et TI store
-// (produit) ; tools/fixtures/. Le fournisseur n'apparaît jamais : « Supplier » vaut
+// DigiKey ProductPricing (v4) : structure d'une réponse réelle (tools/fixtures/digikey-productpricing.json).
+// TI store : structure d'un exemple de la réponse « prix et stock » (camelCase, tiPartNumber), pas encore d'une capture
+// réelle (tools/fixtures/ti-product.json, à remplacer). La fiche produit TI /v1 (PascalCase, Identifier…), que les
+// connecteurs fusionnent sous productInformation, n'est pas servie : faute d'exemple, rien n'est inventé. Le fournisseur n'apparaît jamais : « Supplier » vaut
 // toujours Central.Parts, et l'identifiant de l'offre remplace le numéro de produit du distributeur.
 
 export const SOURCE_CATEGORIES = ['manufacturer', 'authorized_distributor', 'broker_surplus'];
@@ -135,7 +137,7 @@ export function toDigiKeyKeyword(mpn, offers, currency, limit = 50, offset = 0) 
 export function toTiProduct(mpn, offers, currency) {
   const o = offers.find((x) => x.price_status === 'priced') || offers[0];
   if (!o) return null;
-  // Champs et types d'une réponse réelle du TI store (vérifiés par tools/test-catalog.mjs) : un texte vide ou 0 plutôt
+  // Champs et types de l'exemple de réponse du TI store (vérifiés par tools/test-catalog.mjs) : un texte vide ou 0 plutôt
   // que null quand Central.Parts ne connaît pas la valeur, pour ne pas casser un connecteur typé.
   return {
     tiPartNumber: mpn,
@@ -145,7 +147,7 @@ export function toTiProduct(mpn, offers, currency) {
     quantity: o.stock,
     limit: o.stock,
     minimumOrderQuantity: o.moq,
-    standardPackQuantity: 0,
+    standardPackQuantity: 0, // « standardPackQuantity », et non « standardPackageQuantity »
     packageType: '',
     packageCarrier: o.packaging || '',
     customReel: false,
