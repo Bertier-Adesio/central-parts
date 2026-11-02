@@ -67,6 +67,10 @@ export function createMock() {
     ['1N4148W', 'onsemi', 'SOD-123', 500000, 0.004], ['BSS138', 'onsemi', 'SOT-23', 240000, 0.012],
   ];
   const lots = demo.map(([mpn, mf, pack, qty, p], i) => lot('LOT-D' + i, 'ORG-0110', orgs[4].name, mpn, mf, pack, qty, p, 'USD', 5, i));
+  // Lien du vendeur, fiche technique et description sur les premières références (ADR 0022), adresses fictives.
+  Object.assign(lots[0], { description: 'Microcontrôleur Arm Cortex-M0+ 128 Ko, LQFP-64',
+    datasheet_url: 'https://fabricant.example/ds/STM32G071RBT6.pdf', product_url: 'https://vendeur.example/p/STM32G071RBT6' });
+  Object.assign(lots[1], { product_url: 'javascript:alert(1)' });
   // 1 812 références d'un fabricant (familles courantes, numérotées pour rester fictives), paliers propres à chacune.
   const fam = [['SS34', 'SMA'], ['1N4148W', 'SOD-123'], ['BSS138', 'SOT-23'], ['LM358', 'SOP-8'], ['AMS1117', 'SOT-223'],
     ['TL431', 'SOT-23'], ['MMBT3904', 'SOT-23'], ['SMBJ5.0A', 'SMB'], ['78L05', 'SOT-89'], ['LM2596S', 'TO-263']];
@@ -126,7 +130,8 @@ export function createMock() {
       if (path === '/lots') {
         const org = query.get('org'), q = (query.get('q') || '').toLowerCase(), off = Math.max(0, Number(query.get('offset')) || 0);
         const m = lots.filter((l) => (!org || l.org_id === org) &&
-          (!q || l.mpn.toLowerCase().includes(q) || l.manufacturer.toLowerCase().includes(q) || (l.pack || '').toLowerCase().includes(q)))
+          (!q || l.mpn.toLowerCase().includes(q) || l.manufacturer.toLowerCase().includes(q) || (l.pack || '').toLowerCase().includes(q)
+            || (l.description || '').toLowerCase().includes(q)))
           .sort((a, b) => a.seller.localeCompare(b.seller) || a.mpn.toUpperCase().localeCompare(b.mpn.toUpperCase()));
         return [200, { total: m.length, rows: m.slice(off, off + 50) }];
       }

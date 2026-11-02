@@ -82,7 +82,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 <main class="wrap">
   <h1 data-t="title">供应商中心</h1>
   <p class="lead" data-t="lead">注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
-  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。</span> <a href="stock-template.csv" download data-t="tplLink">下载模板（CSV）</a></p>
+  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。产品描述、规格书链接和产品链接为选填，但建议填写。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
@@ -186,7 +186,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
       refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
       menuHint: '在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。',
-      tpl: '推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。', tplLink: '下载模板（CSV）',
+      tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。产品描述、规格书链接和产品链接为选填，但建议填写。',
+      tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）',
       regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
       fCode: '统一社会信用代码', fCodeHint: '18 位，见营业执照。', fCodeOther: '公司注册号码',
@@ -217,7 +218,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
       refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
       menuHint: 'On a phone: open the “Adesio Central.Parts” account in WeChat and tap the menu “供应商” → “上传库存” to receive your login link.',
-      tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and up to five price breaks (USD).', tplLink: 'Download the template (CSV)',
+      tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Description, datasheet link and product link are optional but appreciated.',
+      tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)',
       regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
       fCode: 'Unified social credit code', fCodeHint: '18 characters, on the business licence.', fCodeOther: 'Company registration number',

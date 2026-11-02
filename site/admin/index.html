@@ -88,6 +88,8 @@ table.breaks td{border:0;padding:0 8px 0 0;white-space:nowrap}
 dialog{border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;max-width:480px;width:calc(100% - 32px);box-sizing:border-box;background:var(--bg-surface);color:var(--fg-1)}
 dialog::backdrop{background:var(--bg-inverse);opacity:.5}
 .empty{padding:16px;color:var(--fg-3);font-size:var(--text-sm)}
+.desc{display:inline-block;max-width:36ch;overflow-wrap:anywhere}
+a.ext{font-size:var(--text-xs);color:var(--fg-2)}
 [hidden]{display:none!important}
 @media (max-width:820px){
   .split{grid-template-columns:minmax(0,1fr)}
@@ -478,6 +480,16 @@ dialog::backdrop{background:var(--bg-inverse);opacity:.5}
   $('lot-prev').addEventListener('click', function () { state.lots.offset = Math.max(0, state.lots.offset - 50); loadLots(); });
   $('lot-next').addEventListener('click', function () { state.lots.offset += 50; loadLots(); });
 
+  // Lien du vendeur et fiche technique : usage interne (ADR 0022), jamais montrés aux acheteurs. Seuls les liens
+  // http(s) deviennent cliquables ; ils s'ouvrent dans un nouvel onglet sans transmettre l'adresse du back office.
+  function linksHtml(l) {
+    var out = [];
+    [['datasheet_url', 'Fiche technique'], ['product_url', 'Page chez le vendeur']].forEach(function (k) {
+      var u = l[k[0]];
+      if (u && /^https?:\/\//i.test(u)) out.push('<a class="ext" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + k[1] + '</a>');
+    });
+    return out.length ? '<br>' + out.join(' · ') : '';
+  }
   function breaksHtml(l) {
     if (!l.breaks || !l.breaks.length) return l.unit_price == null ? '<span class="muted">sur demande</span>' : price(l.unit_price, l.currency);
     return '<table class="breaks">' + l.breaks.map(function (b) {
@@ -492,7 +504,8 @@ dialog::backdrop{background:var(--bg-inverse);opacity:.5}
       var rows = d.rows || [];
       $('lot-count').textContent = d.total ? 'Références ' + num(L.offset + 1) + ' à ' + num(L.offset + rows.length) + ' sur ' + num(d.total) + '.' : 'Aucune référence.';
       $('lot-list').innerHTML = rows.map(function (l) {
-        return '<tr><td data-l="Référence" class="mono"><strong>' + esc(l.mpn) + '</strong>' + (l.date_code ? '<br><span class="muted">DC ' + esc(l.date_code) + '</span>' : '') + '</td>' +
+        return '<tr><td data-l="Référence"><strong class="mono">' + esc(l.mpn) + '</strong>' + (l.date_code ? '<br><span class="muted mono">DC ' + esc(l.date_code) + '</span>' : '') +
+          (l.description ? '<br><span class="muted desc">' + esc(l.description) + '</span>' : '') + linksHtml(l) + '</td>' +
           '<td data-l="Marque">' + esc(l.manufacturer || '—') + '</td><td data-l="Boîtier">' + esc(l.pack || '—') + '</td>' +
           '<td data-l="Stock" class="n">' + num(l.qty) + '</td><td data-l="Prix">' + breaksHtml(l) + '</td>' +
           '<td data-l="Délai" class="n">' + (l.lead_days == null ? '—' : esc(l.lead_days) + ' j') + '</td>' +

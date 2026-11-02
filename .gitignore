@@ -31,6 +31,7 @@ data/exports/
 # Modèle vide publié pour les fournisseurs (données fictives).
 !site/depot/stock-template.csv
 !site/depot/lien/modele.csv
+!site/depot/modele-fabricant.csv
 # Listes de test fictives (aucune donnée de fournisseur réel).
 !tools/fixtures/*.csv
 
