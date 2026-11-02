@@ -3,12 +3,16 @@
 // (--no-verify-jwt) : chaque appel porte le jeton du lien personnel, vérifié par la base (empreinte SHA-256).
 //
 //   GET  /listes/me          → vendeur du lien et état de ses offres (en ligne, à reconfirmer, seuil)
-//   POST /listes/upload-url  {file_name} → lien de dépôt signé ; le fichier remplace toujours la liste précédente
+//   POST /listes/upload-url  {file_name, currency} → lien de dépôt signé ; le fichier remplace toujours la liste précédente ;
+//                            currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
 //   GET  /listes/imports     → 20 derniers dépôts du vendeur et leur rapport (lignes rejetées avec leur code)
 //
 // Le vendeur ne voit jamais que ses propres données. Le jeton n'est jamais écrit dans les journaux.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { storagePath } from '../_shared/depot.js';
+
+// Devises proposées au dépôt (mêmes codes que public.currencies et l'inscription).
+const CURRENCIES = ['USD', 'CNH', 'EUR', 'HKD'];
 
 const ORIGINS = (Deno.env.get('LISTES_ORIGINS') || 'https://central.parts').split(',');
 
@@ -41,9 +45,14 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST' && path.endsWith('/upload-url')) {
-      const { file_name } = await req.json().catch(() => ({}));
-      const key = storagePath(org, file_name, { complete: true });
-      if (!key) return json({ error: 'format' }, 422);
+      const { file_name, currency } = await req.json().catch(() => ({}));
+      // Devise des prix quand le fichier ne l'indique pas : choisie à chaque dépôt (obligatoire), transmise à l'import
+      // par le suffixe « -devise-USD » du nom (migration 20261102000017).
+      const cur = String(currency || '').toUpperCase();
+      if (!CURRENCIES.includes(cur)) return json({ error: 'currency' }, 422);
+      const base = storagePath(org, file_name, { complete: true });
+      if (!base) return json({ error: 'format' }, 422);
+      const key = base.replace(/\.([A-Za-z0-9]+)$/, `-devise-${cur}.$1`);
       const { data, error } = await db.storage.from('stock-imports').createSignedUploadUrl(key);
       if (error) return json({ error: 'storage' }, 500);
       return json({ signed_url: data.signedUrl, path: key, max_bytes: 52428800 });
@@ -51,7 +60,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'GET' && path.endsWith('/imports')) {
       const { data, error } = await db.from('stock_imports')
-        .select('id, file_name, status, rows_total, created, updated, rejected, withdrawn, error, report, received_at, processed_at')
+        .select('id, file_name, status, rows_total, created, updated, rejected, withdrawn, error, report, received_at, processed_at, currency, currency_used')
         .eq('org_id', org).order('received_at', { ascending: false }).limit(20);
       if (error) return json({ error: 'database' }, 500);
       return json(data.map((i) => ({ ...i, report: { rejected: (i.report?.rejected || []).slice(0, 200) } })));

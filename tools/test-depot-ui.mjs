@@ -31,8 +31,12 @@ async function api(route) {
   }
   if (path === '/license-url') return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/x', path: 'ORG-0107/licence-1.jpg' });
   if (path === '/license') { state.org.has_license = true; return reply({ ok: true }); }
-  if (path === '/upload-url') return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/y', path: 'ORG-0107/f.csv' });
-  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [] } }] : []);
+  if (path === '/upload-url') {
+    if (!['USD', 'CNH', 'EUR', 'HKD'].includes(body.currency)) return reply({ error: 'currency' }, 422);
+    state.uploadCurrency = body.currency;
+    return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/y', path: 'ORG-0107/f-devise-' + body.currency + '.csv' });
+  }
+  if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [] }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
   if (path === '/contacts') return reply(state.contacts);
   if (path === '/requests') return reply(state.requests || []);
   if (path === '/requests/answer') { state.answer = body; state.requests[0].status = body.ok ? 'confirmed' : 'unavailable'; return reply(state.requests[0]); }
@@ -103,7 +107,12 @@ ok(state.calls.includes('POST /license') && (await page.textContent('#status')).
 // 5. Dépôt d'un fichier de stock pendant l'examen.
 await page.setInputFiles('#file', { name: '库存.csv', mimeType: 'text/csv', buffer: Buffer.from('mpn,quantity\nNE555DR,10\n') });
 await page.click('#send');
+ok((await page.textContent('#msg')).includes('请选择报价币种') && !state.calls.includes('POST /upload-url'), 'devise non choisie : dépôt refusé dans la page');
+await page.selectOption('#cur', 'USD');
+await page.click('#send');
 await page.waitForSelector('.imp');
+ok(state.uploadCurrency === 'USD', 'devise choisie transmise au dépôt');
+ok((await page.textContent('#imports')).includes('币种：USD (上传时选择)'), 'rapport : devise et provenance affichées');
 ok((await page.textContent('#imports')).includes('新增 3'), 'dépôt pendant l\'examen : rapport affiché');
 
 // 6. Collègues : l'administrateur génère une invitation.

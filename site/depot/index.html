@@ -31,6 +31,9 @@ h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 label.file{display:block;border:2px dashed var(--border-2);border-radius:var(--radius-md);padding:24px 16px;text-align:center;cursor:pointer;margin:0 0 12px;background:var(--bg-sunken)}
 label.file input{display:block;margin:12px auto 0;max-width:100%}
 .check{display:flex;gap:8px;align-items:flex-start;margin:0 0 16px;font-size:var(--text-sm)}
+.cur{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+.cur select{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+.cur .hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 0 0}
 progress{width:100%;height:8px;margin:12px 0 0}
 .msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
 .msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
@@ -149,6 +152,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       <label class="file"><span data-t="pick">选择文件：CSV、XLS 或 XLSX，最大 50 MB</span>
         <input type="file" id="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
       </label>
+      <label class="cur"><span data-t="curLabel">报价币种</span>
+        <select id="cur"><option value="" data-t="choose">请选择</option><option>USD</option><option>CNH</option><option>EUR</option><option>HKD</option></select>
+        <span class="hint" data-t="curHint">文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。</span></label>
       <label class="check"><input type="checkbox" id="complete"><span data-t="complete">这是完整库存表：替换之前上传的全部库存（不在此表中的料号库存将归零）。</span></label>
       <button class="btn btn-main" type="submit" id="send" data-t="send">上传</button>
       <progress id="prog" max="100" value="0" hidden></progress>
@@ -209,7 +215,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
       nums: function (i) { return '新增 ' + i.created + ' · 更新 ' + i.updated + ' · 拒绝 ' + i.rejected + ' · 可能重复 ' + i.duplicates + ' · 缺少日期码 ' + i.missing_date_code + (i.withdrawn ? ' · 归零 ' + i.withdrawn : ''); },
       rejected: '被拒绝的行', line: '第 {n} 行',
-      e: { invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
+      curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
+      curSrc: { file: '读取自文件', upload: '上传时选择', company: '公司设置' }, curLine: '币种：',
+      e: { currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
         session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
         code_invalid: '统一社会信用代码有误，请核对营业执照。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
         already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
@@ -241,7 +249,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
       nums: function (i) { return 'new ' + i.created + ' · updated ' + i.updated + ' · rejected ' + i.rejected + ' · possible duplicates ' + i.duplicates + ' · no date code ' + i.missing_date_code + (i.withdrawn ? ' · set to zero ' + i.withdrawn : ''); },
       rejected: 'Rejected lines', line: 'line {n}',
-      e: { invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
+      curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
+      curSrc: { file: 'read from the file', upload: 'chosen at upload', company: 'company setting' }, curLine: 'Currency: ',
+      e: { currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
         session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
         code_invalid: 'The unified social credit code is not valid: please check the business licence.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
         already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
@@ -448,11 +458,20 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       return '<div class="imp"><div class="imp-h"><span>' + esc(i.file_name) + '</span><span class="badge ' + esc(i.status) + '">' + esc(t().st[i.status] || i.status) + '</span></div>' +
         '<p class="muted" style="margin:2px 0 0">' + esc(new Date(i.received_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB')) + '</p>' +
         (i.status === 'done' ? '<p class="nums">' + esc(t().nums(i)) + '</p>' : '') +
+        (curText(i) ? '<p class="muted cur-used" style="margin:2px 0 0">' + esc(t().curLine + curText(i)) + '</p>' : '') +
         (i.error ? '<p class="msg err" style="margin:6px 0 0">' + esc(i.error) + '</p>' : '') +
         (rej.length ? '<details><summary>' + esc(t().rejected) + ' (' + i.rejected + ')</summary><ul>' + rej.map(function (r) {
           return '<li>' + esc(t().line.replace('{n}', r.line)) + ' : ' + esc(r.reason) + '</li>'; }).join('') + '</ul></details>' : '') +
         '</div>';
     }).join('');
+  }
+  // Devise des lignes et sa provenance : « USD（读取自文件）», plusieurs entrées si le fichier mélange les devises.
+  function curText(i) {
+    var u = i.currency_used || {}, keys = Object.keys(u);
+    return keys.map(function (k) {
+      var p = k.split('|');
+      return p[0] + ' (' + (t().curSrc[p[1]] || p[1]) + (keys.length > 1 ? ' · ' + u[k] : '') + ')';
+    }).join(' · ');
   }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -462,11 +481,12 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     if (!f) return;
     if (!/\.(csv|xls|xlsx)$/i.test(f.name)) return err('format');
     if (f.size > 52428800) return err('size');
+    if (!$('cur').value) { $('cur').focus(); return err('currency'); }
     $('send').disabled = true; say('info', t().uploading);
-    api('POST', '/upload-url', { file_name: f.name, complete: $('complete').checked }).then(function (u) {
+    api('POST', '/upload-url', { file_name: f.name, complete: $('complete').checked, currency: $('cur').value }).then(function (u) {
       return putFile(u.signed_url, f, $('prog'));
     }).then(function () {
-      say('ok', t().uploaded); $('form').reset(); $('prog').hidden = true; refresh();
+      say('ok', t().uploaded); var keep = $('cur').value; $('form').reset(); $('cur').value = keep; $('prog').hidden = true; refresh();
     }, function (code) { lost(code); $('prog').hidden = true; })
       .then(function () { $('send').disabled = false; });
   });

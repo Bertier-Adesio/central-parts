@@ -46,6 +46,9 @@ function processUpload(path, bytes) {
     for (const [sku, l] of state.lots) if (!seen.has(sku) && l.qty > 0) { l.qty = 0; imp.withdrawn++; }
     Object.assign(imp, { status: 'done', rejected: parsed.rejected.length, report: { rejected: parsed.rejected } });
   }
+  // Devise et provenance, comme stock_imports.currency_used : en-têtes price-usd-N → lue dans le fichier.
+  const okRows = (imp.created || 0) + (imp.updated || 0);
+  imp.currency_used = okRows ? { 'USD|file': okRows } : {};
   state.imports.unshift(imp);
 }
 
@@ -57,8 +60,10 @@ async function listes(route) {
   const live = [...state.lots.values()].filter((l) => l.qty > 0);
   if (path === '/me') return reply({ name: VENDOR, currency: 'USD', ttl_days: 7, status: { live: live.length, to_reconfirm: 0, last_confirmed: live[0]?.confirmed_at || null } });
   if (path === '/upload-url') {
-    const { file_name } = JSON.parse(req.postData() || '{}');
-    state.pending = 'P1/20261102-090000-' + file_name.replace(/\.(\w+)$/, '-complet.$1');
+    const { file_name, currency } = JSON.parse(req.postData() || '{}');
+    if (!['USD', 'CNH', 'EUR', 'HKD'].includes(currency)) return reply({ error: 'currency' }, 422);
+    state.currency = currency;
+    state.pending = 'P1/20261102-090000-' + file_name.replace(/\.(\w+)$/, '-complet-devise-' + currency + '.$1');
     return reply({ signed_url: SUPA + '/storage/v1/object/upload/sign/stock-imports/x', path: state.pending, max_bytes: 52428800 });
   }
   if (path === '/imports') return reply(state.imports);
@@ -120,7 +125,12 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
 
   await page.setInputFiles('#file', fixture('liste-partenaire.csv'));
   await page.click('#send');
+  ok((await page.textContent('#msg')).includes('请选择报价币种') && !state.pending, 'devise non choisie : dépôt refusé dans la page, rien n\'est envoyé');
+  await page.selectOption('#cur', 'USD');
+  await page.click('#send');
   await page.waitForFunction(() => /10 行通过/.test(document.getElementById('msg').textContent));
+  ok(state.currency === 'USD' && state.pending.includes('-devise-USD.'), 'devise choisie transmise au dépôt');
+  ok((await page.textContent('#imports .imp:first-child')).includes('币种：USD (读取自文件)'), 'rapport : devise et provenance affichées');
   ok((await page.textContent('#msg')).includes('0 行需修改'), 'liste de test : 10 lignes acceptées, aucune à corriger');
   ok((await page.textContent('#n-live')) === '10', 'liste de test : 10 offres en ligne');
   ok(await noScroll(page), '390 px : pas de défilement horizontal après le rapport');

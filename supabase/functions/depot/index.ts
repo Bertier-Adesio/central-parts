@@ -10,7 +10,8 @@
 //                           (region : CN, HK ou OTHER ; CN par défaut pour une page restée en cache)
 //   POST /depot/license-url {file_name}  → lien de dépôt signé pour la photo de la licence (营业执照)
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
-//   POST /depot/upload-url  {file_name, complete?}  → lien de dépôt signé vers le dossier de la société
+//   POST /depot/upload-url  {file_name, complete?, currency}  → lien de dépôt signé vers le dossier de la société ;
+//                           currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
 //   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport
 //   GET  /depot/requests    → demandes d'achat reçues par la société (90 jours), sans l'acheteur
 //   POST /depot/requests/answer {ref, ok} → confirme ou refuse une demande d'achat (ADR 0014)
@@ -22,6 +23,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { licensePath, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
 import { notifyOperators, requestAnswerNote, supplierCard, wechatPost } from '../_shared/wechat.ts';
+
+// Devises proposées au dépôt (mêmes codes que public.currencies et l'inscription).
+const CURRENCIES = ['USD', 'CNH', 'EUR', 'HKD'];
 
 const ORIGINS = (Deno.env.get('DEPOT_ORIGINS') || 'https://central.parts').split(',');
 const SECRET = Deno.env.get('DEPOT_SECRET') || '';
@@ -119,9 +123,14 @@ Deno.serve(async (req) => {
     if (who.status === 'rejected') return json({ error: 'rejected', detail: who.rejected_reason }, 403);
 
     if (req.method === 'POST' && path.endsWith('/upload-url')) {
-      const { file_name, complete } = await body();
-      const key = storagePath(org, file_name, { complete: !!complete });
-      if (!key) return json({ error: 'format', detail: 'CSV, XLS ou XLSX' }, 422);
+      const { file_name, complete, currency } = await body();
+      // Devise des prix quand le fichier ne l'indique pas : choisie à chaque dépôt (obligatoire), transmise à l'import
+      // par le suffixe « -devise-USD » du nom, comme « -complet » (migration 20261102000017).
+      const cur = String(currency || '').toUpperCase();
+      if (!CURRENCIES.includes(cur)) return json({ error: 'currency', detail: CURRENCIES.join(', ') }, 422);
+      const base = storagePath(org, file_name, { complete: !!complete });
+      if (!base) return json({ error: 'format', detail: 'CSV, XLS ou XLSX' }, 422);
+      const key = base.replace(/\.([A-Za-z0-9]+)$/, `-devise-${cur}.$1`);
       const { data, error } = await db.storage.from('stock-imports').createSignedUploadUrl(key);
       if (error) return json({ error: 'storage', detail: error.message }, 500);
       return json({ signed_url: data.signedUrl, path: key, max_bytes: 52428800 });
@@ -129,7 +138,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'GET' && path.endsWith('/imports')) {
       const { data, error } = await db.from('stock_imports')
-        .select('id, file_name, status, rows_total, created, updated, rejected, duplicates, missing_date_code, withdrawn, error, report, received_at, processed_at')
+        .select('id, file_name, status, rows_total, created, updated, rejected, duplicates, missing_date_code, withdrawn, error, report, received_at, processed_at, currency, currency_used')
         .eq('org_id', org).order('received_at', { ascending: false }).limit(20);
       if (error) return json({ error: 'database', detail: error.message }, 500);
       // Rapport allégé pour la page : 50 lignes rejetées au plus.

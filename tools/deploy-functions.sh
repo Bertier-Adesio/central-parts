@@ -29,7 +29,9 @@ fi
 if [ -z "$(echo $LIST)" ]; then echo "Aucune fonction à déployer."; exit 0; fi
 for f in $LIST; do
   case " $ALL " in *" $f "*) ;; *) echo "Fonction inconnue : $f" >&2; exit 1 ;; esac
-  FLAGS="--project-ref $REF --use-api"
+  # --yes : depuis novembre 2026, la CLI demande une confirmation avant de déployer ; en CI (sans terminal), elle
+  # refuse sans cette option (« Confirmation required … Nothing was changed »).
+  FLAGS="--project-ref $REF --use-api --yes"
   case " $PUBLIC " in *" $f "*) FLAGS="$FLAGS --no-verify-jwt" ;; esac
   echo "Déploiement de $f"
   supabase functions deploy "$f" $FLAGS
