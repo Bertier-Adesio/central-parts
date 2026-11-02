@@ -92,7 +92,7 @@ export function isDepotMenuClick(msg) {
 }
 // Boutons du menu anglais des opérateurs (supabase/wechat/menu-operators.json, réservé à l'étiquette « operators »,
 // publié par tools/wechat-menu-operators.mjs) : un clic vaut la commande texte correspondante, pour un opérateur seulement.
-export const OPERATOR_MENU_KEYS = { OP_PENDING: 'pending', OP_HELP: 'help' };
+export const OPERATOR_MENU_KEYS = { OP_PENDING: 'pending', OP_REQUESTS: 'requests', OP_HELP: 'help' };
 export function operatorMenuCommand(msg) {
   if (msg.MsgType !== 'event' || String(msg.Event || '').toUpperCase() !== 'CLICK') return null;
   return Object.hasOwn(OPERATOR_MENU_KEYS, msg.EventKey) ? OPERATOR_MENU_KEYS[msg.EventKey] : null;

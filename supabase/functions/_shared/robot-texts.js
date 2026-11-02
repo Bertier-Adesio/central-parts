@@ -101,6 +101,7 @@ export function operatorHelpText() {
     'approve ORG-0123',
     'reject ORG-0123 reason',
     'link: your login link to the supplier centre',
+    'requests: open purchase requests (latest 10)',
     'reply 123 text: answer forwarded message #123',
     '',
     'Purchase requests (PR-0001):',
@@ -111,6 +112,26 @@ export function operatorHelpText() {
     'paid PR-0001',
     'shipped PR-0001',
     'cancel PR-0001',
+  ].join('\n');
+}
+
+// Statuts des demandes d'achat, pour les opérateurs.
+export const STATUS_EN = { submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
+  proforma_sent: 'proforma sent', paid: 'paid', shipped: 'shipped', cancelled: 'cancelled' };
+
+// Demandes « en cours » : ni expédiées, ni annulées, ni sans stock.
+export const OPEN_REQUEST_STATUSES = ['submitted', 'confirmed', 'proforma_sent', 'paid'];
+
+// Commande « requests » (bouton Review › Purchase requests) : demandes en cours, les plus récentes d'abord.
+// rows : { id, status, mpn, qty, buyer_company, created_at } ; total : nombre de demandes en cours.
+export function operatorRequestsText(rows, total = rows.length) {
+  if (!rows.length) return 'No open purchase request.';
+  const day = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' });
+  return [
+    `Open purchase requests: ${total}${total > rows.length ? ` (latest ${rows.length} shown)` : ''}`,
+    ...rows.map((r) => `${r.id} · ${STATUS_EN[r.status] || r.status} · ${r.mpn} × ${r.qty} · ${r.buyer_company} · ${day(r.created_at)}`),
+    '',
+    `Full card: "request ${rows[0].id}"`,
   ].join('\n');
 }
 
