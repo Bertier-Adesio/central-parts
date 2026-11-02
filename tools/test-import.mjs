@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
 import * as R from '../supabase/functions/_shared/robot-texts.js';
 import { OPERATOR_MENU_KEYS, operatorMenuCommand } from '../supabase/functions/_shared/depot.js';
-import { conditionalMenu, mask, menuProblems, readOpenids } from './wechat-menu-operators.mjs';
+import { conditionalMenu, mask, menuProblems, readOpenids, trymatchVerdict } from './wechat-menu-operators.mjs';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -264,6 +264,8 @@ ok(/const menuCmd = operatorMenuCommand\(msg\);\s*if \(menuCmd\) \{\s*if \(!\(aw
 ok(JSON.stringify(readOpenids('# opérateurs\noABCDEFGHIJKLMNOPQRSTUVWX\n\noABCDEFGHIJKLMNOPQRSTUVWX\n')) === '["oABCDEFGHIJKLMNOPQRSTUVWX"]', 'script du menu : openid lus, doublons et commentaires ignorés');
 let refused = false; try { readOpenids('pas un openid'); } catch { refused = true; }
 ok(refused, 'script du menu : ligne invalide refusée');
+ok(trymatchVerdict({ button: [{ name: 'Review' }] }, opMenu) === 'menu anglais' && trymatchVerdict({ menu: { button: [{ name: 'Review' }] } }, opMenu) === 'menu anglais', 'script du menu : vérification trymatch, deux formes de réponse');
+ok(trymatchVerdict({ button: [{ name: '合作登记' }] }, opMenu).startsWith('menu par défaut') && trymatchVerdict({ errcode: 0 }, opMenu).includes('errcode') && !trymatchVerdict({ errcode: 0, secret: 'zz' }, opMenu).includes('zz'), 'script du menu : menu par défaut ou réponse inconnue signalés, sans valeurs');
 ok(mask('oABCDEFGHIJKLMNOPQRSTUVWX') === 'oABC…VWX', 'script du menu : openid masqué dans le journal');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
