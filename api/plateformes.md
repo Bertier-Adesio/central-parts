@@ -132,6 +132,8 @@ Statuts vus par la plateforme : `pending_validation`, `rejected`, `open`, `offer
 | `GET` | `/v1/demands/{id}` | Détail et statut ; `rejected_reason` si refusée |
 | `POST` | `/v1/demands/{id}/cancel` | Annuler, tant qu'aucune offre n'est acceptée |
 | `GET` | `/v1/demands/{id}/offers` | Offres consolidées, une fois `offers_ready` |
+| `GET` | `/v1/rfqs` | RFQ du client avec leur statut d'ensemble, sans les offres ; filtres `status`, `customer_reference`, `created_since` (100 au plus) |
+| `GET` | `/v1/rfqs/{rfq_id}` | La RFQ entière en un appel : statut d'ensemble, décompte par statut, offres de chaque ligne |
 | `POST` | `/v1/webhooks` | S'abonner à des événements ; secret de signature affiché une seule fois |
 | `GET` | `/v1/webhooks` | Abonnements et cinq dernières livraisons |
 | `DELETE` | `/v1/webhooks/{id}` | Supprimer un abonnement |
@@ -204,6 +206,51 @@ Idempotence : le même appel rejoué dans les 24 h (même `Idempotency-Key`, mê
 - `source_category` : `manufacturer`, `authorized_distributor` ou `broker_surplus` ; une offre de broker n'est jamais présentée comme agréée.
 - Jamais dans la réponse : le nom du fournisseur, son pseudonyme, son SKU, son lot, un lien vers sa fiche, son prix d'achat.
 - Une offre disparaît de la liste après `price_valid_until`.
+
+### Lire une RFQ entière
+
+Une RFQ de N lignes donne N demandes `DEM-…`. Plutôt que de lire chaque demande puis ses offres, la plateforme peut lire la RFQ entière en un appel :
+
+```http
+GET /v1/rfqs/RFQ-0012
+```
+
+```json
+{
+  "rfq_id": "RFQ-0012",
+  "customer_reference": "ADS-4711",
+  "status": "offers_ready",
+  "currency": "EUR",
+  "ship_to_country": "DE",
+  "created_at": "2026-11-10T09:00:00Z",
+  "lines_count": 2,
+  "status_counts": { "offers_ready": 1, "no_offer": 1 },
+  "offers_count": 1,
+  "price_valid_until": "2026-11-12T09:00:00Z",
+  "lines": [
+    { "id": "DEM-1042", "line_id": "L1", "status": "offers_ready", "mpn": "NE555DR", "quantity": 2000,
+      "offers": [ { "offer_id": "OFF-3007", "rank": 1, "unit_price": 0.1012, "currency": "EUR", "…": "…" } ] },
+    { "id": "DEM-1043", "line_id": "L2", "status": "no_offer", "mpn": "LM358DR", "quantity": 500, "offers": [] }
+  ]
+}
+```
+
+- `status` est le **statut d'ensemble**, calculé dans cet ordre :
+
+  | Statut | Quand |
+  |---|---|
+  | `in_progress` | au moins une ligne `pending_validation` ou `open` : le devis peut encore évoluer |
+  | `offers_ready` | sinon, au moins une ligne `offers_ready` ou `ordered` |
+  | `cancelled` | sinon, toutes les lignes `cancelled` |
+  | `no_offer` | sinon (lignes `rejected`, `no_offer` ou `cancelled`) |
+
+  Un statut de ligne inconnu compte comme `in_progress` : la RFQ ne passe jamais à tort pour terminée.
+- `status_counts` : nombre de lignes par statut de ligne. `price_valid_until` : la validité la plus proche parmi toutes les offres rendues (absent sans offre).
+- Chaque ligne reprend les champs de `GET /v1/demands/{id}` (sauf ceux de la RFQ : `rfq_id`, `customer_reference`, `currency`, `ship_to_country`), dont `rejected_reason`, et ses `offers` : mêmes champs que `GET /v1/demands/{id}/offers`, vides tant que la ligne n'est pas `offers_ready` ou `ordered`. Une offre disparaît après `price_valid_until`.
+- RFQ inconnue ou d'un autre client : `404`.
+- `GET /v1/rfqs` : `{ "rfqs": [ { "rfq_id", "customer_reference", "status", "currency", "created_at", "lines_count" } ] }`, les plus récentes d'abord ; `status` filtre sur le statut d'ensemble (`422` sinon).
+
+Un connecteur qui suit des devis peut donc s'en tenir à : `POST /v1/demands`, garder le `rfq_id`, puis interroger `GET /v1/rfqs/{rfq_id}` jusqu'à ce que `status` ne soit plus `in_progress` (ou attendre les webhooks).
 
 ## Webhooks
 

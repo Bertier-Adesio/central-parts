@@ -4,7 +4,7 @@ Procédure pour Bertier, dans l'ordre. Décisions : [ADR 0023](decisions/0023-ro
 
 ## 1. Appliquer la migration (avant la fusion)
 
-SQL Editor de Supabase, projet de production : coller et exécuter `supabase/migrations/20261102000020_route_rfq.sql`, puis `supabase/migrations/20261102000021_api_offres.sql`. Prérequis : migrations jusqu'à `20261102000019` déjà appliquées. Rejouables ; elles n'effacent aucune donnée.
+SQL Editor de Supabase, projet de production : coller et exécuter `supabase/migrations/20261102000020_route_rfq.sql`, puis `supabase/migrations/20261102000021_api_offres.sql`, puis `supabase/migrations/20261103000022_rfq_agregee.sql` (lecture agrégée `GET /v1/rfqs`). Prérequis : migrations jusqu'à `20261102000019` déjà appliquées. Rejouables ; elles n'effacent aucune donnée.
 
 Puis `supabase/sandbox-rfq.sql` : le fournisseur de test du bac à sable (fictif, jamais public, jamais contacté).
 

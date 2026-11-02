@@ -5,6 +5,8 @@
 //
 //   POST   /v1/demands                    RFQ (1 à 50 lignes), Idempotency-Key obligatoire → 202 ; portée demands:write
 //   GET    /v1/demands?status=&customer_reference=&created_since=
+//   GET    /v1/rfqs?status=&customer_reference=&created_since=   RFQ résumées, statut d'ensemble
+//   GET    /v1/rfqs/{rfq_id}               statut d'ensemble, décompte et offres de chaque ligne en un appel
 //   GET    /v1/demands/{id}
 //   POST   /v1/demands/{id}/cancel
 //   GET    /v1/demands/{id}/offers         offres consolidées, prix tout compris (fournisseur jamais nommé)
@@ -32,7 +34,7 @@
 // réels ; faux par défaut), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot).
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { rfqOperatorCard } from '../_shared/robot-texts.js';
-import { API_STATUSES, apiError, bearerKey, sha256Hex, webhookSecret } from '../_shared/rfq.js';
+import { API_STATUSES, RFQ_STATUSES, apiError, bearerKey, sha256Hex, webhookSecret } from '../_shared/rfq.js';
 import {
   digiKeyError, digiKeyLocale, flattenProducts, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyPricing, toDigiKeyProduct,
   toTiProduct,
@@ -130,6 +132,22 @@ Deno.serve(async (req) => {
         p_org: org, p_status: status, p_customer_reference: url.searchParams.get('customer_reference'), p_created_since: since,
       });
       return error ? ko(error) : ok({ demands: data });
+    }
+    // Lecture agrégée : une RFQ de N lignes en un appel (statut d'ensemble, décompte, offres de chaque ligne).
+    if (path === '/v1/rfqs' && req.method === 'GET') {
+      const status = url.searchParams.get('status');
+      if (status && !RFQ_STATUSES.includes(status)) return failWith(422, 'invalid', 'Unknown status (in_progress, offers_ready, no_offer, cancelled)', rl);
+      const since = url.searchParams.get('created_since');
+      if (since && Number.isNaN(Date.parse(since))) return failWith(422, 'invalid', 'created_since must be ISO 8601', rl);
+      const { data, error } = await db.rpc('rfqs_for_client', {
+        p_org: org, p_status: status, p_customer_reference: url.searchParams.get('customer_reference'), p_created_since: since,
+      });
+      return error ? ko(error) : ok({ rfqs: data });
+    }
+    if ((m = /^\/v1\/rfqs\/(RFQ-\d+)$/i.exec(path)) && req.method === 'GET') {
+      const { data, error } = await db.rpc('rfq_for_client', { p_org: org, p_rfq: m[1] });
+      if (error) return ko(error);
+      return data ? ok(data) : failWith(404, 'not_found', 'Unknown RFQ', rl);
     }
     if ((m = /^\/v1\/demands\/(DEM-\d+)$/i.exec(path)) && req.method === 'GET') {
       const { data, error } = await db.rpc('rfq_demand_for_client', { p_org: org, p_id: m[1] });

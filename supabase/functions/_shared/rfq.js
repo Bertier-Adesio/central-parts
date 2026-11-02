@@ -16,6 +16,8 @@ export const RFQ_REMINDER_HOURS = 36;
 export const CURRENCIES = ['EUR', 'USD', 'CNH', 'HKD', 'GBP', 'JPY'];
 export const CLIENT_EVENTS = ['demand.validated', 'demand.rejected', 'demand.offers_ready', 'demand.no_offer', 'offer.expired'];
 export const API_STATUSES = ['pending_validation', 'rejected', 'open', 'offers_ready', 'no_offer', 'ordered', 'cancelled'];
+// Statut d'ensemble d'une RFQ (GET /v1/rfqs), calculé par app.rfq_aggregate_status (migration 20261103000022).
+export const RFQ_STATUSES = ['in_progress', 'offers_ready', 'no_offer', 'cancelled'];
 
 // Texte saisi dans WeChat : espaces et ponctuation pleine chasse ramenés à des espaces simples.
 export function normalizeWechatText(text) {
