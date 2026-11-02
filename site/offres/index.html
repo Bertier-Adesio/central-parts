@@ -42,6 +42,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
 .tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
 .price{font-weight:var(--weight-semibold);white-space:nowrap}
 .num{font-variant-numeric:tabular-nums}
+.api-link{margin:32px 0 0}
+.api-link a{color:var(--fg-2)}
 /* Téléphone : une carte par offre. */
 @media (max-width:720px){
   table.offers,table.offers tbody,table.offers tr,table.offers td{display:block;width:100%;box-sizing:border-box}
@@ -94,6 +96,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     <tbody id="rows"></tbody>
   </table>
   <p class="muted" id="ttl" hidden></p>
+  <p class="muted api-link"><a href="/api/" data-t="api">Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)</a></p>
 </main>
 
 <script>
@@ -109,7 +112,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Demander',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs mettent leurs listes à jour ; une offre non reconfirmée depuis {n} jours est retirée.',
-      mail: 'Demande de prix', home: '/',
+      mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
       e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'Les offres sont indisponibles, réessayez plus tard.' } },
     en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
       lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
@@ -119,7 +122,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Ask',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers keep their lists up to date; an offer not reconfirmed for {n} days is withdrawn.',
-      mail: 'Price request', home: '/en/',
+      mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
       e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Offers are unavailable, please try again later.' } },
     zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
       lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
@@ -129,7 +132,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '询价',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期更新库存表；超过 {n} 天未重新确认的报价将被撤下。',
-      mail: '询价', home: '/zh/',
+      mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
       e: { too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '报价暂不可用，请稍后再试。' } }
   };
   var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
