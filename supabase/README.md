@@ -6,7 +6,7 @@ Schéma PostgreSQL de Central.Parts, tiré de la maquette vivante (`site/app/`).
 supabase/
 ├── migrations/   schéma versionné (tables, contraintes, RLS, vues anonymisées), à appliquer dans l'ordre
 ├── wechat/       menu du compte de service WeChat (publié par l'API)
-├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : connexion, inscription et dépôt ; wechat-events : messages WeChat ; search : recherche publique ; order : demandes d'achat)
+├── functions/    fonctions Edge (import-stock : fichier déposé → lots ; depot : connexion, inscription et dépôt ; wechat-events : messages WeChat ; search : recherche publique ; order : demandes d'achat ; admin : back office)
 ├── reference.sql données de référence (devises, niveaux de test, opérateur) : sur tout projet, après les migrations
 ├── seed.sql      données fictives de la maquette, pour un projet de démonstration uniquement
 └── checks/       contrôles sur un PostgreSQL local (simulation minimale de Supabase, RLS, intégrité)
@@ -181,6 +181,22 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    Le bouton « 供应商 › 上传库存 » est de type « click » (clé `DEPOT_LOGIN`) : WeChat prévient `wechat-events`, qui répond dans la conversation par un lien de connexion personnel (15 minutes) vers `/depot/`, pour tout le monde, inscrit ou non. Sur téléphone, c'est le moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran. Publier le menu **après** le déploiement de `wechat-events` qui gère ce clic : sinon le bouton ne répondrait rien.
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
+### Back office /admin/ (ADR 0018)
+
+Administrateur = utilisateur Supabase Auth rattaché à l'organisation Central.Parts (type `ops`). Connexion par lien e-mail.
+1. **Migration** `20261102000014_back_office.sql` (après `20261102000012` et `20261102000013`).
+2. **Compte** : Authentication > Users > Add user (« Send invitation » ou « Create new user »), avec l'adresse de l'administrateur, puis :
+   ```sql
+   insert into public.members (user_id, org_id, display_name)
+   values ((select id from auth.users where email = '<adresse>'), 'CP', '<nom>');
+   ```
+   (`CP` : identifiant de l'organisation de type `ops` ; à vérifier par `select id from public.organizations where type = 'ops';`.)
+3. **Lien de retour** : Authentication > URL Configuration > Redirect URLs, ajouter `https://central.parts/admin/`.
+4. **Fonction** : `tools/deploy-functions.sh admin` (ou automatiquement à la fusion). Elle utilise les secrets déjà définis (`WECHAT_APPID`, `WECHAT_SECRET`) pour prévenir le fournisseur, comme le robot.
+5. **Retirer un administrateur** : `delete from public.members where user_id = (select id from auth.users where email = '<adresse>');`.
+
+Démonstration locale sans Supabase : `node tools/demo-admin.mjs`, puis ouvrir l'adresse affichée.
+
 ## Déployer les fonctions
 
 Automatique : à chaque push sur `main` qui touche `supabase/functions/`, seules les fonctions touchées sont redéployées (ADR 0016, secret GitHub `SUPABASE_ACCESS_TOKEN`). À la main, depuis la racine du dépôt :
@@ -189,7 +205,7 @@ tools/deploy-functions.sh                 # toutes
 tools/deploy-functions.sh depot search    # certaines
 SUPABASE_PROJECT_REF=<projet de test> tools/deploy-functions.sh   # un autre projet
 ```
-Le script porte les options de chaque fonction (`--no-verify-jwt` pour `depot`, `order`, `search`, `wechat-events`). Les migrations ne sont jamais appliquées par le script ni par le workflow.
+Le script porte les options de chaque fonction (`--no-verify-jwt` pour `admin`, `depot`, `order`, `search`, `wechat-events`). Les migrations ne sont jamais appliquées par le script ni par le workflow.
 
 ## Vérifier en local
 
@@ -197,7 +213,7 @@ Le script porte les options de chaque fonction (`--no-verify-jwt` pour `depot`, 
 tools/test-db.sh        # PostgreSQL local sur /var/tmp:54329 ; crée puis supprime la base cp_test
 ```
 
-Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis 208 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`), inscription des fournisseurs et validation (`checks/04_inscription.sql`), recherche publique (`checks/05_recherche.sql`), demandes d'achat (`checks/06_achat.sql`), messages WeChat (`checks/07_messages.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
+Le script applique une simulation minimale de Supabase (`checks/00_stub_supabase.sql` : rôles, `auth.users`, `auth.uid()`, stockage), les migrations, les données fictives, puis plus de 250 contrôles : droits d'accès et intégrité (`checks/01_rls.sql`), dépôt et transformation des fichiers de stock, API de recherche (`checks/02_import.sql`), invitations, rattachement WeChat et connexion par QR code (`checks/03_depot.sql`), inscription des fournisseurs et validation (`checks/04_inscription.sql`), recherche publique (`checks/05_recherche.sql`), demandes d'achat (`checks/06_achat.sql`), messages WeChat (`checks/07_messages.sql`), back office (`checks/10_back_office.sql`). Ne jamais appliquer `checks/` sur un projet Supabase.
 
 La lecture des fichiers (colonnes, séparateurs, prix, quantités), le jeton de session, les chemins de dépôt, la signature et les événements WeChat se testent sans base : `node tools/test-import.mjs`.
 

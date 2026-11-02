@@ -1,0 +1,9 @@
+# Back office (ADR 0018) : jamais indexé, jamais mis en cache, jamais affiché dans un cadre d'un autre site.
+# La page ne parle qu'à elle-même et à la fonction Edge « admin » de Supabase.
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow"
+  Header always set Cache-Control "no-store"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-Frame-Options "DENY"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://tuhbzziqyisdnqzfvtkh.supabase.co; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+</IfModule>
