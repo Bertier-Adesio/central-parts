@@ -17,10 +17,10 @@ Sur Adesio, les autres fournisseurs ont une API produit (ou catalogue) interrog�
 - **Devise** : celle du lot, comme sur le site depuis le 2 novembre (la conversion sera traitée plus tard). Un réglage (`app.settings` `api_convert_currency`) convertit dans la devise demandée au taux de `public.currencies`, quand les taux seront tenus à jour.
 
 ### Formats compatibles, pour réutiliser un connecteur existant
-- `GET /compat/digikey/products/v4/search/{mpn}/productdetails` et `POST /compat/digikey/products/v4/search/keyword` : forme de DigiKey Product Information v4 (`Product`, `ProductVariations`, `StandardPricing` avec `BreakQuantity`, `UnitPrice`, `TotalPrice`…). Une variante par offre ; `DigiKeyProductNumber` porte l'identifiant opaque ; `Supplier` vaut toujours Central.Parts ; `MarketPlace` vrai pour une offre de broker ou de surplus.
+- `GET /compat/digikey/products/v4/search/{mpn}/productdetails`, `GET …/{mpn}/pricing` et `POST /compat/digikey/products/v4/search/keyword` : forme de DigiKey Product Information v4 (`Product`, `ProductVariations`, `StandardPricing` avec `BreakQuantity`, `UnitPrice`, `TotalPrice`…). Une variante par offre ; `DigiKeyProductNumber` porte l'identifiant opaque ; `Supplier` vaut toujours Central.Parts ; `MarketPlace` vrai pour une offre de broker ou de surplus.
 - `GET /compat/ti/v2/store/products/{mpn}?currency=` : forme du TI store (`tiPartNumber`, `quantity`, `pricing[].priceBreaks[]`…), meilleure offre chiffrée.
 - Ces formats n'ont qu'une devise par réponse : sans conversion, ils ne gardent que les offres dans la devise demandée (USD par défaut) et les offres sur demande. Ce que ces formats ne prévoient pas (catégorie de source, date code, pays d'expédition, validité) est dans une extension `CentralParts` / `centralParts`.
-- Les champs ont été repris des documentations publiques de mémoire (non consultables depuis l'environnement de développement) : à confirmer à la première intégration.
+- DigiKey : structure vérifiée sur une réponse réelle de ProductPricing transmise par Bertier le 2 novembre (test automatique de forme). TI : repris de la documentation publique, à confirmer à la première intégration. `ProductUrl` pointe vers la recherche publique de Central.Parts.
 
 ### Limite d'appels par clé
 - Un connecteur « une référence par appel » dépasse vite 60 appels par minute sur une nomenclature : la limite se règle par clé (`api_keys.calls_per_minute`, `tools/create-api-key.mjs --calls-per-minute`).

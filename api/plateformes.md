@@ -18,6 +18,7 @@ Central.Parts y est **un fournisseur unique** : la plateforme ne voit jamais le 
 | `GET` | `/v1/offers/{offer_id}?qty=&currency=` | Une offre (`cpo_…`) et son prix à la quantité ; `404` si elle n'est plus publiée, `422` sous le MOQ |
 | `GET` | `/v1/manufacturers?q=` | Fabricants présents dans le stock |
 | `GET` | `/compat/digikey/products/v4/search/{mpn}/productdetails` | Format compatible DigiKey (devise : en-tête `X-DIGIKEY-Locale-Currency`, USD par défaut) |
+| `GET` | `/compat/digikey/products/v4/search/{mpn}/pricing?excludeMarketplace=&inStock=` | Format compatible DigiKey ProductPricing (`ProductPricings[].ProductVariations[].StandardPricing[]`) ; `excludeMarketplace=true` écarte les offres de broker et de surplus |
 | `POST` | `/compat/digikey/products/v4/search/keyword` | Format compatible DigiKey : `{ "Keywords": "<référence>", "Limit"?, "Offset"? }` |
 | `GET` | `/compat/ti/v2/store/products/{mpn}?currency=USD` | Format compatible TI store |
 
@@ -58,7 +59,7 @@ Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives) :
 | `date_code`, `ship_from`, `lead_time_days`, `price_valid_until` | `ProductVariations[].CentralParts.*` | `centralParts.*` |
 | fournisseur | `Supplier.Name` = « Central.Parts » | — |
 
-Les noms de champs des formats compatibles suivent les documentations publiques de DigiKey (Product Information v4) et du TI store (inventory and pricing) ; ils sont à confirmer à la première intégration.
+Le format compatible DigiKey reprend la structure d'une réponse réelle de ProductPricing (v4), vérifiée par `tools/test-catalog.mjs` (`tools/fixtures/digikey-productpricing.json`) ; `ProductUrl` renvoie vers la recherche publique de Central.Parts, jamais vers le fournisseur. Le format compatible TI suit la documentation publique du TI store et reste à confirmer à la première intégration.
 
 ## Cycle d'une RFQ
 

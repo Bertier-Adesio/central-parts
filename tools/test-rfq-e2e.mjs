@@ -184,6 +184,10 @@ try {
   ok(dk.status === 200 && dk.json.Product.ManufacturerProductNumber === 'E2ETEST555' && dk.json.Product.ProductVariations.length === 1
     && dk.json.Product.ProductVariations[0].StandardPricing[0].UnitPrice === 0.55, 'compatible DigiKey : productdetails (offre CNH écartée en USD)');
   ok((await api('GET', '/compat/digikey/products/v4/search/INCONNU/productdetails', KEY_LIVE)).json.StatusCode === 404, 'compatible DigiKey : 404 au format DigiKey');
+  const dkp = await api('GET', '/compat/digikey/products/v4/search/E2ETEST555/pricing', KEY_LIVE, undefined, { 'X-DIGIKEY-Locale-Currency': 'USD' });
+  ok(dkp.status === 200 && dkp.json.ProductPricings[0].ProductVariations[0].StandardPricing[0].BreakQuantity === 1
+    && dkp.json.ProductPricings[0].ProductUrl === 'https://central.parts/recherche/?q=E2ETEST555', 'compatible DigiKey : ProductPricing');
+  ok((await api('GET', '/compat/digikey/products/v4/search/E2ETEST555/pricing?excludeMarketplace=true', KEY_LIVE)).status === 404, 'compatible DigiKey : excludeMarketplace écarte les offres de broker');
   const dkw = await api('POST', '/compat/digikey/products/v4/search/keyword', KEY_LIVE, { Keywords: 'E2ETEST555', Limit: 10 }, { 'X-DIGIKEY-Locale-Currency': 'CNH' });
   ok(dkw.status === 200 && dkw.json.ProductsCount === 1 && dkw.json.Products[0].ProductVariations[0].StandardPricing[0].UnitPrice === 3.3, 'compatible DigiKey : keyword, en CNH');
   const ti = await api('GET', '/compat/ti/v2/store/products/E2ETEST555?currency=USD', KEY_LIVE);

@@ -17,6 +17,7 @@
 //   GET    /v1/manufacturers?q=
 //   Formats compatibles, pour réutiliser un connecteur existant (même clé, mêmes données) :
 //   GET    /compat/digikey/products/v4/search/{mpn}/productdetails       (devise : en-tête X-DIGIKEY-Locale-Currency)
+//   GET    /compat/digikey/products/v4/search/{mpn}/pricing?excludeMarketplace=&inStock=&limit=&offset=
 //   POST   /compat/digikey/products/v4/search/keyword {Keywords, Limit?, Offset?}
 //   GET    /compat/ti/v2/store/products/{mpn}?currency=USD
 //   GET    /v1/me, GET /v1/health
@@ -33,7 +34,8 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.4
 import { rfqOperatorCard } from '../_shared/robot-texts.js';
 import { API_STATUSES, apiError, bearerKey, sha256Hex, webhookSecret } from '../_shared/rfq.js';
 import {
-  digiKeyError, digiKeyLocale, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyProduct, toTiProduct,
+  digiKeyError, digiKeyLocale, groupByManufacturer, offersInCurrency, parseOffersQuery, toDigiKeyKeyword, toDigiKeyPricing, toDigiKeyProduct,
+  toTiProduct,
 } from '../_shared/catalog.js';
 import { closeRfq, deliverWebhooks, dispatchRfq, tellCancelled, tick } from '../_shared/rfq-dispatch.ts';
 import { notifyOperators } from '../_shared/wechat.ts';
@@ -183,6 +185,15 @@ Deno.serve(async (req) => {
       if (r.error) return ko(r.error);
       if (!r.offers.length) return reply(digiKeyError(404, 'Product not found'), 404, rl);
       return ok({ Product: toDigiKeyProduct(r.mpn, groupByManufacturer(r.offers)[0]), SearchLocaleUsed: digiKeyLocale(currency) });
+    }
+    if ((m = /^\/compat\/digikey\/products\/v4\/search\/(.+)\/pricing$/.exec(path)) && req.method === 'GET') {
+      const currency = (req.headers.get('x-digikey-locale-currency') || 'USD').toUpperCase();
+      const r = await compatOffers(decodeURIComponent(m[1]), currency);
+      if (r.error) return ko(r.error);
+      const sp = url.searchParams, yes = (k: string) => /^true$/i.test(sp.get(k) || '');
+      const out = toDigiKeyPricing(r.mpn, r.offers, { excludeMarketplace: yes('excludeMarketplace'), inStock: yes('inStock'),
+        limit: Math.min(Math.max(Number(sp.get('limit')) || 5, 1), 10), offset: Math.max(Number(sp.get('offset')) || 0, 0) });
+      return out.ProductsCount ? ok(out) : reply(digiKeyError(404, 'Product not found'), 404, rl);
     }
     if (path === '/compat/digikey/products/v4/search/keyword' && req.method === 'POST') {
       const b = await body();

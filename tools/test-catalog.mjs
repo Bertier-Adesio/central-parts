@@ -1,6 +1,7 @@
 // API d'offres en direct (ADR 0024) : formats de réponse (natif, compatible DigiKey, compatible TI) et paramètres.
 // Les règles en base (offres publiables, prix, anonymat, compteur) : supabase/checks/17_api_offres.sql ; les routes de
 // bout en bout : tools/test-rfq-e2e.mjs. Usage : node tools/test-catalog.mjs
+import { readFileSync } from 'node:fs';
 import * as C from '../supabase/functions/_shared/catalog.js';
 
 let n = 0, bad = 0;
@@ -51,6 +52,29 @@ ok(kw.ProductsCount === 1 && kw.Products[0].ProductVariations.length === 3 && kw
 const two = C.groupByManufacturer([...usd, { ...usd[0], offer_id: 'cpo_x', manufacturer: 'Onsemi', stock: 10 }]);
 ok(two.length === 2 && two[0][0].manufacturer === 'Texas Instruments', 'DigiKey : un produit par fabricant, le plus gros stock d\'abord');
 ok(C.digiKeyError(404, 'Product not found').StatusCode === 404, 'DigiKey : erreur au format DigiKey');
+
+// ---------------------------------------------------------------- DigiKey ProductPricing : même structure qu'une réponse réelle
+const real = JSON.parse(readFileSync(new URL('./fixtures/digikey-productpricing.json', import.meta.url), 'utf8'));
+const pp = C.toDigiKeyPricing('NE555DR', usd);
+// Chaque champ de la réponse réelle existe dans la nôtre, avec le même type (objet, tableau, nombre, texte).
+const kind = (x) => (Array.isArray(x) ? 'array' : x === null ? 'null' : typeof x);
+function sameShape(want, got, path, out) {
+  for (const k of Object.keys(want)) {
+    if (k.startsWith('_')) continue;
+    if (!(k in got)) { out.push(path + k + ' absent'); continue; }
+    if (kind(want[k]) !== kind(got[k])) { out.push(path + k + ' : ' + kind(got[k]) + ' au lieu de ' + kind(want[k])); continue; }
+    if (kind(want[k]) === 'object') sameShape(want[k], got[k], path + k + '.', out);
+    if (kind(want[k]) === 'array' && want[k].length && got[k].length && kind(want[k][0]) === 'object') sameShape(want[k][0], got[k][0], path + k + '[0].', out);
+  }
+  return out;
+}
+const diff = sameShape(real, pp, '', []);
+ok(!diff.length, 'ProductPricing : mêmes champs et mêmes types que la réponse réelle de DigiKey ' + diff.join(', '));
+ok(pp.ProductPricings.length === 1 && pp.ProductPricings[0].ProductVariations.length === 3, 'ProductPricing : un élément par fabricant, une variante par offre');
+ok(pp.ProductPricings[0].ProductUrl === 'https://central.parts/recherche/?q=NE555DR', 'ProductPricing : lien vers la recherche Central.Parts, jamais vers le fournisseur');
+ok(C.toDigiKeyPricing('NE555DR', usd, { excludeMarketplace: true }).ProductPricings[0].ProductVariations.every((v) => !v.MarketPlace), 'ProductPricing : excludeMarketplace écarte broker et surplus');
+ok(C.toDigiKeyPricing('NE555DR', []).ProductPricings.length === 0, 'ProductPricing : aucune offre, liste vide');
+ok(!diff.length && sameShape(real.ProductPricings[0].ProductVariations[0], C.toDigiKeyProduct('NE555DR', usd).ProductVariations[0], '', []).length === 0, 'ProductDetails : variantes de même structure');
 
 // ---------------------------------------------------------------- TI
 const t = C.toTiProduct('NE555DR', usd, 'USD');

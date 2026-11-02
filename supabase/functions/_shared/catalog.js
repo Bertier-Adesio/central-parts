@@ -4,8 +4,8 @@
 //   - format natif : celui de la base (offer_id, stock, moq, price_breaks, source_category, ship_from…), page /api/ ;
 //   - format compatible DigiKey (Product Information v4 : ProductDetails, KeywordSearch) ;
 //   - format compatible Texas Instruments (TI store, inventory and pricing v2).
-// Champs repris de mémoire des documentations publiques de ces API (non consultables depuis l'environnement de
-// développement) : à vérifier avec une intégration réelle. Le fournisseur n'apparaît jamais : « Supplier » vaut
+// Format DigiKey vérifié sur une réponse réelle de ProductPricing (v4, 2 novembre 2026) ; format TI repris de la
+// documentation publique, à vérifier avec une intégration réelle. Le fournisseur n'apparaît jamais : « Supplier » vaut
 // toujours Central.Parts, et l'identifiant de l'offre remplace le numéro de produit du distributeur.
 
 export const SOURCE_CATEGORIES = ['manufacturer', 'authorized_distributor', 'broker_surplus'];
@@ -25,19 +25,44 @@ export function parseOffersQuery(sp) {
   return { args: { p_mpn: mpn, p_manufacturer: sp.get('manufacturer') || null, p_qty: qty, p_currency: sp.get('currency') || null, p_sources: src.length ? src : null } };
 }
 
-const round2 = (x) => Math.round(x * 100) / 100;
-
-// Offres utilisables dans un format à devise unique : sur demande, ou dans la devise de la réponse.
-export function offersInCurrency(offers, currency) {
-  return offers.filter((o) => o.price_status === 'on_request' || o.currency === currency);
-}
-
 // Extension propre à Central.Parts, ajoutée aux formats compatibles : ce que ces formats n'ont pas.
 const extension = (o) => ({
   offerId: o.offer_id, sourceCategory: o.source_category, priceStatus: o.price_status, shipFrom: o.ship_from,
   dateCode: o.date_code ?? null, leadTimeDays: o.lead_time_days ?? null, currency: o.currency ?? null,
   priceValidUntil: o.price_valid_until ?? null,
 });
+
+const round2 = (x) => Math.round(x * 100) / 100;
+
+// Page publique de la référence chez Central.Parts : seul lien donné (jamais la fiche du fournisseur).
+export const productUrl = (mpn) => 'https://central.parts/recherche/?q=' + encodeURIComponent(mpn);
+
+// Variante DigiKey d'une offre (champs vérifiés sur ProductPricing), avec l'extension CentralParts.
+const digiKeyVariation = (o) => ({
+  DigiKeyProductNumber: o.offer_id,
+  PackageType: { Id: 0, Name: o.packaging || '' },
+  MinimumOrderQuantity: o.moq,
+  QuantityAvailableforPackageType: o.stock,
+  StandardPricing: (o.price_breaks || []).map((b) => ({ BreakQuantity: b.quantity, UnitPrice: b.price, TotalPrice: round2(b.quantity * b.price) })),
+  MyPricing: [],
+  MarketPlace: o.source_category === 'broker_surplus',
+  TariffActive: false,
+  Supplier: { Id: 0, Name: 'Central.Parts' },
+  MaxQuantityForDistribution: 0,
+  StandardPackage: 0,
+  DigiReelFee: 0,
+  CentralParts: extension(o),
+});
+const leadWeeks = (offers) => {
+  const lead = offers.map((o) => o.lead_time_days).filter((d) => d != null);
+  return lead.length ? String(Math.ceil(Math.min(...lead) / 7)) : '';
+};
+
+// Offres utilisables dans un format à devise unique : sur demande, ou dans la devise de la réponse.
+export function offersInCurrency(offers, currency) {
+  return offers.filter((o) => o.price_status === 'on_request' || o.currency === currency);
+}
+
 
 // Regroupe les offres d'une référence par fabricant (DigiKey : un produit par fabricant et référence).
 export function groupByManufacturer(offers) {
@@ -53,31 +78,16 @@ export function groupByManufacturer(offers) {
 // Produit au format DigiKey Product Information v4.
 export function toDigiKeyProduct(mpn, offers) {
   const priced = offers.filter((o) => o.price_status === 'priced' && o.price_breaks.length);
-  const lead = offers.map((o) => o.lead_time_days).filter((d) => d != null);
   const first = offers[0] || {};
   return {
     Description: { ProductDescription: first.description || mpn, DetailedDescription: first.description || '' },
     Manufacturer: { Id: 0, Name: first.manufacturer || '' },
     ManufacturerProductNumber: mpn,
     UnitPrice: priced.length ? Math.min(...priced.map((o) => o.price_breaks[0].price)) : 0,
-    ProductUrl: null,
+    ProductUrl: productUrl(mpn),
     DatasheetUrl: offers.map((o) => o.datasheet_url).find(Boolean) || null,
     PhotoUrl: null,
-    ProductVariations: offers.map((o) => ({
-      DigiKeyProductNumber: o.offer_id,
-      PackageType: { Id: 0, Name: o.packaging || '' },
-      StandardPricing: (o.price_breaks || []).map((b) => ({ BreakQuantity: b.quantity, UnitPrice: b.price, TotalPrice: round2(b.quantity * b.price) })),
-      MyPricing: [],
-      MarketPlace: o.source_category === 'broker_surplus',
-      TariffActive: false,
-      Supplier: { Id: 0, Name: 'Central.Parts' },
-      QuantityAvailableforPackageType: o.stock,
-      MaxQuantityForDistribution: 0,
-      MinimumOrderQuantity: o.moq,
-      StandardPackage: 0,
-      DigiReelFee: 0,
-      CentralParts: extension(o),
-    })),
+    ProductVariations: offers.map(digiKeyVariation),
     QuantityAvailable: offers.reduce((s, o) => s + o.stock, 0),
     ProductStatus: { Id: 0, Status: 'Active' },
     BackOrderNotAllowed: true,
@@ -85,7 +95,7 @@ export function toDigiKeyProduct(mpn, offers) {
     Discontinued: false,
     EndOfLife: false,
     Ncnr: false,
-    ManufacturerLeadWeeks: lead.length ? String(Math.ceil(Math.min(...lead) / 7)) : '',
+    ManufacturerLeadWeeks: leadWeeks(offers),
     ManufacturerPublicQuantity: 0,
     Parameters: [],
     OtherNames: [],
@@ -96,6 +106,23 @@ export const digiKeyLocale = (currency) => ({ Site: 'Central.Parts', Language: '
 
 // Erreur au format DigiKey.
 export const digiKeyError = (status, message) => ({ ErrorResponseVersion: '3.0.0', StatusCode: status, ErrorMessage: message, ErrorDetails: '', RequestId: '' });
+
+// Réponse ProductPricing (GET /products/v4/search/{productNumber}/pricing) : un élément par fabricant, comme sur
+// la réponse réelle de DigiKey (ProductPricings[].ProductVariations[].StandardPricing[]).
+// excludeMarketplace : sans les offres de broker et de surplus ; inStock : avec du stock seulement.
+export function toDigiKeyPricing(mpn, offers, { excludeMarketplace = false, inStock = false, limit = 5, offset = 0 } = {}) {
+  const kept = offers.filter((o) => (!excludeMarketplace || o.source_category !== 'broker_surplus') && (!inStock || o.stock > 0));
+  const items = groupByManufacturer(kept).map((g) => ({
+    ManufacturerProductNumber: mpn,
+    Manufacturer: { Id: 0, Name: g[0].manufacturer || '' },
+    Description: { ProductDescription: g[0].description || mpn },
+    ProductUrl: productUrl(mpn),
+    ManufacturerLeadWeeks: leadWeeks(g),
+    StandardPackage: 0,
+    ProductVariations: g.map(digiKeyVariation),
+  }));
+  return { ProductPricings: items.slice(offset, offset + limit), ProductsCount: items.length };
+}
 
 // Réponse KeywordSearch : un produit par fabricant ; la recherche porte sur la référence exacte.
 export function toDigiKeyKeyword(mpn, offers, currency, limit = 50, offset = 0) {
