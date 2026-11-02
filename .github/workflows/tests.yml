@@ -50,6 +50,8 @@ jobs:
         run: deno check supabase/functions/*/index.ts
       - name: Route RFQ, logique et textes (ADR 0023)
         run: node tools/test-rfq.mjs
+      - name: API d'offres, formats natif, DigiKey et TI (ADR 0024)
+        run: node tools/test-catalog.mjs
       - name: Route RFQ, diffusion avec WeChat simulé
         run: deno run --allow-env tools/test-rfq-dispatch.ts
 

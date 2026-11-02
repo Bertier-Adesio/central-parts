@@ -1186,6 +1186,47 @@
     return { day: day, processed: done };
   };
 
+  // ------------------------------------------------------------ API d'offres en direct (ADR 0024)
+  // Même forme que la fonction Edge : lots en stock des vendeurs vérifiés, prix tout compris, vendeur jamais nommé.
+  function catOffer(l, qty) {
+    var o = S().orgs[l.sellerId], m = 1 + P.buyerMargin;
+    var tiers = Object.keys(l.tiers || {}).map(Number).sort(function (a, b) { return a - b; });
+    var breaks = [{ quantity: 1, price: round(l.price * m) }].concat(tiers.map(function (q) { return { quantity: q, price: round(l.tiers[q] * m) }; }));
+    var at = breaks.filter(function (b) { return b.quantity <= (qty || 1); }).pop();
+    var src = o.profile === 'Manufacturer' ? 'manufacturer' : o.profile === 'Distributor' ? 'authorized_distributor' : 'broker_surplus';
+    return { offer_id: 'cpo_' + l.id.toLowerCase().replace(/[^a-z0-9]/g, ''), mpn: l.mpn, manufacturer: l.mfr || null, source_category: src,
+      price_status: l.price ? 'priced' : 'on_request', stock: l.qty, moq: 1, order_multiple: 1, currency: l.currency || o.currency,
+      price_breaks: l.price ? breaks : [], quote: qty && l.price ? { quantity: qty, unit_price: at.price, extended_price: round(at.price * qty) } : null,
+      date_code: l.dc || null, packaging: l.pack || null, ship_from: o.country || null };
+  }
+  function catLots(mpn) {
+    var k = String(mpn || '').toUpperCase().replace(/\s+/g, '');
+    return CP.values(S().lots).filter(function (l) { return l.mpn.toUpperCase().replace(/\s+/g, '') === k && l.qty > 0 && !l.withdrawn && verified(S().orgs[l.sellerId]); });
+  }
+  H['cat.offers'] = function (c) {
+    if (!c.query.mpn) fail(422, 'mpn requis');
+    var qty = c.query.qty ? parseInt(c.query.qty, 10) : null;
+    return { mpn: String(c.query.mpn).toUpperCase(), quantity: qty, offers: catLots(c.query.mpn).map(function (l) { return catOffer(l, qty); }) };
+  };
+  H['cat.search'] = function (c) {
+    var lines = c.body.lines || [];
+    if (!lines.length || lines.length > 500) fail(422, 'De 1 à 500 lignes');
+    return { lines: lines.map(function (l, i) {
+      var qty = l.quantity ? parseInt(l.quantity, 10) : null;
+      return { line_id: String(l.line_id || i + 1), mpn: String(l.mpn || '').toUpperCase(), quantity: qty, offers: catLots(l.mpn).map(function (x) { return catOffer(x, qty); }) };
+    }), __ok200: true };
+  };
+  H['cat.offer'] = function (c) {
+    var l = CP.values(S().lots).filter(function (x) { return 'cpo_' + x.id.toLowerCase().replace(/[^a-z0-9]/g, '') === c.params.id; })[0];
+    if (!l || !(l.qty > 0)) fail(404, 'Offre inconnue ou expirée');
+    return catOffer(l, c.query.qty ? parseInt(c.query.qty, 10) : null);
+  };
+  H['cat.mfrs'] = function (c) {
+    var q = String(c.query.q || '').toLowerCase(), seen = {};
+    CP.values(S().lots).forEach(function (l) { if (l.mfr && l.qty > 0 && l.mfr.toLowerCase().indexOf(q) === 0) seen[l.mfr] = true; });
+    return { manufacturers: Object.keys(seen).sort().map(function (n) { return { name: n }; }) };
+  };
+
   // ------------------------------------------------------------ route RFQ des plateformes (ADR 0023)
   // La plateforme est une société acheteuse appelée par clé d'API. Une RFQ attend la validation d'un administrateur ;
   // rien n'est diffusé avant. Le délai des fournisseurs (48 h après l'envoi réussi) est vérifié par la vraie base.

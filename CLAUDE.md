@@ -17,7 +17,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - `site/proto/` : prototype public du parcours (HTML écrit à la main). `site/depot/` : espace fournisseur (connexion WeChat, inscription, dépôt des fichiers de stock ; ADR 0010 et 0012, écrit à la main). `site/recherche/` : recherche publique du catalogue et demande d'achat, FR/EN/中文, suivi dans `site/recherche/commande/` (ADR 0013 et 0014, écrites à la main). `site/depot/lien/` : dépôt des listes par lien personnel, sans WeChat ; `site/offres/` : offres des fournisseurs partenaires, vendeur anonyme, date de mise à jour (ADR 0021, écrites à la main, non indexées). `site/admin/` : back office des administrateurs (approbation des fournisseurs, stocks en lecture seule ; connexion Supabase Auth, ADR 0018, écrit à la main, `noindex`). `site/app/` : maquette vivante de l'application, cinq rôles et API simulée ; la carte des endpoints vient de `site/app/js/registry.js` (voir ADR 0003).
 - `design/` : maquette source de la landing et de l'aperçu social.
 - `brand/` : logo et design tokens (`tokens.css`).
-- `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock ; `rfq` : API des plateformes, route RFQ validée par un administrateur et diffusée dans WeChat, ADR 0023) et données fictives du projet dev (`seed.sql`) et du bac à sable des plateformes (`sandbox-rfq.sql`), voir ADR 0008 et 0010.
+- `supabase/` : schéma PostgreSQL (migrations, RLS, vues anonymisées), fonctions Edge (import des fichiers de stock ; `rfq` : API des plateformes, offres en direct avec formats compatibles DigiKey et TI (ADR 0024) et route RFQ validée par un administrateur et diffusée dans WeChat (ADR 0023)) et données fictives du projet dev (`seed.sql`) et du bac à sable des plateformes (`sandbox-rfq.sql`), voir ADR 0008 et 0010.
 - `api/` : contrats d'API : `endpoints.md` (généré), `fournisseurs.md` (API fournisseur), `plateformes.md` (route RFQ des plateformes, ADR 0023). `data/`, `legal/` : à concevoir, voir leur README.
 - `docs/decisions/` : ADR numérotés (`000N-titre.md`).
 - `.github/workflows/deploy-site-ovh.yml` : publie `site/` sur l'hébergement OVH à chaque push sur `main` qui touche `site/` ou le workflow, puis retire de `www/` une liste explicite de fichiers qui ne doivent plus être publiés (design system, ancien runtime).
@@ -54,6 +54,7 @@ node tools/test-search-ui.mjs          # recherche publique, achat et suivi site
 node tools/test-listes-ui.mjs          # dépôt par lien site/depot/lien/ et offres site/offres/ (même serveur), API simulée
 node tools/test-admin-ui.mjs           # back office site/admin/ (même serveur), API simulée ; démonstration : node tools/demo-admin.mjs
 node tools/test-rfq.mjs                # route RFQ : commandes WeChat, textes, erreurs, signature des webhooks
+node tools/test-catalog.mjs            # API d'offres en direct : formats natif, compatible DigiKey et compatible TI
 deno run --allow-env tools/test-rfq-dispatch.ts   # route RFQ : diffusion avec WeChat simulé
 node tools/test-rfq-e2e.mjs            # route RFQ de bout en bout : fonctions rfq et wechat-events sous Deno, base locale (comme test-db.sh), module pg
 ```

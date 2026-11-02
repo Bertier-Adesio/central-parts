@@ -169,6 +169,30 @@ try {
   ok(live.length === 1 && JSON.parse(live[0].body).event === 'demand.offers_ready' && verify(wh2.json.signing_secret, live[0].body, live[0].headers), 'webhook demand.offers_ready livré et signé');
   ok(captured().some((x) => x.to === 'oOPERATOR' && x.text.includes(`[RFQ ${dL}] closed: 1 offer(s)`)), 'administrateur prévenu de la clôture');
 
+  // ---------------------------------------------------------------- API d'offres en direct (ADR 0024)
+  const cat = await api('GET', '/v1/offers?mpn=e2etest555&qty=200', KEY_LIVE);
+  ok(cat.status === 200 && cat.json.offers.length === 2, 'offres en direct : deux fournisseurs pour E2ETEST555');
+  ok(!/RSL|V-80|SKU-E2E|LOT-E|Fournisseur partenaire/.test(JSON.stringify(cat.json)), 'offres en direct : aucun élément du fournisseur');
+  const usdOffer = cat.json.offers.find((x) => x.currency === 'USD');
+  ok(usdOffer && Number(usdOffer.quote.unit_price) === 0.55 && usdOffer.offer_id.startsWith('cpo_'), 'offres en direct : 0,50 USD + 10 % = 0,55 USD, identifiant opaque');
+  const one = await api('GET', `/v1/offers/${usdOffer.offer_id}?qty=300`, KEY_LIVE);
+  ok(one.status === 200 && Number(one.json.quote.extended_price) === 165, 'détail d\'une offre : 300 × 0,55 = 165');
+  ok((await api('GET', '/v1/offers', KEY_LIVE)).status === 422, 'offres en direct : mpn obligatoire (422)');
+  const bom = await api('POST', '/v1/offers/search', KEY_LIVE, { lines: [{ line_id: 'A', mpn: 'E2ETEST555', quantity: 200 }, { line_id: 'B', mpn: 'INCONNU' }] });
+  ok(bom.status === 200 && bom.json.lines[0].offers.length === 2 && bom.json.lines[1].offers.length === 0, 'nomenclature en un appel');
+  const dk = await api('GET', '/compat/digikey/products/v4/search/E2ETEST555/productdetails', KEY_LIVE, undefined, { 'X-DIGIKEY-Locale-Currency': 'USD' });
+  ok(dk.status === 200 && dk.json.Product.ManufacturerProductNumber === 'E2ETEST555' && dk.json.Product.ProductVariations.length === 1
+    && dk.json.Product.ProductVariations[0].StandardPricing[0].UnitPrice === 0.55, 'compatible DigiKey : productdetails (offre CNH écartée en USD)');
+  ok((await api('GET', '/compat/digikey/products/v4/search/INCONNU/productdetails', KEY_LIVE)).json.StatusCode === 404, 'compatible DigiKey : 404 au format DigiKey');
+  const dkw = await api('POST', '/compat/digikey/products/v4/search/keyword', KEY_LIVE, { Keywords: 'E2ETEST555', Limit: 10 }, { 'X-DIGIKEY-Locale-Currency': 'CNH' });
+  ok(dkw.status === 200 && dkw.json.ProductsCount === 1 && dkw.json.Products[0].ProductVariations[0].StandardPricing[0].UnitPrice === 3.3, 'compatible DigiKey : keyword, en CNH');
+  const ti = await api('GET', '/compat/ti/v2/store/products/E2ETEST555?currency=USD', KEY_LIVE);
+  ok(ti.status === 200 && ti.json.tiPartNumber === 'E2ETEST555' && ti.json.pricing[0].priceBreaks[0].price === 0.55, 'compatible TI : pricing[].priceBreaks[]');
+  const sbx = await api('GET', '/v1/offers?mpn=NE555DR', KEY_TEST);
+  ok(sbx.json.offers.length === 1 && sbx.json.offers[0].stock === 25000 && (await api('GET', '/v1/offers?mpn=NE555DR', KEY_LIVE)).json.offers.length === 0,
+    'bac à sable : stock de test avec cp_test_, invisible avec cp_live_');
+  ok(Number(sql(`select coalesce(sum(views), 0) from app.offer_views where seller_id = 'RSL1'`)) >= 4, 'compteur de consultations du fournisseur');
+
   // ---------------------------------------------------------------- refus et annulation
   const c3 = await api('POST', '/v1/demands', KEY_LIVE, { currency: 'USD', ship_to_country: 'IT', lines: [{ mpn: 'E2ETEST555', quantity: 5 }, { mpn: 'E2ETEST555', quantity: 6 }] }, { 'Idempotency-Key': 'live-2' });
   const [dR, dC] = c3.json.demands.map((x) => x.id);

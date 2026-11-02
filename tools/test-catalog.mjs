@@ -1,0 +1,69 @@
+// API d'offres en direct (ADR 0024) : formats de réponse (natif, compatible DigiKey, compatible TI) et paramètres.
+// Les règles en base (offres publiables, prix, anonymat, compteur) : supabase/checks/17_api_offres.sql ; les routes de
+// bout en bout : tools/test-rfq-e2e.mjs. Usage : node tools/test-catalog.mjs
+import * as C from '../supabase/functions/_shared/catalog.js';
+
+let n = 0, bad = 0;
+const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+
+// Deux offres de la même référence, comme les renvoie catalog_offers (déjà triées par prix).
+const offers = [
+  { offer_id: 'cpo_aaaaaaaaaaaaaaaaaaaa', mpn: 'NE555DR', manufacturer: 'Texas Instruments', description: 'Minuterie', source_category: 'manufacturer',
+    price_status: 'priced', stock: 20000, moq: 1000, order_multiple: 1, currency: 'USD',
+    price_breaks: [{ quantity: 1000, price: 0.105 }, { quantity: 10000, price: 0.0945 }], lead_time_days: 10, packaging: 'Bande et bobine',
+    ship_from: 'CN', price_valid_until: '2026-11-03T10:00:00Z', datasheet_url: 'https://www.ti.com/lit/ds/symlink/ne555.pdf' },
+  { offer_id: 'cpo_bbbbbbbbbbbbbbbbbbbb', mpn: 'NE555DR', manufacturer: 'Texas Instruments', source_category: 'broker_surplus',
+    price_status: 'priced', stock: 5000, moq: 100, order_multiple: 1, currency: 'USD',
+    price_breaks: [{ quantity: 100, price: 0.22 }, { quantity: 1000, price: 0.198 }], lead_time_days: 3, date_code: '2430', ship_from: 'HK' },
+  { offer_id: 'cpo_cccccccccccccccccccc', mpn: 'NE555DR', manufacturer: 'Texas Instruments', source_category: 'authorized_distributor',
+    price_status: 'on_request', stock: 300, moq: 1, price_breaks: [], ship_from: 'CN' },
+  { offer_id: 'cpo_dddddddddddddddddddd', mpn: 'NE555DR', manufacturer: 'Texas Instruments', source_category: 'broker_surplus',
+    price_status: 'priced', stock: 800, moq: 1, currency: 'CNH', price_breaks: [{ quantity: 1, price: 3.3 }], ship_from: 'CN' },
+];
+
+// ---------------------------------------------------------------- paramètres
+const q = (s) => C.parseOffersQuery(new URLSearchParams(s));
+ok(q('').error && q('').field === 'mpn', 'paramètres : mpn obligatoire');
+ok(q('mpn=NE555DR&qty=0').field === 'qty' && q('mpn=NE555DR&qty=1.5').field === 'qty', 'paramètres : quantité entière ≥ 1');
+ok(q('mpn=NE555DR&source_category=agree').field === 'source_category', 'paramètres : catégorie inconnue refusée');
+const a = q('mpn=NE555DR&qty=2000&currency=EUR&source_category=manufacturer,broker_surplus&manufacturer=TI').args;
+ok(a.p_mpn === 'NE555DR' && a.p_qty === 2000 && a.p_currency === 'EUR' && a.p_manufacturer === 'TI' && a.p_sources.length === 2, 'paramètres : lus');
+
+// ---------------------------------------------------------------- devise unique
+const usd = C.offersInCurrency(offers, 'USD');
+ok(usd.length === 3 && !usd.some((o) => o.currency === 'CNH'), 'devise unique : offres USD et sur demande, CNH écartée');
+
+// ---------------------------------------------------------------- DigiKey
+const p = C.toDigiKeyProduct('NE555DR', usd);
+ok(p.ManufacturerProductNumber === 'NE555DR' && p.Manufacturer.Name === 'Texas Instruments', 'DigiKey : référence et fabricant');
+ok(p.QuantityAvailable === 25300 && p.UnitPrice === 0.105, 'DigiKey : stock total et prix unitaire le plus bas');
+ok(p.ProductVariations.length === 3 && p.ProductVariations[0].DigiKeyProductNumber === 'cpo_aaaaaaaaaaaaaaaaaaaa', 'DigiKey : une variante par offre, identifiant opaque');
+const v = p.ProductVariations[1];
+ok(JSON.stringify(v.StandardPricing) === JSON.stringify([{ BreakQuantity: 100, UnitPrice: 0.22, TotalPrice: 22 }, { BreakQuantity: 1000, UnitPrice: 0.198, TotalPrice: 198 }]), 'DigiKey : paliers BreakQuantity, UnitPrice, TotalPrice');
+ok(v.MinimumOrderQuantity === 100 && v.QuantityAvailableforPackageType === 5000, 'DigiKey : MOQ et stock de la variante');
+ok(v.MarketPlace === true && p.ProductVariations[0].MarketPlace === false, 'DigiKey : broker et surplus signalés (jamais présentés comme stock distributeur)');
+ok(p.ProductVariations.every((x) => x.Supplier.Name === 'Central.Parts'), 'DigiKey : fournisseur toujours Central.Parts');
+ok(v.CentralParts.sourceCategory === 'broker_surplus' && v.CentralParts.dateCode === '2430' && v.CentralParts.shipFrom === 'HK', 'DigiKey : extension CentralParts (catégorie, date code, expédition)');
+ok(p.ProductVariations[2].StandardPricing.length === 0 && p.ProductVariations[2].CentralParts.priceStatus === 'on_request', 'DigiKey : offre sur demande sans prix');
+ok(p.DatasheetUrl === 'https://www.ti.com/lit/ds/symlink/ne555.pdf' && p.ManufacturerLeadWeeks === '1', 'DigiKey : fiche technique, délai en semaines');
+const kw = C.toDigiKeyKeyword('NE555DR', usd, 'USD');
+ok(kw.ProductsCount === 1 && kw.Products[0].ProductVariations.length === 3 && kw.SearchLocaleUsed.Currency === 'USD', 'DigiKey : KeywordSearch');
+const two = C.groupByManufacturer([...usd, { ...usd[0], offer_id: 'cpo_x', manufacturer: 'Onsemi', stock: 10 }]);
+ok(two.length === 2 && two[0][0].manufacturer === 'Texas Instruments', 'DigiKey : un produit par fabricant, le plus gros stock d\'abord');
+ok(C.digiKeyError(404, 'Product not found').StatusCode === 404, 'DigiKey : erreur au format DigiKey');
+
+// ---------------------------------------------------------------- TI
+const t = C.toTiProduct('NE555DR', usd, 'USD');
+ok(t.tiPartNumber === 'NE555DR' && t.quantity === 20000 && t.minimumOrderQuantity === 1000, 'TI : référence, quantité, minimum');
+ok(JSON.stringify(t.pricing) === JSON.stringify([{ currency: 'USD', priceBreaks: [{ priceBreakQuantity: 1000, price: 0.105 }, { priceBreakQuantity: 10000, price: 0.0945 }] }]), 'TI : pricing[].priceBreaks[]');
+ok(t.centralParts.offerId === 'cpo_aaaaaaaaaaaaaaaaaaaa' && t.centralParts.otherOffers.length === 2, 'TI : meilleure offre, autres offres en extension');
+ok(C.toTiProduct('NE555DR', [], 'USD') === null, 'TI : aucune offre');
+ok(C.toTiProduct('NE555DR', [offers[2]], 'USD').pricing.length === 0, 'TI : offre sur demande sans prix');
+
+// ---------------------------------------------------------------- anonymat : aucun champ du fournisseur ne peut sortir
+const leaky = offers.map((o) => ({ ...o, seller_id: 'ORG-0101', sku: 'SKU-SECRET', product_url: 'https://fournisseur.example/x', alias: 'V-9' }));
+const out = JSON.stringify([C.toDigiKeyProduct('NE555DR', leaky), C.toTiProduct('NE555DR', leaky, 'USD')]);
+ok(!/ORG-0101|SKU-SECRET|fournisseur\.example|V-9/.test(out), 'anonymat : les formats compatibles ne recopient aucun champ inconnu');
+
+console.log(`${n - bad}/${n} vérifications réussies`);
+process.exit(bad ? 1 : 0);

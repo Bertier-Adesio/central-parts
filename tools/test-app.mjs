@@ -35,6 +35,17 @@ scenario('registre complet', (CP) => {
   ok(CP.endpoints.length > 40, 'registre chargé');
 });
 
+scenario('API d\'offres en direct : vendeur anonyme, prix tout compris (ADR 0024)', (CP) => {
+  const r = call(CP, 'buyer', 'GET', '/v1/offers?mpn=MC68HC11E1CFNE2&qty=250');
+  ok(r.offers.length >= 1 && r.offers.every((o) => o.offer_id.startsWith('cpo_') && !o.seller && !o.sellerId && !o.sku), 'offres anonymes, identifiant opaque');
+  ok(r.offers.some((o) => o.quote && o.quote.quantity === 250), 'prix à la quantité');
+  call(CP, 'buyer', 'GET', '/v1/offers', undefined, [422]);
+  call(CP, 'seller3', 'GET', '/v1/offers?mpn=MC68HC11E1CFNE2', undefined, [403]);
+  ok(call(CP, 'buyer', 'GET', '/v1/offers/' + r.offers[0].offer_id).offer_id === r.offers[0].offer_id, 'détail d\'une offre');
+  const s = call(CP, 'buyer', 'POST', '/v1/offers/search', { lines: [{ line_id: 'A', mpn: 'MC68HC11E1CFNE2', quantity: 10 }, { mpn: 'INCONNU' }] });
+  ok(s.lines.length === 2 && s.lines[1].offers.length === 0, 'nomenclature');
+});
+
 scenario('RFQ d\'une plateforme : validation par un administrateur avant toute diffusion (ADR 0023)', (CP) => {
   const body = { idempotencyKey: 'k1', customer_reference: 'REF-1', currency: 'EUR', ship_to_country: 'de', lines: [{ line_id: 'L1', mpn: 'MC68HC11E1CFNE2', quantity: 250 }] };
   const r = call(CP, 'buyer', 'POST', '/v1/demands', body);

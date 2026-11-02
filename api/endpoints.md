@@ -2,7 +2,7 @@
 
 > Fichier généré par `node tools/build-api-map.mjs` depuis `site/app/js/registry.js` : ne pas modifier à la main.
 
-87 endpoints et 25 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
+91 endpoints et 25 routes d'écran, implémentés en mémoire par la maquette vivante (`site/app/`, publiée sur `/app/`). C'est le contrat de départ de la future API : chemins, rôles autorisés et règles métier (`site/app/js/api.js`). Les données sont fictives.
 
 ## Conventions
 
@@ -28,6 +28,10 @@
 
 | Méthode | Chemin | Rôles | Rôle de l'endpoint | Écrans |
 |---|---|---|---|---|
+| GET | `/v1/offers` | Acheteur, Central.Parts | Offres en direct pour une référence (mpn, manufacturer, qty, currency, source_category) : stock, MOQ, paliers tout compris, délai, date code, catégorie de source, pays d'expédition, identifiant opaque ; fournisseur jamais nommé | Hors écran : intégration, webhook ou tâche |
+| POST | `/v1/offers/search` | Acheteur, Central.Parts | Offres en direct pour une nomenclature (500 lignes au plus, une réponse par ligne) | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/offers/{id}` | Acheteur, Central.Parts | Détail d'une offre (cpo_…) et prix à la quantité, durée de validité du prix | Hors écran : intégration, webhook ou tâche |
+| GET | `/v1/manufacturers` | Acheteur, Central.Parts | Fabricants présents dans le stock publiable | Hors écran : intégration, webhook ou tâche |
 | GET | `/v1/search` | Public, Acheteur, Vendeur, Laboratoire, Central.Parts | Recherche par référence fabricant dans Inventory et Opportunity (vendeurs anonymes) | `/recherche` |
 | GET | `/v1/pricing/advice` | Vendeur, Central.Parts | Fourchette de prix conseillée par Adesio pour une référence et une quantité, dans la devise du vendeur | `/vendeur/demandes/:id` |
 

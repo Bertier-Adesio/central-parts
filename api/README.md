@@ -13,9 +13,9 @@ API publique par laquelle les canaux acheteurs (Adesio, Luminovo, CalcuQuote, ER
 
 [`endpoints.md`](endpoints.md) liste les 75 endpoints et les 25 routes d'écran de la maquette vivante (`/app/`), avec les rôles autorisés et les étapes d'une transaction. Le fichier est généré depuis `site/app/js/registry.js` ; les règles métier sont implémentées en mémoire dans `site/app/js/api.js` (ADR 0003).
 
-## API des plateformes : route RFQ
+## API des plateformes : offres en direct et route RFQ
 
-[`plateformes.md`](plateformes.md) : guide d'intégration des plateformes de chiffrage (Adesio d'abord) : RFQ de 1 à 50 lignes, validation par un administrateur avant toute diffusion, réponse des fournisseurs dans WeChat sous 48 h, offres consolidées tout compris, webhooks signés, bac à sable ([ADR 0023](../docs/decisions/0023-route-rfq-plateformes-validation-wechat.md)). Servie par la fonction Edge `rfq`, avec le contrat du futur service API.
+[`plateformes.md`](plateformes.md) : guide d'intégration des plateformes de chiffrage (Adesio d'abord) : offres en direct par référence ou nomenclature, formats natif, compatible DigiKey ou compatible TI ([ADR 0024](../docs/decisions/0024-api-offres-en-direct-formats-compatibles.md)) ; et RFQ de 1 à 50 lignes, validation par un administrateur avant toute diffusion, réponse des fournisseurs dans WeChat sous 48 h, offres consolidées tout compris, webhooks signés, bac à sable ([ADR 0023](../docs/decisions/0023-route-rfq-plateformes-validation-wechat.md)). Servie par la fonction Edge `rfq`, avec le contrat du futur service API.
 
 ## API fournisseur
 

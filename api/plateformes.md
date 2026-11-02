@@ -1,8 +1,64 @@
-# API des plateformes : route RFQ
+# API des plateformes : offres en direct et route RFQ
 
 Guide d'intégration pour les plateformes de chiffrage et d'achat (Adesio d'abord, puis Luminovo, CalcuQuote, ERP) qui envoient des demandes de prix (RFQ) à Central.Parts. Décision : [ADR 0023](../docs/decisions/0023-route-rfq-plateformes-validation-wechat.md). Implémentation : fonction Edge `rfq` (`supabase/functions/rfq/`), règles en base (migration `20261102000020_route_rfq.sql`).
 
+Deux usages, même clé, mêmes règles :
+
+1. **Offres en direct** ([ADR 0024](../docs/decisions/0024-api-offres-en-direct-formats-compatibles.md)) : à chaque recherche ou nomenclature, la plateforme interroge Central.Parts comme l'API produit d'un distributeur et affiche stock, paliers et délai. Formats natif, compatible DigiKey ou compatible TI.
+2. **Route RFQ** (ci-dessous) : pour une offre « sur demande » ou une référence absente, une demande de prix aux fournisseurs, réponse sous 48 h.
+
 Central.Parts y est **un fournisseur unique** : la plateforme ne voit jamais le fournisseur, et le fournisseur ne voit jamais la plateforme ni l'acheteur. Les noms de fabricants sont donnés, les fournisseurs sont masqués.
+
+## Offres en direct
+
+| Méthode | Chemin | Rôle |
+|---|---|---|
+| `GET` | `/v1/offers?mpn=&manufacturer=&qty=&currency=&source_category=` | Offres pour une référence (exacte, espaces ignorés), triées par prix |
+| `POST` | `/v1/offers/search` | Nomenclature : `{ "currency"?, "lines": [{ "line_id", "mpn", "manufacturer"?, "quantity"? }] }`, 500 lignes au plus |
+| `GET` | `/v1/offers/{offer_id}?qty=&currency=` | Une offre (`cpo_…`) et son prix à la quantité ; `404` si elle n'est plus publiée, `422` sous le MOQ |
+| `GET` | `/v1/manufacturers?q=` | Fabricants présents dans le stock |
+| `GET` | `/compat/digikey/products/v4/search/{mpn}/productdetails` | Format compatible DigiKey (devise : en-tête `X-DIGIKEY-Locale-Currency`, USD par défaut) |
+| `POST` | `/compat/digikey/products/v4/search/keyword` | Format compatible DigiKey : `{ "Keywords": "<référence>", "Limit"?, "Offset"? }` |
+| `GET` | `/compat/ti/v2/store/products/{mpn}?currency=USD` | Format compatible TI store |
+
+Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives) :
+
+```json
+{
+  "mpn": "NE555DR", "quantity": 2000, "currency_requested": null,
+  "offers": [
+    {
+      "offer_id": "cpo_5f0c2a9e41d7b3a08c6e", "mpn": "NE555DR", "manufacturer": "Texas Instruments",
+      "source_category": "broker_surplus", "price_status": "priced", "stock": 5000, "moq": 100, "order_multiple": 1,
+      "currency": "USD",
+      "price_breaks": [ { "quantity": 100, "price": 0.22 }, { "quantity": 1000, "price": 0.198 }, { "quantity": 5000, "price": 0.165 } ],
+      "quote": { "quantity": 2000, "unit_price": 0.198, "extended_price": 396.0, "covered": true },
+      "lead_time_days": 3, "packaging": "Bande et bobine", "date_code": "2430", "ship_from": "HK",
+      "datasheet_url": "https://…", "price_valid_until": "2026-11-03T10:00:00Z", "updated_at": "2026-11-02T08:12:00Z"
+    },
+    { "offer_id": "cpo_…", "source_category": "authorized_distributor", "price_status": "on_request", "stock": 300, "moq": 1, "price_breaks": [], "ship_from": "CN" }
+  ]
+}
+```
+
+- **Prix** : tout compris, aucune marge n'est ajoutée après. **Devise** : celle de l'offre (`currency`), sans conversion pour l'instant ; le paramètre `currency` sera appliqué quand la conversion sera ouverte.
+- **Offre « sur demande »** : pas de prix ; la chiffrer par une RFQ (`POST /v1/demands`).
+- **Formats compatibles** : une seule devise par réponse ; seules les offres dans cette devise (et les offres sur demande) y figurent. Correspondance :
+
+| Natif | Compatible DigiKey | Compatible TI |
+|---|---|---|
+| `mpn` | `Product.ManufacturerProductNumber` | `tiPartNumber` |
+| `manufacturer` | `Product.Manufacturer.Name` | — |
+| `offer_id` | `ProductVariations[].DigiKeyProductNumber` | `centralParts.offerId` |
+| `stock` | `ProductVariations[].QuantityAvailableforPackageType` (total : `Product.QuantityAvailable`) | `quantity` |
+| `moq` | `ProductVariations[].MinimumOrderQuantity` | `minimumOrderQuantity` |
+| `price_breaks[]` | `ProductVariations[].StandardPricing[]` (`BreakQuantity`, `UnitPrice`, `TotalPrice`) | `pricing[0].priceBreaks[]` (`priceBreakQuantity`, `price`) |
+| `packaging` | `ProductVariations[].PackageType.Name` | `packageCarrier` |
+| `source_category` | `ProductVariations[].MarketPlace` (vrai pour `broker_surplus`) et `CentralParts.sourceCategory` | `centralParts.sourceCategory` |
+| `date_code`, `ship_from`, `lead_time_days`, `price_valid_until` | `ProductVariations[].CentralParts.*` | `centralParts.*` |
+| fournisseur | `Supplier.Name` = « Central.Parts » | — |
+
+Les noms de champs des formats compatibles suivent les documentations publiques de DigiKey (Product Information v4) et du TI store (inventory and pricing) ; ils sont à confirmer à la première intégration.
 
 ## Cycle d'une RFQ
 
@@ -27,10 +83,10 @@ Statuts vus par la plateforme : `pending_validation`, `rejected`, `open`, `offer
 
 - **Adresse de base actuelle** : `https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rfq` suivie des chemins ci-dessous, par exemple `…/functions/v1/rfq/v1/demands`. **Adresse prévue** : `https://api.central.parts` (mêmes chemins, même contrat).
 - **Authentification** : `Authorization: Bearer cp_live_…` (production) ou `cp_test_…` (bac à sable). Une clé par client, remise par Central.Parts par un canal sûr ; seule son empreinte est gardée. Une clé `cp_test_` ne sert qu'au bac à sable.
-- **Limites** : 60 appels par minute et par clé (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` sur chaque réponse ; `429` avec `Retry-After` au-delà) ; 50 lignes par RFQ ; 50 demandes en attente de validation par client.
+- **Limites** : 60 appels par minute et par clé par défaut, réglable par clé (un connecteur qui interroge une référence par appel a besoin de plus) (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` sur chaque réponse ; `429` avec `Retry-After` au-delà) ; 50 lignes par RFQ ; 50 demandes en attente de validation par client.
 - JSON en UTF-8, dates ISO 8601, montants en nombres décimaux.
 
-## Endpoints
+## Endpoints de la route RFQ
 
 | Méthode | Chemin | Rôle |
 |---|---|---|
@@ -153,10 +209,11 @@ Corps : `{ "error": { "code", "message", "field"? } }`.
 | `422` | `invalid` | Donnée invalide ; `field` précise le champ (`lines[L1].quantity`, `currency`…) |
 | `429` | `rate_limited` | Plus de 60 appels par minute, ou plus de 50 demandes en attente ; `Retry-After` en secondes |
 
-## Bac à sable
+## Bac à sable (offres en direct et RFQ)
 
 Avec une clé `cp_test_`, tout le cycle se teste seul, sans aucun message WeChat et sans fournisseur réel :
 
+0. `GET /v1/offers?mpn=NE555DR` (ou un format compatible) : offre du fournisseur de test, en direct ;
 1. `POST /v1/demands` (références du fournisseur de test : `NE555DR`, `LM358DR`, `STM32F103C8T6`, `GRM188R71H104KA93D`) ;
 2. `POST /v1/sandbox/demands/{id}/approve` : la demande passe à `open` (webhook `demand.validated`) ;
 3. `POST /v1/sandbox/demands/{id}/respond` avec `{ "kind": "quote", "price": 0.10, "currency": "USD", "lead_days": 3, "date_code": "2430" }` (ou `{ "kind": "decline" }`) : la demande est close (`offers_ready` ou `no_offer`, webhook) ;
