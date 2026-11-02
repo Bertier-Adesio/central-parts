@@ -70,7 +70,8 @@ jobs:
   pages:
     needs: changes
     if: needs.changes.outputs.pages == 'true'
-    runs-on: ubuntu-latest
+    # Version fixée : Playwright 1.56.1 n'installe pas Chromium sur ubuntu-latest (Ubuntu 26.04 depuis novembre 2026).
+    runs-on: ubuntu-24.04
     env:
       PLAYWRIGHT_VERSION: 1.56.1
     steps:
