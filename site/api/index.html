@@ -271,6 +271,8 @@ pre{margin:0;background:var(--bg-inverse);color:var(--fg-inverse);border-radius:
         <tr data-endpoint="GET /v1/demands/{id}"><td class="m">GET</td><td class="p"><a href="#ep-demands">/v1/demands/{id}</a></td><td><span data-l="fr">Détail et statut d’une demande</span><span data-l="en">Request detail and status</span><span data-l="zh">询价详情与状态</span></td></tr>
         <tr data-endpoint="POST /v1/demands/{id}/cancel"><td class="m">POST</td><td class="p"><a href="#ep-demands">/v1/demands/{id}/cancel</a></td><td><span data-l="fr">Annuler une demande</span><span data-l="en">Cancel a request</span><span data-l="zh">取消询价</span></td></tr>
         <tr data-endpoint="GET /v1/demands/{id}/offers"><td class="m">GET</td><td class="p"><a href="#ep-demands">/v1/demands/{id}/offers</a></td><td><span data-l="fr">Offres chiffrées en réponse à la demande</span><span data-l="en">Priced offers answering the request</span><span data-l="zh">针对询价返回的报价</span></td></tr>
+        <tr data-endpoint="GET /v1/rfqs"><td class="m">GET</td><td class="p"><a href="#ep-rfqs">/v1/rfqs</a></td><td><span data-l="fr">RFQ du client, avec leur statut d’ensemble</span><span data-l="en">The client’s RFQs, with their overall status</span><span data-l="zh">客户的询价单及整体状态</span></td></tr>
+        <tr data-endpoint="GET /v1/rfqs/{rfq_id}"><td class="m">GET</td><td class="p"><a href="#ep-rfqs">/v1/rfqs/{rfq_id}</a></td><td><span data-l="fr">Une RFQ en un appel : statut d’ensemble et offres de chaque ligne</span><span data-l="en">One RFQ in a single call: overall status and offers for every line</span><span data-l="zh">一次调用获取整张询价单：整体状态及每行报价</span></td></tr>
         <tr data-endpoint="POST /v1/webhooks"><td class="m">POST</td><td class="p"><a href="#ep-webhooks">/v1/webhooks</a></td><td><span data-l="fr">S’abonner à des événements</span><span data-l="en">Subscribe to events</span><span data-l="zh">订阅事件</span></td></tr>
         <tr data-endpoint="GET /v1/webhooks"><td class="m">GET</td><td class="p"><a href="#ep-webhooks">/v1/webhooks</a></td><td><span data-l="fr">Abonnements et dernières livraisons</span><span data-l="en">Subscriptions and latest deliveries</span><span data-l="zh">订阅列表与最近推送</span></td></tr>
         <tr data-endpoint="DELETE /v1/webhooks/{id}"><td class="m">DELETE</td><td class="p"><a href="#ep-webhooks">/v1/webhooks/{id}</a></td><td><span data-l="fr">Supprimer un abonnement</span><span data-l="en">Delete a subscription</span><span data-l="zh">删除订阅</span></td></tr>
@@ -435,6 +437,36 @@ Content-Type: application/json
 
 202
 { "rfq_id": "RFQ-0012", "demands": [ { "line_id": "L1", "id": "DEM-1042", "status": "pending_validation" } ] }</code></pre></div>
+  </section>
+
+  <!-- RFQ entière -->
+  <section class="ep" id="ep-rfqs">
+    <h3><span class="meth">GET</span><span class="path">/v1/rfqs/{rfq_id}</span><span class="meth">GET</span><span class="path">/v1/rfqs</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
+    <p data-l="fr">Une RFQ de plusieurs lignes donne une demande par ligne. <code>GET /v1/rfqs/{rfq_id}</code> rend la RFQ entière en un appel : son statut d’ensemble, le nombre de lignes par statut, et pour chaque ligne son statut et ses offres consolidées (mêmes champs que <code>/v1/demands/{id}/offers</code>). Le champ <code>price_valid_until</code> donne la validité la plus proche parmi toutes les offres. <code>GET /v1/rfqs</code> liste les RFQ du client, sans les offres ; filtres <code>status</code>, <code>customer_reference</code>, <code>created_since</code>.</p>
+    <p data-l="en">An RFQ of several lines gives one request per line. <code>GET /v1/rfqs/{rfq_id}</code> returns the whole RFQ in a single call: its overall status, the number of lines per status, and for each line its status and consolidated offers (same fields as <code>/v1/demands/{id}/offers</code>). The <code>price_valid_until</code> field gives the earliest validity across all offers. <code>GET /v1/rfqs</code> lists the client’s RFQs, without the offers; filters <code>status</code>, <code>customer_reference</code>, <code>created_since</code>.</p>
+    <p data-l="zh">一张多行询价单中，每行对应一个询价。<code>GET /v1/rfqs/{rfq_id}</code> 一次调用返回整张询价单：整体状态、各状态的行数，以及每行的状态和汇总报价（字段与 <code>/v1/demands/{id}/offers</code> 相同）。<code>price_valid_until</code> 为所有报价中最早的有效期。<code>GET /v1/rfqs</code> 列出客户的询价单（不含报价）；筛选参数：<code>status</code>、<code>customer_reference</code>、<code>created_since</code>。</p>
+    <div class="tbl"><table>
+      <thead><tr><th><span data-l="fr">Statut d’ensemble</span><span data-l="en">Overall status</span><span data-l="zh">整体状态</span></th><th><span data-l="fr">Quand</span><span data-l="en">When</span><span data-l="zh">条件</span></th></tr></thead>
+      <tbody>
+        <tr><td class="p">in_progress</td><td><span data-l="fr">Au moins une ligne en attente de validation ou ouverte aux fournisseurs</span><span data-l="en">At least one line pending validation or open to suppliers</span><span data-l="zh">至少一行待审核或正在向供应商询价</span></td></tr>
+        <tr><td class="p">offers_ready</td><td><span data-l="fr">Plus aucune ligne en cours, et au moins une ligne avec des offres</span><span data-l="en">No line in progress, and at least one line with offers</span><span data-l="zh">没有进行中的行，且至少一行有报价</span></td></tr>
+        <tr><td class="p">no_offer</td><td><span data-l="fr">Plus aucune ligne en cours, et aucune offre</span><span data-l="en">No line in progress, and no offer</span><span data-l="zh">没有进行中的行，且没有报价</span></td></tr>
+        <tr><td class="p">cancelled</td><td><span data-l="fr">Toutes les lignes annulées</span><span data-l="en">Every line cancelled</span><span data-l="zh">所有行均已取消</span></td></tr>
+      </tbody>
+    </table></div>
+    <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif</span><span data-l="en">Fictitious example</span><span data-l="zh">虚构示例</span></span>
+<pre><code>GET /v1/rfqs/RFQ-0012
+Authorization: Bearer cp_live_XXXXXXXX
+
+200
+{ "rfq_id": "RFQ-0012", "customer_reference": "BOM-4711", "status": "offers_ready",
+  "currency": "EUR", "ship_to_country": "FR", "lines_count": 2,
+  "status_counts": { "offers_ready": 1, "no_offer": 1 }, "offers_count": 1,
+  "price_valid_until": "2026-11-12T09:00:00Z",
+  "lines": [
+    { "id": "DEM-1042", "line_id": "L1", "status": "offers_ready", "mpn": "NE555DR", "quantity": 2500,
+      "offers": [ { "offer_id": "OFF-3007", "rank": 1, "unit_price": 0.1012, "currency": "EUR", "…": "…" } ] },
+    { "id": "DEM-1043", "line_id": "L2", "status": "no_offer", "mpn": "LM358DR", "quantity": 500, "offers": [] } ] }</code></pre></div>
   </section>
 
   <!-- Webhooks -->

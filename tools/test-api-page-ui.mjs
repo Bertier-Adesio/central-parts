@@ -21,6 +21,7 @@ const ENDPOINTS = [
   'GET /v1/offers', 'POST /v1/offers/search', 'GET /v1/offers/{offer_id}', 'GET /v1/manufacturers',
   'GET /v1/me', 'GET /v1/usage', 'GET /v1/health',
   'POST /v1/demands', 'GET /v1/demands', 'GET /v1/demands/{id}', 'POST /v1/demands/{id}/cancel', 'GET /v1/demands/{id}/offers',
+  'GET /v1/rfqs', 'GET /v1/rfqs/{rfq_id}',
   'POST /v1/webhooks', 'GET /v1/webhooks', 'DELETE /v1/webhooks/{id}',
   // Phase 2 : commande
   'POST /v1/inventory/orders', 'POST /v1/offers/{id}/accept', 'GET /v1/transactions', 'GET /v1/transactions/{id}',

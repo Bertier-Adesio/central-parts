@@ -120,6 +120,16 @@ try {
   const o = of.json.offers[0];
   ok(o && Number(o.unit_price) === 0.1012 && o.currency === 'EUR' && o.manufacturer.id === 'MFR-TI' && o.packaging === 'tape_reel' && o.source_category === 'broker_surplus', 'offre : 0,10 USD → 0,1012 EUR tout compris, fabricant, catégorie ' + JSON.stringify(o));
   ok(!/SBX|V-SBX|LOT-|sandbox-rfq-supplier|Fournisseur partenaire/.test(JSON.stringify(of.json)), 'offre : aucun élément du fournisseur');
+  // Lecture agrégée : la RFQ entière en un appel.
+  const rq = await api('GET', `/v1/rfqs/${c1.json.rfq_id}`, KEY_TEST);
+  ok(rq.status === 200 && rq.json.status === 'offers_ready' && rq.json.lines_count === 1 && rq.json.customer_reference === 'ADS-E2E-1'
+    && rq.json.lines[0].id === dS && rq.json.lines[0].line_id === 'L1' && JSON.stringify(rq.json.lines[0].offers) === JSON.stringify(of.json.offers),
+    'GET /v1/rfqs/{id} : statut d\'ensemble et offres de la ligne en un appel');
+  ok(rq.json.price_valid_until === o.price_valid_until && rq.json.status_counts.offers_ready === 1, 'RFQ : validité la plus proche et décompte');
+  ok((await api('GET', '/v1/rfqs/RFQ-999999', KEY_TEST)).status === 404, 'RFQ inconnue : 404');
+  const rl1 = await api('GET', '/v1/rfqs?customer_reference=ADS-E2E-1', KEY_TEST);
+  ok(rl1.status === 200 && rl1.json.rfqs.length === 1 && rl1.json.rfqs[0].rfq_id === c1.json.rfq_id && !('lines' in rl1.json.rfqs[0]), 'GET /v1/rfqs : liste filtrée, sans les lignes');
+  ok((await api('GET', '/v1/rfqs?status=open', KEY_TEST)).status === 422, 'GET /v1/rfqs : statut d\'ensemble inconnu (422)');
   await sleep(1500);
   const cap1 = captured();
   ok(!cap1.some((x) => x.kind === 'wechat'), 'bac à sable : aucun message WeChat (ni fournisseur, ni administrateur)');

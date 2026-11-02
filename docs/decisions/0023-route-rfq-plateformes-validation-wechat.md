@@ -40,6 +40,10 @@ Une plateforme de chiffrage (Adesio d'abord, puis Luminovo, CalcuQuote) veut dem
 ### Bac à sable
 - Une clé `cp_test_` crée des demandes `sandbox` : elles ne sont appariées qu'aux fournisseurs de test (`organizations.sandbox`), et aucun message ne part : l'envoi est simulé. Deux endpoints réservés aux clés de test simulent l'administrateur et le fournisseur, pour qu'une plateforme recette tout le cycle seule.
 
+### Lecture agrégée (complément du 3 novembre 2026)
+- Leçon du premier connecteur (Adesio) : une RFQ de N lignes donne N demandes, et la plateforme devait recalculer elle-même le statut du devis puis lire les offres demande par demande. `GET /v1/rfqs/{rfq_id}` rend la RFQ entière en un appel : statut d'ensemble (`in_progress`, `offers_ready`, `no_offer`, `cancelled`), décompte par statut, offres de chaque ligne, validité la plus proche. `GET /v1/rfqs` les liste. Lecture seule, migration 20261103000022.
+- Le statut d'ensemble est calculé par Central.Parts (`app.rfq_aggregate_status`), pour que chaque plateforme n'ait pas à le réécrire ; un statut de ligne inconnu compte comme « en cours ».
+
 ### Hors périmètre
 - La commande (PO) : même route en sens inverse, à décrire dans un ADR séparé.
 - Tout sujet juridique (reprise le 16 novembre 2026).
