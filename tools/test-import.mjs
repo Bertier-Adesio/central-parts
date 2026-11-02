@@ -8,6 +8,8 @@ import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistra
 import { createHash } from 'node:crypto';
 import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
 import * as R from '../supabase/functions/_shared/robot-texts.js';
+import { OPERATOR_MENU_KEYS, operatorMenuCommand } from '../supabase/functions/_shared/depot.js';
+import { conditionalMenu, mask, menuProblems, readOpenids, trymatchVerdict } from './wechat-menu-operators.mjs';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -195,7 +197,7 @@ en(R.welcomeText('dl_xxxxxxxx', true), 'accueil');
 ok(R.welcomeText('dl_xxxxxxxx', true).includes(fakeUrl) && !R.welcomeText('', true).includes('?login='), 'opérateur : accueil avec lien, ou sans lien si sa création échoue');
 en(R.receivedText(true), 'accusé de réception');
 en(R.operatorHelpText(), 'aide des commandes');
-for (const c of ['pending', 'approve ORG-', 'reject ORG-', 'link', 'reply 123', 'request PR-', 'confirm PR-', 'unavailable PR-', 'proforma PR-', 'paid PR-', 'shipped PR-', 'cancel PR-'])
+for (const c of ['pending', 'requests', 'approve ORG-', 'reject ORG-', 'link', 'reply 123', 'request PR-', 'confirm PR-', 'unavailable PR-', 'proforma PR-', 'paid PR-', 'shipped PR-', 'cancel PR-'])
   ok(R.operatorHelpText().includes(c), 'aide : commande « ' + c + ' » listée');
 en(R.operatorErrorText('ORG-0123', 'company not found'), 'erreur de commande approve / reject');
 en(registrationLine({ region: 'HK', code: '12345678' }), 'ligne de numéro de la fiche [Pending review]');
@@ -243,6 +245,43 @@ ok(R.rejectedNotice('').startsWith('您的公司未通过 Central.Parts 审核�
 ok(R.operatorReplyText('Please send your stock list.') === 'Central.Parts 回复 · Reply from Central.Parts:\nPlease send your stock list.', 'fournisseur, bilingue : réponse d\'un opérateur (en-tête chinois et anglais, texte tel quel)');
 const adm = src('admin/index.ts');
 ok(/const APPROVED = approvedNotice;/.test(adm) && /const REJECTED = rejectedNotice;/.test(adm), 'back office : mêmes avis au fournisseur que le robot (robot-texts.js)');
+
+// Menu anglais des opérateurs (supabase/wechat/menu-operators.json, étiquette « operators ») ; menu.json inchangé.
+const opMenu = JSON.parse(readFileSync(new URL('../supabase/wechat/menu-operators.json', import.meta.url), 'utf8'));
+const opButtons = opMenu.button.flatMap((b) => [b, ...(b.sub_button || [])]);
+ok(menuProblems(opMenu).length === 0, 'menu opérateurs : conforme aux limites WeChat (boutons, octets, types)');
+ok(!HAN.test(opButtons.map((b) => b.name).join(' ')), 'menu opérateurs : libellés en anglais seul');
+ok(['OP_PENDING', 'OP_HELP', 'DEPOT_LOGIN'].every((k) => opButtons.some((b) => b.type === 'click' && b.key === k)), 'menu opérateurs : boutons Pending, Commands et Upload stock');
+ok(opButtons.filter((b) => b.type === 'view').every((b) => /^https:\/\/(central\.parts|docs\.qq\.com)\//.test(b.url)), 'menu opérateurs : liens vers central.parts ou le formulaire Tencent Docs seulement');
+ok(menuProblems(menu).length === 0, 'menu par défaut : toujours conforme');
+ok(menuProblems({ button: [{ name: 'Beaucoup trop long', sub_button: [] }] }).length > 0 && menuProblems({ button: [] }).length > 0, 'menu : libellé trop long ou menu vide refusés');
+ok(JSON.stringify(conditionalMenu(opMenu, 101).matchrule) === '{"tag_id":"101"}', 'menu opérateurs : règle tag_id seule (pas de langue, refusée par WeChat)');
+const clickOf = (key) => ({ ...click, EventKey: key });
+ok(operatorMenuCommand(clickOf('OP_PENDING')) === 'pending' && operatorMenuCommand(clickOf('OP_HELP')) === 'help', 'menu opérateurs : un clic vaut la commande pending ou help');
+ok(operatorMenuCommand(click) === null && operatorMenuCommand(clickOf('toString')) === null && operatorMenuCommand({ MsgType: 'text', Content: 'OP_PENDING' }) === null, 'menu opérateurs : autre bouton ou texte ignorés');
+ok(Object.keys(OPERATOR_MENU_KEYS).every((k) => opButtons.some((b) => b.key === k)), 'menu opérateurs : chaque clé gérée par le robot est dans le menu');
+ok(/const menuCmd = operatorMenuCommand\(msg\);\s*if \(menuCmd\) \{\s*if \(!\(await isOperator\(db, msg\.FromUserName\)\)\) return new Response\('success'\);/.test(ev), 'robot : boutons opérateurs sans effet pour un non-opérateur');
+ok(JSON.stringify(readOpenids('# opérateurs\noABCDEFGHIJKLMNOPQRSTUVWX\n\noABCDEFGHIJKLMNOPQRSTUVWX\n')) === '["oABCDEFGHIJKLMNOPQRSTUVWX"]', 'script du menu : openid lus, doublons et commentaires ignorés');
+let refused = false; try { readOpenids('pas un openid'); } catch { refused = true; }
+ok(refused, 'script du menu : ligne invalide refusée');
+ok(trymatchVerdict({ button: [{ name: 'Review' }] }, opMenu) === 'menu anglais' && trymatchVerdict({ menu: { button: [{ name: 'Review' }] } }, opMenu) === 'menu anglais', 'script du menu : vérification trymatch, deux formes de réponse');
+ok(trymatchVerdict({ button: [{ name: '合作登记' }] }, opMenu).startsWith('menu par défaut') && trymatchVerdict({ errcode: 0 }, opMenu).includes('errcode') && !trymatchVerdict({ errcode: 0, secret: 'zz' }, opMenu).includes('zz'), 'script du menu : menu par défaut ou réponse inconnue signalés, sans valeurs');
+ok(mask('oABCDEFGHIJKLMNOPQRSTUVWX') === 'oABC…VWX', 'script du menu : openid masqué dans le journal');
+
+// Commande « requests » (bouton Review › Purchase requests) : demandes d'achat en cours.
+const prRows = [
+  { id: 'PR-0012', status: 'submitted', mpn: 'STM32F103C8T6', qty: 500, buyer_company: 'Exemple EMS GmbH', created_at: '2026-11-02T09:00:00Z' },
+  { id: 'PR-0009', status: 'proforma_sent', mpn: 'LM317T', qty: 2000, buyer_company: 'Démo OEM SAS', created_at: '2026-10-30T15:00:00Z' },
+];
+const prText = R.operatorRequestsText(prRows, 14);
+en(prText, 'demandes d\'achat en cours (requests)');
+ok(prText.startsWith('Open purchase requests: 14 (latest 2 shown)') && prText.includes('PR-0012 · awaiting supplier · STM32F103C8T6 × 500 · Exemple EMS GmbH · 2 Nov') && prText.includes('PR-0009 · proforma sent') && prText.endsWith('Full card: "request PR-0012"'), 'requests : une ligne par demande, la plus récente d\'abord, et la commande pour la fiche complète');
+ok(!prText.includes('@') && !prText.includes('VAT'), 'requests : la liste ne montre ni e-mail ni TVA de l\'acheteur (fiche complète par « request PR-… »)');
+ok(R.operatorRequestsText([]) === 'No open purchase request.' && R.operatorRequestsText(prRows) .startsWith('Open purchase requests: 2\n'), 'requests : aucune demande, ou toutes affichées');
+ok(JSON.stringify(R.OPEN_REQUEST_STATUSES) === '["submitted","confirmed","proforma_sent","paid"]', 'requests : ni expédiées, ni annulées, ni sans stock');
+ok(operatorMenuCommand(clickOf('OP_REQUESTS')) === 'requests', 'menu opérateurs : Purchase requests vaut la commande requests');
+ok(/if \(\/\^requests\$\/i\.test\(t\)\)/.test(ev) && /\.in\('status', OPEN_REQUEST_STATUSES\)\.order\('created_at', \{ ascending: false \}\)\.limit\(10\)/.test(ev), 'robot : requests lit les 10 demandes en cours les plus récentes');
+ok(/^\s*m = \/\^\(确认\|无货\|发票\|收款\|发货\|取消\|询单\|confirm\|unavailable\|proforma\|paid\|shipped\|cancel\|request\)\\s\*\(PR-\\d\+\)\\s\*\$\/i\.exec\(t\);/m.test(ev), 'robot : commandes PR-… existantes inchangées');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

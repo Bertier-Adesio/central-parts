@@ -1,0 +1,26 @@
+{
+  "button": [
+    {
+      "name": "Review",
+      "sub_button": [
+        { "type": "click", "name": "Pending companies", "key": "OP_PENDING" },
+        { "type": "click", "name": "Purchase requests", "key": "OP_REQUESTS" },
+        { "type": "click", "name": "Commands", "key": "OP_HELP" }
+      ]
+    },
+    {
+      "name": "Supplier",
+      "sub_button": [
+        { "type": "click", "name": "Upload stock", "key": "DEPOT_LOGIN" },
+        { "type": "view", "name": "Stock template", "url": "https://central.parts/depot/stock-template.csv" }
+      ]
+    },
+    {
+      "name": "About",
+      "sub_button": [
+        { "type": "view", "name": "Website", "url": "https://central.parts/en/" },
+        { "type": "view", "name": "Partner form", "url": "https://docs.qq.com/form/page/DRG1KU3JRT21WZ05o" }
+      ]
+    }
+  ]
+}

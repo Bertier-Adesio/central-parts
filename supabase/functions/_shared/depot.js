@@ -90,6 +90,13 @@ export const DEPOT_MENU_KEY = 'DEPOT_LOGIN';
 export function isDepotMenuClick(msg) {
   return msg.MsgType === 'event' && String(msg.Event || '').toUpperCase() === 'CLICK' && msg.EventKey === DEPOT_MENU_KEY;
 }
+// Boutons du menu anglais des opérateurs (supabase/wechat/menu-operators.json, réservé à l'étiquette « operators »,
+// publié par tools/wechat-menu-operators.mjs) : un clic vaut la commande texte correspondante, pour un opérateur seulement.
+export const OPERATOR_MENU_KEYS = { OP_PENDING: 'pending', OP_REQUESTS: 'requests', OP_HELP: 'help' };
+export function operatorMenuCommand(msg) {
+  if (msg.MsgType !== 'event' || String(msg.Event || '').toUpperCase() !== 'CLICK') return null;
+  return Object.hasOwn(OPERATOR_MENU_KEYS, msg.EventKey) ? OPERATOR_MENU_KEYS[msg.EventKey] : null;
+}
 // Texte de la réponse : supabase/functions/_shared/robot-texts.js (anglais seul pour un opérateur).
 export { depotLinkText } from './robot-texts.js';
 
