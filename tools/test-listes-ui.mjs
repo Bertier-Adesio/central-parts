@@ -85,12 +85,12 @@ async function offers(route) {
   const band = (x) => (x >= 100000 ? '100000+' : x >= 10000 ? '10000+' : x >= 1000 ? '1000+' : x >= 100 ? '100+' : '1+');
   // Réponse anonyme, comme public.partner_offers : ni nom, ni SKU, ni lien du vendeur.
   const list = [...state.lots.values()].filter((l) => l.qty > 0 && l.mpn.replace(/\s+/g, '').startsWith(q)).map((l) => ({
-    mpn: l.mpn, manufacturer: l.mfr, supplier: 'partner', seller_category: null, source: 'broker', ship_from: 'HK',
+    mpn: l.mpn, manufacturer: l.mfr, supplier: 'partner', seller_category: null, source: 'broker', ship_from: 'HK', currency: 'USD',
     availability: band(l.qty), moq: l.moq, price_from: Math.min(l.price, ...Object.values(l.tiers)) * 1.1,
     // Prix 1KU : palier qui couvre 1 000 pièces (comme app.lot_price_for), marge comprise.
     price_1k: (Object.entries(l.tiers).filter(([q]) => +q <= 1000).sort((a, b) => b[0] - a[0])[0]?.[1] ?? l.price) * 1.1, updated_at: l.confirmed_at,
   }));
-  return reply({ query: q, currency: u.searchParams.get('cur') || 'EUR', ttl_days: 7, offers: list.slice(0, 50) });
+  return reply({ query: q, currency: 'EUR', ttl_days: 7, offers: list.slice(0, 50) });
 }
 
 const browser = await chromium.launch();
@@ -174,6 +174,7 @@ for (const width of [1280, 390]) {
   ok(text.includes('MT41K128M16JT-107 IT:K') && text.includes(new Date().toLocaleDateString('fr-FR')), width + ' px : référence complète et date de mise à jour');
   ok(text.includes('7 jours'), width + ' px : retrait après 7 jours expliqué');
   ok((text.match(/prix 1 k :/g) || []).length === 10 && (text.match(/à partir de/g) || []).length === 10, width + ' px : « à partir de » et prix 1KU sur chaque offre');
+  ok(/\$US/.test(text) && !/€/.test(text) && !(await page.$('#cur')), width + ' px : prix dans la devise du fournisseur (USD), plus de choix de devise');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
   if (width === 1280) {
     await page.fill('#q', 'ad8');
