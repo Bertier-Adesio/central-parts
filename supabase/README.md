@@ -186,7 +186,7 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    node tools/wechat-menu-operators.mjs --openids ~/Downloads/operators.txt --apply
    unset WECHAT_SECRET; rm ~/Downloads/operators.txt
    ```
-   Le script crée l'étiquette si besoin, y met exactement les openid du fichier (et la retire aux autres), remplace le menu personnalisé de l'étiquette et vérifie par `menu/trymatch` ce que voit chaque opérateur ; il n'affiche ni le jeton ni un openid complet. À relancer quand un opérateur arrive ou part.
+   Le script crée l'étiquette si besoin, y met exactement les openid du fichier (et la retire aux autres), remplace le menu personnalisé de l'étiquette et vérifie par `menu/trymatch` ce que voit chaque opérateur ; il n'affiche ni le jeton ni un openid complet. À relancer quand un opérateur arrive ou part, et quand un opérateur s'est désabonné du compte : WeChat retire alors ses étiquettes, et il retrouve le menu chinois. Ne pas se désabonner pour « rafraîchir » le menu : fermer et rouvrir WeChat, puis attendre quelques minutes.
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ### Back office /admin/ (ADR 0018)
