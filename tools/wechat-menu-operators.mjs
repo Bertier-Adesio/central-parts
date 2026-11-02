@@ -14,8 +14,8 @@
 // ne doit pas être dans le dépôt (le garder hors du dossier, par exemple dans ~/Downloads, puis le supprimer).
 // Le script : crée l'étiquette si besoin, la met aux openid de la liste et la retire aux autres, remplace le menu
 // personnalisé de cette étiquette, puis vérifie avec menu/trymatch ce que voit chaque opérateur. Il n'affiche jamais
-// le jeton ni un openid complet. À relancer après chaque publication de menu.json : menu/create efface les menus
-// personnalisés.
+// le jeton ni un openid complet. À relancer après chaque publication de menu.json (menu/create efface les menus
+// personnalisés) et après le désabonnement d'un opérateur (WeChat retire alors ses étiquettes).
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -138,7 +138,7 @@ async function main() {
     const r = await call(token, '/cgi-bin/menu/trymatch', { user_id: o });
     console.log(`${mask(o)} : ${trymatchVerdict(r, menu)}`);
   }
-  console.log('Fait. Le menu apparaît après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).');
+  console.log('Fait. Le menu apparaît après quelques minutes : fermer et rouvrir WeChat. Ne pas se désabonner : WeChat retirerait l\'étiquette.');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
