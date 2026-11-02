@@ -8,6 +8,8 @@
 //     - abonnement, scan d'un autre QR code du compte (stand, supports imprimés) ou message d'un fournisseur :
 //       message d'accueil avec un lien de connexion personnel (15 minutes) vers la page de dépôt et d'inscription.
 //       Le message automatique de la console WeChat ne s'applique plus une fois le 消息推送 activé ;
+//     - bouton « 供应商 › 上传库存 » du menu (clic, clé DEPOT_LOGIN) : lien de connexion personnel (15 minutes),
+//       pour tous, inscrits ou non : seul moyen simple de se connecter sur téléphone ;
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
@@ -18,7 +20,7 @@
 // Secrets de la fonction : WECHAT_TOKEN (le « Token » saisi dans la console WeChat), WECHAT_APPID et WECHAT_SECRET
 // pour prévenir les fournisseurs de la décision.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
+import { depotLinkText, isDepotMenuClick, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 
 const REPLIES: Record<string, string> = {
@@ -161,6 +163,12 @@ Deno.serve(async (req) => {
       if (link) text += `\n\n手机上请点此返回 · On a phone, tap to go back:\n${SITE}?login=${link}`;
     }
     return text ? reply(text) : new Response('success');
+  }
+
+  // Bouton « 上传库存 » du menu : lien personnel vers la page de dépôt, déjà connecté (inscription si pas de société).
+  if (isDepotMenuClick(msg)) {
+    const { data: link, error } = await db.rpc('depot_login_link', { p_openid: msg.FromUserName });
+    return reply(error ? '暂时无法生成登录链接，请稍后再试。\nThe login link could not be created, please try again later.' : depotLinkText(`${SITE}?login=${link}`));
   }
 
   if (msg.MsgType === 'text') {

@@ -83,6 +83,21 @@ export function sceneOf(msg) {
   return null;
 }
 
+// Bouton « 供应商 › 上传库存 » du menu (type « click », clé DEPOT_LOGIN, supabase/wechat/menu.json) : WeChat prévient
+// le serveur de qui l'a touché ; le robot répond par un lien de connexion personnel. Sur téléphone, c'est le seul
+// moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran.
+export const DEPOT_MENU_KEY = 'DEPOT_LOGIN';
+export function isDepotMenuClick(msg) {
+  return msg.MsgType === 'event' && String(msg.Event || '').toUpperCase() === 'CLICK' && msg.EventKey === DEPOT_MENU_KEY;
+}
+export function depotLinkText(url) {
+  return [
+    '点此登录 Central.Parts 供应商中心（15 分钟内有效）：', url, '',
+    '尚未注册的公司可在页面上注册。链接过期后，请再次点击菜单「供应商」→「上传库存」。', '',
+    'Tap to log in to the Central.Parts supplier centre (valid 15 minutes). Companies not yet registered can register on the page. If the link has expired, tap the menu again.',
+  ].join('\n');
+}
+
 // Réponse texte immédiate dans la conversation WeChat du fournisseur.
 export function replyText(toUser, fromUser, content, now = Date.now()) {
   const cdata = (s) => '<![CDATA[' + String(s).replace(/\]\]>/g, ']]]]><![CDATA[>') + ']]>';
@@ -100,6 +115,30 @@ export function creditCodeOk(code) {
   for (let i = 0; i < 17; i++) t += CREDIT_CHARS.indexOf(c[i]) * CREDIT_WEIGHTS[i];
   const k = (31 - (t % 31)) % 31;
   return CREDIT_CHARS[k] === c[17];
+}
+
+// Numéro d'immatriculation selon le pays / région (migration 20261102000013, même règle que
+// app.registration_number_ok) : Chine continentale (CN) : 统一社会信用代码 ; Hong Kong (HK) et autre pays (OTHER) :
+// 5 à 30 caractères, lettres, chiffres, tirets, espaces, barres obliques. Le numéro est d'abord normalisé.
+export const REGIONS = ['CN', 'HK', 'OTHER'];
+export function normalizeRegistrationNumber(region, code) {
+  const c = String(code || '').trim().toUpperCase();
+  return region === 'CN' ? c : c.replace(/\s+/g, ' ');
+}
+export function registrationNumberOk(region, code) {
+  const c = normalizeRegistrationNumber(region, code);
+  if (region === 'CN') return creditCodeOk(c);
+  if (region === 'HK' || region === 'OTHER') return /^[A-Z0-9 /-]{5,30}$/.test(c) && /[A-Z0-9]/.test(c);
+  return false;
+}
+
+// Ligne « numéro » de la fiche d'une société en attente, pour les opérateurs (en anglais).
+// Région absente (sociétés inscrites avant la migration 20261102000013) : Chine continentale.
+const REGION_LABEL = { CN: 'Mainland China', HK: 'Hong Kong', OTHER: 'other country' };
+export function registrationLine(s) {
+  const region = s.region || 'CN';
+  const kind = region === 'CN' ? 'Credit code' : 'Registration no.';
+  return `${kind} (${REGION_LABEL[region] || region}): ${s.code || '—'}`;
 }
 
 // Chemin de la photo de la licence : <société>/licence-<horodatage>.<ext> ; null si le format n'est pas accepté.

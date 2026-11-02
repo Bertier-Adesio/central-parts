@@ -1,6 +1,7 @@
 // Appels à l'API du compte de service WeChat, partagés par les fonctions depot et wechat-events.
 // Secrets : WECHAT_APPID, WECHAT_SECRET.
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { registrationLine } from './depot.js';
 
 // Jeton d'accès partagé (stable_token), gardé en base jusqu'à cinq minutes avant son échéance.
 export async function accessToken(db: SupabaseClient, force = false): Promise<string> {
@@ -55,7 +56,7 @@ export async function supplierCard(db: SupabaseClient, s: Record<string, unknown
   }
   return [
     `[Pending review] ${s.org_id} · ${s.name}`,
-    `Credit code: ${s.code}`,
+    registrationLine(s),
     `${s.city} · ${s.profile}${s.lines ? ` · ${s.lines} stock lines` : ''}`,
     license,
     `Reply "approve ${s.org_id}" or "reject ${s.org_id} reason"`,

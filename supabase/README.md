@@ -33,7 +33,7 @@ Règles appliquées par la base :
 
 Projet : `https://tuhbzziqyisdnqzfvtkh.supabase.co`.
 
-**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`, `20261101000010_marges_par_vendeur.sql`, `20261101000011_messages_wechat.sql`, `20261102000012_listes_vendeurs.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
+**Par l'éditeur SQL** (le plus simple) : dans le tableau de bord, *SQL Editor* > *New query*, coller et exécuter chaque fichier de `migrations/` dans l'ordre (`20261011000001_schema.sql`, `20261011000002_cnh_compte_dedie.sql`, `20261030000003_depot_stock_fichiers.sql`, `20261030000004_depot_wechat.sql`, `20261030000005_ignore_fichiers_caches.sql`, `20261030000006_depot_qr_wechat.sql`, puis `20261031000007_inscription_fournisseurs.sql`, `20261031000008_recherche_publique.sql`, `20261031000009_demandes_achat.sql`, `20261101000010_marges_par_vendeur.sql`, `20261101000011_messages_wechat.sql`, `20261102000012_listes_vendeurs.sql`, `20261102000013_inscription_hors_chine.sql`) ; puis `reference.sql` (devises, niveaux de test). Si le schéma initial est déjà appliqué, n'exécuter que les migrations suivantes ; chaque migration ne s'exécute qu'une fois. `seed.sql` (sociétés et lots fictifs) seulement sur un projet de démonstration, jamais sur un projet qui reçoit de vraies données.
 
 **Par la CLI Supabase** :
 
@@ -82,6 +82,8 @@ Un fournisseur sans API (ADR 0010) dépose ses fichiers CSV, XLS ou XLSX ; ils d
    ```
 3. **Messages des contacts** (migration `20261101000011_messages_wechat.sql`) : tout message écrit au compte de service par un contact (texte, image, voix) est gardé dans `wechat_messages` et transféré aux opérateurs, en anglais, avec son numéro ; l'opérateur répond par `reply 123 texte` (ou `回复 123 texte`). WeChat ne délivre la réponse qu'à un contact qui a écrit dans les 48 dernières heures.
 4. **Valider dans WeChat** : envoyer au compte de service `待审核`, `通过 ORG-0123` ou `拒绝 ORG-0123 motif`, ou leurs équivalents anglais `pending`, `approve ORG-0123`, `reject ORG-0123 motif` ; `链接` ou `link` donne un lien de connexion personnel. Tout autre message d'un opérateur renvoie la liste des commandes, en chinois et en anglais. Équivalent dans l'éditeur SQL : `select public.approve_supplier('ORG-0123');`.
+
+4. **Sociétés de Hong Kong et d'autres pays** (migration `20261102000013_inscription_hors_chine.sql`) : le formulaire demande le pays / région d'immatriculation (Chine continentale, Hong Kong, autre). Chine continentale : 统一社会信用代码 de 18 caractères, contrôle inchangé ; Hong Kong ou autre : numéro libre de 5 à 30 caractères (lettres, chiffres, tirets, espaces, barres obliques), vérifié par l'opérateur avant d'approuver. Le pays d'une société « autre » reste vide : le compléter avant d'approuver (`update public.organizations set country = 'SG' where id = 'ORG-…'`). La fiche envoyée aux opérateurs indique « Credit code (Mainland China) » ou « Registration no. (Hong Kong / other country) ». Indépendante de la migration 012 (listes des vendeurs) : les deux s'appliquent dans n'importe quel ordre.
 
 ### Recherche publique du catalogue (ADR 0013)
 
@@ -176,6 +178,7 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    curl -s -X POST "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=$TOKEN" -H "Content-Type: application/json" --data-binary @supabase/wechat/menu.json; echo
    ```
    Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
+   Le bouton « 供应商 › 上传库存 » est de type « click » (clé `DEPOT_LOGIN`) : WeChat prévient `wechat-events`, qui répond dans la conversation par un lien de connexion personnel (15 minutes) vers `/depot/`, pour tout le monde, inscrit ou non. Sur téléphone, c'est le moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran. Publier le menu **après** le déploiement de `wechat-events` qui gère ce clic : sinon le bouton ne répondrait rien.
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ## Déployer les fonctions

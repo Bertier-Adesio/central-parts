@@ -102,3 +102,7 @@ Reporté après le salon :
 - La **transmission pré-remplie** au responsable : la page propose seulement de lui transférer le lien `central.parts/depot/`.
 - La **demande d'adhésion** à une société déjà inscrite : la page invite à demander une invitation à son administrateur.
 - La **fédération** (`转给 V-n`) et la vérification automatique du numéro auprès d'un registre.
+
+## Complément du 2 novembre 2026 : Hong Kong et autres pays
+
+Des fournisseurs immatriculés à Hong Kong n'ont pas pu s'inscrire : le formulaire n'acceptait que le 统一社会信用代码 de Chine continentale. Le formulaire demande désormais le pays / région d'immatriculation (Chine continentale, Hong Kong, autre). Pour Hong Kong et les autres pays, le numéro est libre (5 à 30 caractères) et vérifié par l'opérateur avant l'approbation ; aucune pièce supplémentaire n'est demandée à ce stade. Migration `20261102000013_inscription_hors_chine.sql`.
