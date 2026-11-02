@@ -23,7 +23,7 @@ await page.route(FN + '**', (r) => {
   if (q === 'LIMIT') return reply({ error: 'rate_limited' }, 429);
   if (q === 'XXX') return reply({ query: 'XXX', currency: 'EUR', results: [] });
   return reply({ query: q, currency: u.searchParams.get('cur'), results: [
-    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', availability: '10000+', price_from: 0.1234 },
+    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', availability: '10000+', price_from: 0.1234, price_1k: 0.1456 },
     { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', availability: '1000+', price_from: null },
   ] });
 });
@@ -50,6 +50,8 @@ ok(calls[0] === '?q=ne5&cur=EUR', 'appel avec la référence et la devise');
 ok((await page.$$('.res')).length === 2, 'deux offres affichées');
 const txt = await page.textContent('#list');
 ok(txt.includes('à partir de') && txt.includes('Prix sur demande'), 'prix « à partir de » et prix sur demande');
+ok(/prix 1 k : 0,1456\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de »');
+ok((txt.match(/prix 1 k/g) || []).length === 1, 'pas de prix 1KU pour une offre sur demande');
 ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes('Expédié de Chine') && txt.includes('Disponible 10000+'), 'source, pays et tranche affichés');
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
 ok(new URL(page.url()).search === '?q=NE5&cur=EUR', 'adresse partageable');
@@ -57,7 +59,7 @@ ok(new URL(page.url()).search === '?q=NE5&cur=EUR', 'adresse partageable');
 await page.click('#lang');
 ok((await page.textContent('h1')) === 'Search for a component' && (await page.textContent('#list')).includes('Ships from China'), 'anglais');
 await page.click('#lang');
-ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价'), 'chinois');
+ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价') && (await page.textContent('#list')).includes('千颗单价'), 'chinois');
 await page.click('#lang');
 
 await page.fill('#q', 'xx');

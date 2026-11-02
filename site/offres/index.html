@@ -107,7 +107,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris, hors droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
-      partner: 'Fournisseur partenaire', from: 'à partir de', onRequest: 'Sur demande', ask: 'Demander',
+      partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Demander',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs mettent leurs listes à jour ; une offre non reconfirmée depuis {n} jours est retirée.',
       mail: 'Demande de prix', home: '/',
@@ -117,7 +117,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices, excluding import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
-      partner: 'Partner Supplier', from: 'from', onRequest: 'On request', ask: 'Ask',
+      partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Ask',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers keep their lists up to date; an offer not reconfirmed for {n} days is withdrawn.',
       mail: 'Price request', home: '/en/',
@@ -127,7 +127,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: '制造商型号，例如 TPS25990', go: '搜索',
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，不含进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
-      partner: '合作供应商', from: '起', onRequest: '请询价', ask: '询价',
+      partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '询价',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期更新库存表；超过 {n} 天未重新确认的报价将被撤下。',
       mail: '询价', home: '/zh/',
@@ -171,6 +171,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
     $('rows').innerHTML = list.map(function (o) {
       var price = o.price_from != null ? '<span class="muted">' + esc(t().from) + '</span> <span class="price">' + esc(money(o.price_from, data.currency)) + '</span>' : esc(t().onRequest);
+      // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
+      if (o.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(o.price_1k, data.currency)) + '</div>';
       var subject = encodeURIComponent(t().mail + ' — ' + o.mpn);
       var body = encodeURIComponent(o.mpn + (o.manufacturer ? ' (' + o.manufacturer + ')' : '') + '\n' + t().thAvail + ' : ' + o.availability + '\n' + t().thUpdated + ' : ' + new Date(o.updated_at).toLocaleDateString(LOCALE[lang]) + '\n\n');
       return '<tr>' +
