@@ -4,8 +4,8 @@
 //   - format natif : celui de la base (offer_id, stock, moq, price_breaks, source_category, ship_from…), page /api/ ;
 //   - format compatible DigiKey (Product Information v4 : ProductDetails, KeywordSearch) ;
 //   - format compatible Texas Instruments (TI store, inventory and pricing v2).
-// Format DigiKey vérifié sur une réponse réelle de ProductPricing (v4, 2 novembre 2026) ; format TI repris de la
-// documentation publique, à vérifier avec une intégration réelle. Le fournisseur n'apparaît jamais : « Supplier » vaut
+// Formats vérifiés sur des réponses réelles transmises le 2 novembre 2026 : DigiKey ProductPricing (v4) et TI store
+// (produit) ; tools/fixtures/. Le fournisseur n'apparaît jamais : « Supplier » vaut
 // toujours Central.Parts, et l'identifiant de l'offre remplace le numéro de produit du distributeur.
 
 export const SOURCE_CATEGORIES = ['manufacturer', 'authorized_distributor', 'broker_surplus'];
@@ -135,26 +135,29 @@ export function toDigiKeyKeyword(mpn, offers, currency, limit = 50, offset = 0) 
 export function toTiProduct(mpn, offers, currency) {
   const o = offers.find((x) => x.price_status === 'priced') || offers[0];
   if (!o) return null;
+  // Champs et types d'une réponse réelle du TI store (vérifiés par tools/test-catalog.mjs) : un texte vide ou 0 plutôt
+  // que null quand Central.Parts ne connaît pas la valeur, pour ne pas casser un connecteur typé.
   return {
     tiPartNumber: mpn,
     genericPartNumber: mpn,
-    buyNowURL: null,
+    description: o.description || mpn,
+    buyNowUrl: productUrl(mpn),
     quantity: o.stock,
     limit: o.stock,
+    minimumOrderQuantity: o.moq,
+    standardPackQuantity: 0,
+    packageType: '',
+    packageCarrier: o.packaging || '',
+    customReel: false,
+    lifeCycle: 'ACTIVE',
+    pinCount: 0,
+    exportControlClassificationNumber: '',
+    htsCode: '',
     pricing: o.price_status === 'priced'
       ? [{ currency, priceBreaks: o.price_breaks.map((b) => ({ priceBreakQuantity: b.quantity, price: b.price })) }]
       : [],
+    // Aucune prévision de réapprovisionnement chez Central.Parts : liste vide.
     futureInventory: [],
-    description: o.description || null,
-    minimumOrderQuantity: o.moq,
-    standardPackQuantity: null,
-    exportControlClassificationNumber: null,
-    htsCode: null,
-    pinCount: null,
-    packageType: null,
-    packageCarrier: o.packaging || null,
-    customReel: false,
-    lifeCycle: 'ACTIVE',
     centralParts: { ...extension(o), otherOffers: offers.filter((x) => x !== o).map(extension) },
   };
 }

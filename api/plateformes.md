@@ -59,7 +59,7 @@ Réponse de `GET /v1/offers?mpn=NE555DR&qty=2000` (valeurs fictives) :
 | `date_code`, `ship_from`, `lead_time_days`, `price_valid_until` | `ProductVariations[].CentralParts.*` | `centralParts.*` |
 | fournisseur | `Supplier.Name` = « Central.Parts » | — |
 
-Le format compatible DigiKey reprend la structure d'une réponse réelle de ProductPricing (v4), vérifiée par `tools/test-catalog.mjs` (`tools/fixtures/digikey-productpricing.json`) ; `ProductUrl` renvoie vers la recherche publique de Central.Parts, jamais vers le fournisseur. Le format compatible TI suit la documentation publique du TI store et reste à confirmer à la première intégration.
+Le format compatible DigiKey reprend la structure d'une réponse réelle de ProductPricing (v4), vérifiée par `tools/test-catalog.mjs` (`tools/fixtures/digikey-productpricing.json`) ; `ProductUrl` renvoie vers la recherche publique de Central.Parts, jamais vers le fournisseur. Le format compatible TI reprend de même la structure d'une réponse réelle du TI store (`tools/fixtures/ti-product.json`) ; `buyNowUrl` renvoie vers la recherche publique de Central.Parts.
 
 ## Cycle d'une RFQ
 

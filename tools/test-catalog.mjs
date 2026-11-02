@@ -82,6 +82,11 @@ ok(t.tiPartNumber === 'NE555DR' && t.quantity === 20000 && t.minimumOrderQuantit
 ok(JSON.stringify(t.pricing) === JSON.stringify([{ currency: 'USD', priceBreaks: [{ priceBreakQuantity: 1000, price: 0.105 }, { priceBreakQuantity: 10000, price: 0.0945 }] }]), 'TI : pricing[].priceBreaks[]');
 ok(t.centralParts.offerId === 'cpo_aaaaaaaaaaaaaaaaaaaa' && t.centralParts.otherOffers.length === 2, 'TI : meilleure offre, autres offres en extension');
 ok(C.toTiProduct('NE555DR', [], 'USD') === null, 'TI : aucune offre');
+const realTi = JSON.parse(readFileSync(new URL('./fixtures/ti-product.json', import.meta.url), 'utf8'));
+const tiDiff = sameShape(realTi, t, '', []);
+ok(!tiDiff.length, 'TI : mêmes champs et mêmes types que la réponse réelle du TI store ' + tiDiff.join(', '));
+ok(t.buyNowUrl === 'https://central.parts/recherche/?q=NE555DR' && !('buyNowURL' in t), 'TI : buyNowUrl vers la recherche Central.Parts');
+ok(Array.isArray(t.futureInventory) && t.futureInventory.length === 0, 'TI : aucune prévision de stock annoncée');
 ok(C.toTiProduct('NE555DR', [offers[2]], 'USD').pricing.length === 0, 'TI : offre sur demande sans prix');
 
 // ---------------------------------------------------------------- anonymat : aucun champ du fournisseur ne peut sortir
