@@ -49,6 +49,24 @@ await page.route(FN + '/**', api);
 await page.route('https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/**', (r) => { if (r.request().url().endsWith('/y')) state.uploaded = true; return r.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' }); });
 await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
 
+// 0. Téléphone : indication du menu du compte (le QR code ne se scanne pas sur son propre écran) ; masquée sur ordinateur.
+{
+  await page.goto(BASE + '/depot/');
+  await page.waitForSelector('#v-login:not([hidden])');
+  ok(await page.isHidden('#menu-hint'), 'ordinateur : pas d\'indication du menu');
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'zh-CN' });
+  phone.on('pageerror', (e) => errors.push(String(e)));
+  await phone.route(FN + '/**', api);
+  await phone.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
+  await phone.goto(BASE + '/depot/');
+  await phone.waitForSelector('#v-login:not([hidden])');
+  ok(await phone.isVisible('#menu-hint') && (await phone.textContent('#menu-hint')).includes('「供应商」→「上传库存」'), 'téléphone : indication du menu « 供应商 › 上传库存 »');
+  await phone.click('#lang');
+  ok((await phone.textContent('#menu-hint')).includes('to receive your login link'), 'téléphone : indication en anglais');
+  ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'téléphone : pas de défilement horizontal');
+  await phone.close();
+}
+
 // 1. Lien personnel reçu dans WeChat : compte sans société → formulaire d'inscription.
 await page.goto(BASE + '/depot/?login=dl_' + 'a'.repeat(32));
 await page.waitForSelector('#v-register:not([hidden])');

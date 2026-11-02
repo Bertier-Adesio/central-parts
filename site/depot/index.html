@@ -61,6 +61,9 @@ ul.plain{list-style:none;padding:0;margin:0}
 ul.plain li{border-top:1px solid var(--border-1);padding:8px 0;font-size:var(--text-sm);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 ul.plain li:first-child{border-top:0}
 h2{font-size:var(--text-lg);margin:0 0 8px}
+/* Indication réservée aux écrans tactiles (téléphone) : le QR code ne s'y scanne pas. */
+.phone-only{display:none}
+@media (pointer:coarse){.phone-only{display:block}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -90,6 +93,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     <p class="muted" id="qr-hint" data-t="scanHint">请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。</p>
     <button class="btn btn-main" type="button" id="qr-refresh" hidden data-t="refresh">刷新二维码</button>
     <p class="muted" data-t="loginNote">首次使用？扫码后即可注册公司。</p>
+    <p class="msg info phone-only" id="menu-hint" data-t="menuHint">在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。</p>
   </section>
 
   <!-- Inscription de la société -->
@@ -181,6 +185,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     zh: { title: '供应商中心', lead: '注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。',
       scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
       refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
+      menuHint: '在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。',
       tpl: '推荐格式：每行一个料号，含品牌、型号、数量和最多五个价格阶梯（美元）。', tplLink: '下载模板（CSV）',
       regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
@@ -211,6 +216,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     en: { title: 'Supplier centre', lead: 'Register your company and upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
       scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
       refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
+      menuHint: 'On a phone: open the “Adesio Central.Parts” account in WeChat and tap the menu “供应商” → “上传库存” to receive your login link.',
       tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and up to five price breaks (USD).', tplLink: 'Download the template (CSV)',
       regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
