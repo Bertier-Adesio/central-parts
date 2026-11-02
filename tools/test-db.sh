@@ -11,7 +11,8 @@ $P -d cp_test -f checks/00_stub_supabase.sql
 for f in migrations/*.sql; do $P -d cp_test -f "$f"; done
 $P -d cp_test -f seed.sql
 TOTAL=0
-for f in checks/0[1-9]*.sql; do
+for f in checks/[0-9][0-9]_*.sql; do
+  case "$f" in checks/00_*) continue ;; esac
   OUT=$($P -d cp_test -f "$f" 2>&1) || { echo "$f :"; echo "$OUT" | grep -v 'NOTICE:  ok'; exit 1; }
   TOTAL=$((TOTAL + $(echo "$OUT" | grep -c 'NOTICE:  ok')))
 done

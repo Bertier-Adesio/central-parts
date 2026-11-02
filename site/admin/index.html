@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<!-- Back office Central.Parts : approbation des fournisseurs et lecture des stocks (ADR 0018).
+     Écrite à la main, pas générée. Outil interne en français, réservé aux administrateurs (membres de l'organisation
+     Central.Parts dans Supabase Auth). Connexion par lien e-mail ; le jeton reçu ne vit que dans l'onglet
+     (sessionStorage) et expire au bout d'une heure. La page n'est qu'une façade : la fonction Edge « admin » et les
+     fonctions SQL admin_* vérifient le rôle à chaque appel. Aucune clé ni aucun secret dans la page. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Back office — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.brand small{color:var(--fg-inverse-2);font-weight:var(--weight-regular);font-size:var(--text-sm)}
+.who{display:flex;align-items:center;gap:10px;font-size:var(--text-sm);color:var(--fg-inverse-2);flex-wrap:wrap}
+.who button{background:none;border:1px solid var(--fg-inverse-2);color:var(--fg-inverse);border-radius:var(--radius-sm);padding:4px 10px;font:inherit;cursor:pointer}
+main.wrap{padding:24px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+h2{font-size:var(--text-lg);margin:0 0 12px}
+h3{font-size:var(--text-md);margin:20px 0 8px}
+.lead{color:var(--fg-2);margin:0 0 24px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.narrow{max-width:440px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-md);padding:0 16px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer}
+.btn-main{background:var(--bg-inverse);color:var(--fg-inverse)}
+.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
+.btn-ok{background:var(--status-success);color:var(--fg-inverse)}
+.btn-danger{background:var(--status-danger);color:var(--fg-inverse)}
+.btn[disabled]{opacity:.5;cursor:default}
+input[type=email],input[type=search],select,textarea{box-sizing:border-box;width:100%;min-height:var(--control-h-md);padding:6px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+textarea{min-height:88px;resize:vertical}
+label.f{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+label.f input,label.f textarea,label.f select{margin:4px 0 0}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+.msg.ok{background:var(--status-success-bg);color:var(--status-success)}
+.msg.info{background:var(--status-info-bg);color:var(--status-info)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border-1);margin:0 0 20px;overflow-x:auto}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:var(--weight-medium);color:var(--fg-2);cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--fg-1);border-bottom-color:var(--accent)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.seg button{border:1px solid var(--border-2);background:var(--bg-surface);color:var(--fg-1);border-radius:var(--radius-pill);padding:4px 12px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--bg-inverse);color:var(--fg-inverse);border-color:var(--bg-inverse)}
+.split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;align-items:start}
+ul.rows{list-style:none;margin:0;padding:0;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);overflow:hidden}
+ul.rows li+li{border-top:1px solid var(--border-1)}
+ul.rows button{display:block;width:100%;text-align:left;background:none;border:0;padding:12px 14px;font:inherit;color:inherit;cursor:pointer}
+ul.rows button:hover,ul.rows button[aria-current=true]{background:var(--bg-sunken)}
+.r1{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.r1 strong{overflow-wrap:anywhere}
+.r2{font-size:var(--text-sm);color:var(--fg-2);margin:2px 0 0;overflow-wrap:anywhere}
+.badge{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
+.badge.pending{background:var(--status-warning-bg);color:var(--status-warning)}
+.badge.validated{background:var(--status-success-bg);color:var(--status-success)}
+.badge.rejected{background:var(--status-danger-bg);color:var(--status-danger)}
+dl.kv{display:grid;grid-template-columns:minmax(120px,2fr) minmax(0,3fr);gap:6px 16px;margin:0;font-size:var(--text-sm)}
+dl.kv dt{color:var(--fg-3)}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+.mono{font-family:var(--font-mono)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+ol.log{list-style:none;margin:0;padding:0;font-size:var(--text-sm)}
+ol.log li{border-left:3px solid var(--border-2);padding:4px 0 4px 12px;margin:0 0 8px}
+ol.log li.approved{border-left-color:var(--status-success)}
+ol.log li.rejected{border-left-color:var(--status-danger)}
+ol.log li.pending{border-left-color:var(--status-warning)}
+.back{display:none;margin:0 0 12px}
+.tbl-wrap{overflow-x:auto;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md)}
+table{border-collapse:collapse;width:100%;font-size:var(--text-sm)}
+th,td{text-align:left;padding:8px 10px;border-top:1px solid var(--border-1);vertical-align:top}
+thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-medium);white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--bg-sunken)}
+table.breaks{width:auto;font-size:var(--text-xs)}
+table.breaks td{border:0;padding:0 8px 0 0;white-space:nowrap}
+.tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:8px;margin:20px 0 12px;align-items:end}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 0;flex-wrap:wrap}
+dialog{border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;max-width:480px;width:calc(100% - 32px);box-sizing:border-box;background:var(--bg-surface);color:var(--fg-1)}
+dialog::backdrop{background:var(--bg-inverse);opacity:.5}
+.empty{padding:16px;color:var(--fg-3);font-size:var(--text-sm)}
+[hidden]{display:none!important}
+@media (max-width:820px){
+  .split{grid-template-columns:minmax(0,1fr)}
+  .split.detail-open .list-col{display:none}
+  .split:not(.detail-open) .detail-col{display:none}
+  .back{display:inline-flex}
+  .tools{grid-template-columns:minmax(0,1fr)}
+  dl.kv{grid-template-columns:minmax(0,1fr)}
+  dl.kv dd{margin:0 0 6px}
+  table.lots thead{display:none}
+  table.lots tr{display:block;border-top:1px solid var(--border-1);padding:8px 10px}
+  table.lots td{display:block;border:0;padding:2px 0;text-align:left}
+  table.lots td[data-l]::before{content:attr(data-l) " : ";color:var(--fg-3)}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts <small>Back office</small></span>
+    </div>
+    <div class="who" id="who" hidden><span id="who-email"></span><button type="button" id="logout">Déconnexion</button></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="msg err">Le back office a besoin de JavaScript.</p></noscript>
+  <div id="msg" class="msg" role="status" hidden></div>
+
+  <!-- Connexion : lien envoyé par e-mail (Supabase Auth). -->
+  <section id="v-login" hidden>
+    <div class="card narrow">
+      <h1>Connexion</h1>
+      <p class="lead">Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.</p>
+      <form id="login-form">
+        <label class="f">Adresse e-mail<input type="email" id="login-email" autocomplete="email" required></label>
+        <button class="btn btn-main" type="submit" id="login-send">Recevoir le lien</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Compte connecté mais pas administrateur. -->
+  <section id="v-denied" hidden>
+    <div class="card narrow">
+      <h1>Accès refusé</h1>
+      <p class="lead">Ce compte n'est pas administrateur Central.Parts. Aucune donnée n'est accessible.</p>
+      <button class="btn btn-line" type="button" id="denied-logout">Se déconnecter</button>
+    </div>
+  </section>
+
+  <section id="v-app" hidden>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-sup" aria-selected="true" aria-controls="p-sup">Fournisseurs</button>
+      <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="p-stock">Stocks et offres</button>
+    </nav>
+
+    <!-- Approbation des fournisseurs. -->
+    <div id="p-sup" role="tabpanel">
+      <div class="seg" id="filters">
+        <button type="button" data-s="pending" aria-pressed="true">En attente <span data-c="pending"></span></button>
+        <button type="button" data-s="validated" aria-pressed="false">Approuvés <span data-c="validated"></span></button>
+        <button type="button" data-s="rejected" aria-pressed="false">Refusés <span data-c="rejected"></span></button>
+        <button type="button" data-s="" aria-pressed="false">Tous</button>
+      </div>
+      <div class="split" id="split">
+        <div class="list-col"><ul class="rows" id="sup-list"></ul></div>
+        <div class="detail-col">
+          <button type="button" class="btn btn-line back" id="back">← Liste</button>
+          <div class="card" id="sup-detail"><p class="muted">Choisissez une société dans la liste.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stocks et offres, lecture seule. -->
+    <div id="p-stock" role="tabpanel" hidden>
+      <h2>Par fournisseur</h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Fournisseur</th><th class="n">Références en stock</th><th>Dernier import</th><th>Source</th><th>Devise</th></tr></thead>
+          <tbody id="stock-sum"></tbody>
+        </table>
+      </div>
+      <form class="tools" id="lot-form">
+        <label class="f" style="margin:0">Fournisseur<select id="lot-org"><option value="">Tous les fournisseurs</option></select></label>
+        <label class="f" style="margin:0">Recherche (référence, marque, boîtier)<input type="search" id="lot-q" autocomplete="off"></label>
+        <button class="btn btn-main" type="submit">Chercher</button>
+      </form>
+      <p class="muted" id="lot-count"></p>
+      <div class="tbl-wrap">
+        <table class="lots">
+          <thead><tr><th>Référence</th><th>Marque</th><th>Boîtier / emballage</th><th class="n">Stock</th><th>Paliers de prix</th><th class="n">Délai</th><th>Fournisseur</th></tr></thead>
+          <tbody id="lot-list"></tbody>
+        </table>
+      </div>
+      <div class="pager"><button class="btn btn-line" type="button" id="lot-prev">← Précédents</button><button class="btn btn-line" type="button" id="lot-next">Suivants →</button></div>
+    </div>
+  </section>
+</main>
+
+<!-- Confirmation explicite de chaque décision. -->
+<dialog id="confirm" aria-labelledby="c-title">
+  <form method="dialog" id="c-form" novalidate>
+    <h2 id="c-title"></h2>
+    <p id="c-text"></p>
+    <label class="f" id="c-reason-l">Motif<textarea id="c-reason" maxlength="500"></textarea></label>
+    <p class="msg err" id="c-err" hidden></p>
+    <div class="actions">
+      <button class="btn btn-line" type="button" id="c-cancel">Annuler</button>
+      <button class="btn" type="submit" id="c-ok"></button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+  // En local (démonstration et tests), la fonction simulée est servie par la même origine.
+  var LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  var FN = LOCAL ? location.origin + '/functions/v1/admin' : 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/admin';
+  var KEY = 'cp-admin-session';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var STATUS = { pending: 'En attente', validated: 'Approuvée', rejected: 'Refusée', none: 'Non soumise' };
+  var REGION = { CN: 'Chine continentale', HK: 'Hong Kong', OTHER: 'Autre' };
+  var CODE_LABEL = { CN: 'Credit code (Mainland China)', HK: 'Registration no. (Hong Kong)', OTHER: 'Registration no.' };
+  var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker' };
+  var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
+  var ACTION = { approved: 'Approuvée', rejected: 'Refusée', pending: 'Remise en attente' };
+  var ERR = {
+    reason_required: 'Le motif du refus est obligatoire.',
+    already_pending: 'Cette société est déjà en attente.',
+    not_allowed: 'Action impossible dans l\'état actuel de la société (une société approuvée doit d\'abord être remise en attente).',
+    email: 'Adresse e-mail invalide.'
+  };
+
+  var state = { filter: 'pending', org: null, lots: { org: '', q: '', offset: 0, total: 0 } };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function dt(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
+  }
+  function num(n) { return n == null ? '—' : Number(n).toLocaleString('fr-FR'); }
+  function price(p, cur) { return p == null ? 'sur demande' : Number(p).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) + ' ' + esc(cur || ''); }
+  function show(text, kind) {
+    var m = $('msg');
+    if (!text) { m.hidden = true; return; }
+    m.className = 'msg ' + (kind || 'info'); m.textContent = text; m.hidden = false;
+  }
+  function view(id) {
+    ['v-login', 'v-denied', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; });
+    $('who').hidden = id !== 'v-app';
+  }
+
+  // ------------------------------------------------------------ session (jeton Supabase Auth, onglet seulement)
+  function session() {
+    try {
+      var s = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+      if (s && s.token && s.exp > Date.now() / 1000 + 30) return s;
+    } catch (e) { /* stockage indisponible */ }
+    return null;
+  }
+  function saveSession(token, exp) { try { sessionStorage.setItem(KEY, JSON.stringify({ token: token, exp: exp })); } catch (e) { /* rien */ } }
+  function logout(text) {
+    try { sessionStorage.removeItem(KEY); } catch (e) { /* rien */ }
+    view('v-login'); show(text || '', 'info');
+  }
+  // Retour du lien e-mail : #access_token=…&expires_at=… (ou #error_description=…). Retiré aussitôt de l'adresse.
+  (function readHash() {
+    if (!location.hash || location.hash.length < 2) return;
+    var h = new URLSearchParams(location.hash.slice(1));
+    history.replaceState(null, '', location.pathname + location.search);
+    if (h.get('access_token')) {
+      var exp = Number(h.get('expires_at')) || Math.floor(Date.now() / 1000) + (Number(h.get('expires_in')) || 3600);
+      saveSession(h.get('access_token'), exp);
+    } else if (h.get('error_description') || h.get('error')) {
+      show('Lien de connexion refusé : ' + (h.get('error_description') || h.get('error')) + '. Demandez-en un nouveau.', 'err');
+    }
+  })();
+
+  function api(method, path, body) {
+    var s = session();
+    if (!s) { logout('Session expirée : reconnectez-vous.'); return Promise.reject({ handled: true }); }
+    return fetch(FN + path, {
+      method: method,
+      headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (r.status === 401) { logout('Session expirée : reconnectez-vous.'); throw { handled: true }; }
+        if (r.status === 403) { view('v-denied'); show(''); throw { handled: true }; }
+        if (!r.ok) throw { code: d.error, detail: d.detail };
+        return d;
+      });
+    });
+  }
+  function fail(e) {
+    if (e && e.handled) return;
+    show(ERR[e && e.code] || 'Erreur du serveur' + (e && e.detail ? ' : ' + e.detail : (e && e.message ? ' : ' + e.message : '')) + '.', 'err');
+  }
+
+  // ------------------------------------------------------------ connexion
+  $('login-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var email = $('login-email').value.trim();
+    $('login-send').disabled = true;
+    fetch(FN + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) })
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw { code: d.error }; }); })
+      .then(function () { show('Si cette adresse est celle d\'un administrateur, un lien de connexion vient de lui être envoyé. Ouvrez-le dans ce navigateur.', 'ok'); })
+      .catch(fail)
+      .then(function () { $('login-send').disabled = false; });
+  });
+  $('logout').addEventListener('click', function () { logout('Vous êtes déconnecté.'); });
+  $('denied-logout').addEventListener('click', function () { logout(''); });
+
+  // ------------------------------------------------------------ onglets
+  function tab(which) {
+    $('tab-sup').setAttribute('aria-selected', String(which === 'sup'));
+    $('tab-stock').setAttribute('aria-selected', String(which === 'stock'));
+    $('p-sup').hidden = which !== 'sup';
+    $('p-stock').hidden = which !== 'stock';
+    show('');
+    if (which === 'stock') loadStock();
+  }
+  $('tab-sup').addEventListener('click', function () { tab('sup'); });
+  $('tab-stock').addEventListener('click', function () { tab('stock'); });
+
+  // ------------------------------------------------------------ fournisseurs
+  $('filters').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-s]');
+    if (!b) return;
+    state.filter = b.getAttribute('data-s');
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    loadSuppliers();
+  });
+
+  function loadSuppliers() {
+    return api('GET', '/suppliers' + (state.filter ? '?status=' + state.filter : '')).then(function (d) {
+      var c = d.counts || {};
+      ['pending', 'validated', 'rejected'].forEach(function (k) { document.querySelector('[data-c=' + k + ']').textContent = '(' + (c[k] || 0) + ')'; });
+      var rows = d.rows || [];
+      $('sup-list').innerHTML = rows.length ? rows.map(function (o) {
+        return '<li><button type="button" data-org="' + esc(o.org_id) + '"' + (o.org_id === state.org ? ' aria-current="true"' : '') + '>' +
+          '<span class="r1"><strong>' + esc(o.name) + '</strong><span class="badge ' + esc(o.status) + '">' + esc(STATUS[o.status] || o.status) + '</span></span>' +
+          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) + '</span>' +
+          '</button></li>';
+      }).join('') : '<li class="empty">Aucune société dans cette liste.</li>';
+    }).catch(fail);
+  }
+  $('sup-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-org]');
+    if (b) openSupplier(b.getAttribute('data-org'));
+  });
+  $('back').addEventListener('click', function () { $('split').classList.remove('detail-open'); });
+
+  function openSupplier(org) {
+    state.org = org;
+    Array.prototype.forEach.call($('sup-list').querySelectorAll('button[data-org]'), function (b) {
+      if (b.getAttribute('data-org') === org) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+    });
+    return api('GET', '/supplier?org=' + encodeURIComponent(org)).then(function (o) {
+      $('split').classList.add('detail-open');
+      var contacts = (o.contacts || []).map(function (c) {
+        return esc(c.label || 'Sans nom') + ' (' + (c.role === 'admin' ? 'administrateur' : 'membre') + ')';
+      }).join(', ') || '—';
+      var openids = (o.contacts || []).map(function (c) { return esc(c.openid); }).join('<br>') || esc(o.registered_by || '—');
+      var st = o.stock || {}, imp = o.last_import;
+      var acts = '';
+      if (o.status !== 'validated') acts += '<button class="btn btn-ok" type="button" data-act="approve">Approuver</button>';
+      if (o.status === 'pending' || o.status === 'none') acts += '<button class="btn btn-danger" type="button" data-act="reject">Refuser</button>';
+      if (o.status === 'validated' || o.status === 'rejected') acts += '<button class="btn btn-line" type="button" data-act="pending">Remettre en attente</button>';
+      $('sup-detail').innerHTML =
+        '<div class="r1"><h2 id="d-name">' + esc(o.name) + '</h2><span class="badge ' + esc(o.status) + '" id="d-status">' + esc(STATUS[o.status] || o.status) + '</span></div>' +
+        '<dl class="kv">' +
+        '<dt>Identifiant</dt><dd class="mono" id="d-org">' + esc(o.org_id) + (o.alias ? ' · ' + esc(o.alias) : '') + '</dd>' +
+        '<dt>Pays / région d\'immatriculation</dt><dd id="d-region">' + esc(REGION[o.region] || o.region) + '</dd>' +
+        '<dt id="d-code-l">' + esc(CODE_LABEL[o.region] || 'Registration no.') + '</dt><dd class="mono" id="d-code">' + esc(o.code || '—') + '</dd>' +
+        '<dt>Ville</dt><dd>' + esc(o.city || '—') + '</dd>' +
+        '<dt>Type de société</dt><dd>' + esc(PROFILE[o.profile] || o.profile || '—') + '</dd>' +
+        '<dt>Devise des offres</dt><dd>' + esc(o.currency || '—') + '</dd>' +
+        '<dt>Contact</dt><dd>' + contacts + '</dd>' +
+        '<dt>Identifiant WeChat (openid)</dt><dd class="mono">' + openids + '</dd>' +
+        '<dt>Demande</dt><dd>' + esc(dt(o.requested_at)) + ' (heure de Paris)</dd>' +
+        '<dt>Licence (营业执照)</dt><dd>' + (o.has_license ? 'Déposée' : 'Non déposée') + '</dd>' +
+        (o.status === 'rejected' ? '<dt>Motif du refus</dt><dd id="d-reason">' + esc(o.rejected_reason || '—') + '</dd>' : '') +
+        '<dt>Stock</dt><dd>' + num(st.lines) + ' référence(s) en stock' + (st.sources && st.sources.length ? ' · ' + st.sources.map(function (s) { return esc(SOURCE[s] || s); }).join(', ') : '') + '</dd>' +
+        '<dt>Dernier import</dt><dd>' + (imp ? esc(imp.file_name) + ' · ' + esc(dt(imp.received_at)) : '—') + '</dd>' +
+        '</dl>' +
+        '<div class="actions" id="d-actions">' + acts + '</div>' +
+        '<h3>Journal des décisions</h3>' +
+        ((o.decisions || []).length ? '<ol class="log" id="d-log">' + o.decisions.map(function (d) {
+          return '<li class="' + esc(d.action) + '"><strong>' + esc(ACTION[d.action] || d.action) + '</strong> · ' + esc(dt(d.at)) + ' · ' + esc(d.by || 'inconnu') +
+            (d.reason ? '<br><span class="muted">Motif : ' + esc(d.reason) + '</span>' : '') + '</li>';
+        }).join('') + '</ol>' : '<p class="muted" id="d-log">Aucune décision enregistrée.</p>');
+      $('sup-detail').dataset.org = o.org_id;
+      $('sup-detail').dataset.name = o.name;
+      $('sup-detail').scrollIntoView({ block: 'nearest' });
+    }).catch(fail);
+  }
+
+  // ------------------------------------------------------------ décisions, avec confirmation explicite
+  var pending = null;
+  var DECISION = {
+    approve: { title: 'Approuver la société', ok: 'Approuver', cls: 'btn-ok', reason: false,
+      text: 'La société sera approuvée et ses offres pourront être publiées. Le fournisseur reçoit le même message WeChat qu\'avec la commande du robot.' },
+    reject: { title: 'Refuser la société', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
+      text: 'La société sera refusée. Le motif est obligatoire ; il est transmis au fournisseur dans WeChat, comme avec la commande du robot.' },
+    pending: { title: 'Remettre en attente', ok: 'Remettre en attente', cls: 'btn-main', reason: 'optional',
+      text: 'La société repasse en attente : ses offres ne sont plus publiées jusqu\'à une nouvelle approbation. Aucun message n\'est envoyé au fournisseur.' }
+  };
+  $('sup-detail').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-act]');
+    if (!b) return;
+    var a = b.getAttribute('data-act'), d = DECISION[a];
+    pending = a;
+    $('c-title').textContent = d.title + ' · ' + this.dataset.org;
+    $('c-text').textContent = this.dataset.name + ' — ' + d.text;
+    $('c-reason-l').hidden = !d.reason;
+    $('c-reason-l').firstChild.textContent = d.reason === 'required' ? 'Motif du refus (obligatoire)' : 'Motif (facultatif)';
+    $('c-reason').value = '';
+    $('c-reason').required = d.reason === 'required';
+    $('c-err').hidden = true;
+    $('c-ok').className = 'btn ' + d.cls;
+    $('c-ok').textContent = d.ok;
+    $('c-ok').disabled = false;
+    $('confirm').showModal();
+    if (d.reason) $('c-reason').focus();
+  });
+  $('c-cancel').addEventListener('click', function () { pending = null; $('confirm').close(); });
+  $('c-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (!pending) return;
+    var org = $('sup-detail').dataset.org, reason = $('c-reason').value.trim();
+    if (pending === 'reject' && !reason) {
+      $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
+      return;
+    }
+    var path = { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
+    var label = { approve: 'approuvée', reject: 'refusée', pending: 'remise en attente' }[pending];
+    $('c-ok').disabled = true;
+    api('POST', path, pending === 'approve' ? { org: org } : { org: org, reason: reason }).then(function () {
+      $('confirm').close(); pending = null;
+      show('Société ' + org + ' ' + label + '.', 'ok');
+      return Promise.all([loadSuppliers(), openSupplier(org)]);
+    }).catch(function (e) {
+      $('c-ok').disabled = false;
+      if (e && e.handled) { $('confirm').close(); return; }
+      $('c-err').textContent = ERR[e && e.code] || 'Erreur du serveur.'; $('c-err').hidden = false;
+    });
+  });
+
+  // ------------------------------------------------------------ stocks et offres (lecture seule)
+  var stockLoaded = false;
+  function loadStock() {
+    if (stockLoaded) return;
+    stockLoaded = true;
+    api('GET', '/stock').then(function (rows) {
+      $('stock-sum').innerHTML = rows.length ? rows.map(function (s) {
+        return '<tr class="click" data-org="' + esc(s.org_id) + '"><td><strong>' + esc(s.name) + '</strong><br><span class="muted">' + esc(s.org_id) + ' · ' + esc(STATUS[s.status] || s.status) + '</span></td>' +
+          '<td class="n">' + num(s.lines) + '</td><td>' + esc(dt(s.last_import_at)) + (s.last_import_file ? '<br><span class="muted">' + esc(s.last_import_file) + '</span>' : '') + '</td>' +
+          '<td>' + (s.sources || []).map(function (x) { return esc(SOURCE[x] || x); }).join(', ') + '</td><td>' + esc(s.currency || '') + '</td></tr>';
+      }).join('') : '<tr><td colspan="5" class="empty">Aucun stock déposé.</td></tr>';
+      $('lot-org').innerHTML = '<option value="">Tous les fournisseurs</option>' + rows.map(function (s) {
+        return '<option value="' + esc(s.org_id) + '">' + esc(s.name) + ' (' + num(s.lines) + ')</option>';
+      }).join('');
+      return loadLots();
+    }).catch(function (e) { stockLoaded = false; fail(e); });
+  }
+  $('stock-sum').addEventListener('click', function (ev) {
+    var tr = ev.target.closest('tr[data-org]');
+    if (!tr) return;
+    $('lot-org').value = tr.getAttribute('data-org');
+    state.lots = { org: $('lot-org').value, q: $('lot-q').value.trim(), offset: 0 };
+    loadLots();
+    $('lot-form').scrollIntoView({ block: 'start' });
+  });
+  $('lot-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    state.lots = { org: $('lot-org').value, q: $('lot-q').value.trim(), offset: 0 };
+    loadLots();
+  });
+  $('lot-org').addEventListener('change', function () { $('lot-form').requestSubmit(); });
+  $('lot-prev').addEventListener('click', function () { state.lots.offset = Math.max(0, state.lots.offset - 50); loadLots(); });
+  $('lot-next').addEventListener('click', function () { state.lots.offset += 50; loadLots(); });
+
+  function breaksHtml(l) {
+    if (!l.breaks || !l.breaks.length) return l.unit_price == null ? '<span class="muted">sur demande</span>' : price(l.unit_price, l.currency);
+    return '<table class="breaks">' + l.breaks.map(function (b) {
+      return '<tr><td>' + (b.to == null ? num(b.from) + ' et plus' : num(b.from) + ' à ' + num(b.to)) + '</td><td>' + price(b.price, l.currency) + '</td></tr>';
+    }).join('') + '</table>';
+  }
+  function loadLots() {
+    var L = state.lots;
+    var qs = '?offset=' + L.offset + (L.org ? '&org=' + encodeURIComponent(L.org) : '') + (L.q ? '&q=' + encodeURIComponent(L.q) : '');
+    return api('GET', '/lots' + qs).then(function (d) {
+      L.total = d.total;
+      var rows = d.rows || [];
+      $('lot-count').textContent = d.total ? 'Références ' + num(L.offset + 1) + ' à ' + num(L.offset + rows.length) + ' sur ' + num(d.total) + '.' : 'Aucune référence.';
+      $('lot-list').innerHTML = rows.map(function (l) {
+        return '<tr><td data-l="Référence" class="mono"><strong>' + esc(l.mpn) + '</strong>' + (l.date_code ? '<br><span class="muted">DC ' + esc(l.date_code) + '</span>' : '') + '</td>' +
+          '<td data-l="Marque">' + esc(l.manufacturer || '—') + '</td><td data-l="Boîtier">' + esc(l.pack || '—') + '</td>' +
+          '<td data-l="Stock" class="n">' + num(l.qty) + '</td><td data-l="Prix">' + breaksHtml(l) + '</td>' +
+          '<td data-l="Délai" class="n">' + (l.lead_days == null ? '—' : esc(l.lead_days) + ' j') + '</td>' +
+          '<td data-l="Fournisseur">' + esc(l.seller) + '<br><span class="muted">' + esc(SOURCE[l.source] || l.source) + '</span></td></tr>';
+      }).join('');
+      $('lot-prev').disabled = L.offset === 0;
+      $('lot-next').disabled = L.offset + rows.length >= d.total;
+    }).catch(fail);
+  }
+
+  // ------------------------------------------------------------ démarrage
+  if (!session()) { view('v-login'); return; }
+  api('GET', '/me').then(function (me) {
+    $('who-email').textContent = me.email || '';
+    view('v-app');
+    return loadSuppliers();
+  }).catch(fail);
+})();
+</script>
+</body>
+</html>

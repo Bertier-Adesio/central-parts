@@ -1,4 +1,5 @@
-# central.parts : tout est accessible aux robots ; les pages en prototype (/app/, /proto/, /depot/, /recherche/)
+# central.parts : tout est accessible aux robots ; les pages en prototype (/app/, /proto/, /depot/, /recherche/) et le
+# back office (/admin/)
 # portent une balise <meta name="robots" content="noindex"> et ne sont donc pas indexées.
 User-agent: *
 Disallow:

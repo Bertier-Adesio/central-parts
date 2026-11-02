@@ -2,7 +2,7 @@
 # après la fusion, dans leurs propres workflows. Chaque groupe ne tourne que si la PR touche ce qu'il teste.
 #   base   : lecture des fichiers de stock, règles de la maquette, vérification de type des fonctions Edge (toujours)
 #   db     : schéma, RLS et fonctions SQL sur PostgreSQL 16 (migrations, contrôles, données de référence)
-#   pages  : parcours dans Chromium de la maquette, de l'espace fournisseurs et de la recherche (site/)
+#   pages  : parcours dans Chromium de la maquette, de l'espace fournisseurs, de la recherche et du back office (site/)
 name: Tests
 
 on:
@@ -29,7 +29,7 @@ jobs:
           if [ "${{ github.event_name }}" != "pull_request" ]; then echo "db=true" >> "$GITHUB_OUTPUT"; echo "pages=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           FILES=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
           echo "$FILES" | grep -qE '^(supabase/(migrations|checks)/|supabase/(seed|reference)\.sql|tools/test-db\.sh)' && echo "db=true" >> "$GITHUB_OUTPUT" || echo "db=false" >> "$GITHUB_OUTPUT"
-          echo "$FILES" | grep -qE '^(site/|tools/test-.*-ui\.mjs|\.github/workflows/tests\.yml)' && echo "pages=true" >> "$GITHUB_OUTPUT" || echo "pages=false" >> "$GITHUB_OUTPUT"
+          echo "$FILES" | grep -qE '^(site/|tools/test-.*-ui\.mjs|tools/admin-mock\.mjs|\.github/workflows/tests\.yml)' && echo "pages=true" >> "$GITHUB_OUTPUT" || echo "pages=false" >> "$GITHUB_OUTPUT"
 
   base:
     runs-on: ubuntu-latest
@@ -96,3 +96,4 @@ jobs:
           node tools/test-depot-ui.mjs
           node tools/test-search-ui.mjs
           node tools/test-listes-ui.mjs
+          node tools/test-admin-ui.mjs
