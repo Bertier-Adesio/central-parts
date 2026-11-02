@@ -159,6 +159,23 @@ await page.waitForFunction(() => / sur 1\.$/.test(document.getElementById('lot-c
 const row = norm(await page.textContent('#lot-list tr'));
 ok(row.includes('AMS1117-3.3') && row.includes('SOT-223') && row.includes('150 000') && row.includes('5 j'), 'recherche par boîtier : référence, stock, délai');
 ok(/1 à 49/.test(row) && /2 000 et plus/.test(row), 'paliers « de … à … » et dernier palier « et plus »');
+// Prix unitaire sous le premier palier (palier « 1 » d'un flux Octopart) : affiché comme première ligne.
+await page.fill('#lot-q', 'GRM188');
+await page.click('#lot-form button[type=submit]');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('GRM188R71H104KA93D'));
+const grm = norm(await page.textContent('#lot-list tr'));
+ok(/1 à 9\s*0,0031 USD/.test(grm) && /10 à 99\s*0,0029 USD/.test(grm), 'prix unitaire de 1 à 9 affiché avant le premier palier');
+// Prix unitaire égal au premier palier (fichier de fabricant, minimum 10) : pas de ligne « 1 à 9 ».
+await page.fill('#lot-q', 'CH340C');
+await page.click('#lot-form button[type=submit]');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('CH340C'));
+ok(!/(?<!\d)1 à 9(?!\d)/.test(norm(await page.textContent('#lot-list tr'))), 'pas de ligne « 1 à 9 » quand le prix unitaire est celui du premier palier');
+// Prix 1KU (convention) : palier qui couvre 1 000 pièces.
+await page.fill('#lot-q', 'GRM188');
+await page.click('#lot-form button[type=submit]');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('GRM188R71H104KA93D'));
+ok(norm(await page.textContent('#lot-list tr td.p1k')) === '0,0026 USD', 'prix 1KU : palier « 100 et plus » qui couvre 1 000 pièces');
+ok((await page.textContent('table.lots thead')).includes('Prix 1 k'), 'colonne « Prix 1 k » dans le tableau');
 // Lien du vendeur, fiche technique et description (ADR 0022) ; un lien qui n'est pas http(s) n'est jamais cliquable.
 await page.fill('#lot-q', 'cortex');
 await page.click('#lot-form button[type=submit]');
