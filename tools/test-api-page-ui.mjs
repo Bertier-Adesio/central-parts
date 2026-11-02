@@ -20,7 +20,7 @@ const ENDPOINTS = [
   // Phase 1 : chiffrage
   'GET /v1/offers', 'POST /v1/offers/search', 'GET /v1/offers/{offer_id}', 'GET /v1/manufacturers',
   'GET /v1/me', 'GET /v1/usage', 'GET /v1/health',
-  'POST /v1/demands', 'GET /v1/demands', 'GET /v1/demands/{id}', 'GET /v1/demands/{id}/offers',
+  'POST /v1/demands', 'GET /v1/demands', 'GET /v1/demands/{id}', 'POST /v1/demands/{id}/cancel', 'GET /v1/demands/{id}/offers',
   'POST /v1/webhooks', 'GET /v1/webhooks', 'DELETE /v1/webhooks/{id}',
   // Phase 2 : commande
   'POST /v1/inventory/orders', 'POST /v1/offers/{id}/accept', 'GET /v1/transactions', 'GET /v1/transactions/{id}',
@@ -59,6 +59,12 @@ for (const width of [1280, 390]) {
   ok(fr.includes('Spécification v1 en cours · accès sur demande · ouverture prévue après electronica'), width + ' px : bandeau de statut');
   ok(fr.includes('Chaque offre, tracée jusqu’à sa source.') && !fr.includes('Every offer, traced'), width + ' px : baseline FR seule');
   ok(fr.includes('Exemple fictif') && fr.includes('NE555DR'), width + ' px : exemple fictif étiqueté');
+  // Forme validée le 2 novembre (tri DigiKey / TI) : produits et offres, unit_price, snake_case, jamais null.
+  const code = await page.evaluate(() => [...document.querySelectorAll('pre code')].map((c) => c.textContent).join('\n'));
+  ok(/"products": \[/.test(code) && /"unit_price"/.test(code) && !/"price":/.test(code) && !/: null/.test(code), width + ' px : exemples dans la forme actuelle (products, unit_price, aucun null)');
+  ok(/"manufacturer": \{ "id": "MFR-TI"/.test(code) && /"standard_pack_quantity"/.test(code) && /"country_of_origin"/.test(code), width + ' px : fabricant normalisé, conditionnement complet, pays d\'origine');
+  ok(/pending_validation/.test(code) && /ship_to_country/.test(fr), width + ' px : RFQ (lignes, validation, ship_to_country)');
+  ok(fr.includes('/compat/digikey/products/v4/search/{mpn}/pricing'), width + ' px : formats compatibles documentés');
   ok(fr.includes('Adresse de base prévue') && !(await page.$('a[href*="api.central.parts"]')), width + ' px : adresse de base prévue, sans lien');
   ok(fr.includes('Adesio compris'), width + ' px : mêmes données pour tous les clients, Adesio compris');
   for (const e of ENDPOINTS) ok(await page.$(`[data-endpoint="${e}"]`), width + ' px : endpoint ' + e);

@@ -155,32 +155,32 @@ pre{margin:0;background:var(--bg-inverse);color:var(--fg-inverse);border-radius:
   <h2 id="garanties"><span data-l="fr">Ce que renvoie l’API</span><span data-l="en">What the API returns</span><span data-l="zh">API 返回内容</span></h2>
   <div class="grid2">
     <div class="card">
-      <h3><span data-l="fr">Dans chaque offre</span><span data-l="en">In every offer</span><span data-l="zh">每条报价包含</span></h3>
+      <h3><span data-l="fr">Pour chaque référence</span><span data-l="en">For every part number</span><span data-l="zh">每个型号</span></h3>
       <ul class="list" data-l="fr">
-        <li>un identifiant d’offre opaque (<code>offer_id</code>) ;</li>
-        <li>le stock, le minimum de commande et le multiple ;</li>
-        <li>des paliers de prix tout compris, dans la devise demandée : EUR, USD, CNH, HKD, GBP ou JPY ;</li>
-        <li>le délai, le conditionnement, le date code s’il est connu et la durée de validité du prix ;</li>
+        <li>des <strong>produits</strong> : référence et fabricant normalisé (identifiant et nom, alias reconnus), description, fiche technique, boîtier, cycle de vie, ECCN et code douanier HTS quand ils sont connus ;</li>
+        <li>pour chaque produit, ses <strong>offres</strong> : identifiant opaque (<code>offer_id</code>), stock, minimum de commande, multiple et quantité d’un conditionnement complet ;</li>
+        <li>des paliers de prix tout compris (<code>quantity</code>, <code>unit_price</code>), dans la devise de l’offre : EUR, USD, CNH, HKD, GBP ou JPY ;</li>
+        <li>le délai, le conditionnement (bande et bobine, bande coupée, plateau, tube, vrac), le date code s’il est connu et la durée de validité du prix ;</li>
         <li>la catégorie de source : fabricant, distributeur agréé, ou broker et surplus (une offre de broker n’est jamais présentée comme agréée) ;</li>
-        <li>le pays d’expédition ;</li>
+        <li>le pays d’expédition et le pays d’origine ;</li>
         <li>les offres « sur demande » quand il n’y a pas de prix.</li>
       </ul>
       <ul class="list" data-l="en">
-        <li>an opaque offer identifier (<code>offer_id</code>);</li>
-        <li>stock, minimum order quantity and order multiple;</li>
-        <li>all-inclusive price breaks in the requested currency: EUR, USD, CNH, HKD, GBP or JPY;</li>
-        <li>lead time, packaging, date code when known, and price validity;</li>
+        <li><strong>products</strong>: part number and normalized manufacturer (identifier and name, aliases recognized), description, datasheet, case, lifecycle, ECCN and HTS customs code when known;</li>
+        <li>for each product, its <strong>offers</strong>: opaque identifier (<code>offer_id</code>), stock, minimum order quantity, order multiple and full-pack quantity;</li>
+        <li>all-inclusive price breaks (<code>quantity</code>, <code>unit_price</code>) in the offer’s currency: EUR, USD, CNH, HKD, GBP or JPY;</li>
+        <li>lead time, packaging (tape and reel, cut tape, tray, tube, bulk), date code when known, and price validity;</li>
         <li>the source category: manufacturer, authorized distributor, or broker and surplus (a broker offer is never presented as authorized);</li>
-        <li>the ship-from country;</li>
+        <li>the ship-from country and the country of origin;</li>
         <li>“on request” offers when there is no price.</li>
       </ul>
       <ul class="list" data-l="zh">
-        <li>不透明的报价编号（<code>offer_id</code>）；</li>
-        <li>库存、最小起订量和订购倍数；</li>
-        <li>所请求币种的含全部费用价格阶梯：EUR、USD、CNH、HKD、GBP 或 JPY；</li>
-        <li>交期、包装、已知的批号（D/C）以及价格有效期；</li>
+        <li><strong>产品</strong>：型号及统一的制造商（编号和名称，可识别别名）、描述、规格书、封装、生命周期，以及已知的 ECCN 和 HTS 海关编码；</li>
+        <li>每个产品下的<strong>报价</strong>：不透明的报价编号（<code>offer_id</code>）、库存、最小起订量、订购倍数及整包数量；</li>
+        <li>含全部费用的价格阶梯（<code>quantity</code>、<code>unit_price</code>），以报价币种计价：EUR、USD、CNH、HKD、GBP 或 JPY；</li>
+        <li>交期、包装（卷带、剪切带、托盘、管装、散装）、已知的批号（D/C）以及价格有效期；</li>
         <li>来源类别：制造商、授权分销商，或经纪商与库存余货（经纪商报价绝不会标为授权）；</li>
-        <li>发货国家；</li>
+        <li>发货国家和原产国；</li>
         <li>无价格时的“请询价”报价。</li>
       </ul>
     </div>
@@ -262,13 +262,14 @@ pre{margin:0;background:var(--bg-inverse);color:var(--fg-inverse);border-radius:
         <tr data-endpoint="GET /v1/offers"><td class="m">GET</td><td class="p"><a href="#ep-offers">/v1/offers</a></td><td><span data-l="fr">Offres pour une référence</span><span data-l="en">Offers for one part number</span><span data-l="zh">查询单个型号的报价</span></td></tr>
         <tr data-endpoint="POST /v1/offers/search"><td class="m">POST</td><td class="p"><a href="#ep-search">/v1/offers/search</a></td><td><span data-l="fr">Offres pour une nomenclature</span><span data-l="en">Offers for a bill of materials</span><span data-l="zh">查询整份 BOM 的报价</span></td></tr>
         <tr data-endpoint="GET /v1/offers/{offer_id}"><td class="m">GET</td><td class="p"><a href="#ep-offer">/v1/offers/{offer_id}</a></td><td><span data-l="fr">Détail d’une offre, prix à la quantité, durée de validité</span><span data-l="en">Offer detail, price at quantity, validity</span><span data-l="zh">报价详情、指定数量的价格、有效期</span></td></tr>
-        <tr data-endpoint="GET /v1/manufacturers"><td class="m">GET</td><td class="p"><a href="#ep-manufacturers">/v1/manufacturers</a></td><td><span data-l="fr">Référentiel des fabricants</span><span data-l="en">Manufacturer reference list</span><span data-l="zh">制造商目录</span></td></tr>
+        <tr data-endpoint="GET /v1/manufacturers"><td class="m">GET</td><td class="p"><a href="#ep-manufacturers">/v1/manufacturers</a></td><td><span data-l="fr">Référentiel des fabricants (identifiant, nom, alias)</span><span data-l="en">Manufacturer reference list (identifier, name, aliases)</span><span data-l="zh">制造商目录（编号、名称、别名）</span></td></tr>
         <tr data-endpoint="GET /v1/me"><td class="m">GET</td><td class="p"><a href="#ep-account">/v1/me</a></td><td><span data-l="fr">Client et clé appelants</span><span data-l="en">Calling client and key</span><span data-l="zh">调用方客户与密钥信息</span></td></tr>
         <tr data-endpoint="GET /v1/usage"><td class="m">GET</td><td class="p"><a href="#ep-account">/v1/usage</a></td><td><span data-l="fr">Consommation et quotas de la clé</span><span data-l="en">Key usage and quotas</span><span data-l="zh">密钥用量与配额</span></td></tr>
         <tr data-endpoint="GET /v1/health"><td class="m">GET</td><td class="p"><a href="#ep-account">/v1/health</a></td><td><span data-l="fr">État du service</span><span data-l="en">Service status</span><span data-l="zh">服务状态</span></td></tr>
-        <tr data-endpoint="POST /v1/demands"><td class="m">POST</td><td class="p"><a href="#ep-demands">/v1/demands</a></td><td><span data-l="fr">Demande de prix pour une offre « sur demande »</span><span data-l="en">Price request for an “on request” offer</span><span data-l="zh">为“请询价”报价发起询价</span></td></tr>
+        <tr data-endpoint="POST /v1/demands"><td class="m">POST</td><td class="p"><a href="#ep-demands">/v1/demands</a></td><td><span data-l="fr">Demande de prix (RFQ), 1 à 50 lignes</span><span data-l="en">Price request (RFQ), 1 to 50 lines</span><span data-l="zh">询价（RFQ），1 至 50 行</span></td></tr>
         <tr data-endpoint="GET /v1/demands"><td class="m">GET</td><td class="p"><a href="#ep-demands">/v1/demands</a></td><td><span data-l="fr">Demandes du client</span><span data-l="en">The client’s requests</span><span data-l="zh">客户的询价列表</span></td></tr>
         <tr data-endpoint="GET /v1/demands/{id}"><td class="m">GET</td><td class="p"><a href="#ep-demands">/v1/demands/{id}</a></td><td><span data-l="fr">Détail et statut d’une demande</span><span data-l="en">Request detail and status</span><span data-l="zh">询价详情与状态</span></td></tr>
+        <tr data-endpoint="POST /v1/demands/{id}/cancel"><td class="m">POST</td><td class="p"><a href="#ep-demands">/v1/demands/{id}/cancel</a></td><td><span data-l="fr">Annuler une demande</span><span data-l="en">Cancel a request</span><span data-l="zh">取消询价</span></td></tr>
         <tr data-endpoint="GET /v1/demands/{id}/offers"><td class="m">GET</td><td class="p"><a href="#ep-demands">/v1/demands/{id}/offers</a></td><td><span data-l="fr">Offres chiffrées en réponse à la demande</span><span data-l="en">Priced offers answering the request</span><span data-l="zh">针对询价返回的报价</span></td></tr>
         <tr data-endpoint="POST /v1/webhooks"><td class="m">POST</td><td class="p"><a href="#ep-webhooks">/v1/webhooks</a></td><td><span data-l="fr">S’abonner à des événements</span><span data-l="en">Subscribe to events</span><span data-l="zh">订阅事件</span></td></tr>
         <tr data-endpoint="GET /v1/webhooks"><td class="m">GET</td><td class="p"><a href="#ep-webhooks">/v1/webhooks</a></td><td><span data-l="fr">Abonnements et dernières livraisons</span><span data-l="en">Subscriptions and latest deliveries</span><span data-l="zh">订阅列表与最近推送</span></td></tr>
@@ -280,22 +281,20 @@ pre{margin:0;background:var(--bg-inverse);color:var(--fg-inverse);border-radius:
   <!-- GET /v1/offers -->
   <section class="ep" id="ep-offers">
     <h3><span class="meth">GET</span><span class="path">/v1/offers</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Offres disponibles pour une référence fabricant, triées par prix au palier de la quantité demandée.</p>
-    <p data-l="en">Available offers for one manufacturer part number, sorted by price at the break covering the requested quantity.</p>
-    <p data-l="zh">查询单个制造商型号的可用报价，按所请求数量对应价格档位的价格排序。</p>
+    <p data-l="fr">Offres disponibles pour une référence fabricant (exacte, espaces ignorés) : un produit par fabricant, chacun avec ses offres triées par prix.</p>
+    <p data-l="en">Available offers for one manufacturer part number (exact match, spaces ignored): one product per manufacturer, each with its offers sorted by price.</p>
+    <p data-l="zh">查询单个制造商型号（精确匹配，忽略空格）的可用报价：每个制造商一个产品，产品下的报价按价格排序。</p>
     <div class="tbl"><table>
       <thead><tr><th><span data-l="fr">Paramètre</span><span data-l="en">Parameter</span><span data-l="zh">参数</span></th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
         <tr><td class="p">mpn</td><td><span data-l="fr">texte, obligatoire</span><span data-l="en">string, required</span><span data-l="zh">文本，必填</span></td><td><span data-l="fr">Référence fabricant</span><span data-l="en">Manufacturer part number</span><span data-l="zh">制造商型号</span></td></tr>
-        <tr><td class="p">manufacturer</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Fabricant, pour lever une ambiguïté</span><span data-l="en">Manufacturer, to resolve ambiguity</span><span data-l="zh">制造商，用于消除歧义</span></td></tr>
-        <tr><td class="p">qty</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Quantité visée</span><span data-l="en">Target quantity</span><span data-l="zh">目标数量</span></td></tr>
-        <tr><td class="p">currency</td><td>ISO 4217</td><td>EUR, USD, CNH, HKD, GBP, JPY</td></tr>
-        <tr><td class="p">ship_to</td><td>ISO 3166 alpha-2</td><td><span data-l="fr">Pays de livraison</span><span data-l="en">Delivery country</span><span data-l="zh">收货国家</span></td></tr>
+        <tr><td class="p">manufacturer</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Fabricant (nom ou alias, par exemple « TI »)</span><span data-l="en">Manufacturer (name or alias, e.g. “TI”)</span><span data-l="zh">制造商（名称或别名，例如“TI”）</span></td></tr>
+        <tr><td class="p">qty</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Quantité visée : prix à la quantité dans <code>quote</code></span><span data-l="en">Target quantity: price at quantity in <code>quote</code></span><span data-l="zh">目标数量：<code>quote</code> 中给出该数量的价格</span></td></tr>
         <tr><td class="p">source_category</td><td><span data-l="fr">liste</span><span data-l="en">list</span><span data-l="zh">列表</span></td><td><code>manufacturer</code>, <code>authorized_distributor</code>, <code>broker_surplus</code></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif</span><span data-l="en">Fictitious example</span><span data-l="zh">虚构示例</span></span>
-<pre><code>GET /v1/offers?mpn=NE555DR&amp;qty=2500&amp;currency=EUR&amp;ship_to=FR
+<pre><code>GET /v1/offers?mpn=NE555DR&amp;qty=2500
 Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
     <p class="muted"><span data-l="fr">Réponse complète : voir l’</span><span data-l="en">Full response: see the </span><span data-l="zh">完整响应：见</span><a href="#exemple"><span data-l="fr">exemple complet</span><span data-l="en">full example</span><span data-l="zh">完整示例</span></a><span data-l="fr">.</span><span data-l="en">.</span><span data-l="zh">。</span></p>
   </section>
@@ -303,9 +302,9 @@ Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
   <!-- POST /v1/offers/search -->
   <section class="ep" id="ep-search">
     <h3><span class="meth">POST</span><span class="path">/v1/offers/search</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Offres pour toute une nomenclature en un appel. Chaque ligne de la réponse reprend le <code>line_id</code> envoyé.</p>
-    <p data-l="en">Offers for a whole bill of materials in one call. Each response line echoes the <code>line_id</code> sent.</p>
-    <p data-l="zh">一次调用查询整份 BOM 的报价。响应中的每一行都会返回请求中的 <code>line_id</code>。</p>
+    <p data-l="fr">Offres pour toute une nomenclature en un appel, 500 lignes au plus. Chaque ligne de la réponse reprend le <code>line_id</code> envoyé et donne ses produits.</p>
+    <p data-l="en">Offers for a whole bill of materials in one call, up to 500 lines. Each response line echoes the <code>line_id</code> sent and gives its products.</p>
+    <p data-l="zh">一次调用查询整份 BOM 的报价，最多 500 行。响应中的每一行都会返回请求中的 <code>line_id</code> 及其产品。</p>
     <div class="tbl"><table>
       <thead><tr><th><span data-l="fr">Champ</span><span data-l="en">Field</span><span data-l="zh">字段</span></th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
@@ -313,9 +312,7 @@ Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
         <tr><td class="p">lines[].line_id</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Identifiant de la ligne chez le client</span><span data-l="en">Line identifier on the client side</span><span data-l="zh">客户侧的行编号</span></td></tr>
         <tr><td class="p">lines[].mpn</td><td><span data-l="fr">texte, obligatoire</span><span data-l="en">string, required</span><span data-l="zh">文本，必填</span></td><td><span data-l="fr">Référence fabricant</span><span data-l="en">Manufacturer part number</span><span data-l="zh">制造商型号</span></td></tr>
         <tr><td class="p">lines[].manufacturer</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Fabricant</span><span data-l="en">Manufacturer</span><span data-l="zh">制造商</span></td></tr>
-        <tr><td class="p">lines[].quantity</td><td><span data-l="fr">entier, obligatoire</span><span data-l="en">integer, required</span><span data-l="zh">整数，必填</span></td><td><span data-l="fr">Quantité visée</span><span data-l="en">Target quantity</span><span data-l="zh">目标数量</span></td></tr>
-        <tr><td class="p">currency</td><td>ISO 4217</td><td>EUR, USD, CNH, HKD, GBP, JPY</td></tr>
-        <tr><td class="p">ship_to</td><td>ISO 3166 alpha-2</td><td><span data-l="fr">Pays de livraison</span><span data-l="en">Delivery country</span><span data-l="zh">收货国家</span></td></tr>
+        <tr><td class="p">lines[].quantity</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Quantité visée</span><span data-l="en">Target quantity</span><span data-l="zh">目标数量</span></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : requête</span><span data-l="en">Fictitious example: request</span><span data-l="zh">虚构示例：请求</span></span>
@@ -324,17 +321,15 @@ Authorization: Bearer cp_live_XXXXXXXX
 Content-Type: application/json
 
 {
-  "currency": "EUR",
-  "ship_to": "FR",
   "lines": [
-    { "line_id": "L1", "mpn": "NE555DR", "manufacturer": "Texas Instruments", "quantity": 2500 }
+    { "line_id": "L1", "mpn": "NE555DR", "manufacturer": "TI", "quantity": 2500 }
   ]
 }</code></pre></div>
-    <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : réponse 200 (offres abrégées)</span><span data-l="en">Fictitious example: 200 response (offers shortened)</span><span data-l="zh">虚构示例：200 响应（报价已省略）</span></span>
+    <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : réponse 200 (produits abrégés)</span><span data-l="en">Fictitious example: 200 response (products shortened)</span><span data-l="zh">虚构示例：200 响应（产品已省略）</span></span>
 <pre><code>{
-  "currency": "EUR",
   "lines": [
-    { "line_id": "L1", "mpn": "NE555DR", "quantity": 2500, "offers": [ { "offer_id": "off_7QK2MX9A", "…": "…" } ] }
+    { "line_id": "L1", "mpn": "NE555DR", "quantity": 2500,
+      "products": [ { "mpn": "NE555DR", "manufacturer": { "id": "MFR-TI", "name": "Texas Instruments" }, "offers": [ … ] } ] }
   ]
 }</code></pre></div>
   </section>
@@ -342,49 +337,45 @@ Content-Type: application/json
   <!-- GET /v1/offers/{offer_id} -->
   <section class="ep" id="ep-offer">
     <h3><span class="meth">GET</span><span class="path">/v1/offers/{offer_id}</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Détail d’une offre et prix pour une quantité donnée, avec sa durée de validité. Une offre expirée renvoie <code>404</code>.</p>
-    <p data-l="en">Offer detail and price for a given quantity, with its validity. An expired offer returns <code>404</code>.</p>
-    <p data-l="zh">报价详情及指定数量的价格和有效期。已过期的报价返回 <code>404</code>。</p>
+    <p data-l="fr">Une offre, son prix pour une quantité donnée et son produit. Une offre qui n’est plus publiée renvoie <code>404</code> ; une quantité sous le minimum de commande, <code>422</code>.</p>
+    <p data-l="en">One offer, its price for a given quantity, and its product. An offer no longer published returns <code>404</code>; a quantity below the minimum order quantity, <code>422</code>.</p>
+    <p data-l="zh">单条报价、指定数量的价格及其产品。已下架的报价返回 <code>404</code>；数量低于最小起订量返回 <code>422</code>。</p>
     <div class="tbl"><table>
       <thead><tr><th><span data-l="fr">Paramètre</span><span data-l="en">Parameter</span><span data-l="zh">参数</span></th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td class="p">qty</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Quantité à chiffrer (minimum et multiple respectés)</span><span data-l="en">Quantity to price (minimum and multiple respected)</span><span data-l="zh">需报价的数量（须符合最小起订量和倍数）</span></td></tr>
-        <tr><td class="p">currency</td><td>ISO 4217</td><td>EUR, USD, CNH, HKD, GBP, JPY</td></tr>
+        <tr><td class="p">qty</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Quantité à chiffrer</span><span data-l="en">Quantity to price</span><span data-l="zh">需报价的数量</span></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : réponse 200</span><span data-l="en">Fictitious example: 200 response</span><span data-l="zh">虚构示例：200 响应</span></span>
-<pre><code>GET /v1/offers/off_7QK2MX9A?qty=2500&amp;currency=EUR
+<pre><code>GET /v1/offers/cpo_5f0c2a9e41d7b3a08c6e?qty=2500
 
 {
-  "offer_id": "off_7QK2MX9A",
-  "mpn": "NE555DR",
+  "offer_id": "cpo_5f0c2a9e41d7b3a08c6e",
   "source_category": "authorized_distributor",
-  "quote": {
-    "quantity": 2500,
-    "unit_price": 0.118,
-    "extended_price": 295.00,
-    "currency": "EUR",
-    "price_valid_until": "2026-11-20T23:59:59Z"
-  }
+  "price_status": "priced",
+  "currency": "EUR",
+  "quote": { "quantity": 2500, "unit_price": 0.118, "extended_price": 295.00, "covered": true },
+  "price_valid_until": "2026-11-03T10:00:00Z",
+  "product": { "mpn": "NE555DR", "manufacturer": { "id": "MFR-TI", "name": "Texas Instruments" } }
 }</code></pre></div>
   </section>
 
   <!-- GET /v1/manufacturers -->
   <section class="ep" id="ep-manufacturers">
     <h3><span class="meth">GET</span><span class="path">/v1/manufacturers</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Référentiel des fabricants reconnus et de leurs variantes de nom, pour aligner le champ <code>manufacturer</code> de vos nomenclatures.</p>
-    <p data-l="en">Reference list of recognised manufacturers and their name variants, to align the <code>manufacturer</code> field of your BOMs.</p>
-    <p data-l="zh">已收录的制造商及其名称变体，用于统一您 BOM 中的 <code>manufacturer</code> 字段。</p>
+    <p data-l="fr">Référentiel des fabricants présents dans le stock : identifiant stable, nom et alias. « TI », « Texas Instruments Inc. » et « 德州仪器 » désignent le même fabricant.</p>
+    <p data-l="en">Reference list of the manufacturers in stock: stable identifier, name and aliases. “TI”, “Texas Instruments Inc.” and “德州仪器” refer to the same manufacturer.</p>
+    <p data-l="zh">库存中的制造商目录：稳定编号、名称和别名。“TI”、“Texas Instruments Inc.”和“德州仪器”指同一制造商。</p>
     <div class="tbl"><table>
       <thead><tr><th><span data-l="fr">Paramètre</span><span data-l="en">Parameter</span><span data-l="zh">参数</span></th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td class="p">q</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Début du nom ou d’une variante</span><span data-l="en">Start of the name or of a variant</span><span data-l="zh">名称或变体的开头</span></td></tr>
+        <tr><td class="p">q</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Début du nom ou d’un alias</span><span data-l="en">Start of the name or of an alias</span><span data-l="zh">名称或别名的开头</span></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : réponse 200</span><span data-l="en">Fictitious example: 200 response</span><span data-l="zh">虚构示例：200 响应</span></span>
-<pre><code>GET /v1/manufacturers?q=texas
+<pre><code>GET /v1/manufacturers?q=ti
 
-{ "manufacturers": [ { "id": "mfr_0042", "name": "Texas Instruments", "aliases": ["TI"] } ] }</code></pre></div>
+{ "manufacturers": [ { "id": "MFR-TI", "name": "Texas Instruments", "aliases": ["TI", "德州仪器"], "parts": 12 } ] }</code></pre></div>
   </section>
 
   <!-- GET /v1/me, /v1/usage, /v1/health -->
@@ -412,16 +403,25 @@ Content-Type: application/json
   <!-- Demandes -->
   <section class="ep" id="ep-demands">
     <h3><span class="meth">POST</span><span class="path">/v1/demands</span><span class="meth">GET</span><span class="path">/v1/demands/{id}/offers</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Pour une offre « sur demande », le client envoie une demande de prix. Central.Parts consulte ses fournisseurs et publie des offres chiffrées sous <code>/v1/demands/{id}/offers</code> ; l’événement <code>demand.offers_ready</code> prévient le client. <code>GET /v1/demands</code> liste ses demandes, <code>GET /v1/demands/{id}</code> en donne le détail et le statut.</p>
-    <p data-l="en">For an “on request” offer, the client sends a price request. Central.Parts consults its suppliers and publishes priced offers under <code>/v1/demands/{id}/offers</code>; the <code>demand.offers_ready</code> event notifies the client. <code>GET /v1/demands</code> lists its requests, <code>GET /v1/demands/{id}</code> gives the detail and status.</p>
-    <p data-l="zh">对于“请询价”报价，客户提交询价请求。Central.Parts 向其供应商询价，并在 <code>/v1/demands/{id}/offers</code> 下发布带价格的报价；<code>demand.offers_ready</code> 事件会通知客户。<code>GET /v1/demands</code> 列出客户的询价，<code>GET /v1/demands/{id}</code> 返回详情和状态。</p>
+    <p data-l="fr">Pour une offre « sur demande » ou une référence absente, le client envoie une demande de prix (RFQ) de 1 à 50 lignes, avec l’en-tête <code>Idempotency-Key</code>. Réponse <code>202</code> : une demande par ligne, en attente de validation. Central.Parts valide chaque demande avant de la transmettre, anonymisée, aux fournisseurs dont le stock correspond ; ils ont 48 heures pour répondre. Les offres consolidées, tout compris, sont ensuite disponibles sous <code>/v1/demands/{id}/offers</code>.</p>
+    <p data-l="en">For an “on request” offer or a missing part number, the client sends a price request (RFQ) of 1 to 50 lines, with the <code>Idempotency-Key</code> header. <code>202</code> response: one request per line, pending validation. Central.Parts validates each request before passing it, anonymized, to the suppliers whose stock matches; they have 48 hours to answer. The consolidated, all-inclusive offers are then available under <code>/v1/demands/{id}/offers</code>.</p>
+    <p data-l="zh">对于“请询价”报价或缺货型号，客户提交 1 至 50 行的询价（RFQ），并带 <code>Idempotency-Key</code> 请求头。响应 <code>202</code>：每行一个询价，等待审核。Central.Parts 审核每个询价后，以匿名方式转给库存匹配的供应商；供应商须在 48 小时内回复。随后可在 <code>/v1/demands/{id}/offers</code> 获取含全部费用的汇总报价。</p>
+    <p data-l="fr">Statuts : <code>pending_validation</code>, <code>rejected</code> (avec le motif), <code>open</code>, <code>offers_ready</code>, <code>no_offer</code>, <code>cancelled</code>. <code>POST /v1/demands/{id}/cancel</code> annule une demande.</p>
+    <p data-l="en">Statuses: <code>pending_validation</code>, <code>rejected</code> (with the reason), <code>open</code>, <code>offers_ready</code>, <code>no_offer</code>, <code>cancelled</code>. <code>POST /v1/demands/{id}/cancel</code> cancels a request.</p>
+    <p data-l="zh">状态：<code>pending_validation</code>、<code>rejected</code>（附原因）、<code>open</code>、<code>offers_ready</code>、<code>no_offer</code>、<code>cancelled</code>。<code>POST /v1/demands/{id}/cancel</code> 可取消询价。</p>
     <div class="tbl"><table>
       <thead><tr><th><span data-l="fr">Champ</span><span data-l="en">Field</span><span data-l="zh">字段</span></th><th>Type</th><th>Description</th></tr></thead>
       <tbody>
-        <tr><td class="p">offer_id</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Offre « sur demande » visée, ou à défaut <code>mpn</code></span><span data-l="en">Targeted “on request” offer, or <code>mpn</code> instead</span><span data-l="zh">目标“请询价”报价，或改填 <code>mpn</code></span></td></tr>
-        <tr><td class="p">quantity</td><td><span data-l="fr">entier, obligatoire</span><span data-l="en">integer, required</span><span data-l="zh">整数，必填</span></td><td><span data-l="fr">Quantité demandée</span><span data-l="en">Requested quantity</span><span data-l="zh">询价数量</span></td></tr>
-        <tr><td class="p">currency</td><td>ISO 4217</td><td>EUR, USD, CNH, HKD, GBP, JPY</td></tr>
-        <tr><td class="p">ship_to</td><td>ISO 3166 alpha-2</td><td><span data-l="fr">Pays de livraison</span><span data-l="en">Delivery country</span><span data-l="zh">收货国家</span></td></tr>
+        <tr><td class="p">customer_reference</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Référence du client, jamais transmise au fournisseur</span><span data-l="en">Client reference, never passed to the supplier</span><span data-l="zh">客户参考号，绝不转给供应商</span></td></tr>
+        <tr><td class="p">currency</td><td><span data-l="fr">ISO 4217, obligatoire</span><span data-l="en">ISO 4217, required</span><span data-l="zh">ISO 4217，必填</span></td><td>EUR, USD, CNH, HKD, GBP, JPY</td></tr>
+        <tr><td class="p">ship_to_country</td><td><span data-l="fr">ISO 3166 alpha-2, obligatoire</span><span data-l="en">ISO 3166 alpha-2, required</span><span data-l="zh">ISO 3166 alpha-2，必填</span></td><td><span data-l="fr">Pays de livraison</span><span data-l="en">Delivery country</span><span data-l="zh">收货国家</span></td></tr>
+        <tr><td class="p">lines[].line_id</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Identifiant de la ligne chez le client</span><span data-l="en">Line identifier on the client side</span><span data-l="zh">客户侧的行编号</span></td></tr>
+        <tr><td class="p">lines[].mpn</td><td><span data-l="fr">texte, obligatoire</span><span data-l="en">string, required</span><span data-l="zh">文本，必填</span></td><td><span data-l="fr">Référence fabricant</span><span data-l="en">Manufacturer part number</span><span data-l="zh">制造商型号</span></td></tr>
+        <tr><td class="p">lines[].manufacturer</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Fabricant</span><span data-l="en">Manufacturer</span><span data-l="zh">制造商</span></td></tr>
+        <tr><td class="p">lines[].quantity</td><td><span data-l="fr">entier, obligatoire</span><span data-l="en">integer, required</span><span data-l="zh">整数，必填</span></td><td><span data-l="fr">Quantité demandée</span><span data-l="en">Requested quantity</span><span data-l="zh">询价数量</span></td></tr>
+        <tr><td class="p">lines[].date_code_min</td><td><span data-l="fr">texte</span><span data-l="en">string</span><span data-l="zh">文本</span></td><td><span data-l="fr">Date code minimum</span><span data-l="en">Minimum date code</span><span data-l="zh">最低批号</span></td></tr>
+        <tr><td class="p">lines[].lead_days_max</td><td><span data-l="fr">entier</span><span data-l="en">integer</span><span data-l="zh">整数</span></td><td><span data-l="fr">Délai maximum en jours</span><span data-l="en">Maximum lead time in days</span><span data-l="zh">最长交期（天）</span></td></tr>
+        <tr><td class="p">lines[].target_price</td><td><span data-l="fr">décimal</span><span data-l="en">decimal</span><span data-l="zh">小数</span></td><td><span data-l="fr">Prix cible, non transmis au fournisseur</span><span data-l="en">Target price, not passed to the supplier</span><span data-l="zh">目标价，不转给供应商</span></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif</span><span data-l="en">Fictitious example</span><span data-l="zh">虚构示例</span></span>
@@ -430,32 +430,56 @@ Authorization: Bearer cp_live_XXXXXXXX
 Idempotency-Key: demande-2026-11-02-0001
 Content-Type: application/json
 
-{ "offer_id": "off_3RT8LC2B", "quantity": 2500, "currency": "EUR", "ship_to": "FR" }
+{ "customer_reference": "BOM-4711", "currency": "EUR", "ship_to_country": "FR",
+  "lines": [ { "line_id": "L1", "mpn": "NE555DR", "quantity": 2500 } ] }
 
-201
-{ "id": "dem_5HC1W0QZ", "status": "open", "created_at": "2026-11-02T09:00:00Z" }</code></pre></div>
+202
+{ "rfq_id": "RFQ-0012", "demands": [ { "line_id": "L1", "id": "DEM-1042", "status": "pending_validation" } ] }</code></pre></div>
   </section>
 
   <!-- Webhooks -->
   <section class="ep" id="ep-webhooks">
     <h3><span class="meth">POST</span><span class="meth">GET</span><span class="path">/v1/webhooks</span><span class="meth">DELETE</span><span class="path">/v1/webhooks/{id}</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
-    <p data-l="fr">Abonnements du client : <code>{ "url": "https://…", "events": [...] }</code>. Central.Parts appelle l’URL en <code>POST</code>, signé HMAC-SHA256 avec le secret de l’abonnement (en-têtes <code>CP-Signature: sha256=…</code> et <code>CP-Timestamp</code>). Réponse <code>2xx</code> attendue sous 10 s ; nouvelles tentatives avec délai croissant pendant 24 h.</p>
-    <p data-l="en">Client subscriptions: <code>{ "url": "https://…", "events": [...] }</code>. Central.Parts calls the URL with <code>POST</code>, signed with HMAC-SHA256 using the subscription secret (headers <code>CP-Signature: sha256=…</code> and <code>CP-Timestamp</code>). A <code>2xx</code> response is expected within 10 s; retries with increasing delay for 24 h.</p>
-    <p data-l="zh">客户订阅：<code>{ "url": "https://…", "events": [...] }</code>。Central.Parts 以 <code>POST</code> 方式调用该 URL，使用订阅密钥进行 HMAC-SHA256 签名（请求头 <code>CP-Signature: sha256=…</code> 和 <code>CP-Timestamp</code>）。需在 10 秒内返回 <code>2xx</code>；否则在 24 小时内以递增间隔重试。</p>
+    <p data-l="fr">Abonnements du client : <code>{ "url": "https://…", "events": [...] }</code> ; le secret de signature n’est affiché qu’une fois, à la création. Central.Parts appelle l’URL en <code>POST</code>, signé HMAC-SHA256 (en-têtes <code>CP-Signature: sha256=…</code> et <code>CP-Timestamp</code>). Réponse <code>2xx</code> attendue sous 10 s ; nouvelles tentatives avec délai croissant pendant 24 h.</p>
+    <p data-l="en">Client subscriptions: <code>{ "url": "https://…", "events": [...] }</code>; the signing secret is shown only once, at creation. Central.Parts calls the URL with <code>POST</code>, signed with HMAC-SHA256 (headers <code>CP-Signature: sha256=…</code> and <code>CP-Timestamp</code>). A <code>2xx</code> response is expected within 10 s; retries with increasing delay for 24 h.</p>
+    <p data-l="zh">客户订阅：<code>{ "url": "https://…", "events": [...] }</code>；签名密钥仅在创建时显示一次。Central.Parts 以 <code>POST</code> 方式调用该 URL，并进行 HMAC-SHA256 签名（请求头 <code>CP-Signature: sha256=…</code> 和 <code>CP-Timestamp</code>）。需在 10 秒内返回 <code>2xx</code>；否则在 24 小时内以递增间隔重试。</p>
     <div class="tbl"><table>
-      <thead><tr><th><span data-l="fr">Événement</span><span data-l="en">Event</span><span data-l="zh">事件</span></th><th><span data-l="fr">Quand</span><span data-l="en">When</span><span data-l="zh">触发时机</span></th><th><span data-l="fr">Contenu</span><span data-l="en">Payload</span><span data-l="zh">内容</span></th></tr></thead>
+      <thead><tr><th><span data-l="fr">Événement</span><span data-l="en">Event</span><span data-l="zh">事件</span></th><th><span data-l="fr">Quand</span><span data-l="en">When</span><span data-l="zh">触发时机</span></th></tr></thead>
       <tbody>
-        <tr><td class="p">offer.expired</td><td><span data-l="fr">Une offre renvoyée au client n’est plus valable</span><span data-l="en">An offer returned to the client is no longer valid</span><span data-l="zh">已返回给客户的报价失效</span></td><td class="p">offer_id, expired_at</td></tr>
-        <tr><td class="p">demand.offers_ready</td><td><span data-l="fr">Des offres chiffrées répondent à une demande</span><span data-l="en">Priced offers answer a request</span><span data-l="zh">询价已有带价格的报价</span></td><td class="p">demand_id, offers_count</td></tr>
+        <tr><td class="p">demand.validated</td><td><span data-l="fr">La demande est validée ; les fournisseurs sont prévenus</span><span data-l="en">The request is validated; suppliers are notified</span><span data-l="zh">询价已审核，已通知供应商</span></td></tr>
+        <tr><td class="p">demand.rejected</td><td><span data-l="fr">La demande est refusée ; le motif est joint</span><span data-l="en">The request is rejected; the reason is included</span><span data-l="zh">询价被拒绝，附原因</span></td></tr>
+        <tr><td class="p">demand.offers_ready</td><td><span data-l="fr">Des offres consolidées sont disponibles</span><span data-l="en">Consolidated offers are available</span><span data-l="zh">已有汇总报价</span></td></tr>
+        <tr><td class="p">demand.no_offer</td><td><span data-l="fr">Aucune offre chiffrée</span><span data-l="en">No priced offer</span><span data-l="zh">无带价格的报价</span></td></tr>
       </tbody>
     </table></div>
     <div class="ex"><span class="ex-label"><span data-l="fr">Exemple fictif : livraison d’un événement</span><span data-l="en">Fictitious example: event delivery</span><span data-l="zh">虚构示例：事件推送</span></span>
 <pre><code>POST https://votre-plateforme.example/webhooks/central-parts
-CP-Timestamp: 2026-11-03T08:15:00Z
+CP-Timestamp: 1762157700
 CP-Signature: sha256=…
 Content-Type: application/json
 
-{ "event": "demand.offers_ready", "demand_id": "dem_5HC1W0QZ", "offers_count": 2 }</code></pre></div>
+{ "event": "demand.offers_ready", "demand_id": "DEM-1042", "line_id": "L1",
+  "customer_reference": "BOM-4711", "status": "offers_ready", "offers_count": 2 }</code></pre></div>
+  </section>
+
+  <!-- Formats compatibles -->
+  <section class="ep" id="ep-compat">
+    <h3><span data-l="fr">Formats compatibles</span><span data-l="en">Compatible formats</span><span data-l="zh">兼容格式</span><span class="badge"><span data-l="fr">Spécification v1</span><span data-l="en">v1 specification</span><span data-l="zh">v1 规范</span></span></h3>
+    <p data-l="fr">Pour brancher un connecteur existant sans développement, les mêmes offres sont aussi servies dans la forme des API produit les plus courantes, avec la même clé :</p>
+    <p data-l="en">To plug in an existing connector without development, the same offers are also served in the shape of the most common product APIs, with the same key:</p>
+    <p data-l="zh">为了无需开发即可接入现有连接器，同样的报价也以最常见的产品 API 格式提供，使用同一密钥：</p>
+    <div class="tbl"><table>
+      <thead><tr><th><span data-l="fr">Format</span><span data-l="en">Format</span><span data-l="zh">格式</span></th><th><span data-l="fr">Chemin</span><span data-l="en">Path</span><span data-l="zh">路径</span></th></tr></thead>
+      <tbody>
+        <tr><td>DigiKey ProductPricing</td><td class="p">GET /compat/digikey/products/v4/search/{mpn}/pricing</td></tr>
+        <tr><td>DigiKey ProductDetails</td><td class="p">GET /compat/digikey/products/v4/search/{mpn}/productdetails</td></tr>
+        <tr><td>DigiKey KeywordSearch</td><td class="p">POST /compat/digikey/products/v4/search/keyword</td></tr>
+        <tr><td>Texas Instruments store</td><td class="p">GET /compat/ti/v2/store/products/{mpn}</td></tr>
+      </tbody>
+    </table></div>
+    <p data-l="fr">Le fournisseur y vaut toujours « Central.Parts » ; ce que ces formats ne prévoient pas (catégorie de source, date code, pays d’expédition, validité du prix) figure dans une extension <code>CentralParts</code>.</p>
+    <p data-l="en">The supplier there is always “Central.Parts”; what these formats do not provide (source category, date code, ship-from country, price validity) is in a <code>CentralParts</code> extension.</p>
+    <p data-l="zh">其中供应商始终显示为“Central.Parts”；这些格式没有的信息（来源类别、批号、发货国家、价格有效期）放在 <code>CentralParts</code> 扩展字段中。</p>
   </section>
 
   <!-- Phase 2 : commande -->
@@ -485,16 +509,19 @@ Content-Type: application/json
   <h2 id="conventions"><span data-l="fr">Conventions</span><span data-l="en">Conventions</span><span data-l="zh">通用约定</span></h2>
   <ul class="list" data-l="fr">
     <li>JSON en UTF-8, dates ISO 8601, montants en nombres décimaux.</li>
+    <li>Noms de champs en snake_case partout (offres, demandes, webhooks) ; un champ absent veut dire « inconnu », jamais <code>null</code>.</li>
     <li>Idempotence : en-tête <code>Idempotency-Key</code> sur les écritures ; un même appel rejoué dans les 24 h renvoie la même réponse sans double effet.</li>
     <li>Limites d’appels par clé, indiquées dans les en-têtes <code>X-RateLimit-*</code>.</li>
   </ul>
   <ul class="list" data-l="en">
     <li>JSON in UTF-8, ISO 8601 dates, amounts as decimal numbers.</li>
+    <li>Field names in snake_case everywhere (offers, requests, webhooks); a missing field means “unknown”, never <code>null</code>.</li>
     <li>Idempotency: <code>Idempotency-Key</code> header on writes; the same call replayed within 24 h returns the same response with no double effect.</li>
     <li>Call limits per key, stated in the <code>X-RateLimit-*</code> headers.</li>
   </ul>
   <ul class="list" data-l="zh">
     <li>JSON 采用 UTF-8 编码，日期采用 ISO 8601，金额为十进制数。</li>
+    <li>所有字段名统一使用 snake_case（报价、询价、webhook）；缺少某字段表示“未知”，绝不返回 <code>null</code>。</li>
     <li>幂等：写操作使用 <code>Idempotency-Key</code> 请求头；24 小时内重放同一调用返回相同响应，不会重复执行。</li>
     <li>按密钥限制调用频率，限额见 <code>X-RateLimit-*</code> 响应头。</li>
   </ul>
@@ -525,50 +552,57 @@ Content-Type: application/json
   <p data-l="en">One generic part number, made-up values: no real stock, price or supplier data. The first offer is priced; the second is “on request”.</p>
   <p data-l="zh">仅使用一个通用型号，数值均为虚构：库存、价格和供应商均非真实。第一条报价带价格；第二条为“请询价”。</p>
   <div class="ex"><span class="ex-label"><span data-l="fr">Requête</span><span data-l="en">Request</span><span data-l="zh">请求</span></span>
-<pre><code>GET /v1/offers?mpn=NE555DR&amp;qty=2500&amp;currency=EUR&amp;ship_to=FR
+<pre><code>GET /v1/offers?mpn=NE555DR&amp;qty=2500
 Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
   <div class="ex"><span class="ex-label"><span data-l="fr">Réponse 200</span><span data-l="en">200 response</span><span data-l="zh">200 响应</span></span>
 <pre><code>{
   "mpn": "NE555DR",
-  "currency": "EUR",
-  "offers": [
+  "quantity": 2500,
+  "products": [
     {
-      "offer_id": "off_7QK2MX9A",
       "mpn": "NE555DR",
-      "manufacturer": "Texas Instruments",
-      "source_category": "authorized_distributor",
-      "price_status": "priced",
-      "stock": 18000,
-      "moq": 500,
-      "order_multiple": 500,
-      "currency": "EUR",
-      "price_breaks": [
-        { "quantity": 500, "price": 0.142 },
-        { "quantity": 2500, "price": 0.118 },
-        { "quantity": 10000, "price": 0.104 }
-      ],
-      "lead_time_days": 5,
-      "packaging": "tape_reel",
-      "date_code": "2334",
-      "price_valid_until": "2026-11-20T23:59:59Z",
-      "ship_from": "HK"
-    },
-    {
-      "offer_id": "off_3RT8LC2B",
-      "mpn": "NE555DR",
-      "manufacturer": "Texas Instruments",
-      "source_category": "broker_surplus",
-      "price_status": "on_request",
-      "stock": 40000,
-      "moq": 1,
-      "order_multiple": 1,
-      "currency": null,
-      "price_breaks": [],
-      "lead_time_days": 3,
-      "packaging": "tape_reel",
-      "date_code": null,
-      "price_valid_until": null,
-      "ship_from": "CN"
+      "manufacturer": { "id": "MFR-TI", "name": "Texas Instruments" },
+      "description": "Minuterie de précision",
+      "product_url": "https://central.parts/recherche/?q=NE555DR",
+      "package_case": "SOIC-8",
+      "lifecycle": "active",
+      "eccn": "EAR99",
+      "offers": [
+        {
+          "offer_id": "cpo_5f0c2a9e41d7b3a08c6e",
+          "source_category": "authorized_distributor",
+          "price_status": "priced",
+          "stock": 18000,
+          "moq": 500,
+          "order_multiple": 500,
+          "standard_pack_quantity": 2500,
+          "currency": "EUR",
+          "price_breaks": [
+            { "quantity": 500, "unit_price": 0.142 },
+            { "quantity": 2500, "unit_price": 0.118 },
+            { "quantity": 10000, "unit_price": 0.104 }
+          ],
+          "quote": { "quantity": 2500, "unit_price": 0.118, "extended_price": 295.00, "covered": true },
+          "lead_time_days": 5,
+          "packaging": "tape_reel",
+          "date_code": "2334",
+          "ship_from": "HK",
+          "country_of_origin": "MY",
+          "price_valid_until": "2026-11-03T10:00:00Z"
+        },
+        {
+          "offer_id": "cpo_9a1b7c3d5e0f2a4b6c8d",
+          "source_category": "broker_surplus",
+          "price_status": "on_request",
+          "stock": 40000,
+          "moq": 1,
+          "order_multiple": 1,
+          "price_breaks": [],
+          "lead_time_days": 3,
+          "packaging": "tape_reel",
+          "ship_from": "CN"
+        }
+      ]
     }
   ]
 }</code></pre></div>
