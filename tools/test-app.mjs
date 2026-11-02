@@ -35,6 +35,30 @@ scenario('registre complet', (CP) => {
   ok(CP.endpoints.length > 40, 'registre chargé');
 });
 
+scenario('RFQ d\'une plateforme : validation par un administrateur avant toute diffusion (ADR 0023)', (CP) => {
+  const body = { idempotencyKey: 'k1', customer_reference: 'REF-1', currency: 'EUR', ship_to_country: 'de', lines: [{ line_id: 'L1', mpn: 'MC68HC11E1CFNE2', quantity: 250 }] };
+  const r = call(CP, 'buyer', 'POST', '/v1/demands', body);
+  ok(r.demands[0].status === 'pending_validation', 'RFQ en attente de validation');
+  ok(JSON.stringify(call(CP, 'buyer', 'POST', '/v1/demands', body)) === JSON.stringify(r), 'rejeu idempotent');
+  call(CP, 'buyer', 'POST', '/v1/demands', { ...body, customer_reference: 'autre' }, [409]);
+  call(CP, 'buyer', 'POST', '/v1/demands', { ...body, idempotencyKey: undefined }, [422]);
+  const id = r.demands[0].id;
+  call(CP, 'seller3', 'GET', '/v1/demands/' + id, undefined, [404]);
+  call(CP, 'buyer', 'POST', `/v1/admin/demands/${id}/approve`, {}, [403]);
+  ok(call(CP, 'ops1', 'GET', '/v1/admin/demands').some((d) => d.id === id && d.customer_reference === 'REF-1'), 'liste à valider');
+  call(CP, 'ops1', 'POST', `/v1/admin/demands/${id}/reject`, {}, [422]);
+  ok(call(CP, 'ops1', 'POST', `/v1/admin/demands/${id}/approve`, {}).status === 'open', 'validation : enchère ouverte');
+  ok(call(CP, 'seller3', 'GET', '/v1/demands/' + id).buyer === 'Masqué', 'diffusée après validation, plateforme masquée');
+  call(CP, 'ops1', 'POST', `/v1/admin/demands/${id}/approve`, {}, [409]);
+  ok(call(CP, 'buyer', 'POST', `/v1/demands/${id}/cancel`, {}).status === 'cancelled', 'annulation par la plateforme');
+  const r2 = call(CP, 'buyer', 'POST', '/v1/demands', { ...body, idempotencyKey: 'k2' });
+  ok(call(CP, 'ops1', 'POST', `/v1/admin/demands/${r2.demands[0].id}/reject`, { reason: 'Hors périmètre' }).rejected_reason === 'Hors périmètre', 'refus avec motif');
+  const w = call(CP, 'buyer', 'POST', '/v1/webhooks', { url: 'https://plateforme.example/h', events: ['demand.offers_ready'] });
+  call(CP, 'buyer', 'POST', '/v1/webhooks', { url: 'http://x', events: ['demand.offers_ready'] }, [422]);
+  ok(call(CP, 'buyer', 'GET', '/v1/webhooks').length === 1, 'abonnement listé');
+  call(CP, 'buyer', 'DELETE', '/v1/webhooks/' + w.id);
+});
+
 scenario('nomenclature, enchère, transaction avec laboratoire, acceptation, paiement', (CP) => {
   const bom = call(CP, 'buyer', 'POST', '/v1/boms', { name: 't.csv', delivery: 'Intégrateur, Shenzhen (Chine)', lines: [{ mpn: 'STM32G071RBT6', qty: 100 }, { mpn: 'MC68HC11E1CFNE2', qty: 250 }, { mpn: 'INCONNU-1', qty: 5 }] });
   ok(bom.lines[0].offer === 'inventory' && bom.lines[1].offer === 'opportunity' && bom.lines[2].offer === 'opportunity', 'répartition des lignes');
