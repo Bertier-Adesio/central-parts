@@ -202,6 +202,9 @@ begin
 
   -- ---------------------------------------------------------- clôture et consolidation
   perform tests.eq('demandes à clore', public.rfq_due_for_close(t0 + interval '49 hours') @> jsonb_build_array(d1, d2), true);
+  perform tests.eq('clôture automatique : seulement les RFQ des plateformes',
+    (select count(*) from jsonb_array_elements_text(public.rfq_due_for_close(t0 + interval '30 days')) x
+      join public.demands d on d.id = x where d.client_org_id is null), 0::bigint);
   r := public.close_rfq(d1, t0 + interval '49 hours');
   perform tests.eq('clôture : une offre, statut offers', (r->>'offers') || ' ' || (r->>'status'), '1 offers');
   -- 0,38 USD × 0,92 = 0,3496 EUR, + 10 % = 0,3846 EUR.

@@ -698,7 +698,8 @@ $$;
 -- attend closes_at : un envoi échoué non renvoyé à temps ne bloque pas la demande).
 create or replace function public.rfq_ready_to_close(p_id text, p_now timestamptz default now())
 returns boolean language sql stable security definer set search_path = '' as $$
-  select d.status = 'auction' and (
+  -- Seulement les RFQ des plateformes (client_org_id) : les autres demandes Opportunity gardent leur propre cycle.
+  select d.status = 'auction' and d.client_org_id is not null and (
            -- échéance générale passée (elle couvre toutes les échéances des fournisseurs prévenus) ;
            p_now > d.closes_at
            -- ou : au moins un fournisseur prévenu, tous ont répondu ou expiré, personne d'autre à prévenir.
@@ -751,7 +752,7 @@ end $$;
 create or replace function public.rfq_due_for_close(p_now timestamptz default now())
 returns jsonb language sql stable security definer set search_path = '' as $$
   select coalesce(jsonb_agg(d.id order by d.id), '[]') from public.demands d
-   where d.status = 'auction' and public.rfq_ready_to_close(d.id, p_now)
+   where d.status = 'auction' and d.client_org_id is not null and public.rfq_ready_to_close(d.id, p_now)
 $$;
 
 -- ------------------------------------------------------------ webhooks des plateformes
