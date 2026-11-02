@@ -221,7 +221,8 @@ end $$;
 create or replace function public.catalog_manufacturers(p_q text default '', p_sandbox boolean default false, p_now timestamptz default now())
 returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('manufacturers', coalesce(jsonb_agg(jsonb_build_object('name', m.name, 'parts', m.n) order by m.name), '[]'))
-    from (select min(btrim(l.manufacturer)) as name, count(distinct upper(l.mpn)) n
+    -- Graphie la plus fréquente du fabricant (indépendante de la collation de la base).
+    from (select mode() within group (order by btrim(l.manufacturer)) as name, count(distinct upper(l.mpn)) n
             from public.lots l join public.organizations o on o.id = l.seller_id
            where btrim(l.manufacturer) <> '' and l.qty > 0 and l.confirmed_at > p_now - app.offer_ttl()
              and app.is_verified(o.id) and o.sandbox = p_sandbox
