@@ -197,7 +197,7 @@ en(R.welcomeText('dl_xxxxxxxx', true), 'accueil');
 ok(R.welcomeText('dl_xxxxxxxx', true).includes(fakeUrl) && !R.welcomeText('', true).includes('?login='), 'opérateur : accueil avec lien, ou sans lien si sa création échoue');
 en(R.receivedText(true), 'accusé de réception');
 en(R.operatorHelpText(), 'aide des commandes');
-for (const c of ['pending', 'approve ORG-', 'reject ORG-', 'link', 'reply 123', 'request PR-', 'confirm PR-', 'unavailable PR-', 'proforma PR-', 'paid PR-', 'shipped PR-', 'cancel PR-'])
+for (const c of ['pending', 'requests', 'approve ORG-', 'reject ORG-', 'link', 'reply 123', 'request PR-', 'confirm PR-', 'unavailable PR-', 'proforma PR-', 'paid PR-', 'shipped PR-', 'cancel PR-'])
   ok(R.operatorHelpText().includes(c), 'aide : commande « ' + c + ' » listée');
 en(R.operatorErrorText('ORG-0123', 'company not found'), 'erreur de commande approve / reject');
 en(registrationLine({ region: 'HK', code: '12345678' }), 'ligne de numéro de la fiche [Pending review]');
@@ -267,6 +267,21 @@ ok(refused, 'script du menu : ligne invalide refusée');
 ok(trymatchVerdict({ button: [{ name: 'Review' }] }, opMenu) === 'menu anglais' && trymatchVerdict({ menu: { button: [{ name: 'Review' }] } }, opMenu) === 'menu anglais', 'script du menu : vérification trymatch, deux formes de réponse');
 ok(trymatchVerdict({ button: [{ name: '合作登记' }] }, opMenu).startsWith('menu par défaut') && trymatchVerdict({ errcode: 0 }, opMenu).includes('errcode') && !trymatchVerdict({ errcode: 0, secret: 'zz' }, opMenu).includes('zz'), 'script du menu : menu par défaut ou réponse inconnue signalés, sans valeurs');
 ok(mask('oABCDEFGHIJKLMNOPQRSTUVWX') === 'oABC…VWX', 'script du menu : openid masqué dans le journal');
+
+// Commande « requests » (bouton Review › Purchase requests) : demandes d'achat en cours.
+const prRows = [
+  { id: 'PR-0012', status: 'submitted', mpn: 'STM32F103C8T6', qty: 500, buyer_company: 'Exemple EMS GmbH', created_at: '2026-11-02T09:00:00Z' },
+  { id: 'PR-0009', status: 'proforma_sent', mpn: 'LM317T', qty: 2000, buyer_company: 'Démo OEM SAS', created_at: '2026-10-30T15:00:00Z' },
+];
+const prText = R.operatorRequestsText(prRows, 14);
+en(prText, 'demandes d\'achat en cours (requests)');
+ok(prText.startsWith('Open purchase requests: 14 (latest 2 shown)') && prText.includes('PR-0012 · awaiting supplier · STM32F103C8T6 × 500 · Exemple EMS GmbH · 2 Nov') && prText.includes('PR-0009 · proforma sent') && prText.endsWith('Full card: "request PR-0012"'), 'requests : une ligne par demande, la plus récente d\'abord, et la commande pour la fiche complète');
+ok(!prText.includes('@') && !prText.includes('VAT'), 'requests : la liste ne montre ni e-mail ni TVA de l\'acheteur (fiche complète par « request PR-… »)');
+ok(R.operatorRequestsText([]) === 'No open purchase request.' && R.operatorRequestsText(prRows) .startsWith('Open purchase requests: 2\n'), 'requests : aucune demande, ou toutes affichées');
+ok(JSON.stringify(R.OPEN_REQUEST_STATUSES) === '["submitted","confirmed","proforma_sent","paid"]', 'requests : ni expédiées, ni annulées, ni sans stock');
+ok(operatorMenuCommand(clickOf('OP_REQUESTS')) === 'requests', 'menu opérateurs : Purchase requests vaut la commande requests');
+ok(/if \(\/\^requests\$\/i\.test\(t\)\)/.test(ev) && /\.in\('status', OPEN_REQUEST_STATUSES\)\.order\('created_at', \{ ascending: false \}\)\.limit\(10\)/.test(ev), 'robot : requests lit les 10 demandes en cours les plus récentes');
+ok(/^\s*m = \/\^\(确认\|无货\|发票\|收款\|发货\|取消\|询单\|confirm\|unavailable\|proforma\|paid\|shipped\|cancel\|request\)\\s\*\(PR-\\d\+\)\\s\*\$\/i\.exec\(t\);/m.test(ev), 'robot : commandes PR-… existantes inchangées');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

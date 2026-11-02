@@ -10,7 +10,7 @@
 //       Le message automatique de la console WeChat ne s'applique plus une fois le 消息推送 activé ;
 //     - bouton « 供应商 › 上传库存 » du menu (clic, clé DEPOT_LOGIN) : lien de connexion personnel (15 minutes),
 //       pour tous, inscrits ou non : seul moyen simple de se connecter sur téléphone ;
-//     - boutons du menu anglais des opérateurs (clés OP_PENDING, OP_HELP) : comme les commandes pending et help ;
+//     - boutons du menu anglais des opérateurs (clés OP_PENDING, OP_REQUESTS, OP_HELP) : comme pending, requests et help ;
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
@@ -23,8 +23,8 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { depotLinkText, isDepotMenuClick, operatorMenuCommand, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import {
-  approvedNotice, linkErrorText, operatorErrorText, operatorHelpText, operatorReplyText, phoneBackLine, receivedText,
-  rejectedNotice, scanReply, welcomeText,
+  approvedNotice, linkErrorText, OPEN_REQUEST_STATUSES, operatorErrorText, operatorHelpText, operatorReplyText, operatorRequestsText,
+  phoneBackLine, receivedText, rejectedNotice, scanReply, STATUS_EN, welcomeText,
 } from '../_shared/robot-texts.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 
@@ -86,6 +86,13 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     const { data: scene, error } = await db.rpc('depot_login_link', { p_openid: openid });
     return error ? `Login link failed: ${error.message}` : `Login link (valid 15 minutes): ${SITE}?login=${scene}`;
   }
+  // Demandes d'achat en cours, les plus récentes d'abord (bouton Review › Purchase requests).
+  if (/^requests$/i.test(t)) {
+    const { data, count, error } = await db.from('purchase_requests')
+      .select('id, status, mpn, qty, buyer_company, created_at', { count: 'exact' })
+      .in('status', OPEN_REQUEST_STATUSES).order('created_at', { ascending: false }).limit(10);
+    return error ? `Purchase requests: ${error.message}` : operatorRequestsText(data || [], count ?? (data || []).length);
+  }
   if (/^(待审核|pending)$/i.test(t)) {
     const { data } = await db.rpc('pending_suppliers');
     const list = (data || []) as Record<string, unknown>[];
@@ -94,10 +101,6 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   }
   return operatorHelpText();
 }
-
-// Messages aux opérateurs en anglais seul ; messages aux fournisseurs en chinois, avec l'anglais (robot-texts.js).
-const STATUS_EN: Record<string, string> = { submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
-  proforma_sent: 'proforma sent', paid: 'paid', shipped: 'shipped', cancelled: 'cancelled' };
 
 // Réponse d'un fournisseur à une demande d'achat : 确认 PR-… (disponible) ou 无货 PR-… (indisponible).
 async function supplierCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {

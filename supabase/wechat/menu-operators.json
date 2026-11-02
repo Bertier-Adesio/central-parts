@@ -4,6 +4,7 @@
       "name": "Review",
       "sub_button": [
         { "type": "click", "name": "Pending companies", "key": "OP_PENDING" },
+        { "type": "click", "name": "Purchase requests", "key": "OP_REQUESTS" },
         { "type": "click", "name": "Commands", "key": "OP_HELP" }
       ]
     },
