@@ -179,6 +179,14 @@ Page : `https://central.parts/depot/` (ADR 0010). Le fournisseur scanne un QR co
    ```
    Réponse attendue : `{"errcode":0,"errmsg":"ok"}`. Le menu apparaît chez les abonnés après quelques minutes (se désabonner puis se réabonner pour le voir tout de suite).
    Le bouton « 供应商 › 上传库存 » est de type « click » (clé `DEPOT_LOGIN`) : WeChat prévient `wechat-events`, qui répond dans la conversation par un lien de connexion personnel (15 minutes) vers `/depot/`, pour tout le monde, inscrit ou non. Sur téléphone, c'est le moyen simple de se connecter : on ne peut pas scanner le QR code affiché sur son propre écran. Publier le menu **après** le déploiement de `wechat-events` qui gère ce clic : sinon le bouton ne répondrait rien.
+   **Menu anglais des opérateurs** (étiquette d'abonné « operators », menu personnalisé `wechat/menu-operators.json` ; WeChat ne permet plus un menu selon la langue) : boutons *Review › Pending companies / Commands* (clés `OP_PENDING`, `OP_HELP`, même effet que `pending` et `help`, ignorés pour un non-opérateur), *Supplier › Upload stock / Stock template*, *About › Website / Partner form*. Publier **après** le déploiement de `wechat-events` qui gère ces boutons, puis **à nouveau après chaque publication de `menu.json`** (`menu/create` efface les menus personnalisés). Le compte doit être certifié (认证). Dans l'éditeur SQL, `select openid from public.operators;`, enregistrer le résultat dans un fichier hors du dépôt (un openid par ligne), puis :
+   ```bash
+   node tools/wechat-menu-operators.mjs                      # simulation : vérifie le menu, n'envoie rien
+   read -s WECHAT_SECRET; export WECHAT_SECRET
+   node tools/wechat-menu-operators.mjs --openids ~/Downloads/operators.txt --apply
+   unset WECHAT_SECRET; rm ~/Downloads/operators.txt
+   ```
+   Le script crée l'étiquette si besoin, y met exactement les openid du fichier (et la retire aux autres), remplace le menu personnalisé de l'étiquette et vérifie par `menu/trymatch` ce que voit chaque opérateur ; il n'affiche ni le jeton ni un openid complet. À relancer quand un opérateur arrive ou part.
 6. **Retirer l'accès** : `update public.wechat_identities set revoked_at = now() where org_id = 'ORG-0100';`
 
 ### Back office /admin/ (ADR 0018)

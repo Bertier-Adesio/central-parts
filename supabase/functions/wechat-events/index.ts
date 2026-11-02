@@ -10,6 +10,7 @@
 //       Le message automatique de la console WeChat ne s'applique plus une fois le 消息推送 activé ;
 //     - bouton « 供应商 › 上传库存 » du menu (clic, clé DEPOT_LOGIN) : lien de connexion personnel (15 minutes),
 //       pour tous, inscrits ou non : seul moyen simple de se connecter sur téléphone ;
+//     - boutons du menu anglais des opérateurs (clés OP_PENDING, OP_HELP) : comme les commandes pending et help ;
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
@@ -20,7 +21,7 @@
 // Secrets de la fonction : WECHAT_TOKEN (le « Token » saisi dans la console WeChat), WECHAT_APPID et WECHAT_SECRET
 // pour prévenir les fournisseurs de la décision.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { depotLinkText, isDepotMenuClick, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
+import { depotLinkText, isDepotMenuClick, operatorMenuCommand, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import {
   approvedNotice, linkErrorText, operatorErrorText, operatorHelpText, operatorReplyText, phoneBackLine, receivedText,
   rejectedNotice, scanReply, welcomeText,
@@ -138,6 +139,14 @@ Deno.serve(async (req) => {
       if (link) text += phoneBackLine(`${SITE}?login=${link}`, op);
     }
     return text ? reply(text) : new Response('success');
+  }
+
+  // Boutons du menu anglais des opérateurs (Pending companies, Commands) : même effet que la commande texte.
+  // Ignorés pour quelqu'un qui n'est pas opérateur (il ne voit pas ce menu).
+  const menuCmd = operatorMenuCommand(msg);
+  if (menuCmd) {
+    if (!(await isOperator(db, msg.FromUserName))) return new Response('success');
+    return reply(await operatorCommand(db, msg.FromUserName, menuCmd));
   }
 
   // Bouton « 上传库存 » du menu : lien personnel vers la page de dépôt, déjà connecté (inscription si pas de société).
