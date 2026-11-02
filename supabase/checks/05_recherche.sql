@@ -32,7 +32,8 @@ do $$
 declare x jsonb;
 begin
   select e into x from jsonb_array_elements(public.public_search('192.0.2.1', 'XC2S50', 'EUR')->'results') e where e->>'source' = 'surplus' and e->>'ship_from' = 'CN';
-  perform tests.eq('prix tout compris : 300 CNH en EUR (0,128) + 10 %', (x->>'price_from')::numeric, 42.2400);
+  -- Depuis 20261102000019 : prix dans la devise du fournisseur, sans conversion (la devise demandée est ignorée).
+  perform tests.eq('prix tout compris dans la devise du fournisseur : 300 CNH + 10 %', (x->>'price_from')::numeric || ' ' || (x->>'currency'), '330.0000 CNH');
   select e into x from jsonb_array_elements(public.public_search('192.0.2.1', 'XC2S50', 'USD')->'results') e where e->>'source' = 'broker';
   perform tests.eq('prix tout compris en USD : 38 USD + 10 %', (x->>'price_from')::numeric, 41.8000);
   perform tests.eq('recherche : début de référence seulement', jsonb_array_length(public.public_search('192.0.2.1', '2S50', 'EUR')->'results'), 0);
@@ -48,7 +49,7 @@ do $$
 declare x jsonb;
 begin
   select e into x from jsonb_array_elements(public.public_search('192.0.2.1', 'XC2S50', 'EUR')->'results') e where e->>'source' = 'surplus' and e->>'ship_from' = 'CN';
-  perform tests.eq('marge du vendeur : 300 CNH en EUR + 20 % au lieu de 10 %', (x->>'price_from')::numeric, 46.0800);
+  perform tests.eq('marge du vendeur : 300 CNH + 20 % au lieu de 10 %', (x->>'price_from')::numeric, 360.0000);
 end $$;
 reset role;
 delete from app.seller_margins;

@@ -28,7 +28,7 @@ Les vendeurs approuvés doivent charger leurs listes de composants simplement, �
 - Chaque offre affichée porte « mis à jour le … ».
 
 ### API acheteur et vendeur anonyme
-- Fonction Edge `offers` (`public.partner_offers`) : une ligne par offre, vendeur affiché « Fournisseur partenaire / Partner Supplier / 合作供应商 », sans nom, pseudonyme, SKU ni lien. Disponibilité par tranche et prix « à partir de » tout compris, comme la recherche publique (ADR 0013). Sans recherche : les 50 offres confirmées le plus récemment. 30 requêtes par minute et par adresse IP.
+- Fonction Edge `offers` (`public.partner_offers`) : une ligne par offre, vendeur affiché « Fournisseur partenaire / Partner Supplier / 合作供应商 », sans nom, pseudonyme, SKU ni lien. Disponibilité par tranche et prix « à partir de » tout compris, comme la recherche publique (ADR 0013) ; depuis le 2 novembre 2026, aussi le prix 1KU (`price_1k`, prix unitaire pour 1 000 pièces, convention de présentation), vide si le MOQ dépasse 1 000 (migration 20261102000018). Sans recherche : les 50 offres confirmées le plus récemment. 30 requêtes par minute et par adresse IP.
 - Le champ `seller_category` est réservé au modèle à deux axes (ci-dessous) ; il vaut `null` tant que ce modèle n'est pas défini.
 - Page de démonstration `/offres/`, non indexée.
 

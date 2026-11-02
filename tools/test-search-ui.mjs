@@ -10,6 +10,7 @@ const FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search';
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
 const calls = [];
+let quoteCur = null;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 340, height: 844 }, locale: 'fr-FR' });
@@ -22,9 +23,10 @@ await page.route(FN + '**', (r) => {
   const q = u.searchParams.get('q').toUpperCase();
   if (q === 'LIMIT') return reply({ error: 'rate_limited' }, 429);
   if (q === 'XXX') return reply({ query: 'XXX', currency: 'EUR', results: [] });
-  return reply({ query: q, currency: u.searchParams.get('cur'), results: [
-    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', availability: '10000+', price_from: 0.1234 },
-    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', availability: '1000+', price_from: null },
+  // Prix dans la devise du fournisseur (migration 20261102000019) : la devise est sur chaque offre.
+  return reply({ query: q, currency: 'EUR', results: [
+    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', currency: 'USD', availability: '10000+', price_from: 0.1234, price_1k: 0.1456 },
+    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', currency: 'USD', availability: '1000+', price_from: null },
   ] });
 });
 const ORDER = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
@@ -33,7 +35,7 @@ await page.route(ORDER + '**', (r) => {
   const u = new URL(r.request().url());
   const reply = (d, status = 200) => r.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' }, body: JSON.stringify(d) });
   if (r.request().method() === 'OPTIONS') return reply({});
-  if (u.pathname.endsWith('/quote')) { const n = +u.searchParams.get('qty'); return reply({ currency: u.searchParams.get('cur'), qty: n, unit_price: 0.12, total: +(0.12 * n).toFixed(2), covered: n <= 10000 }); }
+  if (u.pathname.endsWith('/quote')) { quoteCur = u.searchParams.get('cur'); const n = +u.searchParams.get('qty'); return reply({ currency: u.searchParams.get('cur'), qty: n, unit_price: 0.12, total: +(0.12 * n).toFixed(2), covered: n <= 10000 }); }
   if (u.pathname.endsWith('/status')) return u.searchParams.get('k') === 'tok' ? reply({ ref: 'PR-0001', status: 'confirmed', mpn: 'NE555DR', qty: 2000, currency: 'EUR', unit_price: 0.12, total: 240, created_at: '2026-11-01T10:00:00Z' }) : reply({ error: 'not_found' }, 404);
   sentOrder = JSON.parse(r.request().postData());
   if (sentOrder.vat === 'FR00000000000') return reply({ error: 'vat_invalid' }, 422);
@@ -46,18 +48,22 @@ ok((await page.textContent('h1')) === 'Rechercher un composant', 'page en franç
 await page.fill('#q', 'ne5');
 await page.click('#f button');
 await page.waitForSelector('.res');
-ok(calls[0] === '?q=ne5&cur=EUR', 'appel avec la référence et la devise');
+ok(calls[0] === '?q=ne5', 'appel avec la référence, sans devise (prix dans la devise du fournisseur)');
+ok(!(await page.$('#cur')), 'plus de choix de devise');
 ok((await page.$$('.res')).length === 2, 'deux offres affichées');
 const txt = await page.textContent('#list');
 ok(txt.includes('à partir de') && txt.includes('Prix sur demande'), 'prix « à partir de » et prix sur demande');
+ok(/à partir de 0,1234\s*\$US/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix affiché dans la devise du fournisseur (USD), pas dans la devise de la réponse');
+ok(/prix 1 k : 0,1456\s*\$US/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de », dans la devise du fournisseur');
+ok((txt.match(/prix 1 k/g) || []).length === 1, 'pas de prix 1KU pour une offre sur demande');
 ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes('Expédié de Chine') && txt.includes('Disponible 10000+'), 'source, pays et tranche affichés');
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
-ok(new URL(page.url()).search === '?q=NE5&cur=EUR', 'adresse partageable');
+ok(new URL(page.url()).search === '?q=NE5', 'adresse partageable');
 
 await page.click('#lang');
 ok((await page.textContent('h1')) === 'Search for a component' && (await page.textContent('#list')).includes('Ships from China'), 'anglais');
 await page.click('#lang');
-ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价'), 'chinois');
+ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价') && (await page.textContent('#list')).includes('千颗单价'), 'chinois');
 await page.click('#lang');
 
 await page.fill('#q', 'xx');
@@ -74,7 +80,7 @@ ok((await page.textContent('#list')).includes('Aucune offre'), 'aucun résultat'
 
 await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
-ok(calls[calls.length - 1] === '?q=NE555&cur=USD' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé : recherche et langue relancées');
+ok(calls[calls.length - 1] === '?q=NE555' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé (ancien paramètre cur ignoré) : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 340 px');
 
 // Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
@@ -93,6 +99,7 @@ ok((await page.textContent('#buy-meta')).includes('Fabricant'), 'achat : offre c
 await page.fill('#o-qty', '2000');
 await page.waitForFunction(() => document.getElementById('quote').textContent.includes('Total'));
 ok((await page.textContent('#quote')).includes('240'), 'achat : devis pour la quantité');
+ok(quoteCur === 'USD', 'achat : devis demandé dans la devise du fournisseur');
 await page.click('#o-send');
 ok((await page.textContent('#msg')).includes('Vérifiez'), 'achat : champs manquants signalés');
 await page.fill('#o-company', 'Atelier Test (fictif)');
