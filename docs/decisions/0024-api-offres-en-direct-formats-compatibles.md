@@ -29,6 +29,11 @@ Tri des champs validé par Bertier le 2 novembre 2026, à partir d'une réponse 
 - Ces formats n'ont qu'une devise par réponse : sans conversion, ils ne gardent que les offres dans la devise demandée (USD par défaut) et les offres sur demande. Ce que ces formats ne prévoient pas (catégorie de source, date code, pays d'expédition, validité) est dans une extension `CentralParts` / `centralParts`.
 - DigiKey : structure vérifiée sur une réponse réelle de ProductPricing transmise par Bertier le 2 novembre (test automatique de forme). TI : structure d'un exemple de la réponse « prix et stock » du store (camelCase), à remplacer par une capture réelle faite avec les identifiants tistore d'un client. La fiche produit TI `/v1` (PascalCase, fusionnée sous `productInformation` par les connecteurs) n'est pas servie, faute d'exemple. `ProductUrl` pointe vers la recherche publique de Central.Parts.
 
+### Fiches produit demandées aux fabricants et distributeurs agréés
+- Décision de Bertier (2 novembre) : on demande aux fabricants et aux distributeurs agréés le fabricant normalisé (nom complet), la description, la fiche technique, le boîtier, le cycle de vie, l'ECCN et le code HTS. **Facultatif, mais apprécié**, et **constitutif de la notation du fournisseur quand on saura le faire**.
+- Mesure dès maintenant : complétude par import (`stock_imports.report.completeness`, marques non reconnues comprises) et par fournisseur sur son stock en ligne (`supplier_data_quality` : sept taux et leur moyenne). Le fournisseur voit les siens sur `/depot/` ; l'administrateur dans le back office et le robot.
+- Aujourd'hui sans effet sur le classement (`counts_for_ranking: false`), comme le taux de traitement des RFQ sous son seuil (ADR 0023).
+
 ### Limite d'appels par clé
 - Un connecteur « une référence par appel » dépasse vite 60 appels par minute sur une nomenclature : la limite se règle par clé (`api_keys.calls_per_minute`, `tools/create-api-key.mjs --calls-per-minute`).
 

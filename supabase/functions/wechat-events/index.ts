@@ -32,7 +32,7 @@ import {
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 import {
   rfqAnswerErrorText, rfqDeclineOkText, rfqDispatchText, rfqHelpText, rfqOperatorCard, rfqOperatorListText,
-  rfqQuoteOkText, rfqStatsText,
+  rfqDataQualityLine, rfqQuoteOkText, rfqStatsText,
 } from '../_shared/robot-texts.js';
 import { parseOperatorRfq, parseSupplierRfq } from '../_shared/rfq.js';
 import { closeRfq, deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
@@ -64,7 +64,10 @@ async function operatorRfqCommand(db: SupabaseClient, openid: string, text: stri
   }
   if (c.cmd === 'stats') {
     const { data, error } = await db.rpc('supplier_score', { p_org: c.org });
-    return error ? `${c.org}: ${error.message}` : rfqStatsText(data);
+    if (error) return `${c.org}: ${error.message}`;
+    // Complétude des fiches produit : future composante de la notation, sans effet aujourd'hui.
+    const { data: dq } = await db.rpc('supplier_data_quality', { p_org: c.org });
+    return rfqStatsText(data) + rfqDataQualityLine(dq);
   }
   if (c.cmd === 'show') {
     const { data, error } = await db.rpc('rfq_for_operator', { p_id: c.ref });

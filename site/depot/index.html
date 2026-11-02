@@ -88,7 +88,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 <main class="wrap">
   <h1 data-t="title">供应商中心</h1>
   <p class="lead" data-t="lead">注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
-  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。产品描述、规格书链接和产品链接为选填，但建议填写。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a></p>
+  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
@@ -175,6 +175,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     </section>
     <section class="card" id="imports-card">
       <h2 data-t="history">上传记录</h2>
+      <p class="muted" id="quality" hidden></p>
       <div id="imports"><p class="muted" data-t="none">暂无记录。</p></div>
     </section>
     <section class="card" id="team" hidden>
@@ -201,7 +202,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       scan: '微信扫码登录', loading: '正在生成二维码…', scanHint: '请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。',
       refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
       menuHint: '在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。',
-      tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。产品描述、规格书链接和产品链接为选填，但建议填写。',
+      tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。',
       tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）',
       regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
@@ -228,6 +229,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       teamTitle: '同事', teamLead: '邀请同事上传库存：每个链接仅限一人使用，14 天内有效。通过微信发送给同事。',
       invName: '同事姓名', invSend: '生成邀请链接', admin: '管理员', member: '成员', me: '（您）', you: '您', invited: '已邀请，待接受',
       st: { received: '已接收', processing: '处理中', done: '完成', failed: '失败' },
+      quality: '您的资料完整度（在售库存）：{p}',
+      cmp: '资料完整度：品牌（已识别）{m} · 描述 {d} · 规格书 {s} · 封装 {c} · 生命周期 {l} · ECCN {e} · HS 编码 {h}',
+      unknownMfr: '未识别的品牌（请使用制造商全称，如 Texas Instruments）：',
       nums: function (i) { return '新增 ' + i.created + ' · 更新 ' + i.updated + ' · 拒绝 ' + i.rejected + ' · 可能重复 ' + i.duplicates + ' · 缺少日期码 ' + i.missing_date_code + (i.withdrawn ? ' · 归零 ' + i.withdrawn : ''); },
       rejected: '被拒绝的行', line: '第 {n} 行',
       curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
@@ -241,7 +245,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       scan: 'Log in with WeChat', loading: 'Generating the QR code…', scanHint: 'Scan with WeChat on your phone. If this page is open on your phone, long-press the QR code.',
       refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
       menuHint: 'On a phone: open the “Adesio Central.Parts” account in WeChat and tap the menu “供应商” → “上传库存” to receive your login link.',
-      tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Description, datasheet link and product link are optional but appreciated.',
+      tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Manufacturers and authorized distributors, please also fill in as far as possible: full manufacturer name, description, datasheet link, case, lifecycle, ECCN and HTS code. These fields are optional, but the more complete your data, the more likely buyers are to choose your offers; they will also count towards your supplier rating later.',
       tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)',
       regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
@@ -268,6 +272,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       teamTitle: 'Colleagues', teamLead: 'Invite colleagues to upload stock: each link is for one person and valid for 14 days. Send it on WeChat.',
       invName: 'Colleague name', invSend: 'Create an invitation link', admin: 'Admin', member: 'Member', me: ' (you)', you: 'You', invited: 'Invited, pending',
       st: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
+      quality: 'Your product data completeness (stock on sale): {p}',
+      cmp: 'Product data: manufacturer (recognized) {m} · description {d} · datasheet {s} · case {c} · lifecycle {l} · ECCN {e} · HTS {h}',
+      unknownMfr: 'Unrecognized manufacturers (please use the full manufacturer name, e.g. Texas Instruments): ',
       nums: function (i) { return 'new ' + i.created + ' · updated ' + i.updated + ' · rejected ' + i.rejected + ' · possible duplicates ' + i.duplicates + ' · no date code ' + i.missing_date_code + (i.withdrawn ? ' · set to zero ' + i.withdrawn : ''); },
       rejected: 'Rejected lines', line: 'line {n}',
       curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
@@ -290,7 +297,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
-    renderRegion(); renderImports(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
+    renderRegion(); renderImports(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
   }
   function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
@@ -521,6 +528,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     clearTimeout(timer);
     api('GET', '/imports').then(function (list) {
       imports = list; renderImports();
+      // Complétude des fiches de la société, recalculée après chaque import terminé.
+      api('GET', '/quality').then(function (q) { quality = q; renderQuality(); }, function () {});
       if (list.some(function (i) { return i.status === 'received' || i.status === 'processing'; })) timer = setTimeout(refresh, 4000);
       else if ($('msg').className === 'msg ok' && $('msg').textContent === t().uploaded) say('', '');
     }, lost);
@@ -536,11 +545,29 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
         '<p class="muted" style="margin:2px 0 0">' + esc(new Date(i.received_at).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB')) + '</p>' +
         (i.status === 'done' ? '<p class="nums">' + esc(t().nums(i)) + '</p>' : '') +
         (curText(i) ? '<p class="muted cur-used" style="margin:2px 0 0">' + esc(t().curLine + curText(i)) + '</p>' : '') +
+        (cmpText(i) ? '<p class="muted cmp" style="margin:2px 0 0">' + esc(cmpText(i)) + '</p>' : '') +
+        (i.report && i.report.completeness && (i.report.completeness.unknown_manufacturers || []).length
+          ? '<p class="muted unk" style="margin:2px 0 0">' + esc(t().unknownMfr + i.report.completeness.unknown_manufacturers.join(', ')) + '</p>' : '') +
         (i.error ? '<p class="msg err" style="margin:6px 0 0">' + esc(i.error) + '</p>' : '') +
         (rej.length ? '<details><summary>' + esc(t().rejected) + ' (' + i.rejected + ')</summary><ul>' + rej.map(function (r) {
           return '<li>' + esc(t().line.replace('{n}', r.line)) + ' : ' + esc(r.reason) + '</li>'; }).join('') + '</ul></details>' : '') +
         '</div>';
     }).join('');
+  }
+  // Complétude des fiches produit d'un import (ADR 0024) : part des lignes qui donnent chaque champ.
+  function cmpText(i) {
+    var c = i.report && i.report.completeness;
+    if (!c || !c.lines) return '';
+    var pc = function (k) { return Math.round((c[k] || 0) / c.lines * 100) + ' %'; };
+    return t().cmp.replace('{m}', pc('manufacturer')).replace('{d}', pc('description')).replace('{s}', pc('datasheet'))
+      .replace('{c}', pc('package_case')).replace('{l}', pc('lifecycle')).replace('{e}', pc('eccn')).replace('{h}', pc('hts_code'));
+  }
+  var quality = null;
+  function renderQuality() {
+    var q = $('quality');
+    if (!q) return;
+    q.hidden = !(quality && quality.lots);
+    if (!q.hidden) q.textContent = t().quality.replace('{p}', Math.round((quality.completeness || 0) * 100) + ' %');
   }
   // Devise des lignes et sa provenance : « USD（读取自文件）», plusieurs entrées si le fichier mélange les devises.
   function curText(i) {

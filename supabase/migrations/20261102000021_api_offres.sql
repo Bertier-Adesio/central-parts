@@ -411,6 +411,9 @@ declare
   r jsonb;
   v_cur text; v_mpn text; v_sku text; v_dc text; v_qty integer; v_moq integer; v_lot text; v_other text; v_lead smallint; v_src text; curs jsonb := '{}';
   v_spq integer; v_case text; v_life text; v_eccn text; v_hts text; v_coo text;
+  -- Complétude des fiches produit (fabricant reconnu, description, fiche technique, boîtier, cycle de vie, ECCN, HTS).
+  c_lines int := 0; c_mfr int := 0; c_desc int := 0; c_ds int := 0; c_case int := 0; c_life int := 0; c_eccn int := 0; c_hts int := 0;
+  c_unknown text[] := '{}';
   n_created int := 0; n_updated int := 0; n_dupes int := 0; n_nodc int := 0;
   rej jsonb := coalesce(p_rejected, '[]'); dupes jsonb := '[]'; v_org_cur text;
 begin
@@ -450,6 +453,17 @@ begin
       rej := rej || jsonb_build_object('line', r->'line', 'code', 'currency', 'reason', 'Devise non prise en charge : ' || v_cur); continue;
     end if;
     if v_dc = '' then n_nodc := n_nodc + 1; end if;
+    c_lines := c_lines + 1;
+    if app.manufacturer_id(r->>'mfr') is not null then c_mfr := c_mfr + 1;
+    elsif nullif(btrim(r->>'mfr'), '') is not null and cardinality(c_unknown) < 20 and not (btrim(r->>'mfr') = any (c_unknown)) then
+      c_unknown := c_unknown || btrim(r->>'mfr');
+    end if;
+    if nullif(btrim(r->>'desc'), '') is not null then c_desc := c_desc + 1; end if;
+    if nullif(btrim(r->>'datasheet'), '') is not null then c_ds := c_ds + 1; end if;
+    if v_case is not null then c_case := c_case + 1; end if;
+    if v_life is not null then c_life := c_life + 1; end if;
+    if v_eccn is not null then c_eccn := c_eccn + 1; end if;
+    if v_hts is not null then c_hts := c_hts + 1; end if;
 
     -- Même lot chez le même vendeur : même SKU s'il existe, sinon même référence et même date code.
     -- Deux requêtes distinctes plutôt qu'un « case » : chacune utilise son index (seller_id, sku) ou
@@ -526,13 +540,63 @@ begin
     -- le rapport garde au plus 1 000 lignes rejetées et 1 000 doublons ; les compteurs restent exacts
     report = jsonb_build_object(
       'rejected', (select coalesce(jsonb_agg(x), '[]') from (select x from jsonb_array_elements(report->'rejected' || rej) x limit 1000) s),
-      'duplicates', (select coalesce(jsonb_agg(x), '[]') from (select x from jsonb_array_elements(report->'duplicates' || dupes) x limit 1000) s))
+      'duplicates', (select coalesce(jsonb_agg(x), '[]') from (select x from jsonb_array_elements(report->'duplicates' || dupes) x limit 1000) s),
+      -- Complétude des fiches produit, cumulée sur les lots de l'import ; 20 marques non reconnues au plus.
+      'completeness', (select jsonb_build_object(
+          'lines', coalesce((c->>'lines')::int, 0) + c_lines, 'manufacturer', coalesce((c->>'manufacturer')::int, 0) + c_mfr,
+          'description', coalesce((c->>'description')::int, 0) + c_desc, 'datasheet', coalesce((c->>'datasheet')::int, 0) + c_ds,
+          'package_case', coalesce((c->>'package_case')::int, 0) + c_case, 'lifecycle', coalesce((c->>'lifecycle')::int, 0) + c_life,
+          'eccn', coalesce((c->>'eccn')::int, 0) + c_eccn, 'hts_code', coalesce((c->>'hts_code')::int, 0) + c_hts,
+          'unknown_manufacturers', (select coalesce(jsonb_agg(u), '[]') from (select distinct u from (
+              select jsonb_array_elements_text(coalesce(c->'unknown_manufacturers', '[]')) as u union select unnest(c_unknown)) a
+              order by u limit 20) b))
+        from (select report->'completeness' as c) x))
   where id = p_import;
 
   return jsonb_build_object('created', n_created, 'updated', n_updated, 'rejected', jsonb_array_length(rej), 'duplicates', n_dupes);
 end $$;
 revoke execute on function public.apply_stock_import_batch(text, jsonb, jsonb) from public, anon, authenticated;
 grant execute on function public.apply_stock_import_batch(text, jsonb, jsonb) to service_role;
+
+-- ------------------------------------------------------------ qualité des fiches produit d'un fournisseur
+-- Ce qu'on demande aux fabricants et aux distributeurs agréés, facultatif mais apprécié : fabricant reconnu par le
+-- référentiel, description, fiche technique, boîtier, cycle de vie, ECCN, code HTS. Taux sur les lots publiables.
+-- Destiné à la notation du fournisseur quand elle saura en tenir compte : aujourd'hui, aucun effet sur le classement.
+create or replace function public.supplier_data_quality(p_org text, p_now timestamptz default now())
+returns jsonb language sql stable security definer set search_path = '' as $$
+  with l as (
+    select (app.manufacturer_id(l.manufacturer) is not null) as mfr, coalesce(btrim(l.description), '') <> '' as descr,
+           coalesce(btrim(l.datasheet_url), '') <> '' as ds, l.package_case is not null as pc, l.lifecycle is not null as lc,
+           l.eccn is not null as ec, l.hts_code is not null as hs
+      from public.lots l join public.organizations o on o.id = l.seller_id
+     where l.seller_id = p_org and l.qty > 0 and (o.sandbox or l.confirmed_at > p_now - app.offer_ttl())),
+  r as (
+    select count(*) as n,
+           round(avg(mfr::int), 3) as mfr, round(avg(descr::int), 3) as descr, round(avg(ds::int), 3) as ds,
+           round(avg(pc::int), 3) as pc, round(avg(lc::int), 3) as lc, round(avg(ec::int), 3) as ec, round(avg(hs::int), 3) as hs
+      from l)
+  select jsonb_strip_nulls(jsonb_build_object('org', p_org, 'lots', r.n,
+    'rates', case when r.n > 0 then jsonb_build_object('manufacturer', r.mfr, 'description', r.descr, 'datasheet', r.ds,
+              'package_case', r.pc, 'lifecycle', r.lc, 'eccn', r.ec, 'hts_code', r.hs) end,
+    -- Moyenne des sept taux, de 0 à 1.
+    'completeness', case when r.n > 0 then round((r.mfr + r.descr + r.ds + r.pc + r.lc + r.ec + r.hs) / 7, 3) end,
+    'counts_for_ranking', false))
+    from r
+$$;
+
+create or replace function public.admin_supplier_data_quality(p_org text)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+begin perform app.require_admin(); return public.supplier_data_quality(upper(p_org)); end $$;
+
+-- Qualité des fiches de la société d'un contact (page /depot/) : la sienne seulement.
+create or replace function public.supplier_own_data_quality(p_openid text)
+returns jsonb language sql stable security definer set search_path = '' as $$
+  select public.supplier_data_quality(w.org_id) - 'org' from public.wechat_identities w where w.openid = p_openid and w.revoked_at is null
+$$;
+revoke execute on function public.supplier_data_quality(text, timestamptz), public.supplier_own_data_quality(text) from public, anon, authenticated;
+grant execute on function public.supplier_data_quality(text, timestamptz), public.supplier_own_data_quality(text) to service_role;
+revoke execute on function public.admin_supplier_data_quality(text) from public, anon;
+grant execute on function public.admin_supplier_data_quality(text) to authenticated, service_role;
 
 -- ------------------------------------------------------------ limite d'appels par clé
 -- Un connecteur « une référence par appel » (format DigiKey ou TI) dépasse vite 60 appels par minute sur une

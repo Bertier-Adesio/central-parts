@@ -12,7 +12,8 @@
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?, currency}  → lien de dépôt signé vers le dossier de la société ;
 //                           currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
-//   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport
+//   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport (complétude des fiches produit comprise)
+//   GET  /depot/quality     → complétude des fiches produit de la société, sur son stock en ligne (ADR 0024)
 //   GET  /depot/requests    → demandes d'achat reçues par la société (90 jours), sans l'acheteur
 //   POST /depot/requests/answer {ref, ok} → confirme ou refuse une demande d'achat (ADR 0014)
 //   GET  /depot/rfqs        → RFQ des plateformes reçues (90 jours) et taux de traitement de la société (ADR 0023)
@@ -138,6 +139,14 @@ Deno.serve(async (req) => {
       const { data, error } = await db.storage.from('stock-imports').createSignedUploadUrl(key);
       if (error) return json({ error: 'storage', detail: error.message }, 500);
       return json({ signed_url: data.signedUrl, path: key, max_bytes: 52428800 });
+    }
+
+    // Complétude des fiches produit de la société (fabricant reconnu, description, fiche technique, boîtier, cycle de
+    // vie, ECCN, HTS ; ADR 0024) : la sienne seulement.
+    if (req.method === 'GET' && path.endsWith('/quality')) {
+      const { data, error } = await db.rpc('supplier_own_data_quality', { p_openid: session.openid });
+      if (error) return json({ error: 'database', detail: error.message }, 500);
+      return json(data || {});
     }
 
     if (req.method === 'GET' && path.endsWith('/imports')) {

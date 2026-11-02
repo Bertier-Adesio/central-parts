@@ -87,6 +87,9 @@ for (const c of ['rfq', 'approve DEM-1001', 'reject DEM-1001 reason', 'resend DE
 }
 ok(!CJK.test(R.operatorHelpText()), 'aide : anglais seul');
 ok(R.rfqClosedText({ id: 'DEM-1', status: 'offers', offers: 2, no_margin: 1 }).includes('no margin'), 'administrateur : bid sans marge signalé');
+const dq = R.rfqDataQualityLine({ lots: 4, completeness: 0.571, rates: { manufacturer: 0.75, description: 1, datasheet: 0.5, package_case: 1, lifecycle: 0, eccn: 0.5, hts_code: 0.25 } });
+ok(dq.includes('Product data 57 % on 4 lot(s)') && dq.includes('manufacturer 75 %') && dq.includes('not used for ranking yet') && !CJK.test(dq), 'administrateur : complétude des fiches produit (rfq stats)');
+ok(R.rfqDataQualityLine({}) === '', 'administrateur : sans lot, pas de ligne de complétude');
 
 // ---------------------------------------------------------------- constantes distinctes
 ok(Q.RFQ_RESPONSE_HOURS === 48 && Q.WECHAT_FREE_TEXT_WINDOW_HOURS === 48 && Q.RFQ_REMINDER_HOURS === 36, 'constantes : délai 48 h, fenêtre WeChat 48 h, rappel 36 h');

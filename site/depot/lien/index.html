@@ -95,7 +95,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 
   <section class="card" id="upload-card" hidden>
     <h2 data-t="uploadTitle">上传新的库存表</h2>
-    <p class="muted"><span data-t="format">格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写：description、datasheet-url、distributor-url。</span>
+    <p class="muted"><span data-t="format">格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写（原厂和授权分销商尤其欢迎，今后也将计入供应商评分）：description、datasheet-url、distributor-url、case（封装）、lifecycle（生命周期）、eccn、hts-code；manufacturer 请填写制造商全称。</span>
       <a href="modele.csv" download data-t="template">下载模板</a></p>
     <form id="form">
       <label class="file"><span data-t="pick">选择文件：CSV 或 XLSX，最大 50 MB</span><input type="file" id="file" accept=".csv,.xlsx,.xls" required></label>
@@ -121,7 +121,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     zh: { title: '上传库存表', lead: '每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。',
       live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新',
       ttl: '报价在最后一次上传后 {n} 天内向采购方展示，之后变为“待重新确认”，不再展示。请定期重新上传。',
-      uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写：description、datasheet-url、distributor-url。',
+      uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写（原厂和授权分销商尤其欢迎，今后也将计入供应商评分）：description、datasheet-url、distributor-url、case（封装）、lifecycle（生命周期）、eccn、hts-code；manufacturer 请填写制造商全称。',
       template: '下载模板', pick: '选择文件：CSV 或 XLSX，最大 50 MB', send: '上传', reportTitle: '上传报告',
       sending: '正在上传…', checking: '正在逐行检查…', done: '已处理：{a} 行通过，{r} 行需修改。', none: '暂无上传记录。',
       status: { received: '已接收', processing: '处理中', done: '已完成', failed: '失败' },
@@ -137,7 +137,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     en: { title: 'Upload your stock list', lead: 'Each upload replaces your previous list. Rejected lines are listed with the reason: correct them and upload again.',
       live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update',
       ttl: 'Offers are shown to buyers for {n} days after your last upload, then marked “to reconfirm” and hidden. Upload again regularly.',
-      uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency; optional but appreciated: description, datasheet-url, distributor-url.',
+      uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency; optional but appreciated (especially from manufacturers and authorized distributors; they will also count towards your supplier rating later): description, datasheet-url, distributor-url, case, lifecycle, eccn, hts-code; please give the full manufacturer name.',
       template: 'Download the template', pick: 'Choose a file: CSV or XLSX, up to 50 MB', send: 'Upload', reportTitle: 'Upload report',
       sending: 'Uploading…', checking: 'Checking each line…', done: 'Processed: {a} line(s) accepted, {r} to correct.', none: 'No upload yet.',
       status: { received: 'Received', processing: 'Processing', done: 'Done', failed: 'Failed' },
@@ -153,7 +153,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     fr: { title: 'Charger votre liste de stock', lead: 'Chaque chargement remplace votre liste précédente. Les lignes refusées sont listées avec leur raison : corrigez-les et rechargez le fichier.',
       live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour',
       ttl: 'Les offres sont montrées aux acheteurs pendant {n} jours après votre dernier chargement, puis passent « à reconfirmer » et ne sont plus montrées. Rechargez votre liste régulièrement.',
-      uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency ; facultatives mais appréciées : description, datasheet-url, distributor-url.',
+      uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency ; facultatives mais appréciées (surtout des fabricants et distributeurs agréés ; elles compteront aussi plus tard dans la notation du fournisseur) : description, datasheet-url, distributor-url, case (boîtier), lifecycle (cycle de vie), eccn, hts-code ; indiquer le nom complet du fabricant.',
       template: 'Télécharger le modèle', pick: 'Choisir un fichier : CSV ou XLSX, 50 Mo au plus', send: 'Charger', reportTitle: 'Rapport de chargement',
       sending: 'Envoi en cours…', checking: 'Contrôle ligne par ligne…', done: 'Traité : {a} ligne(s) acceptée(s), {r} à corriger.', none: 'Aucun chargement pour l’instant.',
       status: { received: 'Reçu', processing: 'En cours', done: 'Terminé', failed: 'Échec' },

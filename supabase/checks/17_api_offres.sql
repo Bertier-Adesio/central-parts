@@ -147,6 +147,17 @@ begin
     '3000 SOT-23 nrnd EAR99 8541210000 PH');
   perform public.apply_stock_import_batch(imp, '[{"line": 3, "mpn": "CATNEW1", "sku": "SKU-SECRET-NEW", "qty": 3500, "currency": "USD", "lifecycle": "peut-être", "spq": "x"}]');
   perform tests.eq('import : champ absent ou illisible, valeur gardée', (select qty || ' ' || standard_pack_quantity || ' ' || lifecycle from public.lots where sku = 'SKU-SECRET-NEW'), '3500 3000 nrnd');
+  perform tests.eq('import : complétude des fiches produit (2 lignes, marque reconnue sur la première)',
+    (select report->'completeness' from public.stock_imports where id = imp),
+    '{"lines": 2, "manufacturer": 1, "description": 0, "datasheet": 0, "package_case": 1, "lifecycle": 1, "eccn": 1, "hts_code": 1, "unknown_manufacturers": []}'::jsonb);
+  perform public.apply_stock_import_batch(imp, '[{"line": 4, "mpn": "CATNEW2", "mfr": "Marque Inconnue", "sku": "SKU-SECRET-NEW2", "qty": 10, "currency": "USD", "desc": "Diode", "datasheet": "https://example.com/d.pdf"}]');
+  perform tests.eq('import : marque non reconnue signalée, compteurs cumulés',
+    (select (report->'completeness'->>'lines') || ' ' || (report->'completeness'->>'description') || ' ' || (report->'completeness'->'unknown_manufacturers')::text
+       from public.stock_imports where id = imp), '3 1 ["Marque Inconnue"]');
+  perform tests.eq('qualité des fiches de CA1 : 7 taux, complétude moyenne, sans effet sur le classement',
+    (select (q->>'lots') || ' ' || (q->'rates'->>'manufacturer') || ' ' || (q->'rates'->>'eccn') || ' ' || (q->>'counts_for_ranking') from public.supplier_data_quality('CA1') q),
+    '4 0.750 0.500 false');
+  perform tests.eq('qualité des fiches : fournisseur sans lot', public.supplier_data_quality('CA4') ? 'completeness', false);
 end $$;
 reset role;
 
@@ -192,6 +203,7 @@ do $$ begin
 end $$;
 set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000f2';
 do $$ begin
+  perform tests.fails('qualité des fiches : réservée à l''administrateur', $s$select public.admin_supplier_data_quality('CA1')$s$, '42501');
   perform tests.fails('consultations : réservées à l''administrateur', $s$select public.admin_offer_views('CA1')$s$, '42501');
 end $$;
 reset role; reset request.jwt.claim.sub;

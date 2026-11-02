@@ -110,6 +110,8 @@ for (const f of ['../site/depot/modele-fabricant.csv', '../site/depot/stock-temp
   const m = mapRows(parseCSV(decode(readFileSync(new URL(f, import.meta.url))))).rows[0];
   ok(m && m.desc && m.datasheet.startsWith('https://') && m.url.startsWith('https://') && m.lead === 3 && Object.keys(m.tiers).length >= 2,
     'modèle ' + f.split('/').pop() + ' : lu en entier (description, fiche technique, lien, délai, paliers)');
+  ok(m && m.case && m.lifecycle === 'active' && m.eccn === 'EAR99' && m.hts === '8542390001',
+    'modèle ' + f.split('/').pop() + ' : champs recommandés aux fabricants et distributeurs (boîtier, cycle de vie, ECCN, HTS)');
 }
 
 // ---------------------------------------------------------------- listes des vendeurs (tools/fixtures)
