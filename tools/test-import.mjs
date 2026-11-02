@@ -2,9 +2,9 @@
 // et des outils de la page de dépôt (supabase/functions/_shared/depot.js).
 // Usage : node tools/test-import.mjs
 import { cleanUrl, mapRows, parseCSV, price } from '../supabase/functions/import-stock/parse.js';
-import { creditCodeOk, DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
+import { creditCodeOk, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -97,18 +97,19 @@ ok(back.ToUserName === 'oFOURNISSEUR' && back.MsgType === 'text' && back.CreateT
 // ---------------------------------------------------------------- inscription des fournisseurs
 ok(creditCodeOk('91350100M000100Y43') && creditCodeOk(' 91350100m000100y43 '), '统一社会信用代码 : exemple de la norme, minuscules et espaces');
 ok(!creditCodeOk('91350100M000100Y44') && !creditCodeOk('91350100M00010OY43') && !creditCodeOk(''), '统一社会信用代码 : clé fausse, lettre O, vide');
+ok(licensePath('ORG-0105', '营业执照.JPEG', d) === 'ORG-0105/licence-20261030-142501.jpg' && licensePath('ORG-0105', 'a.pdf', d).endsWith('.pdf'), 'licence : chemin horodaté dans le dossier de la société');
+ok(licensePath('ORG-0105', 'a.exe', d) === null, 'licence : format refusé');
+ok(JSON.stringify(await readSession(secret, await signSession(secret, { org: null, openid: 'oNEW' }, 3600, now), now)) === '{"org":null,"openid":"oNEW"}', 'jeton : compte sans société, pour l\'inscription');
+
 // Bouton « 供应商 › 上传库存 » du menu WeChat : lien de connexion personnel.
 const click = parseWechatXml('<xml><ToUserName><![CDATA[gh_x]]></ToUserName><FromUserName><![CDATA[oABC]]></FromUserName><CreateTime>1</CreateTime><MsgType><![CDATA[event]]></MsgType><Event><![CDATA[CLICK]]></Event><EventKey><![CDATA[DEPOT_LOGIN]]></EventKey></xml>');
 ok(isDepotMenuClick(click), 'menu : clic sur « 上传库存 » reconnu');
 ok(!isDepotMenuClick({ ...click, EventKey: 'AUTRE' }) && !isDepotMenuClick({ ...click, Event: 'VIEW' }) && !isDepotMenuClick({ MsgType: 'text', Content: 'DEPOT_LOGIN' }), 'menu : autre bouton, lien ou message ignorés');
 const linkText = depotLinkText('https://central.parts/depot/?login=dl_' + 'a'.repeat(32));
 ok(linkText.includes('?login=dl_' + 'a'.repeat(32)) && linkText.includes('15 分钟') && linkText.includes('valid 15 minutes') && Buffer.byteLength(linkText) < 2048, 'menu : réponse avec le lien, en chinois et en anglais, sous 2 048 octets');
-const menu = JSON.parse(readFileSync(new URL('../supabase/wechat/menu.json', import.meta.url), 'utf8'));
+const menu = JSON.parse((await import('node:fs')).readFileSync(new URL('../supabase/wechat/menu.json', import.meta.url), 'utf8'));
 const upload = menu.button.flatMap((b) => b.sub_button || [b]).find((b) => b.name === '上传库存');
 ok(upload && upload.type === 'click' && upload.key === DEPOT_MENU_KEY, 'menu.json : « 上传库存 » est un bouton clic, clé DEPOT_LOGIN');
-ok(licensePath('ORG-0105', '营业执照.JPEG', d) === 'ORG-0105/licence-20261030-142501.jpg' && licensePath('ORG-0105', 'a.pdf', d).endsWith('.pdf'), 'licence : chemin horodaté dans le dossier de la société');
-ok(licensePath('ORG-0105', 'a.exe', d) === null, 'licence : format refusé');
-ok(JSON.stringify(await readSession(secret, await signSession(secret, { org: null, openid: 'oNEW' }, 3600, now), now)) === '{"org":null,"openid":"oNEW"}', 'jeton : compte sans société, pour l\'inscription');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);
