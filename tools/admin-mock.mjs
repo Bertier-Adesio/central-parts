@@ -18,7 +18,8 @@ function tiers(base, i) {
 function lot(id, org, seller, mpn, manufacturer, pack, qty, base, currency, lead, i, source = 'file') {
   const t = tiers(base, i);
   return {
-    id, org_id: org, seller, mpn, manufacturer, pack, qty, unit_price: t[t.length - 1].price, currency, lead_days: lead,
+    // Prix unitaire = premier palier, comme l'import d'un fichier sans colonne de prix unitaire.
+    id, org_id: org, seller, mpn, manufacturer, pack, qty, unit_price: t[0].price, currency, lead_days: lead,
     date_code: i % 3 ? '' : String(2300 + (i % 40)), source, updated_at: day(30, 8),
     breaks: t.map((b, k) => ({ from: b.min, to: t[k + 1] ? t[k + 1].min - 1 : null, price: b.price })),
   };
@@ -72,6 +73,8 @@ export function createMock() {
   Object.assign(lots[0], { description: 'Microcontrôleur Arm Cortex-M0+ 128 Ko, LQFP-64',
     datasheet_url: 'https://fabricant.example/ds/STM32G071RBT6.pdf', product_url: 'https://vendeur.example/p/STM32G071RBT6' });
   Object.assign(lots[1], { product_url: 'javascript:alert(1)' });
+  // Flux Octopart : le palier « 1 » devient le prix unitaire, les paliers commencent à 10.
+  Object.assign(lots[2], { unit_price: 0.0031, breaks: [{ from: 10, to: 99, price: 0.0029 }, { from: 100, to: null, price: 0.0026 }] });
   // 1 812 références d'un fabricant (familles courantes, numérotées pour rester fictives), paliers propres à chacune.
   const fam = [['SS34', 'SMA'], ['1N4148W', 'SOD-123'], ['BSS138', 'SOT-23'], ['LM358', 'SOP-8'], ['AMS1117', 'SOT-223'],
     ['TL431', 'SOT-23'], ['MMBT3904', 'SOT-23'], ['SMBJ5.0A', 'SMB'], ['78L05', 'SOT-89'], ['LM2596S', 'TO-263']];
