@@ -116,6 +116,37 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
 2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` (`request`) affiche la fiche, `发票 PR-0001` (`proforma`, proforma envoyée), `收款 PR-0001` (`paid`, virement reçu), `发货 PR-0001` (`shipped`, expédiée), `取消 PR-0001` (`cancel`, annulée). Le fournisseur répond `确认 PR-0001` (`confirm`) ou `无货 PR-0001` (`unavailable`), ou sur `/depot/`.
 3. **Équivalent SQL** : `select public.request_for_operator('PR-0001');`, `select public.operator_set_request_status('PR-0001', 'paid');`.
 
+### Validité des offres, reconfirmation et rappels (ADR 0025)
+
+Migration `20261103000023_validite_vendeurs.sql` (rejouable), fonction `rappels`. Durée de validité : 14 jours pour un fabricant, 7 pour les autres vendeurs ; le vendeur reconfirme toutes ses offres d'un geste (bouton dans `/depot/` et `/depot/lien/`, ou « 确认库存 » au robot) ; rappels WeChat 48 heures avant l'échéance et le jour de l'expiration.
+
+Gestes de l'opérateur, dans l'éditeur SQL :
+
+```sql
+-- Durée propre à un vendeur (1 à 90 jours) ; null pour revenir à la règle par type.
+update public.organizations set offer_ttl_days = 30 where id = '<ORG-…>';
+-- Valeurs par défaut.
+update app.settings set value = '14', updated_at = now() where name = 'offer_ttl_days_manufacturer';
+update app.settings set value = '7', updated_at = now() where name = 'offer_ttl_days';
+-- État d'un vendeur, reconfirmations, rappels envoyés.
+select public.seller_offer_status('<ORG-…>');
+select * from public.stock_reconfirmations where org_id = '<ORG-…>' order by at desc;
+select * from app.stock_reminders where org_id = '<ORG-…>' order by sent_at desc;
+```
+
+Tâche planifiée des rappels (une fois, après le déploiement de `rappels` ; extensions `pg_cron` et `pg_net` activées, voir `docs/route-rfq-mise-en-service.md`), en remplaçant `<RFQ_JOBS_SECRET>` par le secret de la route RFQ :
+
+```sql
+select cron.schedule('stock-reminders', '17 * * * *', $$
+  select net.http_post(
+    url := 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rappels/tick',
+    headers := '{"Content-Type": "application/json", "X-CP-Jobs-Secret": "<RFQ_JOBS_SECRET>"}'::jsonb,
+    body := '{}'::jsonb)
+$$);
+```
+
+Pour voir les rappels dus sans rien envoyer : `curl -s -X POST -H "X-CP-Jobs-Secret: $SECRET" "https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/rappels/tick?dry=1"`.
+
 ### Listes des vendeurs par lien personnel (ADR 0021)
 
 Migration `20261102000012_listes_vendeurs.sql` (rejouable), fonctions `listes` (vendeur) et `offers` (acheteur), pages `/depot/lien/` et `/offres/`. Le vendeur charge sa liste sans connexion WeChat ; chaque dépôt remplace la précédente ; une offre non rechargée depuis 7 jours passe « à reconfirmer » et n'est plus montrée aux acheteurs.

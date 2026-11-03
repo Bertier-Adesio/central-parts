@@ -16,7 +16,8 @@
 //       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
 //     - commandes RFQ des plateformes (ADR 0023), opérateurs seulement : rfq, rfq DEM-…, rfq stats ORG-…,
 //       approve DEM-… [only ORG-…], reject DEM-… motif, resend DEM-… [ORG-…] ;
-//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ; 报价 DEM-… prix devise
+//     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ; 确认库存 (confirm stock)
+//       pour reconfirmer toutes ses offres sans nouveau fichier (ADR 0025) ; 报价 DEM-… prix devise
 //       délai date code [lot LOT-…] ou 无货 DEM-… pour répondre à une RFQ (refusé après l'échéance de 48 h) ;
 //     - tout autre message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui
 //       répondent par « reply <n°> texte » ; accusé de réception au contact rattaché, accueil sinon.
@@ -27,7 +28,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.4
 import { depotLinkText, isDepotMenuClick, operatorMenuCommand, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import {
   approvedNotice, linkErrorText, OPEN_REQUEST_STATUSES, operatorErrorText, operatorHelpText, operatorReplyText, operatorRequestsText,
-  isHelpRequest, phoneBackLine, receivedText, rejectedNotice, scanReply, STATUS_EN, supplierHelpText, welcomeText,
+  isHelpRequest, isReconfirmRequest, phoneBackLine, reconfirmErrorText, reconfirmOkText, receivedText, rejectedNotice, scanReply, STATUS_EN, supplierHelpText, welcomeText,
 } from '../_shared/robot-texts.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 import {
@@ -187,6 +188,14 @@ async function supplierRfqCommand(db: SupabaseClient, openid: string, text: stri
 async function supplierCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
   const rfq = await supplierRfqCommand(db, openid, text);
   if (rfq !== null) return rfq;
+  // « 确认库存 » / « confirm stock » : toutes les offres en stock repartent pour une période, sans nouveau fichier (ADR 0025).
+  if (isReconfirmRequest(text)) {
+    const { data: who } = await db.rpc('depot_identity', { p_openid: openid });
+    if (!who?.org_id) return null; // inconnu : message ordinaire (accueil et transfert aux opérateurs)
+    const { data, error } = await db.rpc('seller_reconfirm', { p_org: who.org_id, p_by: openid, p_channel: 'wechat' });
+    if (error) return reconfirmErrorText(error.code === 'P0002' ? 'none' : 'other');
+    return reconfirmOkText(data.lots, data.expires_at);
+  }
   const m = /^(确认|无货|confirm|unavailable)\s*(PR-\d+)\s*$/i.exec(text.trim());
   if (!m) return null;
   const ok = m[1] === '确认' || m[1].toLowerCase() === 'confirm';

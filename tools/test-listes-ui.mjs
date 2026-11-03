@@ -67,6 +67,12 @@ async function listes(route) {
     return reply({ signed_url: SUPA + '/storage/v1/object/upload/sign/stock-imports/x', path: state.pending, max_bytes: 52428800 });
   }
   if (path === '/imports') return reply(state.imports);
+  if (path === '/reconfirm') {
+    if (!live.length) return reply({ error: 'no_stock' }, 422);
+    for (const l of live) l.confirmed_at = now();
+    state.reconfirmed = (state.reconfirmed || 0) + 1;
+    return reply({ lots: live.length, ttl_days: 7, expires_at: new Date(Date.now() + 7 * 864e5).toISOString() });
+  }
   return reply({ error: 'not_found' }, 404);
 }
 
@@ -90,7 +96,7 @@ async function offers(route) {
     // Prix 1KU : palier qui couvre 1 000 pièces (comme app.lot_price_for), marge comprise.
     price_1k: (Object.entries(l.tiers).filter(([q]) => +q <= 1000).sort((a, b) => b[0] - a[0])[0]?.[1] ?? l.price) * 1.1, updated_at: l.confirmed_at,
   }));
-  return reply({ query: q, currency: 'EUR', ttl_days: 7, offers: list.slice(0, 50) });
+  return reply({ query: q, currency: 'EUR', ttl_days: 7, ttl_days_manufacturer: 14, offers: list.slice(0, 50) });
 }
 
 const browser = await chromium.launch();
@@ -153,6 +159,10 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   const fr = await page.textContent('#imports .imp:first-child');
   ok(fr.includes('Quantité invalide') && fr.includes('Référence (mpn) vide') && fr.includes('Ligne'), 'rapport FR : raisons traduites');
   ok(await page.evaluate(() => document.documentElement.lang) === 'fr', 'langue de la page suivie');
+  // Reconfirmation sans nouveau fichier (ADR 0025).
+  await page.click('#reconfirm');
+  await page.waitForFunction(() => /Reconfirmé/.test(document.getElementById('msg').textContent));
+  ok(state.reconfirmed === 1 && (await page.textContent('#msg')).includes('1 offres visibles pendant 7 jours'), 'stock inchangé : reconfirmé en un geste');
   ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page vendeur non indexée');
   ok(await noScroll(page), '390 px : pas de défilement horizontal');
   ok(errors.length === 0, 'page vendeur : aucune erreur console ' + errors.join(' | '));
@@ -172,7 +182,7 @@ for (const width of [1280, 390]) {
   ok((text.match(/Fournisseur partenaire/g) || []).length === 10, width + ' px : « Fournisseur partenaire » sur chaque offre');
   ok(!/Vendeur de démonstration|T-00\d\d|example\.com/.test(await page.content()), width + ' px : ni nom, ni SKU, ni lien du vendeur dans la page');
   ok(text.includes('MT41K128M16JT-107 IT:K') && text.includes(new Date().toLocaleDateString('fr-FR')), width + ' px : référence complète et date de mise à jour');
-  ok(text.includes('7 jours'), width + ' px : retrait après 7 jours expliqué');
+  ok(text.includes('7 jours') && text.includes('14 jours pour un fabricant'), width + ' px : retrait après 7 jours, 14 pour un fabricant, expliqué');
   ok((text.match(/prix 1 k :/g) || []).length === 10 && (text.match(/à partir de/g) || []).length === 10, width + ' px : « à partir de » et prix 1KU sur chaque offre');
   ok(/\$US/.test(text) && !/€/.test(text) && !(await page.$('#cur')), width + ' px : prix dans la devise du fournisseur (USD), plus de choix de devise');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');

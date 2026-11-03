@@ -311,5 +311,21 @@ ok(operatorMenuCommand(clickOf('OP_REQUESTS')) === 'requests', 'menu opérateurs
 ok(/if \(\/\^requests\$\/i\.test\(t\)\)/.test(ev) && /\.in\('status', OPEN_REQUEST_STATUSES\)\.order\('created_at', \{ ascending: false \}\)\.limit\(10\)/.test(ev), 'robot : requests lit les 10 demandes en cours les plus récentes');
 ok(/^\s*m = \/\^\(确认\|无货\|发票\|收款\|发货\|取消\|询单\|confirm\|unavailable\|proforma\|paid\|shipped\|cancel\|request\)\\s\*\(PR-\\d\+\)\\s\*\$\/i\.exec\(t\);/m.test(ev), 'robot : commandes PR-… existantes inchangées');
 
+// Validité des offres (ADR 0025) : reconfirmation par WeChat, rappels aux fournisseurs, résumé aux opérateurs.
+{
+  const exp = '2026-11-17T02:06:00Z', url = 'https://central.parts/depot/?login=dl_' + 'a'.repeat(32);
+  ok(['确认库存', ' 库存无变化 ', 'confirm stock', 'Stock unchanged', '库存不变'].every(R.isReconfirmRequest) && !['确认 PR-0001', 'confirm', 'stock', ''].some(R.isReconfirmRequest), 'reconfirmation : mots-clés reconnus, réponses aux demandes d\'achat non confondues');
+  const okText = R.reconfirmOkText(1812, exp);
+  ok(both(okText) && okText.includes('1812') && okText.includes('11月17日 10:06') && okText.includes('17 Nov'), 'reconfirmation : réponse bilingue avec le nombre d\'offres et l\'échéance (heure de Pékin)');
+  ok(both(R.reconfirmErrorText('none')) && both(R.reconfirmErrorText('other')), 'reconfirmation : erreurs bilingues');
+  for (const kind of ['soon', 'expired']) {
+    const t = R.stockReminderText(kind, 1812, exp, url);
+    ok(both(t) && t.includes(url) && t.includes('确认库存') && t.includes('confirm stock') && Buffer.byteLength(t) < 2048, 'rappel « ' + kind + ' » : bilingue, lien personnel, consigne « 确认库存 », sous 2 048 octets');
+  }
+  ok(R.stockReminderText('soon', 3, exp, url).includes('将于') && R.stockReminderText('expired', 3, exp, url).includes('已于'), 'rappel : « bientôt » et « expiré » distingués');
+  const sum = R.operatorReminderSummary([{ org_id: 'ORG-0001', name: 'Test (fictif)', lots: 3, kind: 'soon', expires_at: exp, delivered: false }]);
+  ok(!HAN.test(sum) && sum.includes('NOT delivered') && sum.startsWith('[Stock reminders] 1'), 'résumé opérateurs : anglais seul, rappels non délivrés signalés');
+}
+
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

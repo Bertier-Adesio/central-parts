@@ -144,6 +144,12 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       <div class="org"><strong id="org-name"></strong><span class="badge" id="org-alias"></span></div>
     </div>
     <div id="status" class="msg" hidden></div>
+    <section class="card" id="validity" hidden>
+      <h2 data-t="valTitle">报价有效期</h2>
+      <p id="val-text"></p>
+      <button class="btn btn-line" type="button" id="reconfirm" data-t="reconfirm">库存无变化，一键确认</button>
+      <p class="muted" data-t="reconfirmHint">确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。</p>
+    </section>
     <form class="card" id="lic" hidden>
       <h2 data-t="licTitle">上传营业执照</h2>
       <p class="muted" data-t="licLead">拍照或选择文件：JPG、PNG、PDF，最大 10 MB。仅用于审核，不会公开。</p>
@@ -238,7 +244,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       rejected: '被拒绝的行', line: '第 {n} 行',
       curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
       curSrc: { file: '读取自文件', upload: '上传时选择', company: '公司设置' }, curLine: '币种：',
-      e: { currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
+      valTitle: '报价有效期', reconfirm: '库存无变化，一键确认', reconfirmHint: '确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。',
+      valLive: '{live} 条报价在线，有效期至 {date}（有效期 {ttl} 天）。', valOld: '{n} 条报价已过期，不再向采购方展示。',
+      reconfirmed: '已确认：{n} 条报价有效期至 {date}。',
+      e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
         session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
         code_invalid: '统一社会信用代码有误，请核对营业执照。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
         already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
@@ -282,7 +291,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       rejected: 'Rejected lines', line: 'line {n}',
       curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
       curSrc: { file: 'read from the file', upload: 'chosen at upload', company: 'company setting' }, curLine: 'Currency: ',
-      e: { currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
+      valTitle: 'Offer validity', reconfirm: 'Stock unchanged: confirm', reconfirmHint: 'Confirming keeps all your offers in stock visible for another period. When your stock changes, upload a new file.',
+      valLive: '{live} offers online, valid until {date} ({ttl}-day validity).', valOld: '{n} offers have expired and are no longer shown to buyers.',
+      reconfirmed: 'Confirmed: {n} offers valid until {date}.',
+      e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
         session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
         code_invalid: 'The unified social credit code is not valid: please check the business licence.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
         already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
@@ -292,6 +304,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   try { lang = localStorage.getItem('cp-depot-lang') || (/^zh/i.test(navigator.language) ? 'zh' : 'en'); } catch (e) {}
   var $ = function (id) { return document.getElementById(id); };
   var t = function () { return T[lang]; };
+  var fill = function (s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] == null ? '' : o[k]; }); };
   var token = null, imports = [], timer = null, org = null;
   try { token = sessionStorage.getItem('cp-depot-token'); } catch (e) {}
 
@@ -300,7 +313,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
-    renderRegion(); renderImports(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
+    renderRegion(); renderImports(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
   }
   function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
@@ -527,10 +540,37 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       .then(function () { $('lic-send').disabled = false; });
   });
 
+  // ---------------------------------------------------------------- validité des offres et reconfirmation (ADR 0025)
+  var validity = null;
+  function loadValidity() {
+    api('GET', '/offers-status').then(function (v) { validity = v; renderValidity(); }, function () {});
+  }
+  function shortDate(iso) {
+    try { return new Date(iso).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + (lang === 'zh' ? '（北京时间）' : ' (China time)'); }
+    catch (e) { return iso; }
+  }
+  function renderValidity() {
+    var c = $('validity'), v = validity;
+    if (!c) return;
+    if (!v || !((v.live || 0) + (v.to_reconfirm || 0))) { c.hidden = true; return; }
+    c.hidden = false;
+    var parts = [];
+    if (v.live) parts.push(fill(t().valLive, { live: v.live, date: shortDate(v.expires_at), ttl: v.ttl_days }));
+    if (v.to_reconfirm) parts.push(fill(t().valOld, { n: v.to_reconfirm }));
+    $('val-text').textContent = parts.join(' ');
+  }
+  $('reconfirm').addEventListener('click', function () {
+    var b = this; b.disabled = true;
+    api('POST', '/reconfirm', {}).then(function (r) {
+      say('ok', fill(t().reconfirmed, { n: r.lots, date: shortDate(r.expires_at) }));
+      loadValidity();
+    }, err).then(function () { b.disabled = false; });
+  });
+
   function refresh() {
     clearTimeout(timer);
     api('GET', '/imports').then(function (list) {
-      imports = list; renderImports();
+      imports = list; renderImports(); loadValidity();
       // Complétude des fiches de la société, recalculée après chaque import terminé.
       api('GET', '/quality').then(function (q) { quality = q; renderQuality(); }, function () {});
       if (list.some(function (i) { return i.status === 'received' || i.status === 'processing'; })) timer = setTimeout(refresh, 4000);

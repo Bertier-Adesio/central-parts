@@ -91,6 +91,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       <div class="stat warn"><b id="n-old">0</b><span data-t="toReconfirm">待重新确认</span></div>
       <div class="stat"><b id="d-last">—</b><span data-t="lastUpload">最近更新</span></div>
     </div>
+    <p style="margin:16px 0 0"><button class="btn" type="button" id="reconfirm" data-t="reconfirm">库存无变化，一键确认</button></p>
+    <p class="muted" data-t="reconfirmHint">确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。</p>
   </section>
 
   <section class="card" id="upload-card" hidden>
@@ -128,7 +130,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       choose: '请选择', curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
       curSrc: { file: '读取自文件', upload: '上传时选择', company: '公司设置' }, curLine: '币种：',
       nums: '通过 {a} · 需修改 {r} · 下架 {w}', rejTitle: '需修改的行', line: '行', reason: '原因', more: '仅显示前 200 行。',
-      e: { currency: '请选择报价币种。', link_invalid: '链接无效或已停用。请联系 Central.Parts 获取新链接。', format: '仅接受 CSV、XLS 或 XLSX 文件。', too_big: '文件超过 50 MB。',
+      reconfirm: '库存无变化，一键确认', reconfirmHint: '确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。', reconfirmed: '已确认：{n} 条报价继续展示 {d} 天。',
+      e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', link_invalid: '链接无效或已停用。请联系 Central.Parts 获取新链接。', format: '仅接受 CSV、XLS 或 XLSX 文件。', too_big: '文件超过 50 MB。',
         network: '网络错误，请重试。', other: '出现错误，请重试。', slow: '处理时间较长，请稍后刷新本页查看报告。' },
       r: { mpn_missing: '型号（mpn）为空', qty_invalid: '数量无效：须为正整数', moq_invalid: '最小起订量无效：须大于或等于 1',
         price_invalid: '价格无效：须大于 0', break_incomplete: '价格阶梯不完整：数量和价格须同时填写',
@@ -144,7 +147,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       choose: 'Choose', curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
       curSrc: { file: 'read from the file', upload: 'chosen at upload', company: 'company setting' }, curLine: 'Currency: ',
       nums: 'accepted {a} · to correct {r} · withdrawn {w}', rejTitle: 'Lines to correct', line: 'Line', reason: 'Reason', more: 'Only the first 200 lines are shown.',
-      e: { currency: 'Please choose the price currency.', link_invalid: 'This link is invalid or no longer active. Please ask Central.Parts for a new link.', format: 'Only CSV, XLS or XLSX files are accepted.', too_big: 'The file is larger than 50 MB.',
+      reconfirm: 'Stock unchanged: confirm', reconfirmHint: 'Confirming keeps all your offers in stock visible for another period. When your stock changes, upload a new file.', reconfirmed: 'Confirmed: {n} offers stay visible for {d} days.',
+      e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', link_invalid: 'This link is invalid or no longer active. Please ask Central.Parts for a new link.', format: 'Only CSV, XLS or XLSX files are accepted.', too_big: 'The file is larger than 50 MB.',
         network: 'Network error, please try again.', other: 'Something went wrong, please try again.', slow: 'Processing is taking longer: reload this page in a moment to see the report.' },
       r: { mpn_missing: 'Part number (mpn) is empty', qty_invalid: 'Invalid quantity: a positive whole number is expected', moq_invalid: 'Invalid MOQ: must be 1 or more',
         price_invalid: 'Invalid price: must be greater than 0', break_incomplete: 'Incomplete price break: quantity and price are both required',
@@ -160,7 +164,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       choose: 'Choisir', curLabel: 'Devise des prix', curHint: 'Appliquée aux lignes dont la devise n’est pas dans le fichier ; une colonne de devise (currency / 币种) ou des en-têtes de prix (price-usd-1…) sont prioritaires.',
       curSrc: { file: 'lue dans le fichier', upload: 'choisie au dépôt', company: 'réglage de la société' }, curLine: 'Devise : ',
       nums: 'acceptées {a} · à corriger {r} · retirées {w}', rejTitle: 'Lignes à corriger', line: 'Ligne', reason: 'Raison', more: 'Seules les 200 premières lignes sont affichées.',
-      e: { currency: 'Choisissez la devise des prix.', link_invalid: 'Ce lien n’est pas valable ou n’est plus actif. Demandez un nouveau lien à Central.Parts.', format: 'Seuls les fichiers CSV, XLS ou XLSX sont acceptés.', too_big: 'Le fichier dépasse 50 Mo.',
+      reconfirm: 'Stock inchangé : reconfirmer', reconfirmHint: 'Toutes vos offres en stock restent visibles pour une nouvelle période. Si votre stock a changé, chargez un nouveau fichier.', reconfirmed: 'Reconfirmé : {n} offres visibles pendant {d} jours.',
+      e: { no_stock: 'Vous n’avez aucune offre en stock : chargez d’abord un fichier.', currency: 'Choisissez la devise des prix.', link_invalid: 'Ce lien n’est pas valable ou n’est plus actif. Demandez un nouveau lien à Central.Parts.', format: 'Seuls les fichiers CSV, XLS ou XLSX sont acceptés.', too_big: 'Le fichier dépasse 50 Mo.',
         network: 'Erreur réseau, réessayez.', other: 'Une erreur est survenue, réessayez.', slow: 'Le traitement prend plus de temps : rechargez la page dans un instant pour voir le rapport.' },
       r: { mpn_missing: 'Référence (mpn) vide', qty_invalid: 'Quantité invalide : nombre entier positif attendu', moq_invalid: 'MOQ invalide : 1 ou plus',
         price_invalid: 'Prix invalide : supérieur à 0 attendu', break_incomplete: 'Palier incomplet : quantité et prix requis',
@@ -293,6 +298,15 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       })
       .catch(function (c) { $('bar').hidden = true; err(c); })
       .then(function () { $('send').disabled = false; });
+  });
+
+  // Reconfirmation sans nouveau fichier (ADR 0025) : le vendeur atteste que son stock n'a pas changé.
+  $('reconfirm').addEventListener('click', function () {
+    var b = this; b.disabled = true;
+    api('POST', '/reconfirm', {}).then(function (r) {
+      say('ok', fill(t().reconfirmed, { n: r.lots, d: r.ttl_days }));
+      return api('GET', '/me').then(function (m) { me = m; renderStatus(); });
+    }).catch(err).then(function () { b.disabled = false; });
   });
 
   // Nouveau lien collé dans la barre d'adresse : seul le fragment change, la page est rechargée pour le lire.
