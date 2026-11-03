@@ -57,6 +57,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
 }
 .hdr-r{display:flex;align-items:center;gap:12px}
 .cartlink{color:var(--fg-inverse);text-decoration:none;font-size:var(--text-sm);border:1px solid var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 10px;white-space:nowrap}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:var(--radius-sm)}
 .btn-line.in{border-color:var(--status-success);color:var(--status-success)}
 [hidden]{display:none!important}
 </style>
@@ -197,14 +198,17 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
         '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + '</td>' +
         '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
         '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
-        '<td data-label="">' + (cartHas(o) ? '<a class="btn btn-line in" href="' + esc(t().cartHref) + '">' + esc(t().inCart) + '</a>'
-          : '<button class="btn btn-line add" type="button" data-i="' + i + '">' + esc(t().ask) + '</button>') + '</td>' +
+        '<td data-label="">' + (cartHas(o) ? '<a class="btn btn-line in icon-btn" href="' + esc(t().cartHref) + '" aria-label="' + esc(t().inCart) + '" title="' + esc(t().inCart) + '">' + ICON_IN + '</a>'
+          : '<button class="btn btn-line add icon-btn" type="button" data-i="' + i + '" aria-label="' + esc(t().ask) + '" title="' + esc(t().ask) + '">' + ICON_ADD + '</button>') + '</td>' +
         '</tr>';
     }).join('');
   }
 
   // ------------------------------------------------------------ panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
   var CART = 'cp-cart', CART_MAX = 30;
+  // Icônes du panier (ajouter, déjà dans le panier), dessinées ici : aucune ressource externe.
+  var ICON_ADD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M13.5 8.5v5M11 11h5"/></svg>';
+  var ICON_IN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M10.5 11l2 2 3.5-3.5"/></svg>';
   function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
   function cartAdd(o) {

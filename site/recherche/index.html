@@ -36,7 +36,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 form.search{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 form.search input,form.search select{min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;box-sizing:border-box}
 form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-transform:uppercase}
-.res{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.res{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:1fr auto auto;gap:4px 12px}
 .res:first-child{border-top:0}
 .mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
 .price{text-align:right;font-weight:var(--weight-semibold);white-space:nowrap}
@@ -56,7 +56,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 .quote:empty{display:none}
 .hdr-r{display:flex;align-items:center;gap:10px}
 .cartlink{color:var(--fg-inverse);text-decoration:none;font-size:var(--text-sm);border:1px solid var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 10px;white-space:nowrap}
-.add{grid-column:1 / -1;justify-self:start;min-height:var(--control-h-md);padding:0 14px}
+.add{grid-column:3;grid-row:1;justify-self:end;align-self:start}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:var(--radius-sm)}
 .add.in{border-color:var(--status-success);color:var(--status-success)}
 </style>
 </head>
@@ -207,8 +208,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
         '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span>' +
         '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div>' +
-        (cartHas(x) ? '<a class="btn btn-line add in" href="' + esc(t().cartHref) + '">' + esc(t().inCart) + '</a>'
-          : '<button class="btn btn-line add" type="button" data-i="' + i + '">' + esc(t().add) + '</button>') +
+        (cartHas(x) ? '<a class="btn btn-line add in icon-btn" href="' + esc(t().cartHref) + '" aria-label="' + esc(t().inCart) + '" title="' + esc(t().inCart) + '">' + ICON_IN + '</a>'
+          : '<button class="btn btn-line add icon-btn" type="button" data-i="' + i + '" aria-label="' + esc(t().add) + '" title="' + esc(t().add) + '">' + ICON_ADD + '</button>') +
         (BUY_OPEN ? '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button>' : '') + '</div>';
     }).join('');
     $('list').querySelectorAll('button.add').forEach(function (b) { b.addEventListener('click', function () {
@@ -236,6 +237,9 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 
   // ---------------------------------------------------------------- panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
   var CART = 'cp-cart', CART_MAX = 30;
+  // Icônes du panier (ajouter, déjà dans le panier), dessinées ici : aucune ressource externe.
+  var ICON_ADD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M13.5 8.5v5M11 11h5"/></svg>';
+  var ICON_IN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M10.5 11l2 2 3.5-3.5"/></svg>';
   function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
   function cartAdd(o) {

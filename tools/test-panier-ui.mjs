@@ -62,9 +62,12 @@ await mock(page, errors);
 await page.goto(BASE + '/offres/?lang=fr');
 await page.waitForSelector('#rows button.add');
 ok((await page.textContent('#cart-n')) === '', 'offres : panier vide au départ');
+ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => !!b.querySelector('svg') && b.textContent.trim() === '' && b.getAttribute('aria-label') === 'Ajouter au panier' && b.title === 'Ajouter au panier'),
+  'offres : icône de panier, libellé accessible et infobulle');
 await page.click('#rows tr:nth-child(1) button.add');
 ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await page.textContent('#cart-n')) === '(1)', 'offres : ajout, message et compteur');
-ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr', 'offres : « Dans le panier ✓ » mène au panier');
+ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr'
+  && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'aria-label')) === 'Dans le panier ✓', 'offres : icône « dans le panier » qui mène au panier');
 await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
 ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références');
@@ -76,6 +79,7 @@ await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
 await page.waitForSelector('#list button.add');
 await page.click('#list button.add');
 ok((await page.textContent('#cart-n')) === '(4)' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
+ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttribute('aria-label') === 'Dans le panier ✓'), 'recherche : icône « dans le panier »');
 
 // 3. /panier/ : devis par ligne, offre disparue bloquante, retrait, quantité.
 await page.goto(BASE + '/panier/');
