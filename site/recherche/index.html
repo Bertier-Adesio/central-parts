@@ -75,7 +75,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     <input type="search" name="q" id="q" required minlength="3" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Référence" placeholder="NE555DR">
     <button class="btn btn-main" type="submit" data-t="go">Rechercher</button>
   </form>
-  <p class="muted" data-t="hint">Début de la référence fabricant, 3 caractères au moins. Prix tout compris dans la devise du fournisseur, hors droits et TVA à l'import.</p>
+  <p class="muted" data-t="hint">Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l'import.</p>
   <noscript><p class="msg err">La recherche nécessite JavaScript. · Search requires JavaScript. · 搜索需要启用 JavaScript。</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
   <section class="card" id="out" hidden aria-live="polite"><div id="list"></div></section>
@@ -118,7 +118,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search';
   var T = {
     fr: { title: 'Rechercher un composant', lead: "L'offre agrégée de Central.Parts : fabricants, distributeurs, brokers et surplus vérifiés. Le fournisseur n'est jamais affiché.",
-      go: 'Rechercher', hint: "Début de la référence fabricant, 3 caractères au moins. Prix tout compris dans la devise du fournisseur, hors droits et TVA à l'import.",
+      go: 'Rechercher', hint: "Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l'import.",
       moreTitle: 'Quantités exactes, paliers et commande', moreText: "Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.",
       ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
@@ -127,10 +127,10 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
       send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Central.Parts vérifie votre demande et la transmet au fournisseur, qui confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
       unit: 'Prix unitaire', total: 'Total', excl: "hors droits et TVA à l'import", toConfirm: 'Prix confirmé avec la proforma', partial: 'Quantité supérieure au stock affiché : le fournisseur confirmera la quantité disponible.',
-      sent: 'Demande {ref} envoyée.', choose: 'Choisir',
+      sent: 'Demande {ref} envoyée.', choose: 'Choisir', rates: 'Taux de référence de la BCE du {d}.',
       e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire.', not_found: "Cette offre n'est plus disponible.", terms: 'Cochez la case pour envoyer la demande.', too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
     en: { title: 'Search for a component', lead: 'The aggregated offer of Central.Parts: manufacturers, distributors, verified brokers and surplus. The supplier is never shown.',
-      go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices in the supplier\'s currency, excluding import duties and VAT.',
+      go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices in euros, converted at the ECB reference rate, excluding import duties and VAT.',
       moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, every price break, lead times, quote requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
       ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
@@ -139,10 +139,10 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
       send: 'Send the request', cancel: 'Cancel', doneNext: 'Central.Parts checks your request and sends it to the supplier, who confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
       unit: 'Unit price', total: 'Total', excl: 'excluding import duties and VAT', toConfirm: 'Price confirmed with the proforma', partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.',
-      sent: 'Request {ref} sent.', choose: 'Choose',
+      sent: 'Request {ref} sent.', choose: 'Choose', rates: 'ECB reference rate of {d}.',
       e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields.', not_found: 'This offer is no longer available.', terms: 'Tick the box to send the request.', too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
     zh: { title: '搜索元器件', lead: 'Central.Parts 汇总的现货：原厂、分销商、经审核的贸易商与呆滞库存。不显示供应商名称。',
-      go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，以供应商币种计价，不含进口关税和增值税。',
+      go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，以欧元计价（按欧洲央行参考汇率换算），不含进口关税和增值税。',
       moreTitle: '准确数量、价格阶梯与下单', moreText: '采购商账户或 API（Adesio、Luminovo、CalcuQuote、ERP）可查看准确数量、全部价格阶梯、交期并询价。贸易商与呆滞库存的报价通过 Opportunity 流程：状态问卷、可选实验室检测、验收后付款。',
       ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
@@ -151,7 +151,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到银行转账后交易成立。买方负责进口清关（进口关税和增值税）。',
       send: '提交申请', cancel: '取消', doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
       unit: '单价', total: '合计', excl: '不含进口关税和增值税', toConfirm: '价格以形式发票为准', partial: '数量超过显示的库存：供应商将确认可供数量。',
-      sent: '申请 {ref} 已提交。', choose: '请选择',
+      sent: '申请 {ref} 已提交。', choose: '请选择', rates: '欧洲央行参考汇率日期：{d}。',
       e: { vat_invalid: '增值税号未通过 VIES 验证，请核对。', invalid: '请检查表单内容。', not_found: '该报价已不可用。', terms: '请勾选以提交申请。', too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '搜索暂不可用，请稍后再试。' } }
   };
   var COUNTRY = { fr: { CN: 'Chine', HK: 'Hong Kong', TW: 'Taïwan', DE: 'Allemagne', FR: 'France', US: 'États-Unis' },
@@ -184,7 +184,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   function render(d) {
     var r = d.results || [];
     $('out').hidden = false;
-    var head = '<p class="muted" style="margin:0 0 4px">' + esc((r.length ? t().count : t().none).replace('{n}', r.length).replace('{q}', d.query)) + '</p>';
+    var rates = r.length && d.rates_at ? ' ' + t().rates.replace('{d}', new Date(d.rates_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-GB')) : '';
+    var head = '<p class="muted" style="margin:0 0 4px">' + esc((r.length ? t().count : t().none).replace('{n}', r.length).replace('{q}', d.query) + rates) + '</p>';
     $('list').innerHTML = head + r.map(function (x, i) {
       var price = x.price_from == null ? '<span class="muted">' + esc(t().onRequest) + '</span>'
         : (lang === 'zh' ? esc(money(x.price_from, x.currency || d.currency)) + ' ' + esc(t().from) : esc(t().from) + ' ' + esc(money(x.price_from, x.currency || d.currency)));
@@ -200,11 +201,11 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('list').querySelectorAll('.buy').forEach(function (b) { b.addEventListener('click', function () { var x = r[+b.getAttribute('data-i')]; openBuy(x, x.currency || d.currency); }); });
   }
 
-  // Prix dans la devise du fournisseur (devise de l'import), sans conversion : la devise de chaque offre est dans la
-  // réponse (x.currency) ; d.currency ne sert qu'aux réponses antérieures à la migration 20261102000019.
+  // Prix en euros, convertis au taux de la BCE (migration 20261103000025, ADR 0027) : la devise de chaque offre est
+  // dans la réponse (x.currency), la date du taux dans d.rates_at ; le devis et la demande d'achat suivent la même devise.
   function search(term, push) {
     say(''); $('f').querySelector('button').disabled = true;
-    fetch(FN + '?q=' + encodeURIComponent(term))
+    fetch(FN + '?cur=EUR&q=' + encodeURIComponent(term))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
             function () { throw 'network'; })
       .then(function (d) {

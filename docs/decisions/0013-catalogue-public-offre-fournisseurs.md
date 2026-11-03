@@ -19,6 +19,7 @@ L'offre agrégée de Central.Parts est consultable par les **visiteurs du site**
 
 - Le prix affiché est **tout compris**, partout : prix du fournisseur, marge de Central.Parts et conversion inclus (ADR 0011). Pour une offre broker ou surplus, le détail est donné à la commande.
 - **Modifié le 2 novembre 2026** (migration `20261102000019`) : en attendant de traiter la conversion, les prix publics sont affichés **dans la devise du fournisseur** (devise de l'import), marge comprise, sans conversion ; le choix de devise est retiré des pages. Le prix 1KU (1 000 pièces) s'affiche sous « à partir de » (migration `20261102000018`).
+- **Modifié le 3 novembre 2026** (ADR 0027, migration `20261103000025`) : les prix publics sont affichés **en euros**, convertis au taux de référence de la BCE mis à jour chaque jour, avec la date du taux.
 - La marge est fixée **par catégorie de source et par vendeur** (complété le 1er novembre 2026) : la marge propre à un vendeur, si elle existe, remplace celle de sa catégorie. Migration `20261101000010_marges_par_vendeur.sql`.
 - Seules les offres des fournisseurs validés (`app.is_verified`) apparaissent.
 - La recherche publique passe par une fonction Edge avec une limite de requêtes par visiteur. Les deux niveaux freinent l'aspiration du catalogue par d'autres brokers.

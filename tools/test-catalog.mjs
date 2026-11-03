@@ -3,6 +3,7 @@
 // bout en bout : tools/test-rfq-e2e.mjs. Usage : node tools/test-catalog.mjs
 import { readFileSync } from 'node:fs';
 import * as C from '../supabase/functions/_shared/catalog.js';
+import { parseEcbDaily, ratesStale, ECB_DAILY_URL } from '../supabase/functions/_shared/fx.js';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -106,6 +107,22 @@ ok(C.toTiProduct('NE555DR', [offers[2]], 'USD').pricing.length === 0, 'TI : offr
 const leaky = offers.map((o) => ({ ...o, seller_id: 'ORG-0101', sku: 'SKU-SECRET', product_url: 'https://fournisseur.example/x', alias: 'V-9' }));
 const out = JSON.stringify([C.toDigiKeyProduct('NE555DR', leaky), C.toTiProduct('NE555DR', leaky, 'USD')]);
 ok(!/ORG-0101|SKU-SECRET|fournisseur\.example|V-9/.test(out), 'anonymat : les formats compatibles ne recopient aucun champ inconnu');
+
+// Taux de la BCE (ADR 0027) : fichier quotidien, format réel abrégé (valeurs d'exemple).
+const ecb = `<?xml version="1.0" encoding="UTF-8"?>
+<gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+  <gesmes:subject>Reference rates</gesmes:subject>
+  <Cube><Cube time='2026-11-03'>
+    <Cube currency='USD' rate='1.0870'/><Cube currency='JPY' rate='161.29'/><Cube currency='GBP' rate='0.8412'/>
+    <Cube currency='HKD' rate='8.4746'/><Cube currency='CNY' rate='7.8125'/>
+  </Cube></Cube>
+</gesmes:Envelope>`;
+const fx = parseEcbDaily(ecb);
+ok(fx && fx.date === '2026-11-03' && fx.rates.USD === 1.087 && fx.rates.CNY === 7.8125 && Object.keys(fx.rates).length === 5, 'BCE : date et taux lus');
+ok(parseEcbDaily('<html>erreur</html>') === null && parseEcbDaily('') === null && parseEcbDaily("<Cube time='2026-11-03'></Cube>") === null, 'BCE : fichier illisible ou vide → null');
+ok(ECB_DAILY_URL === 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml', 'BCE : adresse du fichier quotidien');
+const now = Date.parse('2026-11-04T10:00:00Z');
+ok(ratesStale(null, now) && ratesStale('2026-11-03T08:00:00Z', now) && !ratesStale('2026-11-03T15:00:00Z', now), 'BCE : relecture au-delà de 20 heures seulement');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);
