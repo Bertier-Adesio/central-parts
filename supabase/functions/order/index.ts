@@ -79,6 +79,11 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('create_purchase_cart', { p_ip: ip, p: { ...b, vat, vat_checked: valid === true } });
       if (error) {
         if (error.code === 'P0002') return json({ error: 'not_found', mpn: error.details || null }, 404);
+        // Quantité hors MOQ ou SPQ : référence, quantité minimale et SPQ du lot retenu (indice « min/spq »).
+        if (error.code === 'CP422') {
+          const [min, spq] = String(error.hint || '').split('/').map((x) => parseInt(x, 10) || null);
+          return json({ error: 'qty_invalid', mpn: error.details || null, min_qty: min, spq }, 422);
+        }
         return fail(error);
       }
       // Opérateurs seulement, un avis pour tout le panier : rien ne part chez les fournisseurs avant la validation.

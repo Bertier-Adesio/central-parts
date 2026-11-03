@@ -13,11 +13,14 @@ const norm = (t) => (t || '').replace(/[  ]/g, ' ');
 
 // Offres fictives, prix en euros comme partner_offers et public_search (migration 20261103000025).
 const OFFERS = [
-  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
+  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 2500, min_qty: 2500, price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '1000+', moq: 1, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'GONE123', manufacturer: 'Fictif', supplier: 'partner', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '100+', moq: 1, price_from: 1, price_1k: null, updated_at: '2026-11-03T08:00:00Z' },
 ];
 const PRICE = { NE555DR: 0.1, LM358DR: 0.06, BSS138: null };
+// MOQ et SPQ du lot retenu par le devis (public_quote, migration 20261103000027).
+const PACK = { NE555DR: { moq: 100, spq: 2500 }, BSS138: { moq: 10, spq: 1 } };
+const minOf = (k) => (k.spq > 1 ? Math.ceil(k.moq / k.spq) * k.spq : k.moq);
 const state = { carts: [], external: [], quotes: 0 };
 
 async function mock(page, errors) {
@@ -35,8 +38,9 @@ async function mock(page, errors) {
       state.quotes++;
       const mpn = u.searchParams.get('mpn'), qty = +u.searchParams.get('qty');
       if (!(mpn in PRICE)) return reply({ error: 'not_found' }, 404);
-      const p = PRICE[mpn];
-      return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000 });
+      const p = PRICE[mpn], k = PACK[mpn] || { moq: 1, spq: 1 };
+      return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000,
+        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0 });
     }
     if (u.pathname.endsWith('/cart')) {
       const b = JSON.parse(req.postData());
@@ -72,7 +76,8 @@ await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
 ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références');
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
-ok(stored[0].qty === 100 && stored[0].moq === 100 && stored[1].qty === 1, 'offres : quantité de départ = MOQ');
+ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
+ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
 
 // 2. /recherche/ : ajout d'une offre « sur demande ».
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
@@ -85,10 +90,13 @@ ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttrib
 await page.goto(BASE + '/panier/');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 4 && !document.querySelector('#lines').textContent.includes('…'));
 let txt = norm(await page.textContent('#cart'));
-ok(txt.includes('NE555DR') && /10,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (100 × 0,10 €)');
+ok(txt.includes('NE555DR') && /250,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (2 500 × 0,10 €)');
+ok(txt.includes('hors transport, droits et TVA'), 'panier : prix hors transport');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
-ok(txt.includes('minimum 100'), 'panier : MOQ rappelé');
+ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
+ok(norm(await page.textContent('#lines li:nth-child(4)')).includes('Quantité ajustée à 10 (minimum 10).') &&
+  (await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[3].qty === 10, 'panier : quantité d\'une ligne de la recherche ajustée au MOQ donné par le devis');
 await page.fill('#o-company', 'Atelier Panier (fictif)');
 await page.fill('#o-vat', 'FR00999999999');
 await page.fill('#o-name', 'Léa Test');
@@ -100,17 +108,17 @@ await page.click('#o-send');
 ok(norm(await page.textContent('#msg')).includes('Retirez d’abord') && state.carts.length === 0, 'panier : envoi bloqué tant qu\'une offre disparue reste');
 await page.click('#lines li.gone button.rm');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 3);
-await page.fill('#q-0', '2000');
-await page.waitForFunction(() => document.getElementById('lines').textContent.replace(/[  ]/g, ' ').includes('200,00 €'));
-ok(true, 'panier : quantité modifiée, devis recalculé');
-ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[0].qty === 2000, 'panier : quantité gardée dans le navigateur');
+await page.fill('#q-0', '6000');
+await page.waitForFunction(() => document.getElementById('lines').textContent.replace(/[  ]/g, ' ').includes('750,00 €'));
+ok(norm(await page.textContent('#lines li:first-child')).includes('Quantité ajustée à 7 500 (minimum 2 500, par 2 500)'), 'panier : 6 000 ajusté au multiple du SPQ supérieur (7 500), devis recalculé');
+ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[0].qty === 7500, 'panier : quantité ajustée gardée dans le navigateur');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'panier : pas de défilement horizontal (1280 px)');
 
 // 4. Envoi : une seule demande, panier vidé, lien de suivi.
 await page.click('#o-send');
 await page.waitForSelector('#done:not([hidden])');
 const sent = state.carts.at(-1);
-ok(sent.lines.length === 3 && sent.lines[0].qty === '2000' && sent.currency === 'EUR' && sent.company === 'Atelier Panier (fictif)', 'envoi : trois lignes, quantités, coordonnées, en euros');
+ok(sent.lines.length === 3 && sent.lines[0].qty === '7500' && sent.currency === 'EUR' && sent.company === 'Atelier Panier (fictif)', 'envoi : trois lignes, quantités, coordonnées, en euros');
 ok(norm(await page.textContent('#done-msg')).includes('CART-0007') && (await page.getAttribute('#done-link', 'href')).includes('k=tok'), 'envoi : référence du panier et lien de suivi');
 ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')))).length === 0 && await page.isHidden('#cart') && await page.isHidden('#empty'), 'envoi : panier vidé');
 

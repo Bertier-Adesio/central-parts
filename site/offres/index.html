@@ -90,7 +90,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence fabricant, par exemple TPS25990">
     <button class="btn" type="submit" data-t="go">Rechercher</button>
   </form>
-  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import.</p>
+  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.</p>
   <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
 
   <p class="msg" id="msg" role="status" hidden></p>
@@ -114,9 +114,9 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     fr: { eyebrow: 'Supply Network Operator · Chaque offre, tracée jusqu’à sa source.', title: 'Nos offres',
       lead: 'Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.',
       placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
-      hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import.',
+      hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
-      partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓',
+      partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
       cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
@@ -126,9 +126,9 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
       lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
       placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
-      hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding import duties and VAT.',
+      hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
-      partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓',
+      partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
       cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
@@ -138,9 +138,9 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
       lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
       placeholder: '制造商型号，例如 TPS25990', go: '搜索',
-      hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含进口关税和增值税。',
+      hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
-      partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓',
+      partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
       cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
@@ -195,7 +195,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
         '<td class="first"><div class="mpn">' + esc(o.mpn) + '</div><div class="mfr">' + esc(o.manufacturer) + '</div></td>' +
         '<td data-label="' + esc(t().thSupplier) + '"><span class="tag">' + esc(t().partner) + '</span></td>' +
         '<td data-label="' + esc(t().thAvail) + '" class="num">' + esc(o.availability) + '</td>' +
-        '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + '</td>' +
+        '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(Number(o.spq).toLocaleString(LOCALE[lang])) + '</div>' : '') + '</td>' +
         '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
         '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
         '<td data-label="">' + (cartHas(o) ? '<a class="btn btn-line in icon-btn" href="' + esc(t().cartHref) + '" aria-label="' + esc(t().inCart) + '" title="' + esc(t().inCart) + '">' + ICON_IN + '</a>'
@@ -215,7 +215,9 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     var a = cartLoad();
     if (cartHas(o)) return 'ok';
     if (a.length >= CART_MAX) return 'full';
-    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from, qty: Math.max(o.moq || 1, 1), moq: o.moq || 1 });
+    // Quantité de départ : la plus petite compatible avec le MOQ et le SPQ (min_qty, migration 20261103000027).
+    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from,
+      qty: Math.max(o.min_qty || o.moq || 1, 1), moq: o.moq || 1, spq: o.spq || 1 });
     try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
     return cartLoad().length === a.length ? 'ok' : 'off';
   }

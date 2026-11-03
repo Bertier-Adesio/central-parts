@@ -21,6 +21,15 @@ Sur `/offres/`, le bouton « Demander » ouvrait un e-mail (`mailto:`) : rien ne
 - **Avis aux opérateurs** : un seul avis WeChat pour le panier, une ligne par demande.
 - **Suivi** : l'acheteur reçoit une référence CART-… et un lien de suivi qui montre le statut de chaque ligne (`/recherche/commande/`). Le même jeton sert pour toutes les lignes.
 
+### Quantités compatibles avec le MOQ et le SPQ (complément du 3 novembre 2026, migration `20261103000027`)
+- Une quantité est valide si elle **atteint le MOQ** du lot et si elle est **un multiple du SPQ**, la quantité du conditionnement standard (bobine, plateau). La quantité minimale est le plus petit multiple du SPQ qui atteint le MOQ : avec un MOQ de 100 et un SPQ de 2 500, on commande 2 500, 5 000, 7 500…
+- `/offres/` affiche le SPQ sous le MOQ. L'ajout au panier part de la quantité minimale.
+- Dans le panier, la saisie avance par pas du SPQ. Une quantité saisie est arrondie au multiple valide supérieur, et la page affiche « quantité ajustée ». Le devis donne le MOQ et le SPQ du lot retenu, ce qui couvre aussi les références ajoutées depuis `/recherche/`.
+- Le serveur refuse une ligne invalide (`CP422`, réponse `qty_invalid` avec la référence, le minimum et le SPQ). La page ajuste alors la ligne et demande de renvoyer.
+
+### Prix hors transport
+- Tous les prix affichés aux acheteurs sont **hors transport, droits et TVA à l'import** (`/offres/`, `/recherche/`, `/panier/`, suivi ; FR, EN, 中文). Le transport est chiffré avec la facture proforma.
+
 ## Conséquences
 
 - Plus aucun lien `mailto:` dans les offres : toute demande arrive dans l'onglet « Demandes ».
