@@ -83,7 +83,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence fabricant, par exemple TPS25990">
     <button class="btn" type="submit" data-t="go">Rechercher</button>
   </form>
-  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris dans la devise du fournisseur, hors droits et TVA à l’import.</p>
+  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import.</p>
   <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
 
   <p class="msg" id="msg" role="status" hidden></p>
@@ -107,31 +107,34 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     fr: { eyebrow: 'Supply Network Operator · Chaque offre, tracée jusqu’à sa source.', title: 'Nos offres',
       lead: 'Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.',
       placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
-      hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris dans la devise du fournisseur, hors droits et TVA à l’import.',
+      hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
       partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Demander',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
+      rates: 'Taux de référence de la BCE du {d}.',
       mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
       e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'Les offres sont indisponibles, réessayez plus tard.' } },
     en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
       lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
       placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
-      hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in the supplier’s currency, excluding import duties and VAT.',
+      hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
       partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Ask',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
+      rates: 'ECB reference rate of {d}.',
       mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
       e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Offers are unavailable, please try again later.' } },
     zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
       lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
       placeholder: '制造商型号，例如 TPS25990', go: '搜索',
-      hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以供应商币种计价，不含进口关税和增值税。',
+      hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
       partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '询价',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
+      rates: '欧洲央行参考汇率日期：{d}。',
       mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
       e: { too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '报价暂不可用，请稍后再试。' } }
   };
@@ -170,7 +173,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     $('count').hidden = !list.length;
     $('count').textContent = q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length });
     $('table').hidden = !list.length;
-    $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days });
+    $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days }) +
+      (data.rates_at ? ' ' + fill(t().rates, { d: new Date(data.rates_at).toLocaleDateString(LOCALE[lang]) }) : '');
     if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
     $('rows').innerHTML = list.map(function (o) {
       var price = o.price_from != null ? '<span class="muted">' + esc(t().from) + '</span> <span class="price">' + esc(money(o.price_from, o.currency || data.currency)) + '</span>' : esc(t().onRequest);
@@ -191,14 +195,14 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
   }
 
   function load() {
-    // Prix dans la devise du fournisseur, sans conversion (o.currency ; data.currency pour les réponses antérieures
-    // à la migration 20261102000019).
+    // Prix en euros, convertis au taux de la BCE (migration 20261103000025, ADR 0027) ; o.currency donne la devise
+    // de chaque offre, data.rates_at la date du taux le plus ancien utilisé.
     var q = $('q').value.trim();
     var url = new URL(location.href);
     q ? url.searchParams.set('q', q) : url.searchParams.delete('q');
     url.searchParams.delete('cur');
     history.replaceState(null, '', url);
-    return fetch(FN + '?q=' + encodeURIComponent(q))
+    return fetch(FN + '?cur=EUR&q=' + encodeURIComponent(q))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
             function () { throw 'network'; })
       .then(function (d) { data = d; render(); }, function (c) { data = null; $('table').hidden = $('count').hidden = true; say('err', t().e[c] || t().e.other); });

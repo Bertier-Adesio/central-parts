@@ -122,6 +122,16 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    `select public.decide_purchase_request('PR-0001', true, 'admin:moi');`. Redéployer `order`, `admin`, `wechat-events`
    (automatique à la fusion).
 
+### Prix publics en euros, taux de la BCE (ADR 0027)
+
+Migration `20261103000025_prix_euros.sql` (rejouable). `/recherche/` et `/offres/` affichent les prix en euros, marge comprise. La fonction `rappels` (tâche planifiée horaire déjà en place) relit le fichier quotidien de la BCE quand les taux ont plus de 20 heures. Vérifier dans l'éditeur SQL :
+
+```sql
+select code, eur_rate, rate_at from public.currencies order by code;
+```
+
+Mise à jour à la main si besoin (unités pour 1 euro, comme la BCE) : `select public.set_eur_rates('{"USD": 1.087, "CNY": 7.81}', current_date);`.
+
 ### Validité des offres, reconfirmation et rappels (ADR 0025)
 
 Migration `20261103000023_validite_vendeurs.sql` (rejouable), fonction `rappels`. Durée de validité : 14 jours pour un fabricant, 7 pour les autres vendeurs ; le vendeur reconfirme toutes ses offres d'un geste (bouton dans `/depot/` et `/depot/lien/`, ou « 确认库存 » au robot) ; rappels WeChat 48 heures avant l'échéance et le jour de l'expiration.

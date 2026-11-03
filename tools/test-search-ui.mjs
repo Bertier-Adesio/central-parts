@@ -23,10 +23,10 @@ await page.route(FN + '**', (r) => {
   const q = u.searchParams.get('q').toUpperCase();
   if (q === 'LIMIT') return reply({ error: 'rate_limited' }, 429);
   if (q === 'XXX') return reply({ query: 'XXX', currency: 'EUR', results: [] });
-  // Prix dans la devise du fournisseur (migration 20261102000019) : la devise est sur chaque offre.
-  return reply({ query: q, currency: 'EUR', results: [
-    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', currency: 'USD', availability: '10000+', price_from: 0.1234, price_1k: 0.1456 },
-    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', currency: 'USD', availability: '1000+', price_from: null },
+  // Prix convertis en euros au taux de la BCE (migration 20261103000025) : devise sur chaque offre, date du taux.
+  return reply({ query: q, currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', results: [
+    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'manufacturer', ship_from: 'CN', currency: 'EUR', availability: '10000+', price_from: 0.1234, price_1k: 0.1456 },
+    { mpn: 'NE555DR', manufacturer: 'Texas Instruments', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '1000+', price_from: null },
   ] });
 });
 const ORDER = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
@@ -50,13 +50,15 @@ ok((await page.textContent('h1')) === 'Rechercher un composant', 'page en franç
 await page.fill('#q', 'ne5');
 await page.click('#f button');
 await page.waitForSelector('.res');
-ok(calls[0] === '?q=ne5', 'appel avec la référence, sans devise (prix dans la devise du fournisseur)');
+ok(calls[0] === '?cur=EUR&q=ne5', 'appel avec la référence, prix demandés en euros');
 ok(!(await page.$('#cur')), 'plus de choix de devise');
 ok((await page.$$('.res')).length === 2, 'deux offres affichées');
 const txt = await page.textContent('#list');
 ok(txt.includes('à partir de') && txt.includes('Prix sur demande'), 'prix « à partir de » et prix sur demande');
-ok(/à partir de 0,1234\s*\$US/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix affiché dans la devise du fournisseur (USD), pas dans la devise de la réponse');
-ok(/prix 1 k : 0,1456\s*\$US/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de », dans la devise du fournisseur');
+ok(/à partir de 0,1234\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix affiché en euros');
+ok(/prix 1 k : 0,1456\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de », en euros');
+ok(txt.includes('Taux de référence de la BCE du 03/11/2026'), 'date du taux de la BCE affichée');
+ok((await page.textContent('main')).includes('Prix tout compris en euros, convertis au taux de référence de la BCE'), 'consigne : prix en euros');
 ok((txt.match(/prix 1 k/g) || []).length === 1, 'pas de prix 1KU pour une offre sur demande');
 ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes('Expédié de Chine') && txt.includes('Disponible 10000+'), 'source, pays et tranche affichés');
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
@@ -82,7 +84,7 @@ ok((await page.textContent('#list')).includes('Aucune offre'), 'aucun résultat'
 
 await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
-ok(calls[calls.length - 1] === '?q=NE555' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé (ancien paramètre cur ignoré) : recherche et langue relancées');
+ok(calls[calls.length - 1] === '?cur=EUR&q=NE555' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé (ancien paramètre cur ignoré) : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 340 px');
 
 // Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
@@ -101,7 +103,7 @@ ok((await page.textContent('#buy-meta')).includes('Fabricant'), 'achat : offre c
 await page.fill('#o-qty', '2000');
 await page.waitForFunction(() => document.getElementById('quote').textContent.includes('Total'));
 ok((await page.textContent('#quote')).includes('240'), 'achat : devis pour la quantité');
-ok(quoteCur === 'USD', 'achat : devis demandé dans la devise du fournisseur');
+ok(quoteCur === 'EUR', 'achat : devis demandé en euros, comme le prix affiché');
 await page.click('#o-send');
 ok((await page.textContent('#msg')).includes('Vérifiez'), 'achat : champs manquants signalés');
 await page.fill('#o-company', 'Atelier Test (fictif)');

@@ -341,6 +341,7 @@ input,textarea,select{font-size:16px!important}
 <span style="font-weight: 500; letter-spacing: -0.025em; font-size: 18px; white-space: nowrap">Central<span style="color: #D7262E">.</span>Parts</span>
 </a>
 <nav data-nav="1" style="display: flex; gap: 22px; font-size: 14px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; white-space: nowrap">
+<a href="{{ t.offersHref }}" style="color: #F4F2EE; font-weight: 500">{{ t.navOffers }}</a>
 <a href="#parcours" style="color: #C9C5BD">{{ t.navPaths }}</a>
 <a href="#fonctionnement" style="color: #C9C5BD">{{ t.navHow }}</a>
 </nav>
@@ -395,7 +396,10 @@ input,textarea,select{font-size:16px!important}
 <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
 <sc-for list="{{ t.buyerList }}" as="b" hint-placeholder-count="3"><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>{{ b }}</span></sc-for>
 </div>
-<a href="#contact" data-pick-tab="buyer" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 15px; font-weight: 500" style-hover="border-color: #15171C; color: #15171C">{{ t.buyerCta }}</a>
+<div style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px">
+<a href="{{ t.offersHref }}" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" style-hover="background: #33363D; color: #F4F2EE">{{ t.buyerOffers }}</a>
+<a href="#contact" data-pick-tab="buyer" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 15px; font-weight: 500" style-hover="border-color: #15171C; color: #15171C">{{ t.buyerCta }}</a>
+</div>
 </div>
 </div>
 </section>
@@ -483,6 +487,7 @@ input,textarea,select{font-size:16px!important}
 <script type="text/x-dc" data-dc-script="">
 const T = {
 fr: {
+  navOffers: 'Offres', offersHref: '/offres/?lang=fr', buyerOffers: 'Voir les offres',
   navPaths: 'Fabricants · Acheteurs', navHow: 'Fonctionnement', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10-13 novembre · Hall B4, stand 251/12',
   heroTitle: 'Les fabricants chinois de composants, connectés aux acheteurs européens.',
@@ -519,6 +524,7 @@ fr: {
   offices: 'Shenzhen · Paris · Denver'
 },
 en: {
+  navOffers: 'Offers', offersHref: '/offres/?lang=en', buyerOffers: 'See the offers',
   navPaths: 'Manufacturers · Buyers', navHow: 'How it works', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10–13 November · Hall B4, Booth 251/12',
   heroTitle: 'Chinese component makers, connected to European buyers.',
@@ -555,6 +561,7 @@ en: {
   offices: 'Shenzhen · Paris · Denver'
 },
 zh: {
+  navOffers: '报价', offersHref: '/offres/?lang=zh', buyerOffers: '查看报价',
   navPaths: '制造商 · 采购方', navHow: '使用流程', navContact: '联系我们',
   event: 'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位',
   heroTitle: '中国元器件制造商，直连欧洲采购方。',
