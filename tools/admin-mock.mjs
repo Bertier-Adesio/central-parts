@@ -94,7 +94,8 @@ export function createMock() {
     buyer_company: company, buyer_vat: 'FR00999999999', vat_checked: true, buyer_name: 'Acheteur Test', buyer_email: 'achats@example.com',
     buyer_phone: null, delivery: 'FR · 1 rue de l\'Exemple, 69000 Lyon', message: null, created_at: created, updated_at: created,
     decided_at: status === 'pending_validation' ? null : created, decided_by: status === 'pending_validation' ? null : 'admin:' + ADMIN_EMAIL,
-    reject_reason: null, answered_at: null });
+    reject_reason: null, answered_at: null, billing: 'FR · 2 avenue de l\'Exemple, 75000 Paris', transport: { mode: 'central', carrier: 'DHL' },
+    ship_address: { label: 'Entrepôt Shenzhen (fictif)', city: 'Shenzhen', country: 'CN' } });
   const requests = [
     req('PR-0012', 'pending_validation', 'NE555DR', 2000, 0.0957, 191.4, 'Atelier Exemple (fictif)', day(33, 9, 5)),
     req('PR-0011', 'pending_validation', 'STM32G071RBT6', 500, 1.9, 950, 'Bureau d\'études Test (fictif)', day(33, 8, 40)),
@@ -165,6 +166,11 @@ export function createMock() {
       if (path === '/rfq') {
         const s = query.has('status') ? query.get('status') : 'pending_validation';
         return [200, rfqs.filter((d) => !s || d.status === s)];
+      }
+      if (path === '/supplier-addresses') {
+        return [200, query.get('org') === 'ORG-0110' ? [
+          { id: 'ADR-0001', label: 'Entrepôt Shenzhen (fictif)', address: 'Futian, bâtiment 1', postal_code: '518000', city: 'Shenzhen', country: 'CN', contact: '李先生', phone: null, is_default: true, lots: 10 },
+          { id: 'ADR-0002', label: 'Entrepôt Hong Kong (fictif)', address: 'Kwun Tong, unit 2', postal_code: null, city: 'Hong Kong', country: 'HK', contact: null, phone: null, is_default: false, lots: 0 }] : []];
       }
       if (path === '/lots') {
         const org = query.get('org'), q = (query.get('q') || '').toLowerCase(), off = Math.max(0, Number(query.get('offset')) || 0);

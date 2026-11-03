@@ -46,6 +46,12 @@ async function mock(page, errors) {
         moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0, incoterm: mpn === 'LM358DR' ? 'DAP' : 'FCA', fca_place: mpn === 'BSS138' ? 'HK' : 'SZ',
         terms: mpn === 'LM358DR' ? TERMS : null });
     }
+    if (u.pathname.endsWith('/address')) {
+      state.addressCalls = (state.addressCalls || 0) + 1;
+      return reply({ results: u.searchParams.get('q').toLowerCase().startsWith('3 rue') ? [
+        { label: '3 Rue de l’Exemple, 33000 Bordeaux, FR', line1: '3 Rue de l’Exemple', postcode: '33000', city: 'Bordeaux', country: 'FR' },
+        { label: '3 Rue de l’Exemple, 13000 Marseille, FR', line1: '3 Rue de l’Exemple', postcode: '13000', city: 'Marseille', country: 'FR' }] : [] });
+    }
     if (u.pathname.endsWith('/shipping')) {
       // Groupes de fournisseurs comme cart_shipping : LM358DR chez le fournisseur à conditions, le reste chez un autre.
       const lines = JSON.parse(req.postData()).lines, a = [], b = [];
@@ -130,13 +136,30 @@ await page.fill('#o-company', 'Atelier Panier (fictif)');
 await page.fill('#o-vat', 'FR00999999999');
 await page.fill('#o-name', 'Léa Test');
 await page.fill('#o-email', 'panier@example.com');
-await page.selectOption('#o-country', 'FR');
-await page.fill('#o-address', '3 rue de l\'Exemple, 33000 Bordeaux');
+await page.selectOption('#o-bcountry', 'FR');
+// Complétion d'adresses (Photon, par la fonction Edge) : suggestions, puis adresse et pays remplis d'un clic.
+await page.fill('#o-baddress', '3 rue de l');
+await page.waitForSelector('#sg-b:not([hidden]) button');
+ok((await page.$$('#sg-b button')).length === 2 && norm(await page.textContent('#sg-b')).includes('© contributeurs OpenStreetMap'), 'adresses : suggestions et mention OpenStreetMap');
+await page.click('#sg-b button[data-i="0"]');
+ok((await page.inputValue('#o-baddress')) === '3 Rue de l’Exemple\n33000 Bordeaux' && (await page.inputValue('#o-bcountry')) === 'FR' && await page.isHidden('#sg-b'),
+  'adresses : adresse choisie remplie (rue, code postal et ville), liste fermée');
+ok(await page.isHidden('#deliv') && await page.isHidden('#own-box'), 'formulaire : livraison à l\'adresse de facturation et transport par Central.Parts par défaut');
+// Livraison ailleurs, puis compte transporteur de l'acheteur (ADR 0030).
+await page.uncheck('#o-same');
+await page.selectOption('#o-country', 'DE');
+await page.fill('#o-address', 'Lager 5, 10115 Berlin');
+await page.check('#t-own');
+await page.selectOption('#o-carrier', 'FedEx');
+ok(norm(await page.textContent('#ship')).includes('Transport facturé sur votre compte FedEx'), 'livraison : compte transporteur de l\'acheteur, FCA');
 await page.check('#o-terms');
 await page.click('#o-send');
 ok(norm(await page.textContent('#msg')).includes('Retirez d’abord') && state.carts.length === 0, 'panier : envoi bloqué tant qu\'une offre disparue reste');
 await page.click('#lines li.gone button.rm');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 3);
+await page.click('#o-send');
+ok(norm(await page.textContent('#msg')).includes('numéro de compte') && state.carts.length === 0, 'compte transporteur sans numéro : envoi bloqué');
+await page.fill('#o-account', '1234 5678 9');
 await page.fill('#q-0', '6000');
 await page.waitForFunction(() => document.getElementById('lines').textContent.replace(/[  ]/g, ' ').includes('750,00 €'));
 ok(norm(await page.textContent('#lines li:first-child')).includes('Quantité ajustée à 7 500 (minimum 2 500, par 2 500)'), 'panier : 6 000 ajusté au multiple du SPQ supérieur (7 500), devis recalculé');
@@ -147,6 +170,9 @@ ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.inne
 await page.click('#o-send');
 await page.waitForSelector('#done:not([hidden])');
 const sent = state.carts.at(-1);
+ok(state.addressCalls >= 1 && state.external.length === 0, 'adresses : complétion par la fonction Edge seulement, aucune requête externe');
+ok(sent.billing_country === 'FR' && sent.billing_address.includes('Bordeaux') && sent.country === 'DE' && sent.address.includes('Berlin') &&
+  sent.transport.mode === 'own' && sent.transport.carrier === 'FedEx' && sent.transport.account === '1234 5678 9', 'envoi : facturation, livraison et transport');
 ok(sent.lines.length === 3 && sent.lines[0].qty === '7500' && sent.currency === 'EUR' && sent.company === 'Atelier Panier (fictif)', 'envoi : trois lignes, quantités, coordonnées, en euros');
 ok(norm(await page.textContent('#done-msg')).includes('CART-0007') && (await page.getAttribute('#done-link', 'href')).includes('k=tok'), 'envoi : référence du panier et lien de suivi');
 ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')))).length === 0 && await page.isHidden('#cart') && await page.isHidden('#empty'), 'envoi : panier vidé');
@@ -172,8 +198,8 @@ PRICE.LM358DR = 0.06;
 await page.goto(BASE + '/panier/?lang=fr');
 await page.waitForSelector('#lines li');
 delete PRICE.LM358DR;
-for (const [id, v] of [['#o-company', 'A'], ['#o-vat', 'DE123456789'], ['#o-name', 'B'], ['#o-email', 'b@example.com'], ['#o-address', 'C']]) await page.fill(id, v);
-await page.selectOption('#o-country', 'DE');
+for (const [id, v] of [['#o-company', 'A'], ['#o-vat', 'DE123456789'], ['#o-name', 'B'], ['#o-email', 'b@example.com'], ['#o-baddress', 'C']]) await page.fill(id, v);
+await page.selectOption('#o-bcountry', 'DE');
 await page.check('#o-terms');
 await page.click('#o-send');
 await page.waitForSelector('#msg.err');

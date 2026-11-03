@@ -11,12 +11,15 @@
 //                prévient les opérateurs (un seul avis pour le panier)
 //   POST /order/shipping {lines, currency} → livraison du panier par fournisseur (numérotés, jamais nommés) : conditions,
 //                livraison offerte ou montant manquant (migration 20261103000029)
+//   GET  /order/address?q&country&lang → complétion d'adresses (Photon, OpenStreetMap, ADR 0030), interrogé ici
+//                côté serveur : le navigateur ne charge rien d'un tiers ; 5 adresses au plus, filtrées par pays
 //   GET  /order/status?ref&k → statut de la demande ou du panier (CART-…), jamais le fournisseur
 //
 // Le numéro de TVA est vérifié auprès du service VIES de la Commission européenne quand c'est possible.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { notifyOperators } from '../_shared/wechat.ts';
 import { purchaseCartOperatorNote, purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
+import { normalizePhoton, PHOTON_DEFAULT, photonUrl } from '../_shared/address.js';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
@@ -61,6 +64,23 @@ Deno.serve(async (req) => {
         p_qty: parseInt(q.get('qty') || '0', 10) || 0, p_currency: q.get('cur') || 'EUR',
       });
       return error ? fail(error) : json(data);
+    }
+
+    if (req.method === 'GET' && u.pathname.endsWith('/address')) {
+      const text = (q.get('q') || '').trim();
+      if (text.length < 4) return json({ results: [] });
+      const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+      const { error } = await db.rpc('address_lookup_hit', { p_ip: ip });
+      if (error) return fail(error);
+      try {
+        // Instance publique de Komoot par défaut (usage modéré) ; ADDRESS_API pour une instance auto-hébergée.
+        const r = await fetch(photonUrl(Deno.env.get('ADDRESS_API') || PHOTON_DEFAULT, text, q.get('lang') || 'default'), {
+          headers: { 'User-Agent': 'Central.Parts address lookup (https://central.parts)' }, signal: AbortSignal.timeout(4000) });
+        if (!r.ok) return json({ results: [], unavailable: true });
+        return json({ results: normalizePhoton(await r.json(), q.get('country') || '') });
+      } catch {
+        return json({ results: [], unavailable: true });
+      }
     }
 
     if (req.method === 'GET' && u.pathname.endsWith('/status')) {

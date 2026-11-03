@@ -198,6 +198,8 @@ const reqText = norm(await page.textContent('#req-list'));
 ok(reqText.includes('Atelier Exemple (fictif)') && reqText.includes('NE555DR') && reqText.includes('ORG-0110 V-5') && reqText.includes('VIES vérifié'),
   'demande du site : acheteur, référence, fournisseur et prix des deux côtés');
 ok(!reqText.includes('PR-0010'), 'filtre « À valider » : la demande déjà transmise n\'apparaît pas');
+ok(reqText.includes('Facturation') && reqText.includes('75000 Paris') && reqText.includes('Par Central.Parts (DAP), DHL préféré') && reqText.includes('Entrepôt Shenzhen (fictif) · Shenzhen CN'),
+  'demande : facturation, transport choisi et adresse d\'expédition du lot (ADR 0030)');
 ok(norm(await page.textContent('#rfq-list')).includes('DEM-1004') && !norm(await page.textContent('#rfq-list')).includes('DEM-1003'), 'RFQ de l\'API à valider');
 // Refus sans motif : rien n'est envoyé.
 await page.click('#req-list li[data-ref="PR-0011"] button[data-ract="req_reject"]');
@@ -251,6 +253,16 @@ await page.click('#req-list li[data-ref="PR-0013"] button[data-ract="req_approve
 await page.click('#c-ok');
 await page.waitForSelector('#msg.info');
 ok(norm(await page.textContent('#msg')).includes('déjà été traitée'), 'demande déjà traitée par le robot : message, sans erreur');
+
+// 9 ter. Adresses d'expédition d'un vendeur (lecture), dans sa fiche.
+await page.click('#tab-sup');
+await page.click('#filters button[data-s=""]');
+await page.waitForSelector('#sup-list button[data-org="ORG-0110"]');
+await page.click('#sup-list button[data-org="ORG-0110"]');
+await page.waitForFunction(() => (document.getElementById('d-addr') || {}).textContent?.includes('Entrepôt Shenzhen'));
+const addr = norm(await page.textContent('#d-addr'));
+ok(addr.includes('par défaut') && addr.includes('Futian, bâtiment 1, 518000 Shenzhen, CN') && addr.includes('Entrepôt Hong Kong (fictif)') && addr.includes('10 lot(s)'),
+  'fiche vendeur : adresses d\'expédition, la principale signalée');
 
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
 await page.close();
