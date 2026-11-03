@@ -98,11 +98,10 @@ ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références')
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
 ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
 ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
-ok(norm(await page.textContent('#rows tr:nth-child(2)')).includes('DAP adresse de livraison') && norm(await page.textContent('#rows tr:nth-child(2)')).includes('Livraison offerte dès 1 840,00 €'),
-  'offres : fournisseur à conditions propres, DAP et livraison offerte dès un montant');
-ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('FCA Shenzhen') && norm(await page.textContent('#rows tr:nth-child(3)')).includes('FCA Hong Kong'),
-  'offres : Incoterm FCA et lieu (lieu de la base, sinon pays d\'expédition)');
-ok(norm(await page.textContent('#hint')).includes('Incoterm indiqué sur chaque offre (Incoterms® 2020)'), 'offres : mention Incoterms® 2020');
+// La livraison n'est décrite que dans le panier et la page des conditions commerciales.
+ok(!/DAP|FCA|Livraison offerte/.test(norm(await page.textContent('#rows'))), 'offres : ni Incoterm ni livraison sur les lignes');
+ok((await page.getAttribute('#to-terms', 'href')) === '/conditions/?lang=fr' && norm(await page.textContent('#to-terms')).includes('Conditions commerciales'),
+  'offres : lien vers les conditions commerciales');
 
 // 2. /recherche/ : ajout d'une offre « sur demande ».
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
@@ -222,6 +221,27 @@ await page.close();
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), '390 px : panier sans défilement horizontal');
   ok(errs.length === 0, 'aucune erreur console (390 px) : ' + errs.join(' | '));
   await c.close();
+}
+
+// 8 bis. Conditions commerciales : trois langues, chiffres de la règle de Central.Parts.
+{
+  const p = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'fr-FR' }), errs = [];
+  await mock(p, errs);
+  await p.goto(BASE + '/conditions/?lang=fr');
+  const c = norm(await p.textContent('main'));
+  ok(c.includes('DAP, Incoterms® 2020') && c.includes('2 000 €') && c.includes('FCA au lieu d’expédition') && c.includes('30 jours') && c.includes('90 jours') && c.includes('48 heures'),
+    'conditions : livraison DAP, offerte dès 2 000 €, compte de l\'acheteur en FCA, délais, retours, garantie');
+  await p.click('[data-lang=zh]');
+  ok((await p.textContent('h1')) === '交易条件' && norm(await p.textContent('main')).includes('2 000 欧元免运费'), '中文 : conditions');
+  await p.click('[data-lang=en]');
+  ok((await p.textContent('h1')) === 'Terms of sale' && (await p.getAttribute('#to-cart', 'href')) === '/panier/?lang=en', 'EN : conditions et liens');
+  ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth) && errs.length === 0, 'conditions : 390 px sans défilement ni erreur');
+  ok(await p.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'conditions : non indexées');
+  await p.close();
+  const nj = await browser.newPage({ javaScriptEnabled: false });
+  await nj.goto(BASE + '/conditions/');
+  ok((await nj.textContent('h1')) === 'Conditions commerciales' && norm(await nj.textContent('main')).includes('Livraison offerte au-delà de 2 000 €'), 'conditions : lisibles sans JavaScript');
+  await nj.close();
 }
 
 // 9. Sans JavaScript.

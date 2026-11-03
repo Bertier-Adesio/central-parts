@@ -32,6 +32,11 @@ Les prix publics sont en euros, hors transport, droits et TVA à l'import (ADR 0
   - la phrase sur les prix dit « Incoterm indiqué sur chaque offre (Incoterms® 2020) ».
 - **Les chiffres (seuil, délais, retours, garantie) sont des conditions commerciales à valider** avec la relecture juridique après le 16 novembre 2026. Ils sont affichés à titre d'information jusque-là.
 
+### Où la livraison est décrite (complément du 3 novembre 2026)
+- Décision de Bertier : la livraison n'apparaît que **dans le panier** (Incoterm sur chaque ligne, bloc « Livraison » par fournisseur) et sur la page **Conditions commerciales** (`/conditions/`, FR, EN, 中文, non indexée).
+- Les pages d'offres (`/offres/`, `/recherche/`) ne montrent que le produit et le prix, avec un lien vers cette page. Les API continuent de renvoyer `incoterm`, `fca_place` et `terms`.
+- La page reprend les chiffres de la règle de Central.Parts (`default_terms`). Si la règle change, la page doit être mise à jour en même temps.
+
 ### Piste pour les rails Opportunity (après le 16 novembre 2026)
 - Les plateformes de séquestre du marché font régler à la main, en texte libre, ce qu'un Incoterm fixerait : qui paie le transport, l'assurance et les droits ; transporteur et compte transporteur ; délai ; conditions de retour.
 - Pour la fiche transaction Opportunity : une liste d'Incoterms 2020 avec lieu nommé obligatoire, complétée par le transporteur, le compte transporteur, le délai d'expédition et les conditions de retour. À concevoir avec la relecture juridique du paiement à l'acceptation.
