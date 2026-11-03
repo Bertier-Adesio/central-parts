@@ -86,6 +86,10 @@ await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
 ok(calls[calls.length - 1] === '?cur=EUR&q=NE555' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé (ancien paramètre cur ignoré) : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 340 px');
+// Marge pour des polices plus larges (CI) : la liste et l'icône du panier tiennent aussi à 320 px.
+await page.setViewportSize({ width: 320, height: 844 });
+ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 320 px (icône du panier comprise)');
+await page.setViewportSize({ width: 340, height: 844 });
 
 // Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
 ok((await page.$$('.res .buy')).length === 0, 'achats fermés : pas de bouton « Acheter »');
