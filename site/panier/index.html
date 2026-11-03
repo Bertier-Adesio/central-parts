@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<!-- Panier des acheteurs (ADR 0028) : FR, EN, 中文. Écrite à la main, pas générée, non indexée.
+     Les références ajoutées depuis /offres/ et /recherche/ sont gardées dans ce navigateur (localStorage « cp-cart »).
+     Chaque ligne est chiffrée par la fonction Edge « order » (/order/quote, en euros) ; l'envoi crée un panier CART-…
+     (une demande PR-… par ligne), validé par Central.Parts avant tout envoi au fournisseur (ADR 0026).
+     Textes chinois nouveaux : à faire relire. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panier · Cart · 购物车 — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:820px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
+main.wrap{padding:32px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+h2{font-size:var(--text-lg);margin:0 0 12px}
+.lead{color:var(--fg-2);margin:0 0 24px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none;background:var(--bg-inverse);color:var(--fg-inverse)}
+.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
+.btn-small{min-height:var(--control-h-md, 32px);padding:0 12px;font-size:var(--text-sm)}
+.btn[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+.msg.ok{background:var(--status-success-bg);color:var(--status-success)}
+.msg.info{background:var(--status-info-bg);color:var(--status-info)}
+ul.lines{list-style:none;margin:0;padding:0}
+ul.lines li{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,180px) auto;gap:8px 16px;align-items:center;padding:14px 0;border-top:1px solid var(--border-1)}
+ul.lines li:first-child{border-top:0}
+ul.lines li.gone .mpn{text-decoration:line-through}
+.mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap;margin:4px 4px 0 0}
+.qty label{display:block;font-size:var(--text-xs);color:var(--fg-3)}
+.qty input{width:100%;box-sizing:border-box;min-height:var(--control-h-lg);padding:0 10px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;font-variant-numeric:tabular-nums}
+.lp{font-size:var(--text-sm);font-variant-numeric:tabular-nums}
+.lp strong{display:block;font-size:var(--text-base)}
+.total{display:flex;justify-content:space-between;gap:12px;border-top:2px solid var(--border-2);padding:14px 0 0;margin:8px 0 0;font-weight:var(--weight-semibold)}
+@media (max-width:560px){
+  ul.lines li{grid-template-columns:1fr 1fr}
+  ul.lines li .ref{grid-column:1 / -1}
+  ul.lines li .rm{justify-self:end}
+}
+form.order label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+form.order input,form.order select,form.order textarea{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:8px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+form.order .two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:480px){form.order .two{grid-template-columns:1fr}}
+form.order .check{display:flex;gap:8px;align-items:flex-start;font-weight:normal}
+form.order .check input{width:auto;min-height:0;margin:3px 0 0}
+.cta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/" id="home">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <div class="langs" role="group" aria-label="Langue / Language / 语言">
+      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 data-t="title">Panier</h1>
+  <p class="lead" data-t="lead">Une seule demande pour toutes vos références. Central.Parts vérifie la demande, puis confirme la disponibilité auprès de chaque fournisseur avant de vous envoyer une facture proforma.</p>
+  <noscript><p class="msg err">Le panier a besoin de JavaScript. · The cart needs JavaScript. · 购物车需要启用 JavaScript。 · <a href="mailto:contact@central.parts">contact@central.parts</a></p></noscript>
+  <div id="msg" class="msg" role="status" hidden></div>
+
+  <section class="card" id="empty" hidden>
+    <p data-t="empty" style="margin:0 0 12px">Votre panier est vide.</p>
+    <div class="cta"><a class="btn" href="/offres/" id="to-offers" data-t="toOffers">Voir les offres</a><a class="btn btn-line" href="/recherche/" id="to-search" data-t="toSearch">Rechercher une référence</a></div>
+  </section>
+
+  <section class="card" id="cart" hidden>
+    <h2 data-t="linesTitle">Références</h2>
+    <ul class="lines" id="lines"></ul>
+    <div class="total"><span data-t="total">Total indicatif</span><span id="total"></span></div>
+    <p class="muted" id="excl" data-t="excl">Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import. Les prix sont confirmés par la facture proforma.</p>
+    <div class="cta"><a class="btn btn-line btn-small" href="/offres/" id="more" data-t="more">Ajouter d’autres références</a></div>
+  </section>
+
+  <section class="card" id="buyer" hidden>
+    <h2 data-t="buyerTitle">Vos coordonnées</h2>
+    <form class="order" id="order" novalidate>
+      <div class="two">
+        <label><span data-t="fCompany">Société</span><input type="text" id="o-company" required maxlength="160" autocomplete="organization"></label>
+        <label><span data-t="fVat">N° de TVA intracommunautaire</span><input type="text" id="o-vat" required maxlength="20" placeholder="FR12345678901" spellcheck="false"></label>
+        <label><span data-t="fName">Nom et prénom</span><input type="text" id="o-name" required maxlength="120" autocomplete="name"></label>
+        <label><span data-t="fEmail">E-mail professionnel</span><input type="email" id="o-email" required maxlength="160" autocomplete="email"></label>
+        <label><span data-t="fPhone">Téléphone (facultatif)</span><input type="tel" id="o-phone" maxlength="40" autocomplete="tel"></label>
+        <label><span data-t="fCountry">Pays de livraison</span><select id="o-country" required></select></label>
+      </div>
+      <label><span data-t="fAddress">Adresse de livraison</span><textarea id="o-address" required maxlength="500" rows="3" autocomplete="street-address"></textarea></label>
+      <label><span data-t="fMessage">Message (facultatif)</span><textarea id="o-message" maxlength="1000" rows="2"></textarea></label>
+      <label class="check"><input type="checkbox" id="o-terms" required><span data-t="terms">Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).</span></label>
+      <div class="cta"><button class="btn" type="submit" id="o-send" data-t="send">Envoyer la demande</button></div>
+    </form>
+  </section>
+
+  <section class="card" id="done" hidden>
+    <p class="msg ok" id="done-msg" style="margin:0 0 12px"></p>
+    <p class="muted" data-t="doneNext">Central.Parts vérifie votre demande et la transmet aux fournisseurs, qui confirment la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :</p>
+    <p style="overflow-wrap:anywhere"><a id="done-link" href="#"></a></p>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var ORDER_FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';
+  var KEY = 'cp-cart', MAX = 30;
+  var COUNTRIES = ['AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK'];
+  var T = {
+    fr: { title: 'Panier', lead: 'Une seule demande pour toutes vos références. Central.Parts vérifie la demande, puis confirme la disponibilité auprès de chaque fournisseur avant de vous envoyer une facture proforma.',
+      empty: 'Votre panier est vide.', toOffers: 'Voir les offres', toSearch: 'Rechercher une référence', linesTitle: 'Références',
+      total: 'Total indicatif', excl: 'Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import. Les prix sont confirmés par la facture proforma.',
+      more: 'Ajouter d’autres références', buyerTitle: 'Vos coordonnées', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom',
+      fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
+      terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
+      send: 'Envoyer la demande', qty: 'Quantité', unit: 'prix unitaire', toConfirm: 'Prix à confirmer', remove: 'Retirer', moq: 'minimum {n}',
+      partial: 'Quantité supérieure au stock affiché : le fournisseur confirmera la quantité disponible.', gone: 'Offre plus disponible : retirez cette ligne.',
+      totalConfirm: 'à confirmer', choose: 'Choisir', sent: 'Demande {ref} envoyée ({n} référence(s)).',
+      doneNext: 'Central.Parts vérifie votre demande et la transmet aux fournisseurs, qui confirment la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
+      src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus' }, shipFrom: 'Expédié de',
+      e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire et les quantités.', not_found: 'La référence {mpn} n’est plus disponible : retirez-la du panier.',
+        terms: 'Cochez la case pour envoyer la demande.', gone: 'Retirez d’abord les offres qui ne sont plus disponibles.', rate_limited: 'Trop de demandes : réessayez dans une heure ou écrivez à contact@central.parts.',
+        network: 'Erreur réseau, réessayez.', other: 'Envoi impossible pour l’instant, réessayez plus tard ou écrivez à contact@central.parts.' }, home: '/', offers: '/offres/?lang=fr', search: '/recherche/?lang=fr' },
+    en: { title: 'Cart', lead: 'One request for all your part numbers. Central.Parts checks the request, then confirms availability with each supplier before sending you a proforma invoice.',
+      empty: 'Your cart is empty.', toOffers: 'See the offers', toSearch: 'Search for a part number', linesTitle: 'Part numbers',
+      total: 'Indicative total', excl: 'All-inclusive prices in euros, converted at the ECB reference rate, excluding import duties and VAT. Prices are confirmed by the proforma invoice.',
+      more: 'Add more part numbers', buyerTitle: 'Your details', fCompany: 'Company', fVat: 'EU VAT number', fName: 'Full name',
+      fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
+      terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
+      send: 'Send the request', qty: 'Quantity', unit: 'unit price', toConfirm: 'Price to be confirmed', remove: 'Remove', moq: 'minimum {n}',
+      partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.', gone: 'Offer no longer available: remove this line.',
+      totalConfirm: 'to be confirmed', choose: 'Choose', sent: 'Request {ref} sent ({n} part number(s)).',
+      doneNext: 'Central.Parts checks your request and sends it to the suppliers, who confirm availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
+      src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Surplus' }, shipFrom: 'Ships from',
+      e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields and the quantities.', not_found: 'Part number {mpn} is no longer available: remove it from the cart.',
+        terms: 'Tick the box to send the request.', gone: 'First remove the offers that are no longer available.', rate_limited: 'Too many requests: try again in an hour or write to contact@central.parts.',
+        network: 'Network error, please try again.', other: 'Sending is not possible right now: try again later or write to contact@central.parts.' }, home: '/en/', offers: '/offres/?lang=en', search: '/recherche/?lang=en' },
+    zh: { title: '购物车', lead: '所有型号一次提交。Central.Parts 审核申请后，向各供应商确认库存，再向您发送形式发票。',
+      empty: '购物车为空。', toOffers: '查看报价', toSearch: '搜索型号', linesTitle: '型号',
+      total: '参考合计', excl: '价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含进口关税和增值税。最终价格以形式发票为准。',
+      more: '继续添加型号', buyerTitle: '您的信息', fCompany: '公司', fVat: '欧盟增值税号', fName: '姓名',
+      fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '收货国家', fAddress: '收货地址', fMessage: '留言（选填）',
+      terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到转账后交易成立。买方负责进口清关（进口关税和增值税）。',
+      send: '提交申请', qty: '数量', unit: '单价', toConfirm: '价格待确认', remove: '移除', moq: '最少 {n}',
+      partial: '数量超过显示库存：供应商将确认可供数量。', gone: '该报价已失效，请移除此行。',
+      totalConfirm: '待确认', choose: '请选择', sent: '申请 {ref} 已提交（{n} 个型号）。',
+      doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
+      src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核的贸易商', surplus: '呆滞库存' }, shipFrom: '发货地',
+      e: { vat_invalid: '增值税号未通过 VIES 验证，请核对。', invalid: '请检查表单信息和数量。', not_found: '型号 {mpn} 已无货，请从购物车中移除。',
+        terms: '请勾选同意后提交。', gone: '请先移除已失效的报价。', rate_limited: '申请过于频繁，请一小时后再试或发送邮件至 contact@central.parts。',
+        network: '网络错误，请重试。', other: '暂时无法提交，请稍后再试或发送邮件至 contact@central.parts。' }, home: '/zh/', offers: '/offres/?lang=zh', search: '/recherche/?lang=zh' }
+  };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  var COUNTRY = { fr: { CN: 'Chine', HK: 'Hong Kong', TW: 'Taïwan' }, en: { CN: 'China', HK: 'Hong Kong', TW: 'Taiwan' }, zh: { CN: '中国', HK: '中国香港', TW: '中国台湾' } };
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var params = new URLSearchParams(location.search);
+  var nav = (navigator.language || 'fr').slice(0, 2), lang = null;
+  try { lang = localStorage.getItem('cp-lang-offres'); } catch (e) {}
+  if (T[params.get('lang')]) lang = params.get('lang');
+  if (!T[lang]) lang = T[nav] ? nav : 'en';
+  var t = function () { return T[lang]; };
+
+  // ------------------------------------------------------------ panier (navigateur)
+  function load() {
+    try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a.filter(function (l) { return l && l.mpn && l.source && l.ship_from; }).slice(0, MAX) : []; }
+    catch (e) { return []; }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(cart.map(function (l) { return { mpn: l.mpn, manufacturer: l.manufacturer, source: l.source, ship_from: l.ship_from, qty: l.qty, moq: l.moq }; }))); } catch (e) {} }
+  var cart = load(), quotes = {}, timers = {};
+  var keyOf = function (l) { return l.mpn + '|' + l.source + '|' + l.ship_from; };
+
+  function money(v) {
+    try { return new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(v); }
+    catch (e) { return v + ' EUR'; }
+  }
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + (kind || 'info'); m.textContent = text || ''; }
+  function call(url, opts) {
+    return fetch(url, opts).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); },
+      function () { throw { error: 'network' }; });
+  }
+  function quote(l) {
+    var k = keyOf(l);
+    quotes[k] = { loading: true };
+    return call(ORDER_FN + '/quote?mpn=' + encodeURIComponent(l.mpn) + '&source=' + encodeURIComponent(l.source) + '&ship_from=' + encodeURIComponent(l.ship_from) + '&qty=' + l.qty + '&cur=EUR')
+      .then(function (q) { quotes[k] = q; }, function (d) { quotes[k] = { error: d.error || 'other' }; })
+      .then(render);
+  }
+
+  function lineHtml(l, i) {
+    var q = quotes[keyOf(l)] || {}, price;
+    if (q.error === 'not_found') price = '<span class="msg err" style="display:block;margin:0;padding:6px 10px">' + esc(t().gone) + '</span>';
+    else if (q.loading || (!q.error && q.unit_price === undefined)) price = '<span class="muted">…</span>';
+    else if (q.error) price = '<span class="muted">' + esc(t().e[q.error] || t().e.other) + '</span>';
+    else if (q.unit_price == null) price = '<span class="muted">' + esc(t().toConfirm) + '</span>';
+    else price = '<strong>' + esc(money(q.total)) + '</strong><span class="muted">' + esc(t().unit) + ' ' + esc(money(q.unit_price)) + '</span>' + (q.covered ? '' : '<span class="muted" style="display:block">' + esc(t().partial) + '</span>');
+    return '<li data-i="' + i + '"' + (q.error === 'not_found' ? ' class="gone"' : '') + '>' +
+      '<div class="ref"><div class="mpn">' + esc(l.mpn) + '</div><div class="muted">' + esc(l.manufacturer || '') + '</div>' +
+        '<span class="tag">' + esc(t().src[l.source] || l.source) + '</span><span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][l.ship_from]) || l.ship_from) + '</span></div>' +
+      '<div class="qty"><label for="q-' + i + '">' + esc(t().qty) + (l.moq > 1 ? ' · ' + esc(t().moq.replace('{n}', l.moq)) : '') + '</label>' +
+        '<input id="q-' + i + '" type="number" min="1" step="1" inputmode="numeric" value="' + esc(l.qty) + '"></div>' +
+      '<div class="lp">' + price + '</div>' +
+      '<button class="btn btn-line btn-small rm" type="button">' + esc(t().remove) + '</button></li>';
+  }
+  function render() {
+    $('empty').hidden = cart.length > 0 || !$('done').hidden;
+    $('cart').hidden = $('buyer').hidden = !cart.length;
+    if (!cart.length) return;
+    var focus = document.activeElement && document.activeElement.id;
+    var caret = focus && /^q-/.test(focus) ? document.activeElement.value : null;
+    $('lines').innerHTML = cart.map(lineHtml).join('');
+    if (caret !== null && $(focus)) { $(focus).focus(); $(focus).value = caret; }
+    var total = 0, sure = true;
+    cart.forEach(function (l) { var q = quotes[keyOf(l)]; if (q && q.total != null) total += q.total; else sure = false; });
+    $('total').textContent = sure ? money(total) : (total ? money(total) + ' + ' : '') + t().totalConfirm;
+  }
+  $('lines').addEventListener('input', function (ev) {
+    var li = ev.target.closest('li[data-i]'); if (!li || ev.target.tagName !== 'INPUT') return;
+    var l = cart[+li.getAttribute('data-i')], n = parseInt(ev.target.value, 10);
+    if (!(n > 0) || n > 10000000) return;
+    l.qty = n; save();
+    clearTimeout(timers[keyOf(l)]); timers[keyOf(l)] = setTimeout(function () { quote(l); }, 400);
+  });
+  $('lines').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button.rm'); if (!b) return;
+    cart.splice(+b.closest('li').getAttribute('data-i'), 1); save(); say('', ''); render();
+  });
+
+  // ------------------------------------------------------------ envoi
+  function fillCountries() {
+    var names = null; try { names = new Intl.DisplayNames([LOCALE[lang]], { type: 'region' }); } catch (e) {}
+    var cur = $('o-country').value || (lang === 'fr' ? 'FR' : '');
+    $('o-country').innerHTML = '<option value="">' + esc(t().choose) + '</option>' + COUNTRIES.map(function (c) { return [c, names ? names.of(c) : c]; })
+      .sort(function (a, b) { return a[1].localeCompare(b[1]); }).map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
+    $('o-country').value = cur;
+  }
+  $('order').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = function (id) { return $(id).value.trim(); };
+    if (cart.some(function (l) { return (quotes[keyOf(l)] || {}).error === 'not_found'; })) return say('err', t().e.gone);
+    if (!cart.length || cart.some(function (l) { return !(l.qty > 0); }) || !v('o-company') || !v('o-vat') || !v('o-name') ||
+        !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v('o-email')) || !v('o-country') || !v('o-address')) return say('err', t().e.invalid);
+    if (!$('o-terms').checked) return say('err', t().e.terms);
+    say('', ''); $('o-send').disabled = true;
+    call(ORDER_FN + '/cart', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      currency: 'EUR', lines: cart.map(function (l) { return { mpn: l.mpn, source: l.source, ship_from: l.ship_from, qty: String(l.qty) }; }),
+      company: v('o-company'), vat: v('o-vat'), name: v('o-name'), email: v('o-email'), phone: v('o-phone'),
+      country: v('o-country'), address: v('o-address'), message: v('o-message') }) })
+      .then(function (d) {
+        var n = cart.length;
+        cart = []; save();
+        $('done').hidden = false; render(); $('empty').hidden = true;
+        $('done-msg').textContent = t().sent.replace('{ref}', d.ref).replace('{n}', n);
+        $('done-link').href = d.status_url + '&lang=' + lang; $('done-link').textContent = d.status_url.replace(/&k=.*/, '');
+        $('done').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, function (d) {
+        var c = d.error || 'other';
+        if (c === 'not_found' && d.mpn) {
+          cart.forEach(function (l) { if (l.mpn.toUpperCase() === String(d.mpn).toUpperCase()) quotes[keyOf(l)] = { error: 'not_found' }; });
+          render();
+        }
+        say('err', (t().e[c] || t().e.other).replace('{mpn}', d.mpn || ''));
+        $('msg').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      })
+      .then(function () { $('o-send').disabled = false; });
+  });
+
+  // ------------------------------------------------------------ langue
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    $('home').setAttribute('href', t().home);
+    $('to-offers').href = $('more').href = t().offers; $('to-search').href = t().search;
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    fillCountries(); render();
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} say('', ''); applyLang(); });
+  });
+  // Un autre onglet (offres, recherche) ajoute une référence : le panier suit.
+  window.addEventListener('storage', function (ev) {
+    if (ev.key !== KEY) return;
+    cart = load(); cart.forEach(function (l) { if (!quotes[keyOf(l)]) quote(l); }); render();
+  });
+
+  applyLang();
+  cart.forEach(quote);
+})();
+</script>
+</body>
+</html>

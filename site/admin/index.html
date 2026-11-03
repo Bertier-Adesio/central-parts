@@ -503,6 +503,8 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       text: 'La demande est transmise au fournisseur : il la voit dans son espace et reçoit une alerte WeChat (référence, quantité, son prix, pays de livraison ; jamais l\'acheteur).' },
     req_reject: { title: 'Refuser la demande', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
       text: 'Rien n\'est envoyé au fournisseur. L\'acheteur voit « demande non retenue » sur sa page de suivi ; le motif reste interne.' },
+    cart_approve: { title: 'Valider tout le panier', ok: 'Valider les lignes', cls: 'btn-ok', reason: false,
+      text: 'Toutes les lignes à valider de ce panier sont transmises à leurs fournisseurs, chacun ne voyant que sa ligne (jamais l\'acheteur ni les autres lignes).' },
     rfq_approve: { title: 'Valider la RFQ', ok: 'Valider et diffuser', cls: 'btn-ok', reason: false,
       text: 'La RFQ est diffusée aux fournisseurs dont le stock correspond, dans WeChat et dans leur espace (jamais la plateforme ni l\'acheteur).' },
     rfq_reject: { title: 'Refuser la RFQ', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
@@ -512,7 +514,8 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function reqHtml(r) {
     var pend = r.status === 'pending_validation';
     return '<li data-ref="' + esc(r.ref) + '">' +
-      '<div class="r1"><span><span class="origin">Site web</span> <strong class="mono">' + esc(r.ref) + '</strong> · ' + esc(dt(r.created_at)) + '</span>' +
+      '<div class="r1"><span><span class="origin">Site web</span> <strong class="mono">' + esc(r.ref) + '</strong> · ' + esc(dt(r.created_at)) +
+        (r.cart_id ? ' · <span class="mono">' + esc(r.cart_id) + '</span> (' + esc(r.cart_lines) + ' ligne' + (r.cart_lines > 1 ? 's' : '') + ')' : '') + '</span>' +
       '<span class="badge ' + badgeClass(r.status) + '">' + esc(REQ_STATUS[r.status] || r.status) + '</span></div>' +
       '<dl class="kv">' +
       '<dt>Référence</dt><dd><strong class="mono">' + esc(r.mpn) + '</strong> × ' + num(r.qty) + '</dd>' +
@@ -525,8 +528,14 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       (r.decided_at ? '<dt>Décision</dt><dd>' + esc(dt(r.decided_at)) + ' · ' + esc(r.decided_by || '') + (r.reject_reason ? '<br><span class="muted">Motif : ' + esc(r.reject_reason) + '</span>' : '') + '</dd>' : '') +
       '</dl>' +
       (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="req_approve">Valider et transmettre au fournisseur</button>' +
-        '<button class="btn btn-danger" type="button" data-ract="req_reject">Refuser</button></div>' : '') +
+        '<button class="btn btn-danger" type="button" data-ract="req_reject">Refuser</button>' +
+        (r.cart_id && pendingOfCart(r.cart_id).length > 1 ? '<button class="btn btn-line" type="button" data-ract="cart_approve">Valider tout le panier (' + pendingOfCart(r.cart_id).length + ')</button>' : '') +
+        '</div>' : '') +
       '</li>';
+  }
+  // Lignes à valider d'un panier, parmi les demandes affichées.
+  function pendingOfCart(cart) {
+    return (state.reqRows || []).filter(function (x) { return x.cart_id === cart && x.status === 'pending_validation'; }).map(function (x) { return x.ref; });
   }
   function rfqHtml(d) {
     var pend = d.status === 'pending_validation';
@@ -558,6 +567,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       api('GET', '/rfq?status=' + encodeURIComponent(f))
     ]).then(function (res) {
       var site = res[0].rows || [], rfq = res[1] || [];
+      state.reqRows = site;
       $('req-list').innerHTML = site.length ? site.map(reqHtml).join('') : '<li class="empty">' + (f ? 'Aucune demande à valider.' : 'Aucune demande.') + '</li>';
       $('rfq-list').innerHTML = rfq.length ? rfq.map(rfqHtml).join('') : '<li class="empty">' + (f ? 'Aucune RFQ à valider.' : 'Aucune RFQ.') + '</li>';
       var c = res[0].counts || {};
@@ -582,7 +592,11 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var li = b.closest('li'), act = b.getAttribute('data-ract'), d = REQ_DECISION[act];
     var id = li.getAttribute('data-ref') || li.getAttribute('data-id');
     reqPending = { act: act, id: id }; pending = null;
-    $('c-title').textContent = d.title + ' · ' + id;
+    if (act === 'cart_approve') {
+      var row = (state.reqRows || []).filter(function (x) { return x.ref === id; })[0];
+      reqPending.refs = pendingOfCart(row.cart_id); reqPending.cart = row.cart_id;
+    }
+    $('c-title').textContent = d.title + ' · ' + (reqPending.cart ? reqPending.cart + ' (' + reqPending.refs.length + ' lignes)' : id);
     $('c-text').textContent = d.text;
     $('c-reason-l').hidden = !d.reason;
     $('c-reason-l').firstChild.textContent = 'Motif du refus (obligatoire, interne)';
@@ -602,6 +616,19 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (reject && !reason) {
       $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
       return;
+    }
+    if (p.act === 'cart_approve') {
+      $('c-ok').disabled = true;
+      var sent = 0, failed = [];
+      return p.refs.reduce(function (chain, ref) {
+        return chain.then(function () {
+          return api('POST', '/requests/approve', { ref: ref }).then(function () { sent++; }, function (e) { if (e && e.handled) throw e; failed.push(ref); });
+        });
+      }, Promise.resolve()).then(function () {
+        $('confirm').close(); reqPending = null;
+        show(p.cart + ' : ' + sent + ' ligne(s) validée(s) et transmise(s)' + (failed.length ? ' ; non traitée(s) : ' + failed.join(', ') + ' (déjà décidée(s) ailleurs ?)' : '') + '.', failed.length ? 'info' : 'ok');
+        return loadRequests();
+      }, function () { $('confirm').close(); reqPending = null; });
     }
     var site = /^req_/.test(p.act);
     var path = (site ? '/requests/' : '/rfq/') + (reject ? 'reject' : 'approve');

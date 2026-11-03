@@ -191,7 +191,7 @@ ok((await page.$$('#lot-list a[href^="javascript"]')).length === 0, 'lien « jav
 ok((await page.$$('#p-stock button[data-act], #p-stock input:not([type=search])')).length === 0, 'stocks : aucune action de modification');
 
 // 9 bis. Demandes de prix : site web et API au même endroit, rien ne part avant la validation (ADR 0023, 0026).
-ok((await page.textContent('#req-count')) === '3', 'onglet Demandes : compteur des demandes à valider (2 site + 1 API)');
+ok((await page.textContent('#req-count')) === '5', 'onglet Demandes : compteur des demandes à valider (4 site, dont un panier de 2, + 1 API)');
 await page.click('#tab-req');
 await page.waitForSelector('#req-list li[data-ref="PR-0012"]');
 const reqText = norm(await page.textContent('#req-list'));
@@ -217,7 +217,18 @@ await page.click('#c-ok');
 await page.waitForSelector('#msg.ok');
 ok(norm(await page.textContent('#msg')).includes('PR-0012 validée et transmise au fournisseur'), 'validation : message de confirmation');
 ok(mock.state.notified.some((x) => x.ref === 'PR-0012' && x.org === 'ORG-0110'), 'validation : fournisseur prévenu');
+// Panier : chaque ligne porte son panier ; « Valider tout le panier » transmet les deux lignes à leurs fournisseurs.
+await page.waitForFunction(() => !document.querySelector('#req-list li[data-ref="PR-0012"]'));
+const cartCard = norm(await page.textContent('#req-list li[data-ref="PR-0015"]'));
+ok(cartCard.includes('CART-0003') && cartCard.includes('(2 lignes)'), 'panier : référence et nombre de lignes sur la fiche');
+await page.click('#req-list li[data-ref="PR-0015"] button[data-ract="cart_approve"]');
+await page.waitForSelector('#confirm[open]');
+ok(norm(await page.textContent('#c-title')).includes('CART-0003 (2 lignes)') && calls('POST /requests/approve') === 1, 'panier : confirmation, rien d\'envoyé avant');
+await page.click('#c-ok');
 await page.waitForSelector('#req-list li.empty');
+ok(norm(await page.textContent('#msg')).includes('CART-0003 : 2 ligne(s) validée(s)'), 'panier : deux lignes validées');
+ok(mock.state.notified.some((x) => x.ref === 'PR-0015' && x.org === 'ORG-0110') && mock.state.notified.some((x) => x.ref === 'PR-0016' && x.org === 'ORG-0111'),
+  'panier : chaque fournisseur prévenu de sa ligne');
 // RFQ de l'API : validation et diffusion.
 await page.click('#rfq-list li[data-id="DEM-1004"] button[data-ract="rfq_approve"]');
 await page.waitForSelector('#confirm[open]');

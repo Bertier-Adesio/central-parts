@@ -328,6 +328,11 @@ ok(R.operatorHelpText().includes('approve PR-0001') && R.operatorHelpText().incl
 ok(R.STATUS_EN.pending_validation === 'awaiting your validation' && R.STATUS_EN.rejected === 'rejected', 'statuts : à valider, refusée');
 ok(/\/\^\(通过\|ok\|approve\)\\s\+\(PR-\\d\+\)\\s\*\$\/i/.test(ev) && /decide_purchase_request/.test(ev) && /notifySupplierOfRequest/.test(ev),
   'robot : approve / reject PR-… passent par decide_purchase_request, puis préviennent le fournisseur');
+const cartNote = R.purchaseCartOperatorNote('CART-0007', [opCard, { ...opCard, ref: 'PR-0021', mpn: 'LM358DR', qty: 500, unit_price: null }], null, 'EUR');
+ok(cartNote.startsWith('[Cart CART-0007] 2 line(s) · awaiting your validation') && cartNote.includes('PR-0020 · NE555DR × 2000') &&
+  cartNote.includes('PR-0021 · LM358DR × 500 · to confirm') && cartNote.includes('Total: to confirm') && cartNote.includes('line by line'),
+  'panier : un avis aux opérateurs, une ligne par demande, validation ligne par ligne');
+ok(R.purchaseCartOperatorNote('CART-1', [opCard], 191.4, 'EUR').includes('Total: 191.4 EUR'), 'panier : total en euros');
 const orderSrc = readFileSync(new URL('../supabase/functions/order/index.ts', import.meta.url), 'utf8');
 ok(!/sendText|tellSupplier|notifySupplierOfRequest/.test(orderSrc) && /purchaseRequestOperatorNote/.test(orderSrc), 'commande : le fournisseur n\'est plus prévenu à la création, seulement les opérateurs');
 ok(operatorMenuCommand(clickOf('OP_REQUESTS')) === 'requests', 'menu opérateurs : Purchase requests vaut la commande requests');

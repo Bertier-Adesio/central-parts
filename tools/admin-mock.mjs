@@ -99,6 +99,10 @@ export function createMock() {
     req('PR-0012', 'pending_validation', 'NE555DR', 2000, 0.0957, 191.4, 'Atelier Exemple (fictif)', day(33, 9, 5)),
     req('PR-0011', 'pending_validation', 'STM32G071RBT6', 500, 1.9, 950, 'Bureau d\'études Test (fictif)', day(33, 8, 40)),
     req('PR-0010', 'submitted', 'LM358DR', 1000, 0.07, 70, 'EMS Démo (fictif)', day(32, 15)),
+    // Panier de deux lignes (ADR 0028), deux fournisseurs.
+    { ...req('PR-0015', 'pending_validation', 'CH340C', 5000, 0.30, 1500, 'Intégrateur Panier (fictif)', day(33, 9, 30)), cart_id: 'CART-0003', cart_lines: 2 },
+    { ...req('PR-0016', 'pending_validation', 'SS34-F0001', 20000, 0.02, 400, 'Intégrateur Panier (fictif)', day(33, 9, 30)), cart_id: 'CART-0003', cart_lines: 2,
+      supplier: 'ORG-0111 V-6', seller_id: 'ORG-0111', supplier_currency: 'CNH' },
   ];
   const rfqs = [
     { id: 'DEM-1004', status: 'pending_validation', rfq_id: 'RFQ-0040', client: 'ORG-0102 Plateforme de chiffrage (fictif)', mpn: 'TPS62130RGTR',

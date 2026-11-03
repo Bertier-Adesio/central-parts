@@ -55,6 +55,9 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
   table.offers td.first{display:block}
   table.offers td.first::before{content:none}
 }
+.hdr-r{display:flex;align-items:center;gap:12px}
+.cartlink{color:var(--fg-inverse);text-decoration:none;font-size:var(--text-sm);border:1px solid var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 10px;white-space:nowrap}
+.btn-line.in{border-color:var(--status-success);color:var(--status-success)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -66,10 +69,13 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
       <span>Central<span class="accent">.</span>Parts</span>
     </a>
-    <div class="langs" role="group" aria-label="Langue / Language / 语言">
-      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    <div class="hdr-r">
+      <a class="cartlink" href="/panier/" id="cart-link"><span data-t="cart">Panier</span> <span id="cart-n"></span></a>
+      <div class="langs" role="group" aria-label="Langue / Language / 语言">
+        <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+      </div>
     </div>
   </div>
 </header>
@@ -109,7 +115,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
-      partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Demander',
+      partner: 'Fournisseur partenaire', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓',
+      cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
       rates: 'Taux de référence de la BCE du {d}.',
@@ -120,7 +127,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
-      partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Ask',
+      partner: 'Partner Supplier', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓',
+      cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
       rates: 'ECB reference rate of {d}.',
@@ -131,7 +139,8 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
       placeholder: '制造商型号，例如 TPS25990', go: '搜索',
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
-      partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '询价',
+      partner: '合作供应商', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓',
+      cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
       rates: '欧洲央行参考汇率日期：{d}。',
@@ -155,6 +164,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
+    cartCount();
     render();
   }
   document.querySelectorAll('[data-lang]').forEach(function (b) {
@@ -176,12 +186,10 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
     $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days }) +
       (data.rates_at ? ' ' + fill(t().rates, { d: new Date(data.rates_at).toLocaleDateString(LOCALE[lang]) }) : '');
     if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
-    $('rows').innerHTML = list.map(function (o) {
+    $('rows').innerHTML = list.map(function (o, i) {
       var price = o.price_from != null ? '<span class="muted">' + esc(t().from) + '</span> <span class="price">' + esc(money(o.price_from, o.currency || data.currency)) + '</span>' : esc(t().onRequest);
       // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
       if (o.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(o.price_1k, o.currency || data.currency)) + '</div>';
-      var subject = encodeURIComponent(t().mail + ' — ' + o.mpn);
-      var body = encodeURIComponent(o.mpn + (o.manufacturer ? ' (' + o.manufacturer + ')' : '') + '\n' + t().thAvail + ' : ' + o.availability + '\n' + t().thUpdated + ' : ' + new Date(o.updated_at).toLocaleDateString(LOCALE[lang]) + '\n\n');
       return '<tr>' +
         '<td class="first"><div class="mpn">' + esc(o.mpn) + '</div><div class="mfr">' + esc(o.manufacturer) + '</div></td>' +
         '<td data-label="' + esc(t().thSupplier) + '"><span class="tag">' + esc(t().partner) + '</span></td>' +
@@ -189,10 +197,32 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
         '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + '</td>' +
         '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
         '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
-        '<td data-label=""><a class="btn btn-line" href="mailto:contact@central.parts?subject=' + subject + '&amp;body=' + body + '">' + esc(t().ask) + '</a></td>' +
+        '<td data-label="">' + (cartHas(o) ? '<a class="btn btn-line in" href="' + esc(t().cartHref) + '">' + esc(t().inCart) + '</a>'
+          : '<button class="btn btn-line add" type="button" data-i="' + i + '">' + esc(t().ask) + '</button>') + '</td>' +
         '</tr>';
     }).join('');
   }
+
+  // ------------------------------------------------------------ panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
+  var CART = 'cp-cart', CART_MAX = 30;
+  function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
+  function cartAdd(o) {
+    var a = cartLoad();
+    if (cartHas(o)) return 'ok';
+    if (a.length >= CART_MAX) return 'full';
+    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from, qty: Math.max(o.moq || 1, 1), moq: o.moq || 1 });
+    try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
+    return cartLoad().length === a.length ? 'ok' : 'off';
+  }
+  function cartCount() { var n = cartLoad().length; $('cart-n').textContent = n ? '(' + n + ')' : ''; $('cart-link').href = t().cartHref; }
+  $('rows').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button.add'); if (!b || !data) return;
+    var o = data.offers[+b.getAttribute('data-i')], r = cartAdd(o);
+    render(); cartCount();
+    say(r === 'ok' ? '' : 'err', r === 'ok' ? fill(t().added, { mpn: o.mpn }) : r === 'full' ? t().cartFull : t().cartOff);
+  });
+  window.addEventListener('storage', function (ev) { if (ev.key === CART) { cartCount(); render(); } });
 
   function load() {
     // Prix en euros, convertis au taux de la BCE (migration 20261103000025, ADR 0027) ; o.currency donne la devise

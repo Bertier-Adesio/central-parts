@@ -122,6 +122,10 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    `select public.decide_purchase_request('PR-0001', true, 'admin:moi');`. Redéployer `order`, `admin`, `wechat-events`
    (automatique à la fusion).
 
+### Panier des acheteurs (ADR 0028)
+
+Migration `20261103000026_panier.sql` (rejouable), page `/panier/`. Un panier CART-… regroupe une demande PR-… par ligne ; chaque ligne se valide comme une demande seule (onglet « Demandes » du back office, bouton « Valider tout le panier », ou `approve PR-…` dans WeChat). Voir un panier : `select id, status, mpn, qty, seller_id from public.purchase_requests where cart_id = 'CART-0001';`.
+
 ### Prix publics en euros, taux de la BCE (ADR 0027)
 
 Migration `20261103000025_prix_euros.sql` (rejouable). `/recherche/` et `/offres/` affichent les prix en euros, marge comprise. La fonction `rappels` (tâche planifiée horaire déjà en place) relit le fichier quotidien de la BCE quand les taux ont plus de 20 heures. Vérifier dans l'éditeur SQL :
