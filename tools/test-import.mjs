@@ -250,11 +250,21 @@ ok(both(R.depotLinkText(fakeUrl)) && R.depotLinkText(fakeUrl).startsWith('点此
 ok(R.linkErrorText() === '暂时无法生成登录链接，请稍后再试。\nThe login link could not be created, please try again later.', 'fournisseur, inchangé : erreur de création du lien');
 const oldWelcome = (scene) => ['感谢关注 Central.Parts！', '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。', '',
   `1. 注册公司、上传库存（15 分钟内有效，过期请发送任意消息获取新链接）：https://central.parts/depot/?login=${scene}`,
-  '2. 库存表模板：https://central.parts/depot/stock-template.csv', '3. 了解我们：https://central.parts/zh/', '',
+  '2. 使用帮助与模板：https://central.parts/depot/aide/', '3. 了解我们：https://central.parts/zh/', '',
   'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。', '',
-  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Meet us at electronica 2026, Hall B4, Booth 251/12.'].join('\n');
-ok(R.welcomeText('dl_xxxxxxxx') === oldWelcome('dl_xxxxxxxx'), 'fournisseur, inchangé : accueil avec lien');
-ok(R.welcomeText('') === oldWelcome('').replace(/\?login=\S*/, ''), 'fournisseur, inchangé : accueil sans lien');
+  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: https://central.parts/depot/aide/. Meet us at electronica 2026, Hall B4, Booth 251/12.'].join('\n');
+ok(R.welcomeText('dl_xxxxxxxx') === oldWelcome('dl_xxxxxxxx'), 'fournisseur : accueil avec lien et guide d\'utilisation');
+ok(R.welcomeText('') === oldWelcome('').replace(/\?login=\S*/, ''), 'fournisseur : accueil sans lien');
+// Aide aux fournisseurs : mot-clé, texte bilingue avec le lien du guide, menu et modèles publiés.
+ok(['help', ' HELP ', '帮助', '使用帮助', '教程', '?', '？', 'guide'].every(R.isHelpRequest) && !['help me please', 'approve ORG-1', '', 'helpful'].some(R.isHelpRequest), 'aide : mots-clés reconnus, autres messages ignorés');
+ok(both(R.supplierHelpText()) && R.supplierHelpText().includes('https://central.parts/depot/aide/') && R.supplierHelpText().includes('「供应商」→「上传库存」') && Buffer.byteLength(R.supplierHelpText()) < 2048, 'aide : texte bilingue avec le chemin du menu et le guide, sous 2 048 octets');
+{
+  const menu = JSON.parse((await import('node:fs')).readFileSync(new URL('../supabase/wechat/menu.json', import.meta.url), 'utf8'));
+  const subs = menu.button.find((b) => b.name === '供应商').sub_button;
+  ok(subs.length <= 5 && subs[0].key === 'DEPOT_LOGIN' && subs.some((b) => b.name === '使用帮助' && b.url === 'https://central.parts/depot/aide/'), 'menu : « 使用帮助 » ouvre le guide, « 上传库存 » reste le bouton de connexion');
+  const fs = await import('node:fs');
+  ok(['modele-fabricant.xlsx', 'stock-template.xlsx', 'catalogue-produits.xlsx'].every((f) => fs.statSync(new URL('../site/depot/modeles/' + f, import.meta.url)).size > 4000), 'modèles Excel publiés dans site/depot/modeles/');
+}
 ok(Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32))) < 2048 && Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32), true)) < 2048, 'accueil : sous 2 048 octets');
 ok(R.receivedText() === '已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.', 'fournisseur, inchangé : accusé de réception');
 ok(R.approvedNotice('CP-S-0042') === '您的公司已通过 Central.Parts 审核（编号 CP-S-0042），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (CP-S-0042).', 'fournisseur, inchangé : avis de validation');

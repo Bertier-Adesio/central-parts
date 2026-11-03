@@ -6,7 +6,8 @@
       "name": "供应商",
       "sub_button": [
         { "type": "click", "name": "上传库存", "key": "DEPOT_LOGIN" },
-        { "type": "view", "name": "库存表模板", "url": "https://central.parts/depot/stock-template.csv" }
+        { "type": "view", "name": "使用帮助", "url": "https://central.parts/depot/aide/" },
+        { "type": "view", "name": "库存表模板", "url": "https://central.parts/depot/aide/#modeles" }
       ]
     }
   ]

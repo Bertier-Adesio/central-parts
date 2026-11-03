@@ -27,7 +27,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.4
 import { depotLinkText, isDepotMenuClick, operatorMenuCommand, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import {
   approvedNotice, linkErrorText, OPEN_REQUEST_STATUSES, operatorErrorText, operatorHelpText, operatorReplyText, operatorRequestsText,
-  phoneBackLine, receivedText, rejectedNotice, scanReply, STATUS_EN, welcomeText,
+  isHelpRequest, phoneBackLine, receivedText, rejectedNotice, scanReply, STATUS_EN, supplierHelpText, welcomeText,
 } from '../_shared/robot-texts.js';
 import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 import {
@@ -246,6 +246,8 @@ Deno.serve(async (req) => {
     if (await isOperator(db, msg.FromUserName)) return reply(await operatorCommand(db, msg.FromUserName, msg.Content || ''));
     const answer = await supplierCommand(db, msg.FromUserName, msg.Content || '');
     if (answer) return reply(answer);
+    // « help », « 帮助 » : étapes et lien du guide, sans transfert aux opérateurs.
+    if (isHelpRequest(msg.Content)) return reply(supplierHelpText());
   }
 
   // Message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui répondent par « reply ».

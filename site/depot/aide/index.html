@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<!-- Guide de l'espace fournisseur (site/depot/), en chinois et en anglais : connexion par WeChat, inscription, licence,
+     chargement du stock, rapport, demandes des acheteurs, modèles à télécharger, questions fréquentes.
+     Écrite à la main, pas générée. Captures : tools/capture-aide.mjs (données fictives). Modèles : tools/build-templates.py.
+     Sans JavaScript, les deux langues s'affichent l'une après l'autre. Textes chinois : à faire relire. -->
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>供应商使用指南 · Supplier guide — Central.Parts</title>
+<meta name="description" content="Central.Parts 供应商中心使用指南：微信登录、注册公司、上传营业执照和库存表、模板下载。Supplier guide: WeChat login, company registration, licence, stock upload, templates.">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.lang{background:none;border:1px solid var(--fg-inverse-2);color:var(--fg-inverse);border-radius:var(--radius-sm);padding:4px 10px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+main.wrap{padding:32px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+h2{font-size:var(--text-lg);margin:0 0 8px}
+h3{font-size:var(--text-base);margin:16px 0 4px}
+.lead{color:var(--fg-2);margin:0 0 16px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 24px;padding:0;list-style:none}
+.toc a{display:inline-block;padding:4px 10px;border:1px solid var(--border-2);border-radius:var(--radius-pill);color:var(--fg-1);text-decoration:none;font-size:var(--text-sm)}
+ol,ul{padding-left:22px;margin:8px 0}
+li{margin:4px 0}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);font:inherit;font-weight:var(--weight-medium);text-decoration:none;background:var(--bg-inverse);color:var(--fg-inverse)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:12px 0;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
+.msg.warn{background:var(--status-warning-bg);color:var(--status-warning)}
+figure{margin:12px 0 0}
+figure img{display:block;width:100%;max-width:360px;height:auto;border:1px solid var(--border-1);border-radius:var(--radius-md)}
+figcaption{font-size:var(--text-sm);color:var(--fg-3);margin:6px 0 0}
+table{width:100%;border-collapse:collapse;font-size:var(--text-sm)}
+th,td{text-align:left;padding:8px 8px 8px 0;border-top:1px solid var(--border-1);vertical-align:top}
+th{color:var(--fg-3);font-weight:var(--weight-medium)}
+code{font-family:var(--font-mono);font-size:.92em;background:var(--bg-sunken);padding:1px 4px;border-radius:var(--radius-sm);overflow-wrap:anywhere}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+/* Avec JavaScript, une seule langue à la fois ; sans JavaScript, les deux. */
+html.js [data-l]:not(.on){display:none}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/depot/">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <button class="lang" type="button" id="lang" hidden>EN</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ====================================================================== 中文 -->
+<div data-l="zh" lang="zh-Hans" class="on">
+  <h1>供应商使用指南</h1>
+  <p class="lead">Central.Parts 供应商中心无需密码：您的微信就是登录方式。目前，供应商中心与 Adesio 账户相互独立，无需注册 Adesio 账户。</p>
+  <ul class="toc">
+    <li><a href="#zh-login">1. 登录</a></li><li><a href="#zh-register">2. 注册公司</a></li><li><a href="#zh-licence">3. 营业执照</a></li>
+    <li><a href="#zh-stock">4. 上传库存</a></li><li><a href="#zh-report">5. 上传报告</a></li><li><a href="#zh-requests">6. 询单与询价</a></li>
+    <li><a href="#zh-team">7. 同事</a></li><li><a href="#zh-faq">8. 常见问题</a></li><li><a href="#modeles">9. 模板下载</a></li>
+  </ul>
+
+  <section class="card" id="zh-login">
+    <h2>1. 登录</h2>
+    <h3>在手机上</h3>
+    <ol>
+      <li>在微信中打开公众号「Adesio Central.Parts」。</li>
+      <li>点击菜单「供应商」→「上传库存」。</li>
+      <li>您会在对话中收到一个专属登录链接（15 分钟内有效）。点击链接，供应商中心即已登录打开。</li>
+      <li>链接过期后，再次点击菜单即可获取新链接。</li>
+    </ol>
+    <h3>在电脑上</h3>
+    <ol>
+      <li>在浏览器中打开 <a href="/depot/">central.parts/depot/</a>。</li>
+      <li>用手机微信扫描页面上的二维码，页面自动登录。</li>
+    </ol>
+    <p class="msg warn">登录链接为您个人专用，请勿转发：任何人打开它都能进入您的账户。</p>
+  </section>
+
+  <section class="card" id="zh-register">
+    <h2>2. 注册公司</h2>
+    <p>首次登录时，填写「注册公司」表格：</p>
+    <ul>
+      <li>公司全称（与营业执照一致）；</li>
+      <li>注册国家/地区：中国大陆、香港或其他；</li>
+      <li>中国大陆：18 位统一社会信用代码；香港或其他：公司注册号码（5 至 30 个字符）；</li>
+      <li>城市、公司类型（原厂、分销商、贸易商、现货经纪商）和报价货币。</li>
+    </ul>
+    <p class="muted">一个微信账号只能绑定一家公司。同一公司的同事请使用各自的微信，由管理员邀请（见第 7 步）。</p>
+    <figure><img src="img/zh-inscription.jpg" width="358" height="680" loading="lazy" alt="注册公司表格（示例：香港公司）"><figcaption>示例：香港公司（虚构数据）</figcaption></figure>
+  </section>
+
+  <section class="card" id="zh-licence">
+    <h2>3. 上传营业执照</h2>
+    <p>注册后，在供应商中心的「上传营业执照」卡片中，拍照或选择文件（JPG、PNG 或 PDF，最大 10 MB），然后点击「上传」。香港公司请上传商业登记证或公司注册证书。</p>
+    <p class="msg">请在网页上上传，不要发送到微信对话中。审核结果将通过微信通知您。</p>
+    <figure><img src="img/zh-licence.jpg" width="358" height="303" loading="lazy" alt="上传营业执照卡片"></figure>
+  </section>
+
+  <section class="card" id="zh-stock">
+    <h2>4. 上传库存</h2>
+    <ol>
+      <li>按模板准备库存表（见第 9 步）：CSV、XLS 或 XLSX，最大 50 MB，每行一个型号。</li>
+      <li>选择报价币种（文件中的币种列优先）。</li>
+      <li>如果这是您的完整库存，请勾选「这是完整库存表」：新表将替换之前的库存。</li>
+      <li>点击「上传」。</li>
+    </ol>
+    <p class="msg warn">请至少每 7 天重新上传一次库存表：超过 7 天未更新的报价将不再向采购方展示。</p>
+    <figure><img src="img/zh-stock.jpg" width="358" height="427" loading="lazy" alt="上传库存表"></figure>
+  </section>
+
+  <section class="card" id="zh-report">
+    <h2>5. 上传报告</h2>
+    <p>几秒钟后，「上传记录」中会显示报告：新增、更新和被拒绝的行数，以及每一行被拒绝的原因（例如数量无效、价格阶梯不递增）。修改文件后重新上传即可。</p>
+    <figure><img src="img/zh-rapport.jpg" width="358" height="311" loading="lazy" alt="上传报告"></figure>
+  </section>
+
+  <section class="card" id="zh-requests">
+    <h2>6. 询单与询价</h2>
+    <ul>
+      <li><strong>询单</strong>：欧洲买家的采购申请。请在 24 小时内确认是否有货。</li>
+      <li><strong>平台询价</strong>：欧洲报价平台的询价。请在截止时间前报价或回复无货。</li>
+    </ul>
+    <p class="muted">买方信息已匿名：Central.Parts 始终是买卖双方之间的中间方。</p>
+  </section>
+
+  <section class="card" id="zh-team">
+    <h2>7. 同事</h2>
+    <p>公司管理员可在「同事」中为每位同事生成邀请链接（每个链接仅限一人使用，14 天内有效），通过微信发送给同事。</p>
+  </section>
+
+  <section class="card" id="zh-faq">
+    <h2>8. 常见问题</h2>
+    <h3>登录链接已过期</h3>
+    <p>再次点击菜单「供应商」→「上传库存」，即可收到新链接。</p>
+    <h3>提示「此微信账号已绑定公司」</h3>
+    <p>您的微信已绑定一家公司。如需为另一家公司注册，请使用另一个微信账号，或联系我们。</p>
+    <h3>我的报价不见了</h3>
+    <p>超过 7 天未更新的报价将自动下架。重新上传库存表即可恢复展示。</p>
+    <h3>需要 Adesio 账户吗？</h3>
+    <p>不需要。目前 Central.Parts 供应商中心与 Adesio 账户相互独立。</p>
+    <h3>联系我们</h3>
+    <p>直接在公众号「Adesio Central.Parts」中留言，或发邮件至 <a href="mailto:contact@central.parts">contact@central.parts</a>。</p>
+  </section>
+</div>
+
+<!-- ====================================================================== English -->
+<div data-l="en" lang="en">
+  <h1>Supplier guide</h1>
+  <p class="lead">No password is needed for the Central.Parts supplier centre: your WeChat is your login. For now, the supplier centre is separate from Adesio accounts: you don't need an Adesio account.</p>
+  <ul class="toc">
+    <li><a href="#en-login">1. Log in</a></li><li><a href="#en-register">2. Register</a></li><li><a href="#en-licence">3. Licence</a></li>
+    <li><a href="#en-stock">4. Upload stock</a></li><li><a href="#en-report">5. Report</a></li><li><a href="#en-requests">6. Buyer requests</a></li>
+    <li><a href="#en-team">7. Colleagues</a></li><li><a href="#en-faq">8. FAQ</a></li><li><a href="#modeles">9. Templates</a></li>
+  </ul>
+
+  <section class="card" id="en-login">
+    <h2>1. Log in</h2>
+    <h3>On your phone</h3>
+    <ol>
+      <li>In WeChat, open the “Adesio Central.Parts” account.</li>
+      <li>Tap the menu “供应商”, then “上传库存”.</li>
+      <li>You receive a personal link in the chat (valid 15 minutes). Tap it: the supplier centre opens, already logged in.</li>
+      <li>If the link has expired, tap the menu again to get a new one.</li>
+    </ol>
+    <h3>On a computer</h3>
+    <ol>
+      <li>Open <a href="/depot/">central.parts/depot/</a> in your browser.</li>
+      <li>Scan the QR code with WeChat on your phone. The page logs you in automatically.</li>
+    </ol>
+    <p class="msg warn">Login links are personal: don't forward them. Anyone who opens one gets into your account.</p>
+  </section>
+
+  <section class="card" id="en-register">
+    <h2>2. Register your company</h2>
+    <p>The first time you log in, fill in “Register your company”:</p>
+    <ul>
+      <li>full company name, as on the business licence;</li>
+      <li>country / region of registration: Mainland China, Hong Kong or Other;</li>
+      <li>Mainland China: the 18-character unified social credit code; Hong Kong or Other: the company registration number (5 to 30 characters);</li>
+      <li>city, company type (Manufacturer, Distributor, Reseller, Broker) and quote currency.</li>
+    </ul>
+    <p class="muted">One WeChat account can be linked to one company only. Colleagues use their own WeChat and are invited by the administrator (step 7).</p>
+    <figure><img src="img/en-inscription.jpg" width="358" height="719" loading="lazy" alt="Company registration form (example: Hong Kong company)"><figcaption>Example: Hong Kong company (fictitious data)</figcaption></figure>
+  </section>
+
+  <section class="card" id="en-licence">
+    <h2>3. Upload the business licence</h2>
+    <p>After registering, in the card “Upload the business licence”, take a photo or choose a file (JPG, PNG or PDF, up to 10 MB), then tap “Upload”. Hong Kong companies upload their business registration or incorporation certificate.</p>
+    <p class="msg">Upload it on the page, not in the WeChat chat. You are notified of the review in WeChat.</p>
+    <figure><img src="img/en-licence.jpg" width="358" height="322" loading="lazy" alt="Business licence upload card"></figure>
+  </section>
+
+  <section class="card" id="en-stock">
+    <h2>4. Upload your stock</h2>
+    <ol>
+      <li>Prepare your stock file with a template (step 9): CSV, XLS or XLSX, up to 50 MB, one part number per line.</li>
+      <li>Choose the quote currency (a currency column in the file takes precedence).</li>
+      <li>If the file is your complete stock, tick “This is my complete stock list”: it replaces the previous one.</li>
+      <li>Tap “Upload”.</li>
+    </ol>
+    <p class="msg warn">Upload your stock again at least every 7 days: offers not updated for 7 days are no longer shown to buyers.</p>
+    <figure><img src="img/en-stock.jpg" width="358" height="447" loading="lazy" alt="Stock upload form"></figure>
+  </section>
+
+  <section class="card" id="en-report">
+    <h2>5. Upload report</h2>
+    <p>A few seconds later, the report appears under “Upload history”: lines created, updated and rejected, with the reason for each rejected line (for example invalid quantity, price breaks not increasing). Correct the file and upload it again.</p>
+    <figure><img src="img/en-rapport.jpg" width="358" height="330" loading="lazy" alt="Upload report"></figure>
+  </section>
+
+  <section class="card" id="en-requests">
+    <h2>6. Buyer requests and RFQs</h2>
+    <ul>
+      <li><strong>Purchase requests</strong> from European buyers: confirm availability within 24 hours.</li>
+      <li><strong>RFQs</strong> from European quoting platforms: quote or decline before the deadline.</li>
+    </ul>
+    <p class="muted">Buyers are anonymous: Central.Parts always stays between buyer and supplier.</p>
+  </section>
+
+  <section class="card" id="en-team">
+    <h2>7. Colleagues</h2>
+    <p>The company administrator creates an invitation link for each colleague under “Colleagues” (one person per link, valid 14 days) and sends it in WeChat.</p>
+  </section>
+
+  <section class="card" id="en-faq">
+    <h2>8. Frequently asked questions</h2>
+    <h3>My login link has expired</h3>
+    <p>Tap the menu “供应商” → “上传库存” again to receive a new one.</p>
+    <h3>“This WeChat account is already linked to a company”</h3>
+    <p>Your WeChat is linked to a company already. To register another company, use another WeChat account, or contact us.</p>
+    <h3>My offers have disappeared</h3>
+    <p>Offers not updated for 7 days are withdrawn automatically. Upload your stock file again to show them.</p>
+    <h3>Do I need an Adesio account?</h3>
+    <p>No. For now, the Central.Parts supplier centre is separate from Adesio accounts.</p>
+    <h3>Contact</h3>
+    <p>Write to the “Adesio Central.Parts” WeChat account, or e-mail <a href="mailto:contact@central.parts">contact@central.parts</a>.</p>
+  </section>
+</div>
+
+<!-- ====================================================================== Modèles (bilingue) -->
+<section class="card" id="modeles">
+  <h2>9. 模板下载 · Templates</h2>
+  <table>
+    <thead><tr><th>文件 · File</th><th>用途 · Use</th><th>下载 · Download</th></tr></thead>
+    <tbody>
+      <tr><td>原厂库存表（中文表头）<br>Stock, manufacturers (Chinese headers)</td>
+          <td>型号、品牌、库存、价格阶梯（一格）、封装、批次、货期、规格书链接<br>Part number, brand, quantity, price breaks in one cell, package, date code, lead time, datasheet</td>
+          <td><a href="/depot/modeles/modele-fabricant.xlsx" download>Excel</a> · <a href="/depot/modele-fabricant.csv" download>CSV</a></td></tr>
+      <tr><td>国际库存表（英文表头）<br>Stock, international (English headers)</td>
+          <td>Octopart 格式，最多五个价格阶梯<br>Octopart format, up to five price breaks</td>
+          <td><a href="/depot/modeles/stock-template.xlsx" download>Excel</a> · <a href="/depot/stock-template.csv" download>CSV</a></td></tr>
+      <tr><td>产品目录<br>Product catalogue</td>
+          <td>描述、规格书、RoHS / REACH、生命周期、替代型号；一次发送，产品变化时更新<br>Description, datasheet, RoHS / REACH, lifecycle, cross references; send once, update when products change</td>
+          <td><a href="/depot/modeles/catalogue-produits.xlsx" download>Excel</a></td></tr>
+    </tbody>
+  </table>
+  <p class="muted">库存表在供应商中心上传；产品目录请通过邮件或微信发送给 Central.Parts。<br>Upload stock files in the supplier centre; send the product catalogue to Central.Parts by e-mail or WeChat.</p>
+</section>
+
+<p><a class="btn" href="/depot/" id="open">打开供应商中心 · Open the supplier centre</a></p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // Langue : celle choisie sur /depot/ (même clé), sinon celle du navigateur. Sans JavaScript, les deux langues s'affichent.
+  var root = document.documentElement, btn = document.getElementById('lang'), lang;
+  try { lang = localStorage.getItem('cp-depot-lang'); } catch (e) {}
+  var q = /[?&]lang=(zh|en)/.exec(location.search);
+  if (q) lang = q[1];
+  if (lang !== 'zh' && lang !== 'en') lang = /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+  function apply() {
+    root.lang = lang === 'zh' ? 'zh-Hans' : 'en';
+    document.querySelectorAll('[data-l]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-l') === lang); });
+    btn.textContent = lang === 'zh' ? 'EN' : '中文';
+  }
+  root.classList.add('js');
+  btn.hidden = false;
+  btn.addEventListener('click', function () {
+    lang = lang === 'zh' ? 'en' : 'zh';
+    try { localStorage.setItem('cp-depot-lang', lang); } catch (e) {}
+    apply();
+  });
+  apply();
+})();
+</script>
+</body>
+</html>
