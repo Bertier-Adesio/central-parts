@@ -12,9 +12,12 @@ const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + l
 const norm = (t) => (t || '').replace(/[  ]/g, ' ');
 
 // Offres fictives, prix en euros comme partner_offers et public_search (migration 20261103000025).
+const TERMS = { free_shipping_over: 1840, carriers: ['DHL', 'FedEx', 'UPS', 'SF'], ship_within_hours: 24, transit_days_min: 5, transit_days_max: 7, prepaid: true, returns_days: 30, returns_quality_only: true, restocking_pct: 15, warranty_days: 90, incoterm: 'DAP' };
 const OFFERS = [
   { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 2500, min_qty: 2500, incoterm: 'FCA', fca_place: 'SZ', price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
-  { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '1000+', moq: 1, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
+  // Fournisseur fictif avec ses propres conditions (migration 20261103000029) : DAP, livraison offerte dès 1 840 €.
+  { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'HK', currency: 'EUR', availability: '1000+', moq: 1,
+    incoterm: 'DAP', fca_place: 'HK', terms: TERMS, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'GONE123', manufacturer: 'Fictif', supplier: 'partner', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '100+', moq: 1, price_from: 1, price_1k: null, updated_at: '2026-11-03T08:00:00Z' },
 ];
 const PRICE = { NE555DR: 0.1, LM358DR: 0.06, BSS138: null };
@@ -40,7 +43,18 @@ async function mock(page, errors) {
       if (!(mpn in PRICE)) return reply({ error: 'not_found' }, 404);
       const p = PRICE[mpn], k = PACK[mpn] || { moq: 1, spq: 1 };
       return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000,
-        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0, incoterm: 'FCA', fca_place: mpn === 'BSS138' ? 'HK' : 'SZ' });
+        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0, incoterm: mpn === 'LM358DR' ? 'DAP' : 'FCA', fca_place: mpn === 'BSS138' ? 'HK' : 'SZ',
+        terms: mpn === 'LM358DR' ? TERMS : null });
+    }
+    if (u.pathname.endsWith('/shipping')) {
+      // Groupes de fournisseurs comme cart_shipping : LM358DR chez le fournisseur à conditions, le reste chez un autre.
+      const lines = JSON.parse(req.postData()).lines, a = [], b = [];
+      lines.forEach((l, i) => (l.mpn === 'LM358DR' ? a : (l.mpn in PRICE ? b : null))?.push(i));
+      const sub = a.reduce((t, i) => t + PRICE.LM358DR * +lines[i].qty, 0);
+      const groups = [];
+      if (a.length) groups.push({ group: 1, lines: a, subtotal: sub, incoterm: 'DAP', terms: TERMS, free_shipping: sub >= 1840, ...(sub < 1840 ? { missing_for_free: +(1840 - sub).toFixed(2) } : {}) });
+      if (b.length) groups.push({ group: groups.length + 1, lines: b, subtotal: 0, incoterm: 'FCA', free_shipping: false });
+      return reply({ currency: 'EUR', groups });
     }
     if (u.pathname.endsWith('/cart')) {
       const b = JSON.parse(req.postData());
@@ -78,9 +92,11 @@ ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références')
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
 ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
 ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
+ok(norm(await page.textContent('#rows tr:nth-child(2)')).includes('DAP adresse de livraison') && norm(await page.textContent('#rows tr:nth-child(2)')).includes('Livraison offerte dès 1 840,00 €'),
+  'offres : fournisseur à conditions propres, DAP et livraison offerte dès un montant');
 ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('FCA Shenzhen') && norm(await page.textContent('#rows tr:nth-child(3)')).includes('FCA Hong Kong'),
   'offres : Incoterm FCA et lieu (lieu de la base, sinon pays d\'expédition)');
-ok(norm(await page.textContent('#hint')).includes('FCA au lieu d’expédition indiqué (Incoterms® 2020)'), 'offres : mention Incoterms® 2020');
+ok(norm(await page.textContent('#hint')).includes('Incoterm indiqué sur chaque offre (Incoterms® 2020)'), 'offres : mention Incoterms® 2020');
 
 // 2. /recherche/ : ajout d'une offre « sur demande ».
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
@@ -96,6 +112,15 @@ let txt = norm(await page.textContent('#cart'));
 ok(txt.includes('NE555DR') && /250,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (2 500 × 0,10 €)');
 ok(txt.includes('hors transport, droits et TVA') && txt.includes('Incoterms® 2020'), 'panier : prix FCA, hors transport');
 ok(norm(await page.textContent('#lines li:first-child')).includes('FCA Shenzhen') && norm(await page.textContent('#lines li:nth-child(4)')).includes('FCA Hong Kong'), 'panier : lieu FCA de chaque ligne (devis)');
+await page.waitForSelector('#ship:not([hidden]) .grp');
+const shipTxt = norm(await page.textContent('#ship'));
+ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('offerte dès 1 840,00 € (encore 1 839,94 €)') && shipTxt.includes('(DAP adresse de livraison)'),
+  'panier : livraison par fournisseur, montant manquant pour la livraison offerte');
+ok(shipTxt.includes('DHL · FedEx · UPS · SF') && shipTxt.includes('5 à 7 jours ouvrés') && shipTxt.includes('retours sous 30 jours pour défaut qualité') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('paiement d’avance'),
+  'panier : conditions du fournisseur (transporteurs, délais, retours, garantie, paiement)');
+ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Transport chiffré sur la facture proforma') && shipTxt.includes('Droits, taxes et frais de dédouanement à la charge de l’acheteur'),
+  'panier : autre fournisseur, transport sur la proforma ; droits à la charge de l\'acheteur');
+ok(!/ORG-\d|seller_id|tmp-/i.test(await page.content()), 'panier : jamais l\'identifiant du fournisseur');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
 ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');

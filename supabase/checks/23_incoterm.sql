@@ -22,6 +22,9 @@ do $$ begin
 end $$;
 
 insert into app.price_rules (category, margin_pct) values ('surplus', 10), ('broker', 10) on conflict (category) do update set margin_pct = 10;
+-- Sans règle de Central.Parts (migration 20261103000029) : FCA au lieu d'expédition, comme en 20261103000028.
+create table tests.saved as select value from app.settings where name = 'default_terms';
+update app.settings set value = '{}' where name = 'default_terms';
 set role service_role;
 do $$
 declare r jsonb; o jsonb; q jsonb;
@@ -38,6 +41,7 @@ begin
 end $$;
 reset role;
 
+update app.settings set value = (select value from tests.saved) where name = 'default_terms' and exists (select 1 from tests.saved);
 delete from app.price_rules;
 drop schema tests cascade;
 select 'Tous les tests de l''Incoterm sont passés.' as resultat;

@@ -40,7 +40,7 @@ begin
   q := public.public_quote('XC2S50-5TQ144C', 'surplus', 'CN', 200, 'EUR');
   perform tests.eq('devis : palier 250 CNH → EUR (0,128) + 10 %', (q->>'unit_price')::numeric, 35.2000);
   perform tests.eq('devis : total', (q->>'total')::numeric, 7040.00);
-  perform tests.eq('devis : quantité couverte, sans révéler le stock', q - 'unit_price' - 'total', '{"qty": 200, "covered": true, "currency": "EUR", "moq": 1, "spq": null, "min_qty": 1, "qty_ok": true, "incoterm": "FCA", "fca_place": "SZ"}'::jsonb);
+  perform tests.eq('devis : quantité couverte, sans révéler le stock', q - 'unit_price' - 'total' - 'terms', '{"qty": 200, "covered": true, "currency": "EUR", "moq": 1, "spq": null, "min_qty": 1, "qty_ok": true, "incoterm": "DAP", "fca_place": "SZ"}'::jsonb);
   perform tests.eq('devis : au-delà du stock, non couvert', public.public_quote('XC2S50-5TQ144C', 'surplus', 'CN', 900, 'EUR')->>'covered', 'false');
   perform tests.fails('devis : offre inconnue', $s$select public.public_quote('NEXISTEPAS', 'surplus', 'CN', 1, 'EUR')$s$, 'P0002');
 

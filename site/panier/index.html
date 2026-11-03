@@ -46,6 +46,10 @@ ul.lines li.gone .mpn{text-decoration:line-through}
 .qty input{width:100%;box-sizing:border-box;min-height:var(--control-h-lg);padding:0 10px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;font-variant-numeric:tabular-nums}
 .lp{font-size:var(--text-sm);font-variant-numeric:tabular-nums}
 .lp strong{display:block;font-size:var(--text-base)}
+.ship h3{font-size:var(--text-base);margin:16px 0 8px}
+.ship .grp{border-top:1px solid var(--border-1);padding:10px 0;font-size:var(--text-sm)}
+.ship .gh{font-weight:var(--weight-semibold)}
+.ship .ok{color:var(--status-success)}
 .total{display:flex;justify-content:space-between;gap:12px;border-top:2px solid var(--border-2);padding:14px 0 0;margin:8px 0 0;font-weight:var(--weight-semibold)}
 @media (max-width:560px){
   ul.lines li{grid-template-columns:1fr 1fr}
@@ -93,7 +97,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     <h2 data-t="linesTitle">Références</h2>
     <ul class="lines" id="lines"></ul>
     <div class="total"><span data-t="total">Total indicatif</span><span id="total"></span></div>
-    <p class="muted" id="excl" data-t="excl">Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.</p>
+    <div class="ship" id="ship" hidden></div>
+    <p class="muted" id="excl" data-t="excl">Prix tout compris en euros, Incoterm indiqué sur chaque offre (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.</p>
     <div class="cta"><a class="btn btn-line btn-small" href="/offres/" id="more" data-t="more">Ajouter d’autres références</a></div>
   </section>
 
@@ -131,11 +136,16 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   var T = {
     fr: { title: 'Panier', lead: 'Une seule demande pour toutes vos références. Central.Parts vérifie la demande, puis confirme la disponibilité auprès de chaque fournisseur avant de vous envoyer une facture proforma.',
       empty: 'Votre panier est vide.', toOffers: 'Voir les offres', toSearch: 'Rechercher une référence', linesTitle: 'Références',
-      total: 'Total indicatif', excl: 'Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.',
+      total: 'Total indicatif', excl: 'Prix tout compris en euros, Incoterm indiqué sur chaque offre (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.',
       more: 'Ajouter d’autres références', buyerTitle: 'Vos coordonnées', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom',
       fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
-      send: 'Envoyer la demande', qty: 'Quantité', unit: 'prix unitaire', toConfirm: 'Prix à confirmer', remove: 'Retirer', moq: 'minimum {n}', spq: 'par {spq}', adjusted: 'Quantité ajustée à {q} (minimum {n}, par {spq}).', adjustedMoq: 'Quantité ajustée à {q} (minimum {n}).',
+      send: 'Envoyer la demande', qty: 'Quantité', unit: 'prix unitaire', toConfirm: 'Prix à confirmer', shipTitle: 'Livraison', group: 'Fournisseur partenaire {n}', shipFree: 'Livraison offerte',
+      shipPaid: 'Transport chiffré sur la facture proforma', shipFreeFrom: 'offerte dès {m} (encore {r})',
+      shipWithin: 'expédition sous {h} h', transit: '{a} à {b} jours ouvrés', prepaid: 'paiement d’avance',
+      returns: 'retours sous {d} jours', returnsQ: 'retours sous {d} jours pour défaut qualité', restock: 'frais de remise en stock {p} % si erreur de commande',
+      warranty: 'garantie {d} jours', duties: 'Droits, taxes et frais de dédouanement à la charge de l’acheteur.',
+      remove: 'Retirer', moq: 'minimum {n}', spq: 'par {spq}', adjusted: 'Quantité ajustée à {q} (minimum {n}, par {spq}).', adjustedMoq: 'Quantité ajustée à {q} (minimum {n}).',
       partial: 'Quantité supérieure au stock affiché : le fournisseur confirmera la quantité disponible.', gone: 'Offre plus disponible : retirez cette ligne.',
       totalConfirm: 'à confirmer', choose: 'Choisir', sent: 'Demande {ref} envoyée ({n} référence(s)).',
       doneNext: 'Central.Parts vérifie votre demande et la transmet aux fournisseurs, qui confirment la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
@@ -146,11 +156,16 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         network: 'Erreur réseau, réessayez.', other: 'Envoi impossible pour l’instant, réessayez plus tard ou écrivez à contact@central.parts.' }, home: '/', offers: '/offres/?lang=fr', search: '/recherche/?lang=fr' },
     en: { title: 'Cart', lead: 'One request for all your part numbers. Central.Parts checks the request, then confirms availability with each supplier before sending you a proforma invoice.',
       empty: 'Your cart is empty.', toOffers: 'See the offers', toSearch: 'Search for a part number', linesTitle: 'Part numbers',
-      total: 'Indicative total', excl: 'All-inclusive prices in euros, FCA at the shipping point shown (Incoterms® 2020), converted at the ECB reference rate, excluding shipping, import duties and VAT. Prices are confirmed by the proforma invoice.',
+      total: 'Indicative total', excl: 'All-inclusive prices in euros, Incoterm shown on each offer (Incoterms® 2020), converted at the ECB reference rate, excluding shipping, import duties and VAT. Prices are confirmed by the proforma invoice.',
       more: 'Add more part numbers', buyerTitle: 'Your details', fCompany: 'Company', fVat: 'EU VAT number', fName: 'Full name',
       fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
-      send: 'Send the request', qty: 'Quantity', unit: 'unit price', toConfirm: 'Price to be confirmed', remove: 'Remove', moq: 'minimum {n}', spq: 'in multiples of {spq}', adjusted: 'Quantity adjusted to {q} (minimum {n}, in multiples of {spq}).', adjustedMoq: 'Quantity adjusted to {q} (minimum {n}).',
+      send: 'Send the request', qty: 'Quantity', unit: 'unit price', toConfirm: 'Price to be confirmed', shipTitle: 'Delivery', group: 'Partner Supplier {n}', shipFree: 'Free delivery',
+      shipPaid: 'Shipping quoted on the proforma invoice', shipFreeFrom: 'free from {m} ({r} to go)',
+      shipWithin: 'ships within {h} h', transit: '{a} to {b} business days', prepaid: 'payment in advance',
+      returns: 'returns within {d} days', returnsQ: 'returns within {d} days for quality defects', restock: '{p}% restocking fee for ordering errors',
+      warranty: '{d}-day warranty', duties: 'Import duties, taxes and brokerage fees are paid by the buyer.',
+      remove: 'Remove', moq: 'minimum {n}', spq: 'in multiples of {spq}', adjusted: 'Quantity adjusted to {q} (minimum {n}, in multiples of {spq}).', adjustedMoq: 'Quantity adjusted to {q} (minimum {n}).',
       partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.', gone: 'Offer no longer available: remove this line.',
       totalConfirm: 'to be confirmed', choose: 'Choose', sent: 'Request {ref} sent ({n} part number(s)).',
       doneNext: 'Central.Parts checks your request and sends it to the suppliers, who confirm availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
@@ -161,11 +176,16 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         network: 'Network error, please try again.', other: 'Sending is not possible right now: try again later or write to contact@central.parts.' }, home: '/en/', offers: '/offres/?lang=en', search: '/recherche/?lang=en' },
     zh: { title: '购物车', lead: '所有型号一次提交。Central.Parts 审核申请后，向各供应商确认库存，再向您发送形式发票。',
       empty: '购物车为空。', toOffers: '查看报价', toSearch: '搜索型号', linesTitle: '型号',
-      total: '参考合计', excl: '价格为总价，以欧元计价（按欧洲央行参考汇率换算），所示发货地 FCA 交货（Incoterms® 2020），不含运费、进口关税和增值税。最终价格以形式发票为准。',
+      total: '参考合计', excl: '价格为总价，以欧元计价（按欧洲央行参考汇率换算），交货条款见各报价（Incoterms® 2020），不含运费、进口关税和增值税。最终价格以形式发票为准。',
       more: '继续添加型号', buyerTitle: '您的信息', fCompany: '公司', fVat: '欧盟增值税号', fName: '姓名',
       fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '收货国家', fAddress: '收货地址', fMessage: '留言（选填）',
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到转账后交易成立。买方负责进口清关（进口关税和增值税）。',
-      send: '提交申请', qty: '数量', unit: '单价', toConfirm: '价格待确认', remove: '移除', moq: '最少 {n}', spq: '按 {spq} 的倍数', adjusted: '数量已调整为 {q}（最少 {n}，按 {spq} 的倍数）。', adjustedMoq: '数量已调整为 {q}（最少 {n}）。',
+      send: '提交申请', qty: '数量', unit: '单价', toConfirm: '价格待确认', shipTitle: '运输', group: '合作供应商 {n}', shipFree: '免运费',
+      shipPaid: '运费在形式发票中报价', shipFreeFrom: '满 {m} 免运费（还差 {r}）',
+      shipWithin: '{h} 小时内发货', transit: '{a} 至 {b} 个工作日', prepaid: '预付款',
+      returns: '{d} 天内可退货', returnsQ: '质量问题 {d} 天内可退货', restock: '订购错误收取 {p}% 重新入库费',
+      warranty: '质保 {d} 天', duties: '进口关税、税费和清关费用由买方承担。',
+      remove: '移除', moq: '最少 {n}', spq: '按 {spq} 的倍数', adjusted: '数量已调整为 {q}（最少 {n}，按 {spq} 的倍数）。', adjustedMoq: '数量已调整为 {q}（最少 {n}）。',
       partial: '数量超过显示库存：供应商将确认可供数量。', gone: '该报价已失效，请移除此行。',
       totalConfirm: '待确认', choose: '请选择', sent: '申请 {ref} 已提交（{n} 个型号）。',
       doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
@@ -181,7 +201,14 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     DG: { fr: 'Dongguan', en: 'Dongguan', zh: '东莞' }, GZ: { fr: 'Canton', en: 'Guangzhou', zh: '广州' },
     SH: { fr: 'Shanghai', en: 'Shanghai', zh: '上海' }, XM: { fr: 'Xiamen', en: 'Xiamen', zh: '厦门' },
     CN: { fr: 'Chine', en: 'China', zh: '中国' }, TW: { fr: 'Taïwan', en: 'Taiwan', zh: '中国台湾' } };
-  function fca(x) { var p = PLACE[x && (x.fca_place || x.ship_from)]; return p ? (x.incoterm || 'FCA') + ' ' + p[lang] : ''; }
+  var DAP = { fr: 'DAP adresse de livraison', en: 'DAP delivery address', zh: 'DAP 收货地址' };
+  var FREE = { fr: 'Livraison offerte dès {m}', en: 'Free delivery from {m}', zh: '满 {m} 免运费' };
+  function fca(x) {
+    if (x && x.incoterm === 'DAP') return DAP[lang];
+    var p = PLACE[x && (x.fca_place || x.ship_from)]; return p ? (x.incoterm || 'FCA') + ' ' + p[lang] : '';
+  }
+  // Livraison offerte au-delà d'un montant chez ce fournisseur (conditions propres, migration 20261103000029).
+  function freeShip(x, fmt) { return x && x.terms && x.terms.free_shipping_over ? FREE[lang].replace('{m}', fmt(x.terms.free_shipping_over)) : ''; }
   var COUNTRY = { fr: { CN: 'Chine', HK: 'Hong Kong', TW: 'Taïwan' }, en: { CN: 'China', HK: 'Hong Kong', TW: 'Taiwan' }, zh: { CN: '中国', HK: '中国香港', TW: '中国台湾' } };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -225,7 +252,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         if (q.moq) { l.moq = q.moq; l.spq = q.spq || 1; save(); }
         if (q.qty_ok === false && fitQty(l, l.qty) !== l.qty) { adjusted[k] = true; l.qty = fitQty(l, l.qty); save(); return quote(l); }
       }, function (d) { quotes[k] = { error: d.error || 'other' }; })
-      .then(render);
+      .then(function () { render(); loadShipping(); });
   }
 
   function lineHtml(l, i) {
@@ -277,8 +304,49 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   });
   $('lines').addEventListener('click', function (ev) {
     var b = ev.target.closest('button.rm'); if (!b) return;
-    cart.splice(+b.closest('li').getAttribute('data-i'), 1); save(); say('', ''); render();
+    cart.splice(+b.closest('li').getAttribute('data-i'), 1); save(); say('', ''); render(); loadShipping();
   });
+
+  // ------------------------------------------------------------ livraison par fournisseur (numérotés, jamais nommés)
+  var ship = null, shipTimer = null;
+  function loadShipping() {
+    clearTimeout(shipTimer);
+    shipTimer = setTimeout(function () {
+      if (!cart.length) { ship = null; renderShip(); return; }
+      call(ORDER_FN + '/shipping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        currency: 'EUR', lines: cart.map(function (l) { return { mpn: l.mpn, source: l.source, ship_from: l.ship_from, qty: String(l.qty) }; }) }) })
+        .then(function (d) { ship = d; }, function () { ship = null; }).then(renderShip);
+    }, 300);
+  }
+  function termsLine(tm) {
+    if (!tm) return '';
+    var bits = [];
+    if (tm.carriers && tm.carriers.length) bits.push(tm.carriers.join(' · '));
+    if (tm.ship_within_hours) bits.push(t().shipWithin.replace('{h}', tm.ship_within_hours));
+    if (tm.transit_days_min) bits.push(t().transit.replace('{a}', tm.transit_days_min).replace('{b}', tm.transit_days_max || tm.transit_days_min));
+    if (tm.prepaid) bits.push(t().prepaid);
+    if (tm.returns_days != null) bits.push(t()[tm.returns_quality_only ? 'returnsQ' : 'returns'].replace('{d}', tm.returns_days));
+    if (tm.restocking_pct) bits.push(t().restock.replace('{p}', tm.restocking_pct));
+    if (tm.warranty_days) bits.push(t().warranty.replace('{d}', tm.warranty_days));
+    return bits.join(' · ');
+  }
+  function renderShip() {
+    var box = $('ship');
+    var groups = ship && ship.groups || [];
+    box.hidden = !groups.length;
+    if (!groups.length) return;
+    box.innerHTML = '<h3>' + esc(t().shipTitle) + '</h3>' + groups.map(function (g) {
+      var refs = g.lines.map(function (i) { return cart[i] && cart[i].mpn; }).filter(Boolean).join(', ');
+      var st;
+      if (g.free_shipping) st = '<strong class="ok">' + esc(t().shipFree) + '</strong>';
+      else if (g.missing_for_free != null) st = esc(t().shipPaid) + ' · ' + esc(t().shipFreeFrom.replace('{m}', money(g.terms.free_shipping_over)).replace('{r}', money(g.missing_for_free)));
+      else st = esc(t().shipPaid);
+      var inc = g.incoterm === 'DAP' ? DAP[lang] : fca(cart[g.lines[0]] && quotes[keyOf(cart[g.lines[0]])] || {});
+      return '<div class="grp"><div class="gh">' + esc(t().group.replace('{n}', g.group)) + ' <span class="muted">' + esc(refs) + '</span></div>' +
+        '<div>' + st + (inc ? ' <span class="muted">(' + esc(inc) + ')</span>' : '') + '</div>' +
+        (termsLine(g.terms) ? '<div class="muted">' + esc(termsLine(g.terms)) + '</div>' : '') + '</div>';
+    }).join('') + '<p class="muted">' + esc(t().duties) + '</p>';
+  }
 
   // ------------------------------------------------------------ envoi
   function fillCountries() {
@@ -330,7 +398,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('to-offers').href = $('more').href = t().offers; $('to-search').href = t().search;
     document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
-    fillCountries(); render();
+    fillCountries(); render(); renderShip();
   }
   document.querySelectorAll('[data-lang]').forEach(function (b) {
     b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} say('', ''); applyLang(); });

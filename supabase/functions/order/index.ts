@@ -9,6 +9,8 @@
 //   POST /order/cart {lines: [{mpn, source, ship_from, qty}], currency, company, vat, name, email, phone?, country,
 //                address, message?} → panier CART-… (une demande PR-… par ligne, ADR 0028), devis, lien de suivi ;
 //                prévient les opérateurs (un seul avis pour le panier)
+//   POST /order/shipping {lines, currency} → livraison du panier par fournisseur (numérotés, jamais nommés) : conditions,
+//                livraison offerte ou montant manquant (migration 20261103000029)
 //   GET  /order/status?ref&k → statut de la demande ou du panier (CART-…), jamais le fournisseur
 //
 // Le numéro de TVA est vérifié auprès du service VIES de la Commission européenne quand c'est possible.
@@ -68,6 +70,13 @@ Deno.serve(async (req) => {
         : await db.rpc('purchase_request_status', { p_ref: ref, p_token: q.get('k') || '' });
       if (error) return fail(error);
       return data ? json(data) : json({ error: 'not_found' }, 404);
+    }
+
+    if (req.method === 'POST' && u.pathname.endsWith('/shipping')) {
+      const b = await req.json().catch(() => ({}));
+      const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+      const { data, error } = await db.rpc('cart_shipping', { p_ip: ip, p: { currency: b.currency, lines: Array.isArray(b.lines) ? b.lines : [] } });
+      return error ? fail(error) : json(data);
     }
 
     if (req.method === 'POST' && u.pathname.endsWith('/cart')) {
