@@ -17,7 +17,7 @@ Les fournisseurs s'inscrivent seuls (ADR 0012) et sont validés par un opérateu
 - Choix de Bertier (2 novembre 2026) : connexion par **lien e-mail** (Supabase Auth, sans mot de passe), plutôt que par l'identité WeChat du robot.
 - Est administrateur l'utilisateur rattaché (table `members`) à l'organisation de type `ops`, c'est-à-dire `app.is_ops()` du schéma initial, déjà utilisé par les politiques de sécurité par ligne. Pas de nouvelle liste : un seul mécanisme pour la base et le back office.
 - Aucun compte n'est créé par la page (`shouldCreateUser: false`) ; la réponse ne dit pas si l'adresse existe.
-- Session limitée : le jeton d'accès Supabase vit une heure et n'est pas renouvelé ; il est gardé dans l'onglet seulement (`sessionStorage`).
+- Session limitée : le jeton d'accès Supabase vit une heure et n'est pas renouvelé. Depuis le 3 novembre 2026 (demande de Bertier), il est partagé par les onglets du navigateur (`localStorage`) : un onglet ouvert après la connexion est déjà connecté, et le lien e-mail ouvert dans un nouvel onglet connecte aussi celui resté sur la page de connexion. Se déconnecter dans un onglet déconnecte tous les autres ; un jeton expiré est effacé. Le jeton survit à la fermeture du navigateur jusqu'à son expiration, une heure au plus : se déconnecter avant de quitter un poste partagé.
 
 ### Même logique métier que le robot WeChat
 - `admin_approve` et `admin_reject` appellent `approve_supplier` et `reject_supplier`, les fonctions du robot ; rien n'est réécrit à côté.

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!-- Back office Central.Parts : approbation des fournisseurs et lecture des stocks (ADR 0018).
      Écrite à la main, pas générée. Outil interne en français, réservé aux administrateurs (membres de l'organisation
-     Central.Parts dans Supabase Auth). Connexion par lien e-mail ; le jeton reçu ne vit que dans l'onglet
-     (sessionStorage) et expire au bout d'une heure. La page n'est qu'une façade : la fonction Edge « admin » et les
+     Central.Parts dans Supabase Auth). Connexion par lien e-mail ; le jeton reçu est partagé par les onglets du
+     navigateur (localStorage) et expire au bout d'une heure ; se déconnecter dans un onglet déconnecte les autres. La page n'est qu'une façade : la fonction Edge « admin » et les
      fonctions SQL admin_* vérifient le rôle à chaque appel. Aucune clé ni aucun secret dans la page. -->
 <html lang="fr">
 <head>
@@ -259,17 +259,24 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     $('who').hidden = id !== 'v-app';
   }
 
-  // ------------------------------------------------------------ session (jeton Supabase Auth, onglet seulement)
+  // ------------------------------------------------------------ session (jeton Supabase Auth, partagé par les onglets)
+  // localStorage : un onglet ouvert après la connexion est déjà connecté ; le jeton expire toujours au bout d'une heure.
+  // Session d'un onglet ouvert avant ce changement (sessionStorage) : reprise une fois, puis effacée.
+  try {
+    var old = sessionStorage.getItem(KEY);
+    if (old) { if (!localStorage.getItem(KEY)) localStorage.setItem(KEY, old); sessionStorage.removeItem(KEY); }
+  } catch (e) { /* stockage indisponible */ }
   function session() {
     try {
-      var s = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+      var s = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (s && s.token && s.exp > Date.now() / 1000 + 30) return s;
+      if (s) localStorage.removeItem(KEY);
     } catch (e) { /* stockage indisponible */ }
     return null;
   }
-  function saveSession(token, exp) { try { sessionStorage.setItem(KEY, JSON.stringify({ token: token, exp: exp })); } catch (e) { /* rien */ } }
+  function saveSession(token, exp) { try { localStorage.setItem(KEY, JSON.stringify({ token: token, exp: exp })); } catch (e) { /* rien */ } }
   function logout(text) {
-    try { sessionStorage.removeItem(KEY); } catch (e) { /* rien */ }
+    try { localStorage.removeItem(KEY); } catch (e) { /* rien */ }
     view('v-login'); show(text || '', 'info');
   }
   // Retour du lien e-mail : #access_token=…&expires_at=… (ou #error_description=…). Retiré aussitôt de l'adresse.
@@ -542,12 +549,22 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   }
 
   // ------------------------------------------------------------ démarrage
-  if (!session()) { view('v-login'); return; }
-  api('GET', '/me').then(function (me) {
-    $('who-email').textContent = me.email || '';
-    view('v-app');
-    return loadSuppliers();
-  }).catch(fail);
+  function start() {
+    if (!session()) { view('v-login'); return; }
+    api('GET', '/me').then(function (me) {
+      $('who-email').textContent = me.email || '';
+      view('v-app');
+      show('');
+      return loadSuppliers();
+    }).catch(fail);
+  }
+  // Un autre onglet se connecte (lien e-mail ouvert ailleurs) ou se déconnecte : cet onglet suit.
+  window.addEventListener('storage', function (ev) {
+    if (ev.key !== KEY && ev.key !== null) return;
+    if (session()) { if ($('v-app').hidden) start(); }
+    else if (!$('v-app').hidden) logout('Déconnecté dans un autre onglet.');
+  });
+  start();
 })();
 </script>
 </body>
