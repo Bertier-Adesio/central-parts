@@ -205,8 +205,8 @@ for (const width of [1280, 390]) {
     await page.click('[data-lang=en]');
     ok((await page.textContent('#rows')).includes('Partner Supplier'), 'EN : Partner Supplier');
     ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page acheteur non indexée');
-    const mail = await page.getAttribute('#rows tr:first-child a', 'href');
-    ok(mail.startsWith('mailto:contact@central.parts') && !/T-00|example/.test(decodeURIComponent(mail)), 'demande de prix vers Central.Parts, sans donnée du vendeur');
+    // « Demander » est devenu « Ajouter au panier » (ADR 0028) : plus de lien mailto.
+    ok((await page.$$('#rows button.add')).length === 10 && (await page.$$('#rows a[href^="mailto:"]')).length === 0, 'bouton « Add to cart » sur chaque offre, plus de mailto');
   }
   ok(errors.length === 0, width + ' px : aucune erreur console ' + errors.join(' | '));
   await page.close();

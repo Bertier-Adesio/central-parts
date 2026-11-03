@@ -43,6 +43,12 @@ form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-t
 .steps li.done{color:var(--fg-1)}
 .steps li.done::before{background:var(--accent);border-color:var(--accent)}
 .mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
+.cl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 0;border-top:1px solid var(--border-1);font-size:var(--text-sm)}
+.cl:first-child{border-top:0}
+.cl .st{grid-column:1 / -1;color:var(--fg-2)}
+.cl .st.done{color:var(--status-success)}
+.cl .pr{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cl-total{display:flex;justify-content:space-between;border-top:2px solid var(--border-2);padding:10px 0 0;font-weight:var(--weight-semibold)}
 .price{text-align:right;font-weight:var(--weight-semibold);white-space:nowrap}
 .meta{grid-column:1 / -1;display:flex;gap:6px;flex-wrap:wrap;font-size:var(--text-sm);color:var(--fg-2)}
 .tag{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
@@ -78,6 +84,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   <div id="msg" class="msg" hidden role="status"></div>
   <section class="card" id="out" hidden>
     <p class="muted" id="ref"></p>
+    <div id="cart-lines" hidden></div>
     <p class="mpn" id="mpn"></p>
     <p id="price"></p>
     <ol class="steps" id="steps"></ol>
@@ -113,10 +120,25 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     try { return new Intl.NumberFormat(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-GB', { style: 'currency', currency: cur === 'CNH' ? 'CNY' : cur }).format(v); }
     catch (e) { return v + ' ' + cur; }
   }
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function say(text) { $('msg').hidden = !text; $('msg').className = 'msg err'; $('msg').textContent = text || ''; }
+  // Libellé du statut d'une ligne de panier : étape atteinte, ou fin (indisponible, annulée, non retenue).
+  function stLabel(st) { return STEPS.indexOf(st) >= 0 ? t().s[st] : (t().end[st] || st); }
   function render(d) {
     $('out').hidden = false;
     $('ref').textContent = t().ref.replace('{ref}', d.ref).replace('{date}', new Date(d.created_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-GB'));
+    // Panier (CART-…, ADR 0028) : une ligne par référence, chacune avec son statut.
+    $('cart-lines').hidden = !d.cart;
+    ['mpn', 'price', 'steps'].forEach(function (id) { $(id).hidden = !!d.cart; });
+    if (d.cart) {
+      $('cart-lines').innerHTML = (d.lines || []).map(function (l) {
+        var done = ['submitted', 'confirmed', 'proforma_sent', 'paid', 'shipped'].indexOf(l.status) >= 0;
+        return '<div class="cl"><span class="mpn">' + esc(l.mpn) + ' × ' + esc(l.qty) + '</span><span class="pr">' +
+          esc(l.unit_price == null ? t().toConfirm : money(l.total, d.currency)) + '</span><span class="st' + (done ? ' done' : '') + '">' + esc(stLabel(l.status)) + '</span></div>';
+      }).join('') + '<div class="cl-total"><span>' + esc(t().total) + '</span><span>' + esc(d.total == null ? t().toConfirm : money(d.total, d.currency)) + '</span></div>' +
+        '<p class="muted">' + esc(t().excl) + '</p>';
+      return;
+    }
     $('mpn').textContent = d.mpn + ' × ' + d.qty;
     $('price').textContent = d.unit_price == null ? t().toConfirm : t().total + ' ' + money(d.total, d.currency) + ' (' + t().unit + ' ' + money(d.unit_price, d.currency) + ', ' + t().excl + ')';
     var at = STEPS.indexOf(d.status), html = '';

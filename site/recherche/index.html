@@ -54,6 +54,10 @@ form.order .check{display:flex;gap:8px;align-items:flex-start;font-weight:normal
 form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 .quote{font-family:var(--font-mono);background:var(--bg-sunken);border-radius:var(--radius-sm);padding:10px 12px;margin:0 0 12px;font-size:var(--text-sm)}
 .quote:empty{display:none}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.cartlink{color:var(--fg-inverse);text-decoration:none;font-size:var(--text-sm);border:1px solid var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 10px;white-space:nowrap}
+.add{grid-column:1 / -1;justify-self:start;min-height:var(--control-h-md);padding:0 14px}
+.add.in{border-color:var(--status-success);color:var(--status-success)}
 </style>
 </head>
 <body>
@@ -64,7 +68,10 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
       <span>Central<span class="accent">.</span>Parts</span>
     </a>
-    <button class="lang" type="button" id="lang">EN</button>
+    <div class="hdr-r">
+      <a class="cartlink" href="/panier/" id="cart-link"><span data-t="cart">Panier</span> <span id="cart-n"></span></a>
+      <button class="lang" type="button" id="lang">EN</button>
+    </div>
   </div>
 </header>
 
@@ -123,6 +130,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
       from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} »',
+      cart: 'Panier', add: 'Ajouter au panier', inCart: 'Dans le panier ✓', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       buy: 'Acheter', buyTitle: "Demande d'achat", fQty: 'Quantité', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom', fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
       send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Central.Parts vérifie votre demande et la transmet au fournisseur, qui confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
@@ -135,6 +143,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
       from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}"',
+      cart: 'Cart', add: 'Add to cart', inCart: 'In the cart ✓', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       buy: 'Buy', buyTitle: 'Purchase request', fQty: 'Quantity', fCompany: 'Company', fVat: 'VAT number', fName: 'Full name', fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
       send: 'Send the request', cancel: 'Cancel', doneNext: 'Central.Parts checks your request and sends it to the supplier, who confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
@@ -147,6 +156,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
       from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价',
+      cart: '购物车', add: '加入购物车', inCart: '已加入购物车 ✓', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       buy: '购买', buyTitle: '采购申请', fQty: '数量', fCompany: '公司', fVat: '增值税号（欧盟）', fName: '姓名', fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '交货国家', fAddress: '交货地址', fMessage: '留言（选填）',
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到银行转账后交易成立。买方负责进口清关（进口关税和增值税）。',
       send: '提交申请', cancel: '取消', doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
@@ -171,6 +181,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('lang').textContent = LABEL[ORDER[(ORDER.indexOf(lang) + 1) % 3]];
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     $('home').href = t().home; $('cta-buyer').href = t().home + '#contact';
+    cartCount();
     if (last) render(last);
     if (offer) { describe(); fillCountries(); quote(); }
   }
@@ -196,8 +207,16 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
         '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span>' +
         '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div>' +
+        (cartHas(x) ? '<a class="btn btn-line add in" href="' + esc(t().cartHref) + '">' + esc(t().inCart) + '</a>'
+          : '<button class="btn btn-line add" type="button" data-i="' + i + '">' + esc(t().add) + '</button>') +
         (BUY_OPEN ? '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button>' : '') + '</div>';
     }).join('');
+    $('list').querySelectorAll('button.add').forEach(function (b) { b.addEventListener('click', function () {
+      var x = r[+b.getAttribute('data-i')], res = cartAdd(x);
+      render(d); cartCount();
+      $('msg').hidden = false; $('msg').className = 'msg ' + (res === 'ok' ? 'ok' : 'err');
+      $('msg').textContent = res === 'ok' ? t().added.replace('{mpn}', x.mpn) : res === 'full' ? t().cartFull : t().cartOff;
+    }); });
     $('list').querySelectorAll('.buy').forEach(function (b) { b.addEventListener('click', function () { var x = r[+b.getAttribute('data-i')]; openBuy(x, x.currency || d.currency); }); });
   }
 
@@ -214,6 +233,21 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       }, function (code) { $('out').hidden = true; say(t().e[code] || t().e.other); })
       .then(function () { $('f').querySelector('button').disabled = false; });
   }
+
+  // ---------------------------------------------------------------- panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
+  var CART = 'cp-cart', CART_MAX = 30;
+  function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
+  function cartAdd(o) {
+    var a = cartLoad();
+    if (cartHas(o)) return 'ok';
+    if (a.length >= CART_MAX) return 'full';
+    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from, qty: 1, moq: 1 });
+    try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
+    return cartLoad().length === a.length ? 'ok' : 'off';
+  }
+  function cartCount() { var n = cartLoad().length; $('cart-n').textContent = n ? '(' + n + ')' : ''; $('cart-link').href = t().cartHref; }
+  window.addEventListener('storage', function (ev) { if (ev.key === CART) { cartCount(); if (last) render(last); } });
 
   // ---------------------------------------------------------------- demande d'achat (ADR 0014)
   var ORDER_FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order';

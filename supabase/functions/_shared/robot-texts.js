@@ -184,6 +184,24 @@ export function purchaseRequestOperatorNote(op) {
   ].join('\n');
 }
 
+// Panier (ADR 0028) : un seul avis aux opérateurs, une ligne par demande ; chaque ligne se valide à part.
+// cards : fiches request_for_operator des lignes ; total : total du panier (null si une ligne est à confirmer).
+export function purchaseCartOperatorNote(ref, cards, total, currency) {
+  const b = cards[0];
+  return [
+    `[Cart ${ref}] ${cards.length} line(s) · awaiting your validation`,
+    `Buyer: ${b.buyer_company} · ${b.buyer_vat}${b.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
+    `${b.buyer_name} · ${b.buyer_email}${b.buyer_phone ? ' · ' + b.buyer_phone : ''}`,
+    `Delivery: ${b.delivery}`,
+    ...(b.message ? [`Message: ${b.message}`] : []),
+    '',
+    ...cards.map((c) => `${c.ref} · ${c.mpn} × ${c.qty} · ${c.unit_price ?? 'to confirm'} ${c.currency} · ${c.supplier}: ${c.supplier_unit_price ?? '?'} ${c.supplier_currency}, stock ${c.lot_qty}`),
+    `Total: ${total ?? 'to confirm'}${total != null ? ' ' + currency : ''}`,
+    '',
+    `Nothing is sent to the suppliers before you decide, line by line: "approve PR-…" or "reject PR-… reason", or https://central.parts/admin/`,
+  ].join('\n');
+}
+
 // Demande d'achat validée : message au fournisseur (chinois), sans l'acheteur. v : supplier_view (request_for_supplier).
 export function supplierRequestText(v) {
   return [

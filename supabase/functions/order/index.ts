@@ -6,12 +6,15 @@
 //   POST /order  {mpn, source, ship_from, qty, currency, company, vat, name, email, phone?, country, address, message?}
 //                → référence, devis, lien de suivi ; prévient les opérateurs dans WeChat. Le fournisseur n'est prévenu
 //                  qu'après la validation d'un administrateur (back office ou robot, ADR 0026)
-//   GET  /order/status?ref&k → statut de la demande (jamais le fournisseur)
+//   POST /order/cart {lines: [{mpn, source, ship_from, qty}], currency, company, vat, name, email, phone?, country,
+//                address, message?} → panier CART-… (une demande PR-… par ligne, ADR 0028), devis, lien de suivi ;
+//                prévient les opérateurs (un seul avis pour le panier)
+//   GET  /order/status?ref&k → statut de la demande ou du panier (CART-…), jamais le fournisseur
 //
 // Le numéro de TVA est vérifié auprès du service VIES de la Commission européenne quand c'est possible.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { notifyOperators } from '../_shared/wechat.ts';
-import { purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
+import { purchaseCartOperatorNote, purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
@@ -59,9 +62,38 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'GET' && u.pathname.endsWith('/status')) {
-      const { data, error } = await db.rpc('purchase_request_status', { p_ref: q.get('ref') || '', p_token: q.get('k') || '' });
+      const ref = q.get('ref') || '';
+      const { data, error } = /^CART-/i.test(ref)
+        ? await db.rpc('purchase_cart_status', { p_cart: ref, p_token: q.get('k') || '' })
+        : await db.rpc('purchase_request_status', { p_ref: ref, p_token: q.get('k') || '' });
       if (error) return fail(error);
       return data ? json(data) : json({ error: 'not_found' }, 404);
+    }
+
+    if (req.method === 'POST' && u.pathname.endsWith('/cart')) {
+      const b = await req.json().catch(() => ({}));
+      const vat = String(b.vat || '').toUpperCase().replace(/[\s.-]/g, '');
+      const valid = await viesValid(vat);
+      if (valid === false) return json({ error: 'vat_invalid' }, 422);
+      const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+      const { data, error } = await db.rpc('create_purchase_cart', { p_ip: ip, p: { ...b, vat, vat_checked: valid === true } });
+      if (error) {
+        if (error.code === 'P0002') return json({ error: 'not_found', mpn: error.details || null }, 404);
+        return fail(error);
+      }
+      // Opérateurs seulement, un avis pour tout le panier : rien ne part chez les fournisseurs avant la validation.
+      const notify = (async () => {
+        const cards = [];
+        for (const l of data.lines) {
+          const { data: op } = await db.rpc('request_for_operator', { p_ref: l.ref });
+          if (op) cards.push(op);
+        }
+        if (cards.length) await notifyOperators(db, purchaseCartOperatorNote(data.ref, cards, data.total, data.currency));
+      })().catch(() => {});
+      const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+      if (rt) rt.waitUntil(notify); else await notify;
+      return json({ ...data, vat_checked: valid === true,
+        status_url: `${SITE}/recherche/commande/?ref=${encodeURIComponent(data.ref)}&k=${data.token}` });
     }
 
     if (req.method === 'POST' && u.pathname.endsWith('/order')) {
