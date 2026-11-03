@@ -141,6 +141,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok(state.currency === 'USD' && state.pending.includes('-devise-USD.'), 'devise choisie transmise au dépôt');
   ok((await page.textContent('#imports .imp:first-child')).includes('币种：USD (读取自文件)'), 'rapport : devise et provenance affichées');
   ok((await page.textContent('#msg')).includes('0 行需修改'), 'liste de test : 10 lignes acceptées, aucune à corriger');
+  await page.waitForFunction(() => document.getElementById('n-live').textContent === '10', null, { timeout: 5000 }).catch(() => {});
   ok((await page.textContent('#n-live')) === '10', 'liste de test : 10 offres en ligne');
   ok(await noScroll(page), '390 px : pas de défilement horizontal après le rapport');
 
@@ -153,6 +154,8 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
     ['MPN vide', '型号（mpn）为空'], ['prix nul', '价格无效'], ['palier sans prix', '价格阶梯不完整'], ['MOQ à 0', '最小起订量无效']]) {
     ok(report.includes(want), 'rapport 中文 : ' + label);
   }
+  // Le compteur se met à jour après le message d'import (second appel) : on l'attend, sans changer la valeur attendue.
+  await page.waitForFunction(() => document.getElementById('n-live').textContent === '1', null, { timeout: 5000 }).catch(() => {});
   ok((await page.textContent('#n-live')) === '1', 'remplacement : 1 offre en ligne après la liste fausse');
   await page.click('[data-lang=en]');
   ok((await page.textContent('#imports .imp:first-child')).includes('Price breaks: quantities must increase'), 'rapport EN : raisons traduites');
