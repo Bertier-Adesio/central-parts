@@ -26,7 +26,7 @@ Pour chaque ligne, dans cet ordre ([ADR 0022](../docs/decisions/0022-liens-descr
 
 ## Format attendu des fabricants chinois
 
-Modèle à en-têtes chinois, sur le modèle des fichiers de prix des fabricants (UMW) : [`site/depot/modele-fabricant.csv`](../site/depot/modele-fabricant.csv), publié à `https://central.parts/depot/modele-fabricant.csv` et proposé dans l'espace fournisseur.
+Modèle à en-têtes chinois, sur le modèle des fichiers de prix des fabricants (UMW) : [`site/depot/modele-fabricant.csv`](../site/depot/modele-fabricant.csv), publié à `https://central.parts/depot/modele-fabricant.csv` et proposé dans l'espace fournisseur. Versions Excel des deux modèles de stock (mêmes en-têtes, données d'abord, mode d'emploi en seconde feuille) et **catalogue produit** (fiches : catégorie, description, fiche technique, RoHS, REACH, cycle de vie, conditionnement, MSL, AEC-Q, origine, codes douanier et d'export, image ; feuille « Cross reference » des équivalences) dans [`site/depot/modeles/`](../site/depot/modeles/), générés par `tools/build-templates.py` et proposés dans le guide [`/depot/aide/`](../site/depot/aide/). Le catalogue n'est pas encore importé : le fournisseur l'envoie par e-mail ou WeChat.
 
 ```
 型号,品牌,产品编号,产品描述,封装,库存,批次,货期,最小起订量,币种,价格,规格书链接,产品链接

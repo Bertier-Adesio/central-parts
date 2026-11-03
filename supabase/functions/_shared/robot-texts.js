@@ -8,6 +8,7 @@
 // anglais et restent dans wechat.ts et wechat-events.
 
 const SITE = 'https://central.parts/depot/';
+const HELP = 'https://central.parts/depot/aide/';
 
 // Réponse au scan du QR code de connexion affiché sur la page de dépôt (scène dl_…).
 const SCAN = {
@@ -77,12 +78,34 @@ export function welcomeText(scene, operator = false) {
     '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。',
     '',
     `1. 注册公司、上传库存（15 分钟内有效，过期请发送任意消息获取新链接）：${link}`,
-    '2. 库存表模板：https://central.parts/depot/stock-template.csv',
+    `2. 使用帮助与模板：${HELP}`,
     '3. 了解我们：https://central.parts/zh/',
     '',
     'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。',
     '',
-    'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Meet us at electronica 2026, Hall B4, Booth 251/12.',
+    `Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: ${HELP}. Meet us at electronica 2026, Hall B4, Booth 251/12.`,
+  ].join('\n');
+}
+
+// Demande d'aide d'un fournisseur ou d'un inconnu (« help », « 帮助 »…) : les opérateurs ont leur propre « help ».
+export function isHelpRequest(text) {
+  return /^\s*(help|guide|帮助|使用帮助|教程|[?？])\s*$/i.test(String(text || ''));
+}
+
+// Étapes de connexion et d'utilisation, avec le lien du guide (site/depot/aide/).
+export function supplierHelpText() {
+  return [
+    '使用帮助',
+    '1. 登录：点击菜单「供应商」→「上传库存」，再点击收到的链接（15 分钟内有效）。在电脑上：打开 central.parts/depot/，用微信扫码。',
+    '2. 首次登录：注册公司（中国大陆、香港或其他），并在网页上上传营业执照。',
+    '3. 上传库存表（CSV 或 Excel），并至少每 7 天重新上传一次。',
+    `完整指南与模板：${HELP}`,
+    '',
+    'Help',
+    '1. Log in: tap the menu “供应商” → “上传库存”, then the link you receive (valid 15 minutes). On a computer: open central.parts/depot/ and scan the QR code with WeChat.',
+    '2. First time: register your company (Mainland China, Hong Kong or other) and upload your business licence on the page.',
+    '3. Upload your stock file (CSV or Excel) at least every 7 days.',
+    `Full guide and templates: ${HELP}`,
   ].join('\n');
 }
 

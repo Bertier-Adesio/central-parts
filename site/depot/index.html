@@ -88,7 +88,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 <main class="wrap">
   <h1 data-t="title">供应商中心</h1>
   <p class="lead" data-t="lead">注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
-  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a></p>
+  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a> · <a href="aide/#modeles" data-t="tplMore">Excel 模板与产品目录</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
@@ -99,6 +99,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     <p class="muted" id="qr-hint" data-t="scanHint">请用手机微信扫一扫。在手机上打开此页面时，长按二维码识别。</p>
     <button class="btn btn-main" type="button" id="qr-refresh" hidden data-t="refresh">刷新二维码</button>
     <p class="muted" data-t="loginNote">首次使用？扫码后即可注册公司。</p>
+    <p class="muted"><a href="aide/" data-t="helpLink">使用帮助：如何登录、注册公司和上传库存</a></p>
     <p class="msg info phone-only" id="menu-hint" data-t="menuHint">在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。</p>
   </section>
 
@@ -203,7 +204,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
       menuHint: '在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。',
       tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。',
-      tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）',
+      tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）', tplMore: 'Excel 模板与产品目录',
+      helpLink: '使用帮助：如何登录、注册公司和上传库存',
       regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
       fCode: '统一社会信用代码', fCodeHint: '18 位，见营业执照。', fCodeOther: '公司注册号码',
@@ -246,7 +248,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
       menuHint: 'On a phone: open the “Adesio Central.Parts” account in WeChat and tap the menu “供应商” → “上传库存” to receive your login link.',
       tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Manufacturers and authorized distributors, please also fill in as far as possible: full manufacturer name, description, datasheet link, case, lifecycle, ECCN and HTS code. These fields are optional, but the more complete your data, the more likely buyers are to choose your offers; they will also count towards your supplier rating later.',
-      tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)',
+      tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)', tplMore: 'Excel templates and product catalogue',
+      helpLink: 'Help: how to log in, register your company and upload your stock',
       regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
       fCode: 'Unified social credit code', fCodeHint: '18 characters, on the business licence.', fCodeOther: 'Company registration number',
