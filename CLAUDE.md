@@ -31,6 +31,7 @@ Règle : la protection dépend de la source. Toute offre de broker ou de surplus
 - Les pages publiées n'utilisent aucun runtime ni framework : HTML statique, un seul `<script>` vanilla en fin de page, tout lisible sans JavaScript.
 - Couleurs et typos : utiliser les variables de `brand/tokens.css` (alias sémantiques `--bg-*`, `--fg-*`, `--accent`…), pas de valeurs en dur.
 - Aucune ressource chargée depuis un CDN : tout est auto-hébergé dans `site/assets/`.
+- En-tête de sécurité CSP dans `site/.htaccess` (ADR 0031) : les scripts en ligne y sont autorisés par empreinte. Après toute modification du `<script>` d'une page écrite à la main, lancer `node tools/build-csp.mjs` et committer `site/.htaccess` (`tools/build-site.mjs` le fait pour la landing ; la CI échoue sinon). Toute nouvelle source externe (image, appel réseau) s'ajoute dans `tools/build-csp.mjs`.
 - Le site doit rester accessible depuis la Chine : aucun lien ni ressource vers Google, LinkedIn ou un autre service tiers (le build échoue sinon), seule exception : le formulaire partenaire Tencent Docs. Voir `docs/decisions/0006-acces-depuis-la-chine.md`.
 - Une branche par sujet (`fournisseurs/…`, `clients/…`, `site/…`, `api/…`, `data/…`, `docs/…`, voir ADR 0016), puis pull request vers `main`. Ne pas pousser directement sur `main` sans accord, car cela déploie le site et les fonctions Supabase touchées en production.
 - Toute décision structurante (stack API, modèle de données, hébergement) donne lieu à un ADR dans `docs/decisions/`.
@@ -54,6 +55,7 @@ node tools/test-aide-ui.mjs            # guide du fournisseur site/depot/aide/ e
 node tools/test-search-ui.mjs          # recherche publique, achat et suivi site/recherche/ (même serveur), API simulée
 node tools/test-listes-ui.mjs          # dépôt par lien site/depot/lien/ et offres site/offres/ (même serveur), API simulée
 node tools/test-panier-ui.mjs          # panier site/panier/ : ajout depuis les offres et la recherche, envoi, suivi (même serveur), API simulée
+node tools/test-csp.mjs                # en-tête CSP sur chaque page (même serveur) : aucune violation, script injecté et envoi externe refusés
 node tools/test-api-page-ui.mjs        # documentation de l'API d'offres site/api/ (même serveur) : langues, endpoints, mots interdits, noindex
 node tools/test-admin-ui.mjs           # back office site/admin/ (même serveur), API simulée, demandes à valider ; démonstration : node tools/demo-admin.mjs
 node tools/test-rfq.mjs                # route RFQ : commandes WeChat, textes, erreurs, signature des webhooks
