@@ -58,7 +58,8 @@ ok(txt.includes('à partir de') && txt.includes('Prix sur demande'), 'prix « à
 ok(/à partir de 0,1234\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix affiché en euros');
 ok(/prix 1 k : 0,1456\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de », en euros');
 ok(txt.includes('Taux de référence de la BCE du 03/11/2026'), 'date du taux de la BCE affichée');
-ok((await page.textContent('main')).includes('Prix tout compris en euros, convertis au taux de référence de la BCE'), 'consigne : prix en euros');
+ok((await page.textContent('main')).includes('Prix tout compris en euros, Incoterm indiqué sur chaque offre (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport'), 'consigne : prix en euros, FCA, hors transport');
+ok(txt.includes('FCA Chine') && txt.includes('FCA Hong Kong'), 'Incoterm : FCA et lieu d\'expédition sur chaque offre (pays faute de lieu précis)');
 ok((txt.match(/prix 1 k/g) || []).length === 1, 'pas de prix 1KU pour une offre sur demande');
 ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes('Expédié de Chine') && txt.includes('Disponible 10000+'), 'source, pays et tranche affichés');
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
@@ -86,6 +87,10 @@ await page.goto(BASE + '/recherche/?q=NE555&cur=USD&lang=zh');
 await page.waitForSelector('.res');
 ok(calls[calls.length - 1] === '?cur=EUR&q=NE555' && (await page.textContent('h1')) === '搜索元器件', 'lien partagé (ancien paramètre cur ignoré) : recherche et langue relancées');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 340 px');
+// Marge pour des polices plus larges (CI) : la liste et l'icône du panier tiennent aussi à 320 px.
+await page.setViewportSize({ width: 320, height: 844 });
+ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 320 px (icône du panier comprise)');
+await page.setViewportSize({ width: 340, height: 844 });
 
 // Achats fermés jusqu'à leur lancement : pas de bouton « Acheter ».
 ok((await page.$$('.res .buy')).length === 0, 'achats fermés : pas de bouton « Acheter »');

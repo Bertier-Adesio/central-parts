@@ -9,12 +9,17 @@
 //   POST /order/cart {lines: [{mpn, source, ship_from, qty}], currency, company, vat, name, email, phone?, country,
 //                address, message?} → panier CART-… (une demande PR-… par ligne, ADR 0028), devis, lien de suivi ;
 //                prévient les opérateurs (un seul avis pour le panier)
+//   POST /order/shipping {lines, currency} → livraison du panier par fournisseur (numérotés, jamais nommés) : conditions,
+//                livraison offerte ou montant manquant (migration 20261103000029)
+//   GET  /order/address?q&country&lang → complétion d'adresses (Photon, OpenStreetMap, ADR 0030), interrogé ici
+//                côté serveur : le navigateur ne charge rien d'un tiers ; 5 adresses au plus, filtrées par pays
 //   GET  /order/status?ref&k → statut de la demande ou du panier (CART-…), jamais le fournisseur
 //
 // Le numéro de TVA est vérifié auprès du service VIES de la Commission européenne quand c'est possible.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { notifyOperators } from '../_shared/wechat.ts';
 import { purchaseCartOperatorNote, purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
+import { normalizePhoton, PHOTON_DEFAULT, photonUrl } from '../_shared/address.js';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
@@ -61,6 +66,23 @@ Deno.serve(async (req) => {
       return error ? fail(error) : json(data);
     }
 
+    if (req.method === 'GET' && u.pathname.endsWith('/address')) {
+      const text = (q.get('q') || '').trim();
+      if (text.length < 4) return json({ results: [] });
+      const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+      const { error } = await db.rpc('address_lookup_hit', { p_ip: ip });
+      if (error) return fail(error);
+      try {
+        // Instance publique de Komoot par défaut (usage modéré) ; ADDRESS_API pour une instance auto-hébergée.
+        const r = await fetch(photonUrl(Deno.env.get('ADDRESS_API') || PHOTON_DEFAULT, text, q.get('lang') || 'default'), {
+          headers: { 'User-Agent': 'Central.Parts address lookup (https://central.parts)' }, signal: AbortSignal.timeout(4000) });
+        if (!r.ok) return json({ results: [], unavailable: true });
+        return json({ results: normalizePhoton(await r.json(), q.get('country') || '') });
+      } catch {
+        return json({ results: [], unavailable: true });
+      }
+    }
+
     if (req.method === 'GET' && u.pathname.endsWith('/status')) {
       const ref = q.get('ref') || '';
       const { data, error } = /^CART-/i.test(ref)
@@ -68,6 +90,13 @@ Deno.serve(async (req) => {
         : await db.rpc('purchase_request_status', { p_ref: ref, p_token: q.get('k') || '' });
       if (error) return fail(error);
       return data ? json(data) : json({ error: 'not_found' }, 404);
+    }
+
+    if (req.method === 'POST' && u.pathname.endsWith('/shipping')) {
+      const b = await req.json().catch(() => ({}));
+      const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+      const { data, error } = await db.rpc('cart_shipping', { p_ip: ip, p: { currency: b.currency, lines: Array.isArray(b.lines) ? b.lines : [] } });
+      return error ? fail(error) : json(data);
     }
 
     if (req.method === 'POST' && u.pathname.endsWith('/cart')) {
@@ -79,6 +108,11 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('create_purchase_cart', { p_ip: ip, p: { ...b, vat, vat_checked: valid === true } });
       if (error) {
         if (error.code === 'P0002') return json({ error: 'not_found', mpn: error.details || null }, 404);
+        // Quantité hors MOQ ou SPQ : référence, quantité minimale et SPQ du lot retenu (indice « min/spq »).
+        if (error.code === 'CP422') {
+          const [min, spq] = String(error.hint || '').split('/').map((x) => parseInt(x, 10) || null);
+          return json({ error: 'qty_invalid', mpn: error.details || null, min_qty: min, spq }, 422);
+        }
         return fail(error);
       }
       // Opérateurs seulement, un avis pour tout le panier : rien ne part chez les fournisseurs avant la validation.

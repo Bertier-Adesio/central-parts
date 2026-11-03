@@ -168,6 +168,16 @@ export function operatorRequestsText(rows, total = rows.length) {
   ].join('\n');
 }
 
+// Facturation et transport d'une demande (ADR 0030), pour les avis aux opérateurs.
+function billingTransportLines(op) {
+  const t = op.transport || {};
+  return [
+    ...(op.billing && op.billing !== op.delivery ? [`Billing: ${op.billing}`] : []),
+    t.mode === 'own' ? `Shipping: buyer's ${t.carrier} account ${t.account} (FCA)` : `Shipping: by Central.Parts (DAP)${t.carrier ? ', preferred ' + t.carrier : ''}`,
+    ...(op.ship_address ? [`Ships from: ${op.ship_address.label} · ${op.ship_address.city} ${op.ship_address.country}`] : []),
+  ];
+}
+
 // Demande d'achat du site (ADR 0014, 0026) : avis aux opérateurs à l'arrivée, avant toute diffusion au fournisseur.
 // op : fiche request_for_operator.
 export function purchaseRequestOperatorNote(op) {
@@ -176,6 +186,7 @@ export function purchaseRequestOperatorNote(op) {
     `Buyer: ${op.buyer_company} · ${op.buyer_vat}${op.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
     `${op.buyer_name} · ${op.buyer_email}${op.buyer_phone ? ' · ' + op.buyer_phone : ''}`,
     `Delivery: ${op.delivery}`,
+    ...billingTransportLines(op),
     `Price ${op.unit_price ?? 'to confirm'} ${op.currency} (total ${op.total ?? 'to confirm'})`,
     `Supplier ${op.supplier}: ${op.supplier_unit_price ?? '?'} ${op.supplier_currency}, stock ${op.lot_qty}`,
     ...(op.message ? [`Message: ${op.message}`] : []),
@@ -193,6 +204,7 @@ export function purchaseCartOperatorNote(ref, cards, total, currency) {
     `Buyer: ${b.buyer_company} · ${b.buyer_vat}${b.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
     `${b.buyer_name} · ${b.buyer_email}${b.buyer_phone ? ' · ' + b.buyer_phone : ''}`,
     `Delivery: ${b.delivery}`,
+    ...billingTransportLines(b),
     ...(b.message ? [`Message: ${b.message}`] : []),
     '',
     ...cards.map((c) => `${c.ref} · ${c.mpn} × ${c.qty} · ${c.unit_price ?? 'to confirm'} ${c.currency} · ${c.supplier}: ${c.supplier_unit_price ?? '?'} ${c.supplier_currency}, stock ${c.lot_qty}`),

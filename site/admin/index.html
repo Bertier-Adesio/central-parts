@@ -65,6 +65,9 @@ ul.rows button:hover,ul.rows button[aria-current=true]{background:var(--bg-sunke
 .badge.rejected{background:var(--status-danger-bg);color:var(--status-danger)}
 .tabs .count{display:inline-block;min-width:1.4em;margin-left:6px;padding:0 6px;border-radius:var(--radius-pill);background:var(--status-warning-bg);color:var(--status-warning);font-size:var(--text-xs)}
 ul.reqs{list-style:none;margin:0 0 20px;padding:0}
+ul.addr{list-style:none;margin:0;padding:0;font-size:var(--text-sm)}
+ul.addr li{padding:6px 0;border-top:1px solid var(--border-1)}
+ul.addr li:first-child{border-top:0}
 ul.reqs > li{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:14px 16px;margin:0 0 10px}
 ul.reqs > li.empty{color:var(--fg-3)}
 ul.reqs .actions{margin-top:10px}
@@ -431,12 +434,23 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (imp && curText(imp) ? '<dt>Devise du dernier import</dt><dd id="d-cur">' + esc(curText(imp)) + '</dd>' : '') +
         '</dl>' +
         '<div class="actions" id="d-actions">' + acts + '</div>' +
+        '<h3>Adresses d\'expédition</h3><div id="d-addr" class="muted">…</div>' +
         '<h3>Journal des décisions</h3>' +
         ((o.decisions || []).length ? '<ol class="log" id="d-log">' + o.decisions.map(function (d) {
           return '<li class="' + esc(d.action) + '"><strong>' + esc(ACTION[d.action] || d.action) + '</strong> · ' + esc(dt(d.at)) + ' · ' + esc(d.by || 'inconnu') +
             (d.reason ? '<br><span class="muted">Motif : ' + esc(d.reason) + '</span>' : '') + '</li>';
         }).join('') + '</ol>' : '<p class="muted" id="d-log">Aucune décision enregistrée.</p>');
       $('sup-detail').dataset.org = o.org_id;
+      api('GET', '/supplier-addresses?org=' + encodeURIComponent(o.org_id)).then(function (list) {
+        if (!$('d-addr')) return;
+        $('d-addr').classList.toggle('muted', !list.length);
+        $('d-addr').innerHTML = list.length ? '<ul class="addr">' + list.map(function (a) {
+          return '<li><strong>' + esc(a.label) + '</strong>' + (a.is_default ? ' <span class="badge validated">par défaut</span>' : '') +
+            '<br>' + esc(a.address) + ', ' + esc(a.postal_code ? a.postal_code + ' ' : '') + esc(a.city) + ', ' + esc(a.country) +
+            (a.contact || a.phone ? '<br><span class="muted">' + esc([a.contact, a.phone].filter(Boolean).join(' · ')) + '</span>' : '') +
+            ' <span class="muted">· ' + num(a.lots) + ' lot(s) rattaché(s)</span></li>';
+        }).join('') + '</ul>' : 'Aucune adresse : le lieu affiché vient de la ville de la société.';
+      }).catch(function () { if ($('d-addr')) $('d-addr').textContent = '—'; });
       $('sup-detail').dataset.name = o.name;
       $('sup-detail').scrollIntoView({ block: 'nearest' });
     }).catch(fail);
@@ -511,6 +525,12 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       text: 'Rien n\'est envoyé aux fournisseurs ; la plateforme reçoit le refus (webhook). Motif obligatoire.' }
   };
   function money(v, cur) { return v == null ? 'à confirmer' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' ' + esc(cur || ''); }
+  // Transport choisi par l'acheteur (ADR 0030) : par Central.Parts (DAP) ou sur son compte (FCA).
+  function transportText(tr) {
+    tr = tr || {};
+    return tr.mode === 'own' ? 'Compte de l\'acheteur : ' + (tr.carrier || '?') + ' n° ' + (tr.account || '?') + ' (FCA)'
+      : 'Par Central.Parts (DAP)' + (tr.carrier ? ', ' + tr.carrier + ' préféré' : '');
+  }
   function reqHtml(r) {
     var pend = r.status === 'pending_validation';
     return '<li data-ref="' + esc(r.ref) + '">' +
@@ -523,6 +543,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       '<dt>Acheteur</dt><dd>' + esc(r.buyer_company) + ' · <span class="mono">' + esc(r.buyer_vat) + '</span> ' + (r.vat_checked ? '(VIES vérifié)' : '(TVA non vérifiée)') +
         '<br>' + esc(r.buyer_name) + ' · ' + esc(r.buyer_email) + (r.buyer_phone ? ' · ' + esc(r.buyer_phone) : '') + '</dd>' +
       '<dt>Livraison</dt><dd>' + esc(r.delivery) + '</dd>' +
+      (r.billing && r.billing !== r.delivery ? '<dt>Facturation</dt><dd>' + esc(r.billing) + '</dd>' : '') +
+      '<dt>Transport</dt><dd>' + esc(transportText(r.transport)) + '</dd>' +
+      (r.ship_address ? '<dt>Expédition</dt><dd>' + esc(r.ship_address.label + ' · ' + r.ship_address.city + ' ' + r.ship_address.country) + '</dd>' : '') +
       '<dt>Fournisseur</dt><dd>' + esc(r.supplier || '—') + ' · prix net ' + money(r.supplier_unit_price, r.supplier_currency) + ' · stock ' + num(r.lot_qty) + '</dd>' +
       (r.message ? '<dt>Message</dt><dd>' + esc(r.message) + '</dd>' : '') +
       (r.decided_at ? '<dt>Décision</dt><dd>' + esc(dt(r.decided_at)) + ' · ' + esc(r.decided_by || '') + (r.reject_reason ? '<br><span class="muted">Motif : ' + esc(r.reject_reason) + '</span>' : '') + '</dd>' : '') +

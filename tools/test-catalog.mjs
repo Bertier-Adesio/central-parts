@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import * as C from '../supabase/functions/_shared/catalog.js';
 import { parseEcbDaily, ratesStale, ECB_DAILY_URL } from '../supabase/functions/_shared/fx.js';
+import { addressText, normalizePhoton, photonUrl } from '../supabase/functions/_shared/address.js';
 
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -123,6 +124,23 @@ ok(parseEcbDaily('<html>erreur</html>') === null && parseEcbDaily('') === null &
 ok(ECB_DAILY_URL === 'https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml', 'BCE : adresse du fichier quotidien');
 const now = Date.parse('2026-11-04T10:00:00Z');
 ok(ratesStale(null, now) && ratesStale('2026-11-03T08:00:00Z', now) && !ratesStale('2026-11-03T15:00:00Z', now), 'BCE : relecture au-delà de 20 heures seulement');
+
+// Complétion d'adresses (Photon, ADR 0030) : réponse GeoJSON de forme réelle, valeurs fictives.
+const photon = { type: 'FeatureCollection', features: [
+  { type: 'Feature', properties: { type: 'house', street: 'Rue de l’Exemple', housenumber: '3', postcode: '33000', city: 'Bordeaux', countrycode: 'FR' } },
+  { type: 'Feature', properties: { type: 'house', street: 'Rue de l’Exemple', housenumber: '3', postcode: '33000', city: 'Bordeaux', countrycode: 'FR' } },
+  { type: 'Feature', properties: { type: 'street', name: 'Beispielstraße', postcode: '10115', city: 'Berlin', countrycode: 'DE' } },
+  { type: 'Feature', properties: { type: 'other', name: 'Usine Test', street: 'Allée des Tests', housenumber: '12', postcode: '69000', town: 'Lyon', countrycode: 'FR' } },
+  { type: 'Feature', properties: { type: 'country', name: 'France', countrycode: 'FR' } },
+] };
+const fr = normalizePhoton(photon, 'fr');
+ok(fr.length === 2 && fr[0].label === 'Rue de l’Exemple 3, 33000 Bordeaux, FR' && fr[1].line1 === 'Usine Test, Allée des Tests 12' && fr[1].city === 'Lyon',
+  'adresses : filtrées par pays, sans doublon, ni résultat sans ville (pays seul)');
+ok(normalizePhoton(photon, '').some((a) => a.city === 'Berlin' && a.line1 === 'Beispielstraße'), 'adresses : sans pays, tous les pays ; rue sans numéro');
+ok(addressText(fr[0]) === 'Rue de l’Exemple 3\n33000 Bordeaux', 'adresses : texte du formulaire (rue, puis code postal et ville)');
+ok(photonUrl('https://photon.example/', 'rue de l’exemple', 'zh') === 'https://photon.example/api/?q=rue%20de%20l%E2%80%99exemple&limit=8&lang=default'
+  && photonUrl(null, 'x', 'fr').startsWith('https://photon.komoot.io/api/'), 'adresses : requête Photon, langue par défaut si non prise en charge, instance réglable');
+ok(normalizePhoton(null, 'FR').length === 0 && normalizePhoton({ features: [] }, 'FR').length === 0, 'adresses : réponse vide ou illisible → aucune adresse');
 
 console.log(`${n - bad}/${n} vérifications réussies`);
 process.exit(bad ? 1 : 0);

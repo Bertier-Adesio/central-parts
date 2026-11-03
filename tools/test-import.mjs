@@ -317,6 +317,12 @@ ok(note.startsWith('[Purchase request PR-0020] NE555DR × 2000 · awaiting your 
   note.includes('"reject PR-0020 reason"') && note.includes('https://central.parts/admin/') && !note.includes('Message:') && !/\n\n\n/.test(note),
   'demande d\'achat : avis aux opérateurs avec les commandes de validation, sans ligne vide de trop');
 ok(R.purchaseRequestOperatorNote({ ...opCard, message: 'Urgent' }).includes('Message: Urgent'), 'demande d\'achat : message de l\'acheteur repris');
+const own = R.purchaseRequestOperatorNote({ ...opCard, billing: 'FR · 1 rue de Paris', transport: { mode: 'own', carrier: 'FedEx', account: '123456789' },
+  ship_address: { label: 'Entrepôt', city: 'Shenzhen', country: 'CN' } });
+ok(own.includes('Billing: FR · 1 rue de Paris') && own.includes("Shipping: buyer's FedEx account 123456789 (FCA)") && own.includes('Ships from: Entrepôt · Shenzhen CN'),
+  'demande d\'achat : facturation, compte transporteur de l\'acheteur, adresse d\'expédition (ADR 0030)');
+ok(R.purchaseRequestOperatorNote({ ...opCard, transport: { mode: 'central', carrier: 'DHL' } }).includes('Shipping: by Central.Parts (DAP), preferred DHL') &&
+  !R.purchaseRequestOperatorNote({ ...opCard, billing: opCard.delivery }).includes('Billing:'), 'demande d\'achat : transport par Central.Parts ; facturation omise si identique');
 const sup = R.supplierRequestText({ ref: 'PR-0020', mpn: 'NE555DR', qty: 2000, unit_price: 0.08, currency: 'USD', delivery_country: 'FR' });
 ok(sup.startsWith('【新询单 PR-0020】') && sup.includes('您的单价 0.08 USD') && sup.includes('「确认 PR-0020」') && sup.includes('https://central.parts/depot/') &&
   !/Atelier|achats@|FR00999/.test(sup), 'demande validée : message au fournisseur en chinois, sans l\'acheteur');

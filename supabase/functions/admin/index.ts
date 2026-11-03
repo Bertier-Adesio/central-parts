@@ -19,6 +19,7 @@
 //   GET  /admin/requests?status=pending_validation → demandes d'achat du site (ADR 0026) ; status vide : toutes (100 dernières)
 //   POST /admin/requests/approve {ref}      → valide et prévient le fournisseur dans WeChat (même fonction que « approve PR-… »)
 //   POST /admin/requests/reject  {ref, reason} → refuse, motif interne obligatoire (même fonction que « reject PR-… motif »)
+//   GET  /admin/supplier-addresses?org=ORG-0107 → adresses d'expédition du vendeur (ADR 0030)
 //   GET  /admin/supplier-score?org=ORG-0107 → taux de traitement des RFQ d'un fournisseur (jamais montré à une plateforme)
 //   GET  /admin/offer-views?org=ORG-0107    → consultations de ses offres par l'API d'offres, 8 semaines (ADR 0024)
 //   GET  /admin/data-quality?org=ORG-0107   → complétude de ses fiches produit (future composante de sa notation)
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
         if (status && !/^[a-z_]{1,32}$/.test(status)) return json({ error: 'status' }, 422);
         return send('admin_requests', { p_status: status });
       }
+      if (path === '/supplier-addresses') return send('admin_seller_addresses', { p_org: q('org') });
       if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
       if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
       if (path === '/data-quality') return send('admin_supplier_data_quality', { p_org: q('org') });

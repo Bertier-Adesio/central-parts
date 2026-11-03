@@ -12,12 +12,18 @@ const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + l
 const norm = (t) => (t || '').replace(/[  ]/g, ' ');
 
 // Offres fictives, prix en euros comme partner_offers et public_search (migration 20261103000025).
+const TERMS = { free_shipping_over: 1840, carriers: ['DHL', 'FedEx', 'UPS', 'SF'], ship_within_hours: 24, transit_days_min: 5, transit_days_max: 7, prepaid: true, returns_days: 30, returns_quality_only: true, restocking_pct: 15, warranty_days: 90, incoterm: 'DAP' };
 const OFFERS = [
-  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
-  { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '1000+', moq: 1, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
+  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 2500, min_qty: 2500, incoterm: 'FCA', fca_place: 'SZ', price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
+  // Fournisseur fictif avec ses propres conditions (migration 20261103000029) : DAP, livraison offerte dès 1 840 €.
+  { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'HK', currency: 'EUR', availability: '1000+', moq: 1,
+    incoterm: 'DAP', fca_place: 'HK', terms: TERMS, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'GONE123', manufacturer: 'Fictif', supplier: 'partner', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '100+', moq: 1, price_from: 1, price_1k: null, updated_at: '2026-11-03T08:00:00Z' },
 ];
 const PRICE = { NE555DR: 0.1, LM358DR: 0.06, BSS138: null };
+// MOQ et SPQ du lot retenu par le devis (public_quote, migration 20261103000027).
+const PACK = { NE555DR: { moq: 100, spq: 2500 }, BSS138: { moq: 10, spq: 1 } };
+const minOf = (k) => (k.spq > 1 ? Math.ceil(k.moq / k.spq) * k.spq : k.moq);
 const state = { carts: [], external: [], quotes: 0 };
 
 async function mock(page, errors) {
@@ -35,8 +41,26 @@ async function mock(page, errors) {
       state.quotes++;
       const mpn = u.searchParams.get('mpn'), qty = +u.searchParams.get('qty');
       if (!(mpn in PRICE)) return reply({ error: 'not_found' }, 404);
-      const p = PRICE[mpn];
-      return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000 });
+      const p = PRICE[mpn], k = PACK[mpn] || { moq: 1, spq: 1 };
+      return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000,
+        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0, incoterm: mpn === 'LM358DR' ? 'DAP' : 'FCA', fca_place: mpn === 'BSS138' ? 'HK' : 'SZ',
+        terms: mpn === 'LM358DR' ? TERMS : null });
+    }
+    if (u.pathname.endsWith('/address')) {
+      state.addressCalls = (state.addressCalls || 0) + 1;
+      return reply({ results: u.searchParams.get('q').toLowerCase().startsWith('3 rue') ? [
+        { label: '3 Rue de l’Exemple, 33000 Bordeaux, FR', line1: '3 Rue de l’Exemple', postcode: '33000', city: 'Bordeaux', country: 'FR' },
+        { label: '3 Rue de l’Exemple, 13000 Marseille, FR', line1: '3 Rue de l’Exemple', postcode: '13000', city: 'Marseille', country: 'FR' }] : [] });
+    }
+    if (u.pathname.endsWith('/shipping')) {
+      // Groupes de fournisseurs comme cart_shipping : LM358DR chez le fournisseur à conditions, le reste chez un autre.
+      const lines = JSON.parse(req.postData()).lines, a = [], b = [];
+      lines.forEach((l, i) => (l.mpn === 'LM358DR' ? a : (l.mpn in PRICE ? b : null))?.push(i));
+      const sub = a.reduce((t, i) => t + PRICE.LM358DR * +lines[i].qty, 0);
+      const groups = [];
+      if (a.length) groups.push({ group: 1, lines: a, subtotal: sub, incoterm: 'DAP', terms: TERMS, free_shipping: sub >= 1840, ...(sub < 1840 ? { missing_for_free: +(1840 - sub).toFixed(2) } : {}) });
+      if (b.length) groups.push({ group: groups.length + 1, lines: b, subtotal: 0, incoterm: 'FCA', free_shipping: false });
+      return reply({ currency: 'EUR', groups });
     }
     if (u.pathname.endsWith('/cart')) {
       const b = JSON.parse(req.postData());
@@ -62,51 +86,94 @@ await mock(page, errors);
 await page.goto(BASE + '/offres/?lang=fr');
 await page.waitForSelector('#rows button.add');
 ok((await page.textContent('#cart-n')) === '', 'offres : panier vide au départ');
+ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => !!b.querySelector('svg') && b.textContent.trim() === '' && b.getAttribute('aria-label') === 'Ajouter au panier' && b.title === 'Ajouter au panier'),
+  'offres : icône de panier, libellé accessible et infobulle');
 await page.click('#rows tr:nth-child(1) button.add');
 ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await page.textContent('#cart-n')) === '(1)', 'offres : ajout, message et compteur');
-ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr', 'offres : « Dans le panier ✓ » mène au panier');
+ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr'
+  && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'aria-label')) === 'Dans le panier ✓', 'offres : icône « dans le panier » qui mène au panier');
 await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
 ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références');
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
-ok(stored[0].qty === 100 && stored[0].moq === 100 && stored[1].qty === 1, 'offres : quantité de départ = MOQ');
+ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
+ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
+ok(norm(await page.textContent('#rows tr:nth-child(2)')).includes('DAP adresse de livraison') && norm(await page.textContent('#rows tr:nth-child(2)')).includes('Livraison offerte dès 1 840,00 €'),
+  'offres : fournisseur à conditions propres, DAP et livraison offerte dès un montant');
+ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('FCA Shenzhen') && norm(await page.textContent('#rows tr:nth-child(3)')).includes('FCA Hong Kong'),
+  'offres : Incoterm FCA et lieu (lieu de la base, sinon pays d\'expédition)');
+ok(norm(await page.textContent('#hint')).includes('Incoterm indiqué sur chaque offre (Incoterms® 2020)'), 'offres : mention Incoterms® 2020');
 
 // 2. /recherche/ : ajout d'une offre « sur demande ».
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
 await page.waitForSelector('#list button.add');
 await page.click('#list button.add');
 ok((await page.textContent('#cart-n')) === '(4)' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
+ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttribute('aria-label') === 'Dans le panier ✓'), 'recherche : icône « dans le panier »');
 
 // 3. /panier/ : devis par ligne, offre disparue bloquante, retrait, quantité.
 await page.goto(BASE + '/panier/');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 4 && !document.querySelector('#lines').textContent.includes('…'));
 let txt = norm(await page.textContent('#cart'));
-ok(txt.includes('NE555DR') && /10,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (100 × 0,10 €)');
+ok(txt.includes('NE555DR') && /250,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (2 500 × 0,10 €)');
+ok(txt.includes('hors transport, droits et TVA') && txt.includes('Incoterms® 2020'), 'panier : prix FCA, hors transport');
+ok(norm(await page.textContent('#lines li:first-child')).includes('FCA Shenzhen') && norm(await page.textContent('#lines li:nth-child(4)')).includes('FCA Hong Kong'), 'panier : lieu FCA de chaque ligne (devis)');
+await page.waitForSelector('#ship:not([hidden]) .grp');
+const shipTxt = norm(await page.textContent('#ship'));
+ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('offerte dès 1 840,00 € (encore 1 839,94 €)') && shipTxt.includes('(DAP adresse de livraison)'),
+  'panier : livraison par fournisseur, montant manquant pour la livraison offerte');
+ok(shipTxt.includes('DHL · FedEx · UPS · SF') && shipTxt.includes('5 à 7 jours ouvrés') && shipTxt.includes('retours sous 30 jours pour défaut qualité') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('paiement d’avance'),
+  'panier : conditions du fournisseur (transporteurs, délais, retours, garantie, paiement)');
+ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Transport chiffré sur la facture proforma') && shipTxt.includes('Droits, taxes et frais de dédouanement à la charge de l’acheteur'),
+  'panier : autre fournisseur, transport sur la proforma ; droits à la charge de l\'acheteur');
+ok(!/ORG-\d|seller_id|tmp-/i.test(await page.content()), 'panier : jamais l\'identifiant du fournisseur');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
-ok(txt.includes('minimum 100'), 'panier : MOQ rappelé');
+ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
+ok(norm(await page.textContent('#lines li:nth-child(4)')).includes('Quantité ajustée à 10 (minimum 10).') &&
+  (await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[3].qty === 10, 'panier : quantité d\'une ligne de la recherche ajustée au MOQ donné par le devis');
 await page.fill('#o-company', 'Atelier Panier (fictif)');
 await page.fill('#o-vat', 'FR00999999999');
 await page.fill('#o-name', 'Léa Test');
 await page.fill('#o-email', 'panier@example.com');
-await page.selectOption('#o-country', 'FR');
-await page.fill('#o-address', '3 rue de l\'Exemple, 33000 Bordeaux');
+await page.selectOption('#o-bcountry', 'FR');
+// Complétion d'adresses (Photon, par la fonction Edge) : suggestions, puis adresse et pays remplis d'un clic.
+await page.fill('#o-baddress', '3 rue de l');
+await page.waitForSelector('#sg-b:not([hidden]) button');
+ok((await page.$$('#sg-b button')).length === 2 && norm(await page.textContent('#sg-b')).includes('© contributeurs OpenStreetMap'), 'adresses : suggestions et mention OpenStreetMap');
+await page.click('#sg-b button[data-i="0"]');
+ok((await page.inputValue('#o-baddress')) === '3 Rue de l’Exemple\n33000 Bordeaux' && (await page.inputValue('#o-bcountry')) === 'FR' && await page.isHidden('#sg-b'),
+  'adresses : adresse choisie remplie (rue, code postal et ville), liste fermée');
+ok(await page.isHidden('#deliv') && await page.isHidden('#own-box'), 'formulaire : livraison à l\'adresse de facturation et transport par Central.Parts par défaut');
+// Livraison ailleurs, puis compte transporteur de l'acheteur (ADR 0030).
+await page.uncheck('#o-same');
+await page.selectOption('#o-country', 'DE');
+await page.fill('#o-address', 'Lager 5, 10115 Berlin');
+await page.check('#t-own');
+await page.selectOption('#o-carrier', 'FedEx');
+ok(norm(await page.textContent('#ship')).includes('Transport facturé sur votre compte FedEx'), 'livraison : compte transporteur de l\'acheteur, FCA');
 await page.check('#o-terms');
 await page.click('#o-send');
 ok(norm(await page.textContent('#msg')).includes('Retirez d’abord') && state.carts.length === 0, 'panier : envoi bloqué tant qu\'une offre disparue reste');
 await page.click('#lines li.gone button.rm');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 3);
-await page.fill('#q-0', '2000');
-await page.waitForFunction(() => document.getElementById('lines').textContent.replace(/[  ]/g, ' ').includes('200,00 €'));
-ok(true, 'panier : quantité modifiée, devis recalculé');
-ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[0].qty === 2000, 'panier : quantité gardée dans le navigateur');
+await page.click('#o-send');
+ok(norm(await page.textContent('#msg')).includes('numéro de compte') && state.carts.length === 0, 'compte transporteur sans numéro : envoi bloqué');
+await page.fill('#o-account', '1234 5678 9');
+await page.fill('#q-0', '6000');
+await page.waitForFunction(() => document.getElementById('lines').textContent.replace(/[  ]/g, ' ').includes('750,00 €'));
+ok(norm(await page.textContent('#lines li:first-child')).includes('Quantité ajustée à 7 500 (minimum 2 500, par 2 500)'), 'panier : 6 000 ajusté au multiple du SPQ supérieur (7 500), devis recalculé');
+ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[0].qty === 7500, 'panier : quantité ajustée gardée dans le navigateur');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'panier : pas de défilement horizontal (1280 px)');
 
 // 4. Envoi : une seule demande, panier vidé, lien de suivi.
 await page.click('#o-send');
 await page.waitForSelector('#done:not([hidden])');
 const sent = state.carts.at(-1);
-ok(sent.lines.length === 3 && sent.lines[0].qty === '2000' && sent.currency === 'EUR' && sent.company === 'Atelier Panier (fictif)', 'envoi : trois lignes, quantités, coordonnées, en euros');
+ok(state.addressCalls >= 1 && state.external.length === 0, 'adresses : complétion par la fonction Edge seulement, aucune requête externe');
+ok(sent.billing_country === 'FR' && sent.billing_address.includes('Bordeaux') && sent.country === 'DE' && sent.address.includes('Berlin') &&
+  sent.transport.mode === 'own' && sent.transport.carrier === 'FedEx' && sent.transport.account === '1234 5678 9', 'envoi : facturation, livraison et transport');
+ok(sent.lines.length === 3 && sent.lines[0].qty === '7500' && sent.currency === 'EUR' && sent.company === 'Atelier Panier (fictif)', 'envoi : trois lignes, quantités, coordonnées, en euros');
 ok(norm(await page.textContent('#done-msg')).includes('CART-0007') && (await page.getAttribute('#done-link', 'href')).includes('k=tok'), 'envoi : référence du panier et lien de suivi');
 ok((await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')))).length === 0 && await page.isHidden('#cart') && await page.isHidden('#empty'), 'envoi : panier vidé');
 
@@ -131,8 +198,8 @@ PRICE.LM358DR = 0.06;
 await page.goto(BASE + '/panier/?lang=fr');
 await page.waitForSelector('#lines li');
 delete PRICE.LM358DR;
-for (const [id, v] of [['#o-company', 'A'], ['#o-vat', 'DE123456789'], ['#o-name', 'B'], ['#o-email', 'b@example.com'], ['#o-address', 'C']]) await page.fill(id, v);
-await page.selectOption('#o-country', 'DE');
+for (const [id, v] of [['#o-company', 'A'], ['#o-vat', 'DE123456789'], ['#o-name', 'B'], ['#o-email', 'b@example.com'], ['#o-baddress', 'C']]) await page.fill(id, v);
+await page.selectOption('#o-bcountry', 'DE');
 await page.check('#o-terms');
 await page.click('#o-send');
 await page.waitForSelector('#msg.err');
