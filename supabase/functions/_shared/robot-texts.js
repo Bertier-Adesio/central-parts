@@ -137,6 +137,8 @@ export function operatorHelpText() {
     '',
     'Purchase requests (PR-0001):',
     'request PR-0001: show the request',
+    'approve PR-0001: send it to the supplier',
+    'reject PR-0001 reason (internal, never shown)',
     'confirm PR-0001',
     'unavailable PR-0001',
     'proforma PR-0001',
@@ -147,11 +149,11 @@ export function operatorHelpText() {
 }
 
 // Statuts des demandes d'achat, pour les opérateurs.
-export const STATUS_EN = { submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
+export const STATUS_EN = { pending_validation: 'awaiting your validation', rejected: 'rejected', submitted: 'awaiting supplier', confirmed: 'confirmed by supplier', unavailable: 'unavailable',
   proforma_sent: 'proforma sent', paid: 'paid', shipped: 'shipped', cancelled: 'cancelled' };
 
-// Demandes « en cours » : ni expédiées, ni annulées, ni sans stock.
-export const OPEN_REQUEST_STATUSES = ['submitted', 'confirmed', 'proforma_sent', 'paid'];
+// Demandes « en cours » : ni refusées, ni expédiées, ni annulées, ni sans stock.
+export const OPEN_REQUEST_STATUSES = ['pending_validation', 'submitted', 'confirmed', 'proforma_sent', 'paid'];
 
 // Commande « requests » (bouton Review › Purchase requests) : demandes en cours, les plus récentes d'abord.
 // rows : { id, status, mpn, qty, buyer_company, created_at } ; total : nombre de demandes en cours.
@@ -164,6 +166,41 @@ export function operatorRequestsText(rows, total = rows.length) {
     '',
     `Full card: "request ${rows[0].id}"`,
   ].join('\n');
+}
+
+// Demande d'achat du site (ADR 0014, 0026) : avis aux opérateurs à l'arrivée, avant toute diffusion au fournisseur.
+// op : fiche request_for_operator.
+export function purchaseRequestOperatorNote(op) {
+  return [
+    `[Purchase request ${op.ref}] ${op.mpn} × ${op.qty} · awaiting your validation`,
+    `Buyer: ${op.buyer_company} · ${op.buyer_vat}${op.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
+    `${op.buyer_name} · ${op.buyer_email}${op.buyer_phone ? ' · ' + op.buyer_phone : ''}`,
+    `Delivery: ${op.delivery}`,
+    `Price ${op.unit_price ?? 'to confirm'} ${op.currency} (total ${op.total ?? 'to confirm'})`,
+    `Supplier ${op.supplier}: ${op.supplier_unit_price ?? '?'} ${op.supplier_currency}, stock ${op.lot_qty}`,
+    ...(op.message ? [`Message: ${op.message}`] : []),
+    '',
+    `Nothing is sent to the supplier before you decide: "approve ${op.ref}" or "reject ${op.ref} reason", or https://central.parts/admin/`,
+  ].join('\n');
+}
+
+// Demande d'achat validée : message au fournisseur (chinois), sans l'acheteur. v : supplier_view (request_for_supplier).
+export function supplierRequestText(v) {
+  return [
+    `【新询单 ${v.ref}】`,
+    `型号 ${v.mpn}，数量 ${v.qty}`,
+    `您的单价 ${v.unit_price ?? '待报价'} ${v.currency}，交货国家 ${v.delivery_country}`,
+    `请在 24 小时内回复「确认 ${v.ref}」或「无货 ${v.ref}」，或在 ${SITE} 处理。`,
+  ].join('\n');
+}
+
+// Décision d'un opérateur sur une demande d'achat (approve / reject PR-…), réponse dans WeChat.
+// d : réponse de decide_purchase_request ; notified : nombre de contacts du fournisseur prévenus (validation).
+export function purchaseDecisionText(d, notified = 0) {
+  if (d.status === 'rejected') return `Rejected ${d.ref}. Nothing was sent to the supplier; the buyer sees "not accepted".`;
+  return `Approved ${d.ref} → ${d.supplier}: ` + (notified
+    ? `${notified} WeChat contact(s) notified.`
+    : 'no WeChat contact reached (48-hour rule): the request is visible in their supplier centre, follow up by hand.');
 }
 
 // Erreur d'une commande approve / reject (le message vient de la base).

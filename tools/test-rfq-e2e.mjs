@@ -4,7 +4,8 @@
 //   erreurs de l'API (401, 403, 404, 409, 422), X-RateLimit-*, bac à sable complet sans aucun message, webhooks
 //   signés ; en production : fiche à l'administrateur, « approve DEM-… » dans WeChat, message anonymisé au
 //   fournisseur, échec d'envoi sans délai démarré, 报价 et réponse en double, clôture par la tâche planifiée,
-//   offres tout compris, refus avec motif, annulation.
+//   offres tout compris, refus avec motif, annulation ; demande d'achat du site validée par « approve PR-… » avant
+//   tout message au fournisseur (ADR 0026).
 // Prérequis : PostgreSQL (comme tools/test-db.sh), Deno, et le module pg (npm install --no-save pg@8.13.1).
 // Usage : node tools/test-rfq-e2e.mjs        (variables : PGHOST, PGPORT, PGPASSWORD, DENO)
 import { spawn, execSync } from 'node:child_process';
@@ -221,6 +222,22 @@ try {
   ok((await api('POST', `/v1/demands/${dC}/cancel`, KEY_LIVE)).status === 409, 'annulation deux fois : 409');
   const list = await api('GET', '/v1/demands?customer_reference=ADS-E2E-2', KEY_LIVE);
   ok(list.json.demands.length === 1 && list.json.demands[0].id === dL, 'liste filtrée par customer_reference');
+
+  // ---------------------------------------------------------------- demande d'achat du site : validation par l'administrateur (ADR 0026)
+  const prCat = sql(`select app.source_category('Broker')`);
+  const pr = JSON.parse(sql(`select public.create_purchase_request('198.51.100.77', '{"mpn": "E2ETEST555", "source": "${prCat}", "ship_from": "HK",
+    "qty": "100", "currency": "EUR", "company": "Acheteur E2E (fictif)", "vat": "FR00999999999", "name": "Paul E2E", "email": "e2e@example.com",
+    "country": "FR", "address": "1 rue de l''Exemple"}'::jsonb)`)).ref;
+  const before = captured().length;
+  ok((await wechat('oSUP1', `确认 ${pr}`)).includes('未找到询单'), 'demande d\'achat en attente : le fournisseur ne peut pas y répondre');
+  ok((await wechat('oOPERATOR', `reject ${pr}`)).includes('Reason required'), 'robot : refus d\'une demande d\'achat sans motif demandé');
+  const apr = await wechat('oOPERATOR', `approve ${pr}`);
+  ok(apr === `Approved ${pr} → RSL1 V-801: 1 WeChat contact(s) notified.`, 'robot : « approve PR-… » → ' + apr);
+  const prSup = captured().slice(before).filter((x) => x.kind === 'wechat' && x.to === 'oSUP1');
+  ok(prSup.length === 1 && prSup[0].text.startsWith(`【新询单 ${pr}】`) && !/Acheteur E2E|e2e@|FR00999/.test(prSup[0].text), 'fournisseur prévenu après la validation seulement, sans l\'acheteur');
+  ok((await wechat('oOPERATOR', `approve ${pr}`)).includes('déjà traitée'), 'robot : seconde validation refusée');
+  ok((await wechat('oSUP1', `确认 ${pr}`)).startsWith(`已确认询单 ${pr}`), 'fournisseur : confirmation après la validation');
+  ok(sql(`select status || ' ' || decided_by from public.purchase_requests where id = '${pr}'`) === 'confirmed oOPERATOR', 'base : confirmée, décision de l\'opérateur gardée');
   ok(!captured().some((x) => x.kind === 'blocked'), 'aucun appel réseau hors simulation');
 } finally {
   // Groupe entier : le lanceur de Deno peut avoir un processus enfant.

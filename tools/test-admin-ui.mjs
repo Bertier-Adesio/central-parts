@@ -190,6 +190,57 @@ await page.waitForFunction(() => document.getElementById('lot-list').textContent
 ok((await page.$$('#lot-list a[href^="javascript"]')).length === 0, 'lien « javascript: » jamais rendu cliquable');
 ok((await page.$$('#p-stock button[data-act], #p-stock input:not([type=search])')).length === 0, 'stocks : aucune action de modification');
 
+// 9 bis. Demandes de prix : site web et API au même endroit, rien ne part avant la validation (ADR 0023, 0026).
+ok((await page.textContent('#req-count')) === '3', 'onglet Demandes : compteur des demandes à valider (2 site + 1 API)');
+await page.click('#tab-req');
+await page.waitForSelector('#req-list li[data-ref="PR-0012"]');
+const reqText = norm(await page.textContent('#req-list'));
+ok(reqText.includes('Atelier Exemple (fictif)') && reqText.includes('NE555DR') && reqText.includes('ORG-0110 V-5') && reqText.includes('VIES vérifié'),
+  'demande du site : acheteur, référence, fournisseur et prix des deux côtés');
+ok(!reqText.includes('PR-0010'), 'filtre « À valider » : la demande déjà transmise n\'apparaît pas');
+ok(norm(await page.textContent('#rfq-list')).includes('DEM-1004') && !norm(await page.textContent('#rfq-list')).includes('DEM-1003'), 'RFQ de l\'API à valider');
+// Refus sans motif : rien n'est envoyé.
+await page.click('#req-list li[data-ref="PR-0011"] button[data-ract="req_reject"]');
+await page.waitForSelector('#confirm[open]');
+await page.click('#c-ok');
+ok(await page.isVisible('#c-err') && calls('POST /requests/reject') === 0, 'refus d\'une demande sans motif : aucun appel');
+await page.fill('#c-reason', 'Demande de test');
+await page.click('#c-ok');
+await page.waitForSelector('#confirm[open]', { state: 'detached' });
+await page.waitForFunction(() => !document.querySelector('#req-list li[data-ref="PR-0011"]'));
+ok(mock.state.requests.find((r) => r.ref === 'PR-0011').status === 'rejected' && !mock.state.notified.some((x) => x.ref === 'PR-0011'), 'demande refusée : fournisseur non prévenu');
+// Validation : confirmation, puis le fournisseur est prévenu.
+await page.click('#req-list li[data-ref="PR-0012"] button[data-ract="req_approve"]');
+await page.waitForSelector('#confirm[open]');
+ok(calls('POST /requests/approve') === 0, 'validation : rien n\'est envoyé avant la confirmation');
+await page.click('#c-ok');
+await page.waitForSelector('#msg.ok');
+ok(norm(await page.textContent('#msg')).includes('PR-0012 validée et transmise au fournisseur'), 'validation : message de confirmation');
+ok(mock.state.notified.some((x) => x.ref === 'PR-0012' && x.org === 'ORG-0110'), 'validation : fournisseur prévenu');
+await page.waitForSelector('#req-list li.empty');
+// RFQ de l'API : validation et diffusion.
+await page.click('#rfq-list li[data-id="DEM-1004"] button[data-ract="rfq_approve"]');
+await page.waitForSelector('#confirm[open]');
+await page.click('#c-ok');
+await page.waitForSelector('#rfq-list li.empty');
+ok(mock.state.rfqs.find((d) => d.id === 'DEM-1004').status === 'auction', 'RFQ validée et diffusée');
+ok((await page.isHidden('#req-count')), 'plus rien à valider : compteur masqué');
+// Toutes les demandes : statuts et décisions.
+await page.click('#req-filters button[data-r=""]');
+await page.waitForSelector('#req-list li[data-ref="PR-0010"]');
+const all = norm(await page.textContent('#req-list'));
+ok(all.includes('Transmise au fournisseur') && all.includes('Refusée') && all.includes('Motif : Demande de test'), 'toutes les demandes : statuts et motif interne');
+ok((await page.$$('#req-list button[data-ract]')).length === 0, 'demandes déjà traitées : plus de bouton de décision');
+// Déjà traitée ailleurs (robot WeChat) : message clair, liste rafraîchie.
+mock.state.requests.push({ ...mock.state.requests[0], ref: 'PR-0013', status: 'pending_validation', decided_at: null, decided_by: null });
+await page.click('#req-filters button[data-r="pending_validation"]');
+await page.waitForSelector('#req-list li[data-ref="PR-0013"]');
+mock.state.requests.find((r) => r.ref === 'PR-0013').status = 'submitted';
+await page.click('#req-list li[data-ref="PR-0013"] button[data-ract="req_approve"]');
+await page.click('#c-ok');
+await page.waitForSelector('#msg.info');
+ok(norm(await page.textContent('#msg')).includes('déjà été traitée'), 'demande déjà traitée par le robot : message, sans erreur');
+
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
 await page.close();
 
@@ -209,6 +260,9 @@ ok(await page.isVisible('#sup-list'), '390 px : retour à la liste');
 await page.click('#tab-stock');
 await page.waitForSelector('#lot-list tr');
 ok(await wide(), '390 px : stocks sans défilement horizontal');
+await page.click('#tab-req');
+await page.waitForSelector('#req-list li[data-ref]');
+ok(await wide(), '390 px : demandes sans défilement horizontal');
 ok(errors.length === 0, 'aucune erreur console ni requête externe (390 px) : ' + errors.join(' | '));
 await page.close();
 

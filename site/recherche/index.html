@@ -101,7 +101,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     </form>
     <div id="done" hidden>
       <p class="msg ok" id="done-msg" style="margin:0 0 12px"></p>
-      <p class="muted" data-t="doneNext">Le fournisseur confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :</p>
+      <p class="muted" data-t="doneNext">Central.Parts vérifie votre demande et la transmet au fournisseur, qui confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :</p>
       <p style="overflow-wrap:anywhere"><a id="done-link" href="#"></a></p>
     </div>
   </section>
@@ -125,7 +125,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} »',
       buy: 'Acheter', buyTitle: "Demande d'achat", fQty: 'Quantité', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom', fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
-      send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Le fournisseur confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
+      send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Central.Parts vérifie votre demande et la transmet au fournisseur, qui confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
       unit: 'Prix unitaire', total: 'Total', excl: "hors droits et TVA à l'import", toConfirm: 'Prix confirmé avec la proforma', partial: 'Quantité supérieure au stock affiché : le fournisseur confirmera la quantité disponible.',
       sent: 'Demande {ref} envoyée.', choose: 'Choisir',
       e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire.', not_found: "Cette offre n'est plus disponible.", terms: 'Cochez la case pour envoyer la demande.', too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
@@ -137,7 +137,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}"',
       buy: 'Buy', buyTitle: 'Purchase request', fQty: 'Quantity', fCompany: 'Company', fVat: 'VAT number', fName: 'Full name', fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
-      send: 'Send the request', cancel: 'Cancel', doneNext: 'The supplier confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
+      send: 'Send the request', cancel: 'Cancel', doneNext: 'Central.Parts checks your request and sends it to the supplier, who confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
       unit: 'Unit price', total: 'Total', excl: 'excluding import duties and VAT', toConfirm: 'Price confirmed with the proforma', partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.',
       sent: 'Request {ref} sent.', choose: 'Choose',
       e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields.', not_found: 'This offer is no longer available.', terms: 'Tick the box to send the request.', too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
@@ -149,7 +149,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价',
       buy: '购买', buyTitle: '采购申请', fQty: '数量', fCompany: '公司', fVat: '增值税号（欧盟）', fName: '姓名', fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '交货国家', fAddress: '交货地址', fMessage: '留言（选填）',
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到银行转账后交易成立。买方负责进口清关（进口关税和增值税）。',
-      send: '提交申请', cancel: '取消', doneNext: '供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
+      send: '提交申请', cancel: '取消', doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
       unit: '单价', total: '合计', excl: '不含进口关税和增值税', toConfirm: '价格以形式发票为准', partial: '数量超过显示的库存：供应商将确认可供数量。',
       sent: '申请 {ref} 已提交。', choose: '请选择',
       e: { vat_invalid: '增值税号未通过 VIES 验证，请核对。', invalid: '请检查表单内容。', not_found: '该报价已不可用。', terms: '请勾选以提交申请。', too_short: '请至少输入 3 个字符。', rate_limited: '搜索过于频繁，请一分钟后再试。', network: '网络错误，请重试。', other: '搜索暂不可用，请稍后再试。' } }
