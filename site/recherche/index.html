@@ -36,7 +36,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 form.search{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 form.search input,form.search select{min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;box-sizing:border-box}
 form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-transform:uppercase}
-.res{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:1fr auto auto;gap:4px 12px}
+.res{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px}
+@media (max-width:420px){.res{gap:4px 8px}.res .price{white-space:normal;font-size:var(--text-sm)}}
 .res:first-child{border-top:0}
 .mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
 .price{text-align:right;font-weight:var(--weight-semibold);white-space:nowrap}
