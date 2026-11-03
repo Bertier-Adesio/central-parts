@@ -38,6 +38,8 @@ async function api(route) {
   }
   if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [], completeness: { lines: 3, manufacturer: 3, description: 2, datasheet: 3, package_case: 3, lifecycle: 0, eccn: 1, hts_code: 0, unknown_manufacturers: ['ACME Semi'] } }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
   if (path === '/quality') return reply(state.uploaded ? { lots: 3, completeness: 0.571, rates: {} } : {});
+  if (path === '/offers-status') return reply(state.uploaded ? { live: state.expired ? 0 : 3, to_reconfirm: state.expired ? 3 : 0, ttl_days: 14, expires_at: '2026-11-17T02:06:00Z', last_confirmed: '2026-11-03T02:06:00Z' } : { live: 0, to_reconfirm: 0, ttl_days: 14 });
+  if (path === '/reconfirm') { state.reconfirmed = (state.reconfirmed || 0) + 1; state.expired = false; return reply({ lots: 3, ttl_days: 14, expires_at: '2026-11-18T08:00:00Z' }); }
   if (path === '/contacts') return reply(state.contacts);
   if (path === '/requests') return reply(state.requests || []);
   if (path === '/requests/answer') { state.answer = body; state.requests[0].status = body.ok ? 'confirmed' : 'unavailable'; return reply(state.requests[0]); }
@@ -130,6 +132,16 @@ ok((await page.textContent('#imports')).includes('资料完整度：品牌（已
 ok((await page.textContent('#imports')).includes('未识别的品牌') && (await page.textContent('#imports')).includes('ACME Semi'), 'rapport : marques non reconnues signalées');
 ok((await page.textContent('#quality')) === '您的资料完整度（在售库存）：57 %', 'complétude globale de la société affichée');
 ok((await page.textContent('[data-t=tpl]')).includes('今后也将计入供应商评分'), 'aide : champs recommandés, comptés plus tard dans la notation');
+
+// 5 bis. Validité des offres et reconfirmation sans nouveau fichier (ADR 0025).
+await page.waitForSelector('#validity:not([hidden])');
+ok((await page.textContent('#val-text')).includes('3 条报价在线') && (await page.textContent('#val-text')).includes('有效期 14 天'), 'validité : offres en ligne, échéance et durée de 14 jours');
+state.expired = true;
+await page.click('#reconfirm');
+await page.waitForFunction(() => /已确认：3 条报价/.test(document.getElementById('msg').textContent));
+ok(state.reconfirmed === 1 && state.calls.includes('POST /reconfirm'), 'stock inchangé : reconfirmé en un geste');
+await page.waitForFunction(() => !/已过期/.test(document.getElementById('val-text').textContent));
+ok((await page.textContent('#val-text')).includes('3 条报价在线'), 'après reconfirmation : offres de nouveau en ligne');
 
 // 6. Collègues : l'administrateur génère une invitation.
 ok(await page.isVisible('#team'), 'administrateur : section « 同事 » visible');

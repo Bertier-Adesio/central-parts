@@ -12,6 +12,8 @@
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?, currency}  → lien de dépôt signé vers le dossier de la société ;
 //                           currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
+//   GET  /depot/offers-status → validité des offres (en ligne, à reconfirmer, échéance) ; POST /depot/reconfirm → reconfirmer
+//                           toutes les offres en stock sans nouveau fichier (ADR 0025)
 //   GET  /depot/imports     → 20 derniers imports de la société, avec leur rapport (complétude des fiches produit comprise)
 //   GET  /depot/quality     → complétude des fiches produit de la société, sur son stock en ligne (ADR 0024)
 //   GET  /depot/requests    → demandes d'achat reçues par la société (90 jours), sans l'acheteur
@@ -147,6 +149,18 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('supplier_own_data_quality', { p_openid: session.openid });
       if (error) return json({ error: 'database', detail: error.message }, 500);
       return json(data || {});
+    }
+
+    // Validité des offres (ADR 0025) : en ligne, à reconfirmer, échéance ; reconfirmation sans nouveau fichier.
+    if (req.method === 'GET' && path.endsWith('/offers-status')) {
+      const { data, error } = await db.rpc('seller_offer_status', { p_org: org });
+      if (error) return json({ error: 'database', detail: error.message }, 500);
+      return json(data || {});
+    }
+    if (req.method === 'POST' && path.endsWith('/reconfirm')) {
+      const { data, error } = await db.rpc('seller_reconfirm', { p_org: org, p_by: session.openid, p_channel: 'depot' });
+      if (error) return json({ error: error.code === 'P0002' ? 'no_stock' : 'database', detail: error.message }, error.code === 'P0002' ? 422 : 500);
+      return json(data);
     }
 
     if (req.method === 'GET' && path.endsWith('/imports')) {

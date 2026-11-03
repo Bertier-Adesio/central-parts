@@ -357,3 +357,58 @@ export function rfqClosedText(r) {
     ? `[RFQ ${r.id}] closed: ${r.offers} offer(s) sent to the platform.` + (r.no_margin ? ` ${r.no_margin} quote(s) skipped: no margin set for the supplier.` : '')
     : `[RFQ ${r.id}] closed with no offer.` + (r.no_margin ? ` ${r.no_margin} quote(s) skipped: no margin set for the supplier.` : '');
 }
+
+// ------------------------------------------------------------ validité des offres (ADR 0025)
+// Échéance en chinois puis en anglais, heure de Pékin seulement (le fournisseur la lit en Chine).
+function expiryZh(iso) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+    .formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  return `${Number(p.month)}月${Number(p.day)}日 ${p.hour}:${p.minute}（北京时间）`;
+}
+function expiryEn(iso) {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+    .format(new Date(iso)) + ' China time';
+}
+
+// « 确认库存 » / « confirm stock » : le fournisseur reconfirme toutes ses offres sans nouveau fichier.
+export function isReconfirmRequest(text) {
+  return /^\s*(确认库存|库存无变化|库存不变|confirm\s+stock|stock\s+unchanged)\s*$/i.test(String(text || ''));
+}
+
+export function reconfirmOkText(lots, expiresIso) {
+  return [
+    `已确认库存：${lots} 条报价继续展示，有效期至 ${expiryZh(expiresIso)}。库存有变化时，请上传新的库存表。`,
+    `Stock confirmed: ${lots} offers stay visible until ${expiryEn(expiresIso)}. When your stock changes, upload a new file.`,
+  ].join('\n');
+}
+
+export function reconfirmErrorText(code) {
+  return code === 'none'
+    ? '您目前没有在售库存，请先上传库存表。\nYou have no stock online: upload a stock file first.'
+    : '暂时无法确认库存，请稍后再试，或在供应商中心上传库存表。\nThe stock could not be confirmed, please try again later or upload a file in the supplier centre.';
+}
+
+// Rappel au fournisseur : « soon » (avant l'échéance) ou « expired » (offres retirées). url : lien de connexion personnel.
+export function stockReminderText(kind, lots, expiresIso, url) {
+  const zh = kind === 'soon'
+    ? `提醒：您在 Central.Parts 的 ${lots} 条报价将于 ${expiryZh(expiresIso)} 到期，到期后不再向采购方展示。`
+    : `您在 Central.Parts 的 ${lots} 条报价已于 ${expiryZh(expiresIso)} 到期，目前不再向采购方展示。`;
+  const en = kind === 'soon'
+    ? `Reminder: your ${lots} offers on Central.Parts expire on ${expiryEn(expiresIso)} and will then be hidden from buyers.`
+    : `Your ${lots} offers on Central.Parts expired on ${expiryEn(expiresIso)} and are no longer shown to buyers.`;
+  return [
+    zh,
+    '库存无变化：直接回复「确认库存」。库存有变化：点击链接上传新的库存表（15 分钟内有效）：',
+    url,
+    '',
+    en,
+    'Stock unchanged: reply "confirm stock". Stock changed: tap the link to upload a new file (valid 15 minutes).',
+  ].join('\n');
+}
+
+// Résumé pour les opérateurs (anglais seul).
+export function operatorReminderSummary(items) {
+  const lines = items.map((r) => `${r.org_id} · ${r.name}: ${r.lots} offers ${r.kind === 'soon' ? 'expire' : 'expired'} ${expiryEn(r.expires_at)}` +
+    (r.delivered ? '' : ' (reminder NOT delivered: write to them)'));
+  return [`[Stock reminders] ${items.length} supplier(s)`, ...lines].join('\n');
+}

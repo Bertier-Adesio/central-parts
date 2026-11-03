@@ -6,6 +6,7 @@
 //   POST /listes/upload-url  {file_name, currency} → lien de dépôt signé ; le fichier remplace toujours la liste précédente ;
 //                            currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
 //   GET  /listes/imports     → 20 derniers dépôts du vendeur et leur rapport (lignes rejetées avec leur code)
+//   POST /listes/reconfirm   → reconfirme toutes les offres en stock sans nouveau fichier (ADR 0025)
 //
 // Le vendeur ne voit jamais que ses propres données. Le jeton n'est jamais écrit dans les journaux.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
@@ -56,6 +57,13 @@ Deno.serve(async (req) => {
       const { data, error } = await db.storage.from('stock-imports').createSignedUploadUrl(key);
       if (error) return json({ error: 'storage' }, 500);
       return json({ signed_url: data.signedUrl, path: key, max_bytes: 52428800 });
+    }
+
+    // Reconfirmation sans nouveau fichier (ADR 0025) : le vendeur atteste que son stock n'a pas changé.
+    if (req.method === 'POST' && path.endsWith('/reconfirm')) {
+      const { data, error } = await db.rpc('seller_reconfirm', { p_org: org, p_by: 'link', p_channel: 'lien' });
+      if (error) return json({ error: error.code === 'P0002' ? 'no_stock' : 'database' }, error.code === 'P0002' ? 422 : 500);
+      return json(data);
     }
 
     if (req.method === 'GET' && path.endsWith('/imports')) {
