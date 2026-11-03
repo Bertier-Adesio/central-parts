@@ -58,7 +58,8 @@ ok(txt.includes('à partir de') && txt.includes('Prix sur demande'), 'prix « à
 ok(/à partir de 0,1234\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix affiché en euros');
 ok(/prix 1 k : 0,1456\s*€/.test(txt.replace(/[\u202f\u00a0]/g, ' ')), 'prix 1KU affiché sous « à partir de », en euros');
 ok(txt.includes('Taux de référence de la BCE du 03/11/2026'), 'date du taux de la BCE affichée');
-ok((await page.textContent('main')).includes('Prix tout compris en euros, convertis au taux de référence de la BCE'), 'consigne : prix en euros');
+ok((await page.textContent('main')).includes('Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport'), 'consigne : prix en euros, FCA, hors transport');
+ok(txt.includes('FCA Chine') && txt.includes('FCA Hong Kong'), 'Incoterm : FCA et lieu d\'expédition sur chaque offre (pays faute de lieu précis)');
 ok((txt.match(/prix 1 k/g) || []).length === 1, 'pas de prix 1KU pour une offre sur demande');
 ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes('Expédié de Chine') && txt.includes('Disponible 10000+'), 'source, pays et tranche affichés');
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');

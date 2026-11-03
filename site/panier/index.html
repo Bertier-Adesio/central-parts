@@ -93,7 +93,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     <h2 data-t="linesTitle">Références</h2>
     <ul class="lines" id="lines"></ul>
     <div class="total"><span data-t="total">Total indicatif</span><span id="total"></span></div>
-    <p class="muted" id="excl" data-t="excl">Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.</p>
+    <p class="muted" id="excl" data-t="excl">Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.</p>
     <div class="cta"><a class="btn btn-line btn-small" href="/offres/" id="more" data-t="more">Ajouter d’autres références</a></div>
   </section>
 
@@ -131,7 +131,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   var T = {
     fr: { title: 'Panier', lead: 'Une seule demande pour toutes vos références. Central.Parts vérifie la demande, puis confirme la disponibilité auprès de chaque fournisseur avant de vous envoyer une facture proforma.',
       empty: 'Votre panier est vide.', toOffers: 'Voir les offres', toSearch: 'Rechercher une référence', linesTitle: 'Références',
-      total: 'Total indicatif', excl: 'Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.',
+      total: 'Total indicatif', excl: 'Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Les prix sont confirmés par la facture proforma.',
       more: 'Ajouter d’autres références', buyerTitle: 'Vos coordonnées', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom',
       fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
@@ -146,7 +146,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         network: 'Erreur réseau, réessayez.', other: 'Envoi impossible pour l’instant, réessayez plus tard ou écrivez à contact@central.parts.' }, home: '/', offers: '/offres/?lang=fr', search: '/recherche/?lang=fr' },
     en: { title: 'Cart', lead: 'One request for all your part numbers. Central.Parts checks the request, then confirms availability with each supplier before sending you a proforma invoice.',
       empty: 'Your cart is empty.', toOffers: 'See the offers', toSearch: 'Search for a part number', linesTitle: 'Part numbers',
-      total: 'Indicative total', excl: 'All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT. Prices are confirmed by the proforma invoice.',
+      total: 'Indicative total', excl: 'All-inclusive prices in euros, FCA at the shipping point shown (Incoterms® 2020), converted at the ECB reference rate, excluding shipping, import duties and VAT. Prices are confirmed by the proforma invoice.',
       more: 'Add more part numbers', buyerTitle: 'Your details', fCompany: 'Company', fVat: 'EU VAT number', fName: 'Full name',
       fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
@@ -161,7 +161,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         network: 'Network error, please try again.', other: 'Sending is not possible right now: try again later or write to contact@central.parts.' }, home: '/en/', offers: '/offres/?lang=en', search: '/recherche/?lang=en' },
     zh: { title: '购物车', lead: '所有型号一次提交。Central.Parts 审核申请后，向各供应商确认库存，再向您发送形式发票。',
       empty: '购物车为空。', toOffers: '查看报价', toSearch: '搜索型号', linesTitle: '型号',
-      total: '参考合计', excl: '价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。最终价格以形式发票为准。',
+      total: '参考合计', excl: '价格为总价，以欧元计价（按欧洲央行参考汇率换算），所示发货地 FCA 交货（Incoterms® 2020），不含运费、进口关税和增值税。最终价格以形式发票为准。',
       more: '继续添加型号', buyerTitle: '您的信息', fCompany: '公司', fVat: '欧盟增值税号', fName: '姓名',
       fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '收货国家', fAddress: '收货地址', fMessage: '留言（选填）',
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到转账后交易成立。买方负责进口清关（进口关税和增值税）。',
@@ -176,6 +176,12 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         network: '网络错误，请重试。', other: '暂时无法提交，请稍后再试或发送邮件至 contact@central.parts。' }, home: '/zh/', offers: '/offres/?lang=zh', search: '/recherche/?lang=zh' }
   };
   var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  // Lieu FCA (Incoterms® 2020, ADR 0029) : code renvoyé par la base, libellé dans la langue de la page.
+  var PLACE = { HK: { fr: 'Hong Kong', en: 'Hong Kong', zh: '香港' }, SZ: { fr: 'Shenzhen', en: 'Shenzhen', zh: '深圳' },
+    DG: { fr: 'Dongguan', en: 'Dongguan', zh: '东莞' }, GZ: { fr: 'Canton', en: 'Guangzhou', zh: '广州' },
+    SH: { fr: 'Shanghai', en: 'Shanghai', zh: '上海' }, XM: { fr: 'Xiamen', en: 'Xiamen', zh: '厦门' },
+    CN: { fr: 'Chine', en: 'China', zh: '中国' }, TW: { fr: 'Taïwan', en: 'Taiwan', zh: '中国台湾' } };
+  function fca(x) { var p = PLACE[x && (x.fca_place || x.ship_from)]; return p ? (x.incoterm || 'FCA') + ' ' + p[lang] : ''; }
   var COUNTRY = { fr: { CN: 'Chine', HK: 'Hong Kong', TW: 'Taïwan' }, en: { CN: 'China', HK: 'Hong Kong', TW: 'Taiwan' }, zh: { CN: '中国', HK: '中国香港', TW: '中国台湾' } };
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
@@ -229,6 +235,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     else if (q.error) price = '<span class="muted">' + esc(t().e[q.error] || t().e.other) + '</span>';
     else if (q.unit_price == null) price = '<span class="muted">' + esc(t().toConfirm) + '</span>';
     else price = '<strong>' + esc(money(q.total)) + '</strong><span class="muted">' + esc(t().unit) + ' ' + esc(money(q.unit_price)) + '</span>' + (q.covered ? '' : '<span class="muted" style="display:block">' + esc(t().partial) + '</span>');
+    if (q.fca_place) price += '<span class="muted inc" style="display:block">' + esc(fca(q)) + '</span>';
     if (adjusted[keyOf(l)]) price += '<span class="muted adj" style="display:block">' + esc(fillQ(l.spq > 1 ? t().adjusted : t().adjustedMoq, l)) + '</span>';
     return '<li data-i="' + i + '"' + (q.error === 'not_found' ? ' class="gone"' : '') + '>' +
       '<div class="ref"><div class="mpn">' + esc(l.mpn) + '</div><div class="muted">' + esc(l.manufacturer || '') + '</div>' +

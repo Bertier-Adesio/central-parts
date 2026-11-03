@@ -84,7 +84,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     <input type="search" name="q" id="q" required minlength="3" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Référence" placeholder="NE555DR">
     <button class="btn btn-main" type="submit" data-t="go">Rechercher</button>
   </form>
-  <p class="muted" data-t="hint">Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l'import.</p>
+  <p class="muted" data-t="hint">Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l'import.</p>
   <noscript><p class="msg err">La recherche nécessite JavaScript. · Search requires JavaScript. · 搜索需要启用 JavaScript。</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
   <section class="card" id="out" hidden aria-live="polite"><div id="list"></div></section>
@@ -127,7 +127,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search';
   var T = {
     fr: { title: 'Rechercher un composant', lead: "L'offre agrégée de Central.Parts : fabricants, distributeurs, brokers et surplus vérifiés. Le fournisseur n'est jamais affiché.",
-      go: 'Rechercher', hint: "Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l'import.",
+      go: 'Rechercher', hint: "Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, FCA au lieu d’expédition indiqué (Incoterms® 2020), convertis au taux de référence de la BCE, hors transport, droits et TVA à l'import.",
       moreTitle: 'Quantités exactes, paliers et commande', moreText: "Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.",
       ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
@@ -140,7 +140,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       sent: 'Demande {ref} envoyée.', choose: 'Choisir', rates: 'Taux de référence de la BCE du {d}.',
       e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire.', not_found: "Cette offre n'est plus disponible.", terms: 'Cochez la case pour envoyer la demande.', too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
     en: { title: 'Search for a component', lead: 'The aggregated offer of Central.Parts: manufacturers, distributors, verified brokers and surplus. The supplier is never shown.',
-      go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
+      go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices in euros, FCA at the shipping point shown (Incoterms® 2020), converted at the ECB reference rate, excluding shipping, import duties and VAT.',
       moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, every price break, lead times, quote requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
       ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
@@ -153,7 +153,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       sent: 'Request {ref} sent.', choose: 'Choose', rates: 'ECB reference rate of {d}.',
       e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields.', not_found: 'This offer is no longer available.', terms: 'Tick the box to send the request.', too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
     zh: { title: '搜索元器件', lead: 'Central.Parts 汇总的现货：原厂、分销商、经审核的贸易商与呆滞库存。不显示供应商名称。',
-      go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
+      go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，以欧元计价（按欧洲央行参考汇率换算），所示发货地 FCA 交货（Incoterms® 2020），不含运费、进口关税和增值税。',
       moreTitle: '准确数量、价格阶梯与下单', moreText: '采购商账户或 API（Adesio、Luminovo、CalcuQuote、ERP）可查看准确数量、全部价格阶梯、交期并询价。贸易商与呆滞库存的报价通过 Opportunity 流程：状态问卷、可选实验室检测、验收后付款。',
       ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
@@ -175,6 +175,12 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   if (!T[lang]) { try { lang = localStorage.getItem('cp-search-lang'); } catch (e) {} }
   if (!T[lang]) lang = /^zh/i.test(navigator.language) ? 'zh' : /^fr/i.test(navigator.language) ? 'fr' : 'en';
   var t = function () { return T[lang]; };
+  // Lieu FCA (Incoterms® 2020, ADR 0029) : code renvoyé par la base, libellé dans la langue de la page.
+  var PLACE = { HK: { fr: 'Hong Kong', en: 'Hong Kong', zh: '香港' }, SZ: { fr: 'Shenzhen', en: 'Shenzhen', zh: '深圳' },
+    DG: { fr: 'Dongguan', en: 'Dongguan', zh: '东莞' }, GZ: { fr: 'Canton', en: 'Guangzhou', zh: '广州' },
+    SH: { fr: 'Shanghai', en: 'Shanghai', zh: '上海' }, XM: { fr: 'Xiamen', en: 'Xiamen', zh: '厦门' },
+    CN: { fr: 'Chine', en: 'China', zh: '中国' }, TW: { fr: 'Taïwan', en: 'Taiwan', zh: '中国台湾' } };
+  function fca(x) { var p = PLACE[x && (x.fca_place || x.ship_from)]; return p ? (x.incoterm || 'FCA') + ' ' + p[lang] : ''; }
   var last = null;
   var ORDER = ['fr', 'en', 'zh'], LABEL = { fr: 'FR', en: 'EN', zh: '中文' };
 
@@ -204,6 +210,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
         : (lang === 'zh' ? esc(money(x.price_from, x.currency || d.currency)) + ' ' + esc(t().from) : esc(t().from) + ' ' + esc(money(x.price_from, x.currency || d.currency)));
       // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
       if (x.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(x.price_1k, x.currency || d.currency)) + '</div>';
+      if (fca(x)) price += '<div class="muted inc">' + esc(fca(x)) + '</div>';
       var opp = x.source === 'broker' || x.source === 'surplus';
       return '<div class="res"><div><div class="mpn">' + esc(x.mpn) + '</div><div class="muted">' + esc(x.manufacturer) + '</div></div>' +
         '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +

@@ -13,7 +13,7 @@ const norm = (t) => (t || '').replace(/[  ]/g, ' ');
 
 // Offres fictives, prix en euros comme partner_offers et public_search (migration 20261103000025).
 const OFFERS = [
-  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 2500, min_qty: 2500, price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
+  { mpn: 'NE555DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 2500, min_qty: 2500, incoterm: 'FCA', fca_place: 'SZ', price_from: 0.09, price_1k: 0.1, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'LM358DR', manufacturer: 'Texas Instruments', supplier: 'partner', source: 'distributor', ship_from: 'CN', currency: 'EUR', availability: '1000+', moq: 1, price_from: 0.05, price_1k: 0.06, updated_at: '2026-11-03T08:00:00Z' },
   { mpn: 'GONE123', manufacturer: 'Fictif', supplier: 'partner', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '100+', moq: 1, price_from: 1, price_1k: null, updated_at: '2026-11-03T08:00:00Z' },
 ];
@@ -40,7 +40,7 @@ async function mock(page, errors) {
       if (!(mpn in PRICE)) return reply({ error: 'not_found' }, 404);
       const p = PRICE[mpn], k = PACK[mpn] || { moq: 1, spq: 1 };
       return reply({ currency: u.searchParams.get('cur'), qty, unit_price: p, total: p == null ? null : +(p * qty).toFixed(2), covered: qty <= 10000,
-        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0 });
+        moq: k.moq, spq: k.spq, min_qty: minOf(k), qty_ok: qty >= k.moq && qty % k.spq === 0, incoterm: 'FCA', fca_place: mpn === 'BSS138' ? 'HK' : 'SZ' });
     }
     if (u.pathname.endsWith('/cart')) {
       const b = JSON.parse(req.postData());
@@ -78,6 +78,9 @@ ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références')
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
 ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
 ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
+ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('FCA Shenzhen') && norm(await page.textContent('#rows tr:nth-child(3)')).includes('FCA Hong Kong'),
+  'offres : Incoterm FCA et lieu (lieu de la base, sinon pays d\'expédition)');
+ok(norm(await page.textContent('#hint')).includes('FCA au lieu d’expédition indiqué (Incoterms® 2020)'), 'offres : mention Incoterms® 2020');
 
 // 2. /recherche/ : ajout d'une offre « sur demande ».
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
@@ -91,7 +94,8 @@ await page.goto(BASE + '/panier/');
 await page.waitForFunction(() => document.querySelectorAll('#lines li').length === 4 && !document.querySelector('#lines').textContent.includes('…'));
 let txt = norm(await page.textContent('#cart'));
 ok(txt.includes('NE555DR') && /250,00 €/.test(txt) && txt.includes('prix unitaire 0,10 €'), 'panier : devis en euros pour la quantité (2 500 × 0,10 €)');
-ok(txt.includes('hors transport, droits et TVA'), 'panier : prix hors transport');
+ok(txt.includes('hors transport, droits et TVA') && txt.includes('Incoterms® 2020'), 'panier : prix FCA, hors transport');
+ok(norm(await page.textContent('#lines li:first-child')).includes('FCA Shenzhen') && norm(await page.textContent('#lines li:nth-child(4)')).includes('FCA Hong Kong'), 'panier : lieu FCA de chaque ligne (devis)');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
 ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
