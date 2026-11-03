@@ -265,3 +265,7 @@ for (const lang of Object.keys(LANGS)) {
 // Tokens de marque publiés pour les pages écrites à la main (site/proto/).
 copyFileSync(join(ROOT, 'brand/tokens.css'), join(OUT, 'assets/tokens.css'));
 console.log('site/assets/tokens.css');
+
+// En-tête CSP : empreintes des scripts en ligne des pages, recalculées après la génération (ADR 0031).
+const { writeCsp } = await import('./build-csp.mjs');
+console.log(`site/.htaccess (CSP, ${writeCsp()} empreinte(s))`);

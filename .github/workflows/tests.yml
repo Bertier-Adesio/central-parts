@@ -44,6 +44,8 @@ jobs:
           deno-version: v2.x
       - name: Lecture des fichiers de stock et outils du dépôt
         run: node tools/test-import.mjs
+      - name: En-tête CSP à jour (empreintes des scripts en ligne)
+        run: node tools/build-csp.mjs --check
       - name: Règles métier de la maquette
         run: node tools/test-app.mjs
       - name: Vérification de type des fonctions Edge
@@ -118,5 +120,6 @@ jobs:
           node tools/test-search-ui.mjs
           node tools/test-listes-ui.mjs
           node tools/test-panier-ui.mjs
+          node tools/test-csp.mjs
           node tools/test-api-page-ui.mjs
           node tools/test-admin-ui.mjs
