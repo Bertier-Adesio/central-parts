@@ -1,6 +1,7 @@
 // Fonction « admin » simulée, pour la démonstration locale (tools/demo-admin.mjs) et le test Chromium
 // (tools/test-admin-ui.mjs) du back office site/admin/. Mêmes routes, mêmes réponses et mêmes règles que
-// supabase/functions/admin/index.ts et les fonctions SQL admin_* (migration 20261102000014). Données fictives.
+// supabase/functions/admin/index.ts et les fonctions SQL admin_* (migrations 20261102000014, 20261102000020 pour les RFQ,
+// 20261103000024 pour les demandes d'achat). Données fictives.
 //
 // Jetons simulés : DEMO-ADMIN (administrateur), DEMO-OTHER (compte connecté, pas administrateur) ; tout autre
 // jeton est expiré (401).
@@ -86,7 +87,27 @@ export function createMock() {
   lots.push(lot('LOT-C1', 'ORG-0107', orgs[0].name, 'CJ-NE555-F01', '长电 (fictif)', 'SOP-8', 20000, 0.35, 'CNH', 3, 1));
   orgs[0].import = { file_name: '库存.csv', status: 'done', received_at: day(31, 9, 30), rows_total: 1, rejected: 0 };
 
-  const state = { orgs, lots, notified: [], calls: [], logins: [] };
+  // Demandes d'achat du site (fiches request_for_operator) et RFQ des plateformes (rfq_for_operator), fictives.
+  const req = (ref, status, mpn, qty, price, total, company, created) => ({
+    ref, origin: 'site', status, mpn, qty, currency: 'EUR', unit_price: price, total, supplier: 'ORG-0110 V-5', seller_id: 'ORG-0110',
+    source: 'distributor', ship_from: 'CN', supplier_unit_price: +(price / 1.1 * 1.08).toFixed(4), supplier_currency: 'USD', lot_qty: 30000,
+    buyer_company: company, buyer_vat: 'FR00999999999', vat_checked: true, buyer_name: 'Acheteur Test', buyer_email: 'achats@example.com',
+    buyer_phone: null, delivery: 'FR · 1 rue de l\'Exemple, 69000 Lyon', message: null, created_at: created, updated_at: created,
+    decided_at: status === 'pending_validation' ? null : created, decided_by: status === 'pending_validation' ? null : 'admin:' + ADMIN_EMAIL,
+    reject_reason: null, answered_at: null });
+  const requests = [
+    req('PR-0012', 'pending_validation', 'NE555DR', 2000, 0.0957, 191.4, 'Atelier Exemple (fictif)', day(33, 9, 5)),
+    req('PR-0011', 'pending_validation', 'STM32G071RBT6', 500, 1.9, 950, 'Bureau d\'études Test (fictif)', day(33, 8, 40)),
+    req('PR-0010', 'submitted', 'LM358DR', 1000, 0.07, 70, 'EMS Démo (fictif)', day(32, 15)),
+  ];
+  const rfqs = [
+    { id: 'DEM-1004', status: 'pending_validation', rfq_id: 'RFQ-0040', client: 'ORG-0102 Plateforme de chiffrage (fictif)', mpn: 'TPS62130RGTR',
+      manufacturer: 'Texas Instruments', qty: 3000, ship_to: 'FR', currency: 'EUR', created_at: day(33, 7, 30), candidates: ['ORG-0110'], bids: 0 },
+    { id: 'DEM-1003', status: 'auction', rfq_id: 'RFQ-0039', client: 'ORG-0102 Plateforme de chiffrage (fictif)', mpn: 'CH340C', qty: 10000,
+      ship_to: 'DE', currency: 'EUR', created_at: day(32, 11), validated_by: 'admin:' + ADMIN_EMAIL,
+      sellers: [{ org: 'ORG-0110', notify: 'sent', response: 'pending' }], bids: 0 },
+  ];
+  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [] };
   const find = (id) => orgs.find((o) => o.org_id === id);
   const lines = (id) => lots.filter((l) => l.org_id === id && l.qty > 0).length;
   const decide = (o, action, reason) => {
@@ -131,6 +152,16 @@ export function createMock() {
           last_import_at: o.import?.received_at || null, last_import_file: o.import?.file_name || null,
         })).sort((a, b) => String(b.last_import_at).localeCompare(String(a.last_import_at)))];
       }
+      if (path === '/requests') {
+        const s = query.has('status') ? query.get('status') : 'pending_validation';
+        const counts = {};
+        for (const r of requests) counts[r.status] = (counts[r.status] || 0) + 1;
+        return [200, { counts, rows: requests.filter((r) => !s || r.status === s) }];
+      }
+      if (path === '/rfq') {
+        const s = query.has('status') ? query.get('status') : 'pending_validation';
+        return [200, rfqs.filter((d) => !s || d.status === s)];
+      }
       if (path === '/lots') {
         const org = query.get('org'), q = (query.get('q') || '').toLowerCase(), off = Math.max(0, Number(query.get('offset')) || 0);
         const m = lots.filter((l) => (!org || l.org_id === org) &&
@@ -139,6 +170,39 @@ export function createMock() {
           .sort((a, b) => a.seller.localeCompare(b.seller) || a.mpn.toUpperCase().localeCompare(b.mpn.toUpperCase()));
         return [200, { total: m.length, rows: m.slice(off, off + 50) }];
       }
+    }
+    if (method === 'POST' && (path === '/requests/approve' || path === '/requests/reject')) {
+      const r = requests.find((x) => x.ref === String(body.ref || '').trim().toUpperCase());
+      if (!/^PR-\d{1,8}$/i.test(String(body.ref || '').trim())) return [422, { error: 'ref' }];
+      const why = String(body.reason || '').trim();
+      if (path === '/requests/reject' && !why) return [422, { error: 'reason_required' }];
+      if (!r) return [409, { error: 'not_allowed' }];
+      if (r.status !== 'pending_validation') return [409, { error: 'already_decided' }];
+      Object.assign(r, { decided_at: new Date().toISOString(), decided_by: 'admin:' + ADMIN_EMAIL });
+      if (path === '/requests/reject') {
+        Object.assign(r, { status: 'rejected', reject_reason: why });
+        return [200, { ...r, supplier_view: null }];
+      }
+      r.status = 'submitted';
+      state.notified.push({ org: r.seller_id, kind: 'request', ref: r.ref });
+      return [200, { ...r, notified: 1 }];
+    }
+    if (method === 'POST' && (path === '/rfq/approve' || path === '/rfq/reject')) {
+      const d = rfqs.find((x) => x.id === String(body.id || '').trim().toUpperCase());
+      if (!/^DEM-\d{1,8}$/i.test(String(body.id || '').trim())) return [422, { error: 'id' }];
+      const why = String(body.reason || '').trim();
+      if (path === '/rfq/reject' && !why) return [422, { error: 'reason_required' }];
+      if (!d) return [409, { error: 'not_allowed' }];
+      if (d.status !== 'pending_validation') return [409, { error: 'already_decided' }];
+      if (path === '/rfq/reject') {
+        Object.assign(d, { status: 'rejected', rejected_reason: why });
+        return [200, d];
+      }
+      Object.assign(d, { status: 'auction', validated_by: 'admin:' + ADMIN_EMAIL,
+        sellers: (d.candidates || []).map((o) => ({ org: o, notify: 'sent', response: 'pending' })) });
+      delete d.candidates;
+      state.notified.push({ org: (d.sellers[0] || {}).org, kind: 'rfq', ref: d.id });
+      return [200, { ...d, dispatch: { sent: d.sellers.length } }];
     }
     if (method === 'POST') {
       const o = find(body.org);

@@ -13,7 +13,8 @@
 //     - boutons du menu anglais des opérateurs (clés OP_PENDING, OP_REQUESTS, OP_HELP) : comme pending, requests et help ;
 //     - message d'un opérateur (table operators) : commandes 待审核, 通过 ORG-…, 拒绝 ORG-… motif, 链接 (lien de
 //       connexion pour tester la page) (ADR 0012) et suite
-//       des demandes d'achat : 询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
+//       des demandes d'achat : approve PR-… / reject PR-… motif (validation avant tout envoi au fournisseur, ADR 0026),
+//       询单, 确认, 无货, 发票, 收款, 发货, 取消 PR-… (ADR 0014) ;
 //     - commandes RFQ des plateformes (ADR 0023), opérateurs seulement : rfq, rfq DEM-…, rfq stats ORG-…,
 //       approve DEM-… [only ORG-…], reject DEM-… motif, resend DEM-… [ORG-…] ;
 //     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ; 确认库存 (confirm stock)
@@ -27,10 +28,10 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { depotLinkText, isDepotMenuClick, operatorMenuCommand, parseWechatXml, replyText, sceneOf, wechatSignatureOk } from '../_shared/depot.js';
 import {
-  approvedNotice, linkErrorText, OPEN_REQUEST_STATUSES, operatorErrorText, operatorHelpText, operatorReplyText, operatorRequestsText,
+  approvedNotice, linkErrorText, OPEN_REQUEST_STATUSES, purchaseDecisionText, operatorErrorText, operatorHelpText, operatorReplyText, operatorRequestsText,
   isHelpRequest, isReconfirmRequest, phoneBackLine, reconfirmErrorText, reconfirmOkText, receivedText, rejectedNotice, scanReply, STATUS_EN, supplierHelpText, welcomeText,
 } from '../_shared/robot-texts.js';
-import { notifyOperators, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
+import { notifyOperators, notifySupplierOfRequest, requestAnswerNote, sendText, supplierCard } from '../_shared/wechat.ts';
 import {
   rfqAnswerErrorText, rfqDeclineOkText, rfqDispatchText, rfqHelpText, rfqOperatorCard, rfqOperatorListText,
   rfqDataQualityLine, rfqQuoteOkText, rfqStatsText,
@@ -119,6 +120,15 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
     if (error) return operatorErrorText(org, error.message);
     later(tellAdmins(db, org, rejectedNotice(reason)));
     return `Rejected ${org}`;
+  }
+  // Validation d'une demande d'achat du site (ADR 0026) : rien ne part chez le fournisseur avant.
+  m = /^(通过|ok|approve)\s+(PR-\d+)\s*$/i.exec(t) || /^(拒绝|reject)\s+(PR-\d+)\s*([\s\S]*)$/i.exec(t);
+  if (m) {
+    const ok = !/^(拒绝|reject)$/i.test(m[1]), ref = m[2].toUpperCase();
+    const { data, error } = await db.rpc('decide_purchase_request', { p_ref: ref, p_approve: ok, p_by: openid, p_reason: ok ? null : (m[3] || '').trim() });
+    if (error) return error.code === 'CP005' ? `Reason required: "reject ${ref} reason".` : `${ref}: ${error.message}`;
+    const notified = ok && data.seller_id && data.supplier_view ? await notifySupplierOfRequest(db, data.seller_id, data.supplier_view) : 0;
+    return purchaseDecisionText(data, notified);
   }
   m = /^(确认|无货|发票|收款|发货|取消|询单|confirm|unavailable|proforma|paid|shipped|cancel|request)\s*(PR-\d+)\s*$/i.exec(t);
   if (m) {

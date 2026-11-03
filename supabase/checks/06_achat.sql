@@ -72,6 +72,9 @@ set role service_role;
 do $$
 declare v_ref text := (select v from tests.vars where k = 'ref'); s jsonb;
 begin
+  -- Depuis la migration 20261103000024, la demande attend la validation de l'administrateur (voir 20_validation_demandes.sql).
+  perform tests.eq('fournisseur : rien avant la validation', jsonb_array_length(public.supplier_requests('oS4')), 0);
+  perform public.decide_purchase_request(v_ref, true, 'test');
   s := public.supplier_requests('oS4')->0;
   perform tests.eq('fournisseur : sa demande, avec son prix net', s->>'ref' || ' ' || (s->>'unit_price')::numeric(10,2) || ' ' || (s->>'currency'), v_ref || ' 250.00 CNH');
   perform tests.eq('fournisseur : jamais l''acheteur', s::text ~* 'atelier|achats@|FR12345', false);

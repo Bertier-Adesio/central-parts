@@ -33,4 +33,4 @@ Les fournisseurs s'inscrivent seuls (ADR 0012) et sont validés par un opérateu
 
 - À faire une fois, dans Supabase (après accord) : appliquer la migration, créer le compte de Bertier dans Authentication > Users et le rattacher à l'organisation Central.Parts, ajouter `https://central.parts/admin/` aux Redirect URLs. Voir `supabase/README.md`.
 - La fonction `admin` est déployée sans vérification de jeton par la passerelle (pour la demande de lien), comme `depot` : elle contrôle elle-même chaque appel.
-- Phase 2 (après electronica) : demandes d'achat PR-…, boîte de réception WeChat, plusieurs administrateurs avec rôles.
+- Phase 2 (après electronica) : boîte de réception WeChat, plusieurs administrateurs avec rôles. Les demandes de prix du site (PR-…) et de l'API (DEM-…) sont validées dans l'onglet « Demandes » depuis le 3 novembre 2026 (ADR 0026).

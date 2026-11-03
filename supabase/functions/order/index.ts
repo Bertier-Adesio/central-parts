@@ -4,12 +4,14 @@
 //
 //   GET  /order/quote?mpn&source&ship_from&qty&cur → prix unitaire et total tout compris, quantité couverte ou non
 //   POST /order  {mpn, source, ship_from, qty, currency, company, vat, name, email, phone?, country, address, message?}
-//                → référence, devis, lien de suivi ; prévient le fournisseur et les opérateurs dans WeChat
+//                → référence, devis, lien de suivi ; prévient les opérateurs dans WeChat. Le fournisseur n'est prévenu
+//                  qu'après la validation d'un administrateur (back office ou robot, ADR 0026)
 //   GET  /order/status?ref&k → statut de la demande (jamais le fournisseur)
 //
 // Le numéro de TVA est vérifié auprès du service VIES de la Commission européenne quand c'est possible.
-import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { notifyOperators, sendText } from '../_shared/wechat.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
+import { notifyOperators } from '../_shared/wechat.ts';
+import { purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
@@ -27,11 +29,6 @@ async function viesValid(vat: string): Promise<boolean | null> {
   } catch {
     return null;
   }
-}
-
-async function tellSupplier(db: SupabaseClient, sellerId: string, text: string) {
-  const { data } = await db.from('wechat_identities').select('openid').eq('org_id', sellerId).is('revoked_at', null);
-  await Promise.all((data || []).map((w: { openid: string }) => sendText(db, w.openid, text)));
 }
 
 Deno.serve(async (req) => {
@@ -76,27 +73,10 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('create_purchase_request', { p_ip: ip, p: { ...b, vat, vat_checked: valid === true } });
       if (error) return fail(error);
 
-      // Fournisseur (sans l'acheteur) et opérateurs (fiche complète), après la réponse à l'acheteur.
+      // Opérateurs seulement : rien ne part chez le fournisseur avant la validation d'un administrateur (ADR 0026).
       const notify = (async () => {
-        const { data: sup } = await db.from('purchase_requests').select('seller_id, supplier_unit_price, supplier_currency, delivery_country').eq('id', data.ref).single();
         const { data: op } = await db.rpc('request_for_operator', { p_ref: data.ref });
-        if (sup?.seller_id) {
-          await tellSupplier(db, sup.seller_id, [
-            `【新询单 ${data.ref}】`,
-            `型号 ${op.mpn}，数量 ${op.qty}`,
-            `您的单价 ${sup.supplier_unit_price ?? '待报价'} ${sup.supplier_currency}，交货国家 ${sup.delivery_country}`,
-            `请在 24 小时内回复「确认 ${data.ref}」或「无货 ${data.ref}」，或在 ${SITE}/depot/ 处理。`,
-          ].join('\n'));
-        }
-        await notifyOperators(db, [
-          `[Purchase request ${op.ref}] ${op.mpn} × ${op.qty}`,
-          `Buyer: ${op.buyer_company} · ${op.buyer_vat}${op.vat_checked ? ' (VIES checked)' : ' (not checked)'}`,
-          `${op.buyer_name} · ${op.buyer_email}${op.buyer_phone ? ' · ' + op.buyer_phone : ''}`,
-          `Delivery: ${op.delivery}`,
-          `Price ${op.unit_price ?? 'to confirm'} ${op.currency} (total ${op.total ?? 'to confirm'})`,
-          `Supplier ${op.supplier}: ${op.supplier_unit_price ?? '?'} ${op.supplier_currency}, stock ${op.lot_qty}`,
-          op.message ? `Message: ${op.message}` : '',
-        ].filter(Boolean).join('\n'));
+        if (op) await notifyOperators(db, purchaseRequestOperatorNote(op));
       })().catch(() => {});
       const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
       if (rt) rt.waitUntil(notify); else await notify;

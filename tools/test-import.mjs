@@ -306,7 +306,30 @@ en(prText, 'demandes d\'achat en cours (requests)');
 ok(prText.startsWith('Open purchase requests: 14 (latest 2 shown)') && prText.includes('PR-0012 · awaiting supplier · STM32F103C8T6 × 500 · Exemple EMS GmbH · 2 Nov') && prText.includes('PR-0009 · proforma sent') && prText.endsWith('Full card: "request PR-0012"'), 'requests : une ligne par demande, la plus récente d\'abord, et la commande pour la fiche complète');
 ok(!prText.includes('@') && !prText.includes('VAT'), 'requests : la liste ne montre ni e-mail ni TVA de l\'acheteur (fiche complète par « request PR-… »)');
 ok(R.operatorRequestsText([]) === 'No open purchase request.' && R.operatorRequestsText(prRows) .startsWith('Open purchase requests: 2\n'), 'requests : aucune demande, ou toutes affichées');
-ok(JSON.stringify(R.OPEN_REQUEST_STATUSES) === '["submitted","confirmed","proforma_sent","paid"]', 'requests : ni expédiées, ni annulées, ni sans stock');
+ok(JSON.stringify(R.OPEN_REQUEST_STATUSES) === '["pending_validation","submitted","confirmed","proforma_sent","paid"]', 'requests : à valider et en cours ; ni refusées, ni expédiées, ni annulées, ni sans stock');
+
+// Validation des demandes d'achat par l'administrateur (ADR 0026).
+const opCard = { ref: 'PR-0020', mpn: 'NE555DR', qty: 2000, buyer_company: 'Atelier Test (fictif)', buyer_vat: 'FR00999999999', vat_checked: true,
+  buyer_name: 'Jeanne Test', buyer_email: 'achats@example.com', buyer_phone: null, delivery: 'FR · 1 rue de l\'Exemple', unit_price: 0.0957,
+  currency: 'EUR', total: 191.4, supplier: 'ORG-0110 V-5', supplier_unit_price: 0.08, supplier_currency: 'USD', lot_qty: 30000, message: null };
+const note = R.purchaseRequestOperatorNote(opCard);
+ok(note.startsWith('[Purchase request PR-0020] NE555DR × 2000 · awaiting your validation') && note.includes('"approve PR-0020"') &&
+  note.includes('"reject PR-0020 reason"') && note.includes('https://central.parts/admin/') && !note.includes('Message:') && !/\n\n\n/.test(note),
+  'demande d\'achat : avis aux opérateurs avec les commandes de validation, sans ligne vide de trop');
+ok(R.purchaseRequestOperatorNote({ ...opCard, message: 'Urgent' }).includes('Message: Urgent'), 'demande d\'achat : message de l\'acheteur repris');
+const sup = R.supplierRequestText({ ref: 'PR-0020', mpn: 'NE555DR', qty: 2000, unit_price: 0.08, currency: 'USD', delivery_country: 'FR' });
+ok(sup.startsWith('【新询单 PR-0020】') && sup.includes('您的单价 0.08 USD') && sup.includes('「确认 PR-0020」') && sup.includes('https://central.parts/depot/') &&
+  !/Atelier|achats@|FR00999/.test(sup), 'demande validée : message au fournisseur en chinois, sans l\'acheteur');
+ok(R.supplierRequestText({ ref: 'PR-1', mpn: 'X', qty: 1, unit_price: null, currency: 'CNH', delivery_country: 'DE' }).includes('待报价 CNH'), 'demande validée : prix à confirmer');
+ok(R.purchaseDecisionText({ ref: 'PR-0020', status: 'submitted', supplier: 'ORG-0110 V-5' }, 2) === 'Approved PR-0020 → ORG-0110 V-5: 2 WeChat contact(s) notified.', 'robot : validation, contacts prévenus');
+ok(R.purchaseDecisionText({ ref: 'PR-0020', status: 'submitted', supplier: 'ORG-0110 V-5' }, 0).includes('48-hour rule'), 'robot : validation sans contact joignable');
+ok(R.purchaseDecisionText({ ref: 'PR-0020', status: 'rejected' }).startsWith('Rejected PR-0020. Nothing was sent'), 'robot : refus');
+ok(R.operatorHelpText().includes('approve PR-0001') && R.operatorHelpText().includes('reject PR-0001 reason'), 'aide : validation des demandes d\'achat');
+ok(R.STATUS_EN.pending_validation === 'awaiting your validation' && R.STATUS_EN.rejected === 'rejected', 'statuts : à valider, refusée');
+ok(/\/\^\(通过\|ok\|approve\)\\s\+\(PR-\\d\+\)\\s\*\$\/i/.test(ev) && /decide_purchase_request/.test(ev) && /notifySupplierOfRequest/.test(ev),
+  'robot : approve / reject PR-… passent par decide_purchase_request, puis préviennent le fournisseur');
+const orderSrc = readFileSync(new URL('../supabase/functions/order/index.ts', import.meta.url), 'utf8');
+ok(!/sendText|tellSupplier|notifySupplierOfRequest/.test(orderSrc) && /purchaseRequestOperatorNote/.test(orderSrc), 'commande : le fournisseur n\'est plus prévenu à la création, seulement les opérateurs');
 ok(operatorMenuCommand(clickOf('OP_REQUESTS')) === 'requests', 'menu opérateurs : Purchase requests vaut la commande requests');
 ok(/if \(\/\^requests\$\/i\.test\(t\)\)/.test(ev) && /\.in\('status', OPEN_REQUEST_STATUSES\)\.order\('created_at', \{ ascending: false \}\)\.limit\(10\)/.test(ev), 'robot : requests lit les 10 demandes en cours les plus récentes');
 ok(/^\s*m = \/\^\(确认\|无货\|发票\|收款\|发货\|取消\|询单\|confirm\|unavailable\|proforma\|paid\|shipped\|cancel\|request\)\\s\*\(PR-\\d\+\)\\s\*\$\/i\.exec\(t\);/m.test(ev), 'robot : commandes PR-… existantes inchangées');

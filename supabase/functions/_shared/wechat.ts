@@ -2,6 +2,7 @@
 // Secrets : WECHAT_APPID, WECHAT_SECRET.
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { registrationLine } from './depot.js';
+import { supplierRequestText } from './robot-texts.js';
 
 // Jeton d'accès partagé (stable_token), gardé en base jusqu'à cinq minutes avant son échéance.
 export async function accessToken(db: SupabaseClient, force = false): Promise<string> {
@@ -67,4 +68,12 @@ export async function supplierCard(db: SupabaseClient, s: Record<string, unknown
 export function requestAnswerNote(r: { ref: string; mpn: string; qty: number }, ok: boolean): string {
   return `[Purchase request ${r.ref}] Supplier ${ok ? 'confirmed availability' : 'has no stock'}: ${r.mpn} × ${r.qty}.` +
     (ok ? ` Send the proforma, then reply "proforma ${r.ref}".` : '');
+}
+
+// Demande d'achat validée par un administrateur (ADR 0026) : prévient tous les contacts WeChat actifs du fournisseur.
+// v : supplier_view renvoyé par decide_purchase_request. Renvoie le nombre de contacts effectivement prévenus.
+export async function notifySupplierOfRequest(db: SupabaseClient, sellerId: string, v: Record<string, unknown>): Promise<number> {
+  const { data } = await db.from('wechat_identities').select('openid').eq('org_id', sellerId).is('revoked_at', null);
+  const sent = await Promise.all((data || []).map((w: { openid: string }) => sendText(db, w.openid, supplierRequestText(v))));
+  return sent.filter(Boolean).length;
 }

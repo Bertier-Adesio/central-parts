@@ -36,6 +36,8 @@ await page.route(ORDER + '**', (r) => {
   const reply = (d, status = 200) => r.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type' }, body: JSON.stringify(d) });
   if (r.request().method() === 'OPTIONS') return reply({});
   if (u.pathname.endsWith('/quote')) { quoteCur = u.searchParams.get('cur'); const n = +u.searchParams.get('qty'); return reply({ currency: u.searchParams.get('cur'), qty: n, unit_price: 0.12, total: +(0.12 * n).toFixed(2), covered: n <= 10000 }); }
+  const st = { attente: 'pending_validation', refus: 'rejected' }[u.searchParams.get('k')];
+  if (u.pathname.endsWith('/status') && st) return reply({ ref: 'PR-0001', status: st, mpn: 'NE555DR', qty: 2000, currency: 'EUR', unit_price: 0.12, total: 240, created_at: '2026-11-01T10:00:00Z' });
   if (u.pathname.endsWith('/status')) return u.searchParams.get('k') === 'tok' ? reply({ ref: 'PR-0001', status: 'confirmed', mpn: 'NE555DR', qty: 2000, currency: 'EUR', unit_price: 0.12, total: 240, created_at: '2026-11-01T10:00:00Z' }) : reply({ error: 'not_found' }, 404);
   sentOrder = JSON.parse(r.request().postData());
   if (sentOrder.vat === 'FR00000000000') return reply({ error: 'vat_invalid' }, 422);
@@ -124,8 +126,14 @@ ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.inne
 // Suivi de la demande.
 await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=tok&lang=fr');
 await page.waitForSelector('#out:not([hidden])');
-ok((await page.$$('.steps li.done')).length === 2 && (await page.textContent('#steps')).includes('confirmée'), 'suivi : étapes franchies');
+ok((await page.$$('.steps li.done')).length === 3 && (await page.textContent('#steps')).includes('confirmée'), 'suivi : étapes franchies (vérifiée, transmise, confirmée)');
 ok(!(await page.textContent('main')).match(/V-\d|ORG-/), 'suivi : jamais le fournisseur');
+await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=attente&lang=fr');
+await page.waitForSelector('#out:not([hidden])');
+ok((await page.$$('.steps li.done')).length === 1 && (await page.textContent('#steps')).includes('en cours de vérification'), 'suivi : en attente de validation par Central.Parts');
+await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=refus&lang=en');
+await page.waitForSelector('#out:not([hidden])');
+ok((await page.textContent('#steps')).includes('cannot follow up') && !(await page.textContent('main')).includes('rejected'), 'suivi : demande refusée, sans motif ni code');
 await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=faux&lang=en');
 await page.waitForSelector('#msg:not([hidden])');
 ok((await page.textContent('#msg')).includes('not found'), 'suivi : lien faux');

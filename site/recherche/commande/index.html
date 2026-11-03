@@ -89,19 +89,19 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 (function () {
   'use strict';
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order/status';
-  var STEPS = ['submitted', 'confirmed', 'proforma_sent', 'paid', 'shipped'];
+  var STEPS = ['pending_validation', 'submitted', 'confirmed', 'proforma_sent', 'paid', 'shipped'];
   var T = {
     fr: { title: 'Suivi de la demande', back: 'Nouvelle recherche', ref: 'Demande {ref} du {date}', total: 'Total', unit: 'prix unitaire', toConfirm: 'Prix confirmé avec la proforma', excl: "hors droits et TVA à l'import",
-      s: { submitted: 'Demande reçue', confirmed: 'Disponibilité confirmée par le fournisseur', proforma_sent: 'Facture proforma envoyée par e-mail', paid: 'Virement reçu', shipped: 'Expédiée' },
-      end: { unavailable: "Le fournisseur n'a plus cette quantité : Central.Parts vous propose une alternative par e-mail.", cancelled: 'Demande annulée.' },
+      s: { pending_validation: 'Demande reçue, en cours de vérification', submitted: 'Demande transmise au fournisseur', confirmed: 'Disponibilité confirmée par le fournisseur', proforma_sent: 'Facture proforma envoyée par e-mail', paid: 'Virement reçu', shipped: 'Expédiée' },
+      end: { unavailable: "Le fournisseur n'a plus cette quantité : Central.Parts vous propose une alternative par e-mail.", cancelled: 'Demande annulée.', rejected: 'Nous ne pouvons pas donner suite à cette demande. Écrivez à contact@central.parts pour en savoir plus.' },
       e: { not_found: 'Demande introuvable : vérifiez le lien reçu.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
     en: { title: 'Request tracking', back: 'New search', ref: 'Request {ref} of {date}', total: 'Total', unit: 'unit price', toConfirm: 'Price confirmed with the proforma', excl: 'excluding import duties and VAT',
-      s: { submitted: 'Request received', confirmed: 'Availability confirmed by the supplier', proforma_sent: 'Proforma invoice sent by e-mail', paid: 'Bank transfer received', shipped: 'Shipped' },
-      end: { unavailable: 'The supplier no longer has this quantity: Central.Parts will offer an alternative by e-mail.', cancelled: 'Request cancelled.' },
+      s: { pending_validation: 'Request received, being checked', submitted: 'Request sent to the supplier', confirmed: 'Availability confirmed by the supplier', proforma_sent: 'Proforma invoice sent by e-mail', paid: 'Bank transfer received', shipped: 'Shipped' },
+      end: { unavailable: 'The supplier no longer has this quantity: Central.Parts will offer an alternative by e-mail.', cancelled: 'Request cancelled.', rejected: 'We cannot follow up on this request. Write to contact@central.parts to find out more.' },
       e: { not_found: 'Request not found: please check the link you received.', network: 'Network error, please try again.', other: 'Tracking is unavailable, please try again later.' } },
     zh: { title: '采购申请跟踪', back: '重新搜索', ref: '申请 {ref}（{date}）', total: '合计', unit: '单价', toConfirm: '价格以形式发票为准', excl: '不含进口关税和增值税',
-      s: { submitted: '已收到申请', confirmed: '供应商已确认库存', proforma_sent: '形式发票已通过邮件发送', paid: '已收到转账', shipped: '已发货' },
-      end: { unavailable: '供应商已无此数量：Central.Parts 将通过邮件为您推荐替代货源。', cancelled: '申请已取消。' },
+      s: { pending_validation: '已收到申请，正在审核', submitted: '申请已转交供应商', confirmed: '供应商已确认库存', proforma_sent: '形式发票已通过邮件发送', paid: '已收到转账', shipped: '已发货' },
+      end: { unavailable: '供应商已无此数量：Central.Parts 将通过邮件为您推荐替代货源。', cancelled: '申请已取消。', rejected: '我们无法处理此申请。如需了解详情，请发送邮件至 contact@central.parts。' },
       e: { not_found: '未找到申请，请核对链接。', network: '网络错误，请重试。', other: '暂时无法查询，请稍后再试。' } }
   };
   var $ = function (id) { return document.getElementById(id); };
@@ -120,7 +120,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('mpn').textContent = d.mpn + ' × ' + d.qty;
     $('price').textContent = d.unit_price == null ? t().toConfirm : t().total + ' ' + money(d.total, d.currency) + ' (' + t().unit + ' ' + money(d.unit_price, d.currency) + ', ' + t().excl + ')';
     var at = STEPS.indexOf(d.status), html = '';
-    if (at < 0) html = '<li class="done">' + t().s.submitted + '</li><li class="done">' + (t().end[d.status] || d.status) + '</li>';
+    if (at < 0) html = '<li class="done">' + t().s.pending_validation + '</li><li class="done">' + (t().end[d.status] || d.status) + '</li>';
     else html = STEPS.map(function (s, i) { return '<li class="' + (i <= at ? 'done' : '') + '">' + t().s[s] + '</li>'; }).join('');
     $('steps').innerHTML = html;
   }

@@ -63,6 +63,12 @@ ul.rows button:hover,ul.rows button[aria-current=true]{background:var(--bg-sunke
 .badge.pending{background:var(--status-warning-bg);color:var(--status-warning)}
 .badge.validated{background:var(--status-success-bg);color:var(--status-success)}
 .badge.rejected{background:var(--status-danger-bg);color:var(--status-danger)}
+.tabs .count{display:inline-block;min-width:1.4em;margin-left:6px;padding:0 6px;border-radius:var(--radius-pill);background:var(--status-warning-bg);color:var(--status-warning);font-size:var(--text-xs)}
+ul.reqs{list-style:none;margin:0 0 20px;padding:0}
+ul.reqs > li{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:14px 16px;margin:0 0 10px}
+ul.reqs > li.empty{color:var(--fg-3)}
+ul.reqs .actions{margin-top:10px}
+.origin{font-size:var(--text-xs);color:var(--fg-3);text-transform:uppercase;letter-spacing:.04em}
 dl.kv{display:grid;grid-template-columns:minmax(120px,2fr) minmax(0,3fr);gap:6px 16px;margin:0;font-size:var(--text-sm)}
 dl.kv dt{color:var(--fg-3)}
 dl.kv dd{margin:0;overflow-wrap:anywhere}
@@ -147,8 +153,22 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   <section id="v-app" hidden>
     <nav class="tabs" role="tablist">
       <button type="button" role="tab" id="tab-sup" aria-selected="true" aria-controls="p-sup">Fournisseurs</button>
+      <button type="button" role="tab" id="tab-req" aria-selected="false" aria-controls="p-req">Demandes<span class="count" id="req-count" hidden></span></button>
       <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="p-stock">Stocks et offres</button>
     </nav>
+
+    <!-- Demandes de prix : site web (demandes d'achat) et API (RFQ des plateformes). Rien ne part chez un fournisseur
+         avant la validation (ADR 0023, 0026). -->
+    <div id="p-req" role="tabpanel" hidden>
+      <div class="seg" id="req-filters">
+        <button type="button" data-r="pending_validation" aria-pressed="true">À valider</button>
+        <button type="button" data-r="" aria-pressed="false">Toutes</button>
+      </div>
+      <h2>Site web · demandes d'achat</h2>
+      <ul class="reqs" id="req-list"></ul>
+      <h2>API · RFQ des plateformes</h2>
+      <ul class="reqs" id="rfq-list"></ul>
+    </div>
 
     <!-- Approbation des fournisseurs. -->
     <div id="p-sup" role="tabpanel">
@@ -226,10 +246,17 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     reason_required: 'Le motif du refus est obligatoire.',
     already_pending: 'Cette société est déjà en attente.',
     not_allowed: 'Action impossible dans l\'état actuel de la société (une société approuvée doit d\'abord être remise en attente).',
-    email: 'Adresse e-mail invalide.'
+    email: 'Adresse e-mail invalide.',
+    already_decided: 'Cette demande a déjà été traitée (par le robot WeChat ou un autre onglet) : la liste est mise à jour.'
   };
+  var REQ_STATUS = { pending_validation: 'À valider', rejected: 'Refusée', submitted: 'Transmise au fournisseur',
+    confirmed: 'Confirmée par le fournisseur', unavailable: 'Indisponible', proforma_sent: 'Proforma envoyée', paid: 'Payée',
+    shipped: 'Expédiée', cancelled: 'Annulée' };
+  var RFQ_STATUS = { pending_validation: 'À valider', rejected: 'Refusée', auction: 'Diffusée aux fournisseurs',
+    offers: 'Offres prêtes', no_offer: 'Sans offre', ordered: 'Commandée', cancelled: 'Annulée' };
+  function badgeClass(st) { return st === 'pending_validation' ? 'pending' : (st === 'rejected' || st === 'unavailable' || st === 'cancelled' || st === 'no_offer') ? 'rejected' : 'validated'; }
 
-  var state = { filter: 'pending', org: null, lots: { org: '', q: '', offset: 0, total: 0 } };
+  var state = { filter: 'pending', reqFilter: 'pending_validation', org: null, lots: { org: '', q: '', offset: 0, total: 0 } };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -329,14 +356,16 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
 
   // ------------------------------------------------------------ onglets
   function tab(which) {
-    $('tab-sup').setAttribute('aria-selected', String(which === 'sup'));
-    $('tab-stock').setAttribute('aria-selected', String(which === 'stock'));
-    $('p-sup').hidden = which !== 'sup';
-    $('p-stock').hidden = which !== 'stock';
+    ['sup', 'req', 'stock'].forEach(function (k) {
+      $('tab-' + k).setAttribute('aria-selected', String(which === k));
+      $('p-' + k).hidden = which !== k;
+    });
     show('');
     if (which === 'stock') loadStock();
+    if (which === 'req') loadRequests();
   }
   $('tab-sup').addEventListener('click', function () { tab('sup'); });
+  $('tab-req').addEventListener('click', function () { tab('req'); });
   $('tab-stock').addEventListener('click', function () { tab('stock'); });
 
   // ------------------------------------------------------------ fournisseurs
@@ -427,7 +456,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var b = ev.target.closest('button[data-act]');
     if (!b) return;
     var a = b.getAttribute('data-act'), d = DECISION[a];
-    pending = a;
+    pending = a; reqPending = null;
     $('c-title').textContent = d.title + ' · ' + this.dataset.org;
     $('c-text').textContent = this.dataset.name + ' — ' + d.text;
     $('c-reason-l').hidden = !d.reason;
@@ -441,9 +470,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     $('confirm').showModal();
     if (d.reason) $('c-reason').focus();
   });
-  $('c-cancel').addEventListener('click', function () { pending = null; $('confirm').close(); });
+  $('c-cancel').addEventListener('click', function () { pending = null; reqPending = null; $('confirm').close(); });
   $('c-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
+    if (reqPending) return submitRequestDecision();
     if (!pending) return;
     var org = $('sup-detail').dataset.org, reason = $('c-reason').value.trim();
     if (pending === 'reject' && !reason) {
@@ -463,6 +493,135 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       $('c-err').textContent = ERR[e && e.code] || 'Erreur du serveur.'; $('c-err').hidden = false;
     });
   });
+
+  // ------------------------------------------------------------ demandes de prix (site web et API)
+  // Site : demandes d'achat (PR-…), validées ici ou par « approve PR-… » dans WeChat ; le fournisseur n'est prévenu
+  // qu'à la validation. API : RFQ des plateformes (DEM-…), même règle (ADR 0023).
+  var reqPending = null;
+  var REQ_DECISION = {
+    req_approve: { title: 'Valider la demande', ok: 'Valider et transmettre', cls: 'btn-ok', reason: false,
+      text: 'La demande est transmise au fournisseur : il la voit dans son espace et reçoit une alerte WeChat (référence, quantité, son prix, pays de livraison ; jamais l\'acheteur).' },
+    req_reject: { title: 'Refuser la demande', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
+      text: 'Rien n\'est envoyé au fournisseur. L\'acheteur voit « demande non retenue » sur sa page de suivi ; le motif reste interne.' },
+    rfq_approve: { title: 'Valider la RFQ', ok: 'Valider et diffuser', cls: 'btn-ok', reason: false,
+      text: 'La RFQ est diffusée aux fournisseurs dont le stock correspond, dans WeChat et dans leur espace (jamais la plateforme ni l\'acheteur).' },
+    rfq_reject: { title: 'Refuser la RFQ', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
+      text: 'Rien n\'est envoyé aux fournisseurs ; la plateforme reçoit le refus (webhook). Motif obligatoire.' }
+  };
+  function money(v, cur) { return v == null ? 'à confirmer' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' ' + esc(cur || ''); }
+  function reqHtml(r) {
+    var pend = r.status === 'pending_validation';
+    return '<li data-ref="' + esc(r.ref) + '">' +
+      '<div class="r1"><span><span class="origin">Site web</span> <strong class="mono">' + esc(r.ref) + '</strong> · ' + esc(dt(r.created_at)) + '</span>' +
+      '<span class="badge ' + badgeClass(r.status) + '">' + esc(REQ_STATUS[r.status] || r.status) + '</span></div>' +
+      '<dl class="kv">' +
+      '<dt>Référence</dt><dd><strong class="mono">' + esc(r.mpn) + '</strong> × ' + num(r.qty) + '</dd>' +
+      '<dt>Prix acheteur</dt><dd>' + money(r.unit_price, r.currency) + (r.total != null ? ' · total ' + money(r.total, r.currency) : '') + '</dd>' +
+      '<dt>Acheteur</dt><dd>' + esc(r.buyer_company) + ' · <span class="mono">' + esc(r.buyer_vat) + '</span> ' + (r.vat_checked ? '(VIES vérifié)' : '(TVA non vérifiée)') +
+        '<br>' + esc(r.buyer_name) + ' · ' + esc(r.buyer_email) + (r.buyer_phone ? ' · ' + esc(r.buyer_phone) : '') + '</dd>' +
+      '<dt>Livraison</dt><dd>' + esc(r.delivery) + '</dd>' +
+      '<dt>Fournisseur</dt><dd>' + esc(r.supplier || '—') + ' · prix net ' + money(r.supplier_unit_price, r.supplier_currency) + ' · stock ' + num(r.lot_qty) + '</dd>' +
+      (r.message ? '<dt>Message</dt><dd>' + esc(r.message) + '</dd>' : '') +
+      (r.decided_at ? '<dt>Décision</dt><dd>' + esc(dt(r.decided_at)) + ' · ' + esc(r.decided_by || '') + (r.reject_reason ? '<br><span class="muted">Motif : ' + esc(r.reject_reason) + '</span>' : '') + '</dd>' : '') +
+      '</dl>' +
+      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="req_approve">Valider et transmettre au fournisseur</button>' +
+        '<button class="btn btn-danger" type="button" data-ract="req_reject">Refuser</button></div>' : '') +
+      '</li>';
+  }
+  function rfqHtml(d) {
+    var pend = d.status === 'pending_validation';
+    var sellers = (d.sellers || []).map(function (s) { return esc(s.org) + ' (' + esc(s.response) + ')'; }).join(', ');
+    return '<li data-id="' + esc(d.id) + '">' +
+      '<div class="r1"><span><span class="origin">API</span> <strong class="mono">' + esc(d.id) + '</strong>' + (d.rfq_id ? ' · ' + esc(d.rfq_id) : '') + ' · ' + esc(dt(d.created_at)) + (d.sandbox ? ' · bac à sable' : '') + '</span>' +
+      '<span class="badge ' + badgeClass(d.status) + '">' + esc(RFQ_STATUS[d.status] || d.status) + '</span></div>' +
+      '<dl class="kv">' +
+      '<dt>Référence</dt><dd><strong class="mono">' + esc(d.mpn) + '</strong>' + (d.manufacturer ? ' (' + esc(d.manufacturer) + ')' : '') + ' × ' + num(d.qty) + (d.dc_min ? ' · DC ≥ ' + esc(d.dc_min) : '') + '</dd>' +
+      '<dt>Plateforme</dt><dd>' + esc(d.client || '—') + (d.customer_reference ? ' · réf. ' + esc(d.customer_reference) : '') + '</dd>' +
+      '<dt>Livraison, devise</dt><dd>' + esc(d.ship_to || '—') + ' · ' + esc(d.currency || '') + (d.target_price ? ' · prix cible ' + esc(d.target_price) : '') + '</dd>' +
+      (pend ? '<dt>Fournisseurs possibles</dt><dd>' + ((d.candidates || []).map(esc).join(', ') || 'aucun stock correspondant') + '</dd>'
+            : '<dt>Fournisseurs prévenus</dt><dd>' + (sellers || '—') + ' · ' + num(d.bids || 0) + ' offre(s)</dd>') +
+      (d.rejected_reason ? '<dt>Motif du refus</dt><dd>' + esc(d.rejected_reason) + '</dd>' : '') +
+      '</dl>' +
+      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="rfq_approve">Valider et diffuser</button>' +
+        '<button class="btn btn-danger" type="button" data-ract="rfq_reject">Refuser</button></div>' : '') +
+      '</li>';
+  }
+  // Compteur de l'onglet : demandes à valider, site et API.
+  function countRequests(nSite, nApi) {
+    var n = (nSite || 0) + (nApi || 0);
+    $('req-count').hidden = !n; $('req-count').textContent = n;
+  }
+  function loadRequests() {
+    var f = state.reqFilter;
+    return Promise.all([
+      api('GET', '/requests?status=' + encodeURIComponent(f)),
+      api('GET', '/rfq?status=' + encodeURIComponent(f))
+    ]).then(function (res) {
+      var site = res[0].rows || [], rfq = res[1] || [];
+      $('req-list').innerHTML = site.length ? site.map(reqHtml).join('') : '<li class="empty">' + (f ? 'Aucune demande à valider.' : 'Aucune demande.') + '</li>';
+      $('rfq-list').innerHTML = rfq.length ? rfq.map(rfqHtml).join('') : '<li class="empty">' + (f ? 'Aucune RFQ à valider.' : 'Aucune RFQ.') + '</li>';
+      var c = res[0].counts || {};
+      countRequests(c.pending_validation, f ? rfq.length : rfq.filter(function (d) { return d.status === 'pending_validation'; }).length);
+    }).catch(fail);
+  }
+  function refreshCount() {
+    return Promise.all([api('GET', '/requests?status=pending_validation'), api('GET', '/rfq?status=pending_validation')])
+      .then(function (res) { countRequests(((res[0].counts || {}).pending_validation) || 0, (res[1] || []).length); })
+      .catch(function () { /* compteur seulement */ });
+  }
+  $('req-filters').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-r]');
+    if (!b) return;
+    state.reqFilter = b.getAttribute('data-r');
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    loadRequests();
+  });
+  function openRequestDecision(ev) {
+    var b = ev.target.closest('button[data-ract]');
+    if (!b) return;
+    var li = b.closest('li'), act = b.getAttribute('data-ract'), d = REQ_DECISION[act];
+    var id = li.getAttribute('data-ref') || li.getAttribute('data-id');
+    reqPending = { act: act, id: id }; pending = null;
+    $('c-title').textContent = d.title + ' · ' + id;
+    $('c-text').textContent = d.text;
+    $('c-reason-l').hidden = !d.reason;
+    $('c-reason-l').firstChild.textContent = 'Motif du refus (obligatoire, interne)';
+    $('c-reason').value = '';
+    $('c-reason').required = d.reason === 'required';
+    $('c-err').hidden = true;
+    $('c-ok').className = 'btn ' + d.cls;
+    $('c-ok').textContent = d.ok;
+    $('c-ok').disabled = false;
+    $('confirm').showModal();
+    if (d.reason) $('c-reason').focus();
+  }
+  $('req-list').addEventListener('click', openRequestDecision);
+  $('rfq-list').addEventListener('click', openRequestDecision);
+  function submitRequestDecision() {
+    var p = reqPending, reason = $('c-reason').value.trim(), reject = /_reject$/.test(p.act);
+    if (reject && !reason) {
+      $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
+      return;
+    }
+    var site = /^req_/.test(p.act);
+    var path = (site ? '/requests/' : '/rfq/') + (reject ? 'reject' : 'approve');
+    var body = site ? { ref: p.id } : { id: p.id };
+    if (reject) body.reason = reason;
+    $('c-ok').disabled = true;
+    api('POST', path, body).then(function (r) {
+      $('confirm').close(); reqPending = null;
+      var text = reject ? p.id + ' refusée : rien n\'a été envoyé au fournisseur.'
+        : site ? p.id + ' validée et transmise au fournisseur' + (r.notified ? ' (' + r.notified + ' contact(s) WeChat prévenu(s)).' : ' : aucun contact WeChat joignable (règle des 48 heures), la demande est visible dans son espace ; relancez-le à la main.')
+        : p.id + ' validée et diffusée aux fournisseurs.';
+      show(text, reject ? 'info' : 'ok');
+      return loadRequests();
+    }).catch(function (e) {
+      $('c-ok').disabled = false;
+      if (e && e.handled) { $('confirm').close(); return; }
+      if (e && e.code === 'already_decided') { $('confirm').close(); reqPending = null; show(ERR.already_decided, 'info'); loadRequests(); return; }
+      $('c-err').textContent = ERR[e && e.code] || 'Erreur du serveur.'; $('c-err').hidden = false;
+    });
+  }
 
   // ------------------------------------------------------------ stocks et offres (lecture seule)
   var stockLoaded = false;
@@ -555,6 +714,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       $('who-email').textContent = me.email || '';
       view('v-app');
       show('');
+      refreshCount();
       return loadSuppliers();
     }).catch(fail);
   }

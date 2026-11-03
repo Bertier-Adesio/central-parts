@@ -115,6 +115,12 @@ Page `https://central.parts/recherche/` (FR, EN, 中文), fonction Edge `search`
    Redéployer aussi `depot` et `wechat-events`.
 2. **Suivre dans WeChat** (opérateur) : `询单 PR-0001` (`request`) affiche la fiche, `发票 PR-0001` (`proforma`, proforma envoyée), `收款 PR-0001` (`paid`, virement reçu), `发货 PR-0001` (`shipped`, expédiée), `取消 PR-0001` (`cancel`, annulée). Le fournisseur répond `确认 PR-0001` (`confirm`) ou `无货 PR-0001` (`unavailable`), ou sur `/depot/`.
 3. **Équivalent SQL** : `select public.request_for_operator('PR-0001');`, `select public.operator_set_request_status('PR-0001', 'paid');`.
+4. **Validation par l'administrateur (ADR 0026, migration `20261103000024_validation_demandes_achat.sql`, rejouable)** : une
+   nouvelle demande arrive « à valider » ; le fournisseur ne la voit pas et n'est pas prévenu. Valider ou refuser dans le
+   back office (`/admin/`, onglet « Demandes ») ou dans WeChat : `approve PR-0001` (le fournisseur est alors prévenu),
+   `reject PR-0001 motif` (motif interne, jamais montré). Équivalent SQL :
+   `select public.decide_purchase_request('PR-0001', true, 'admin:moi');`. Redéployer `order`, `admin`, `wechat-events`
+   (automatique à la fusion).
 
 ### Validité des offres, reconfirmation et rappels (ADR 0025)
 

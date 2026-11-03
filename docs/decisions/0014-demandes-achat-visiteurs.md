@@ -40,3 +40,4 @@ Limite contre les abus : 5 demandes par heure et par adresse IP.
 - Contrôles : `checks/06_achat.sql`, `tools/test-search-ui.mjs`, `tools/test-depot-ui.mjs`.
 - Avant la première vente réelle : les marges (`app.price_rules`), le compte bancaire de réception, le modèle de proforma, et la validation juridique et fiscale de l'achat-revente.
 - Ouverture des achats : passer `BUY_OPEN` à `true`, appliquer la migration `…009` si ce n'est pas fait et déployer la fonction `order`.
+- Modifié le 3 novembre 2026 (ADR 0026) : une demande arrive « à valider » ; le fournisseur n'est prévenu qu'après la validation d'un administrateur (back office ou « approve PR-… » dans WeChat).
