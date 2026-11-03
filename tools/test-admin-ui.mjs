@@ -217,6 +217,44 @@ await page.close();
 await page.goto(BASE + '/admin/#access_token=PERIME&expires_in=3600');
 await page.waitForSelector('#v-login:not([hidden])');
 ok(norm(await page.textContent('#msg')).includes('Session expirée'), 'jeton expiré : retour à la connexion');
+await page.close();
+
+// 12. Plusieurs onglets du même navigateur : une connexion vaut pour tous, une déconnexion aussi.
+mock = createMock();
+{
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'fr-FR' });
+  const tabs = [];
+  for (let i = 0; i < 2; i++) {
+    const p = await ctx.newPage();
+    await p.route(BASE + '/functions/v1/admin/**', api);
+    await p.route(/^(?!http:\/\/localhost)/, (r) => r.abort());
+    tabs.push(p);
+  }
+  const [a, b] = tabs;
+  await b.goto(BASE + '/admin/');
+  await b.waitForSelector('#v-login:not([hidden])');
+  await a.goto(BASE + '/admin/#access_token=DEMO-ADMIN&expires_in=3600');
+  await a.waitForSelector('#v-app:not([hidden])');
+  await b.waitForSelector('#v-app:not([hidden])');
+  ok(norm(await b.textContent('#who-email')) === ADMIN_EMAIL, 'onglets : l\'onglet resté sur la connexion se connecte quand le lien est ouvert dans un autre');
+  const c = await ctx.newPage();
+  await c.route(BASE + '/functions/v1/admin/**', api);
+  await c.goto(BASE + '/admin/');
+  await c.waitForSelector('#v-app:not([hidden])');
+  ok(await c.isHidden('#v-login'), 'onglets : un nouvel onglet est déjà connecté');
+  await a.click('#logout');
+  await b.waitForSelector('#v-login:not([hidden])');
+  await c.waitForSelector('#v-login:not([hidden])');
+  ok(norm(await b.textContent('#msg')).includes('autre onglet') && await c.isHidden('#v-app'), 'onglets : se déconnecter dans un onglet déconnecte les autres');
+  const stored = await a.evaluate(() => [localStorage.getItem('cp-admin-session'), sessionStorage.getItem('cp-admin-session')]);
+  ok(stored[0] === null && stored[1] === null, 'onglets : aucun jeton gardé après la déconnexion');
+  // Jeton expiré dans le stockage partagé : effacé, écran de connexion.
+  await c.evaluate(() => localStorage.setItem('cp-admin-session', JSON.stringify({ token: 'X', exp: 1 })));
+  await c.reload();
+  await c.waitForSelector('#v-login:not([hidden])');
+  ok(await c.evaluate(() => localStorage.getItem('cp-admin-session')) === null, 'onglets : jeton expiré effacé du stockage');
+  await ctx.close();
+}
 await browser.close();
 
 console.log(`${n - bad}/${n} contrôles du back office passés.`);
