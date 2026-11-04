@@ -434,6 +434,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (imp && curText(imp) ? '<dt>Devise du dernier import</dt><dd id="d-cur">' + esc(curText(imp)) + '</dd>' : '') +
         '</dl>' +
         '<div class="actions" id="d-actions">' + acts + '</div>' +
+        (o.status === 'validated' ? '<h3>Dépôt du fournisseur</h3><p class="muted">Charger un fichier de stock pour lui, voir ses imports, reconfirmer ses offres. ' +
+          'Lien personnel à votre nom, valable 8 heures, inscrit au journal ; les fichiers sont chargés au nom du fournisseur.</p>' +
+          '<div class="actions"><button class="btn btn-line" type="button" id="d-depot">Ouvrir son dépôt (8 h)</button></div><p id="d-depot-out"></p>' : '') +
         '<h3>Adresses d\'expédition</h3><div id="d-addr" class="muted">…</div>' +
         '<h3>Journal des décisions</h3>' +
         ((o.decisions || []).length ? '<ol class="log" id="d-log">' + o.decisions.map(function (d) {
@@ -467,6 +470,20 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       text: 'La société repasse en attente : ses offres ne sont plus publiées jusqu\'à une nouvelle approbation. Aucun message n\'est envoyé au fournisseur.' }
   };
   $('sup-detail').addEventListener('click', function (ev) {
+    // Accès au dépôt du fournisseur (ADR 0021, complément) : le lien s'ouvre d'un clic sur l'ancre, sans fenêtre bloquée.
+    var dep = ev.target.closest('#d-depot');
+    if (dep) {
+      var org = this.dataset.org, name = this.dataset.name;
+      dep.disabled = true;
+      api('POST', '/depot-link', { org: org }).then(function (r) {
+        var until = new Date(r.expires_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+        var a = document.createElement('a');
+        a.href = r.url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.id = 'd-depot-link';
+        a.textContent = 'Ouvrir le dépôt de ' + name + ' (valable jusqu\'à ' + until + ', heure de Paris)';
+        $('d-depot-out').replaceChildren(a);
+      }).catch(fail).then(function () { dep.disabled = false; });
+      return;
+    }
     var b = ev.target.closest('button[data-act]');
     if (!b) return;
     var a = b.getAttribute('data-act'), d = DECISION[a];

@@ -83,6 +83,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   <noscript><p class="msg err">本页面需要启用 JavaScript。This page needs JavaScript. Cette page a besoin de JavaScript.</p></noscript>
   <p class="msg info" id="msg" role="status" hidden></p>
 
+  <p class="msg info" id="operator" role="note" hidden></p>
   <section class="card" id="status-card" hidden>
     <h2 id="org-name"></h2>
     <p class="muted" id="ttl-text"></p>
@@ -122,6 +123,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   var T = {
     zh: { title: '上传库存表', lead: '每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。',
       live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新',
+      operator: '您正在以 Central.Parts 运营人员身份为该公司操作（链接有效至 {t}）。',
       ttl: '报价在最后一次上传后 {n} 天内向采购方展示，之后变为“待重新确认”，不再展示。请定期重新上传。',
       uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写（原厂和授权分销商尤其欢迎，今后也将计入供应商评分）：description、datasheet-url、distributor-url、case（封装）、lifecycle（生命周期）、eccn、hts-code；manufacturer 请填写制造商全称。',
       template: '下载模板', pick: '选择文件：CSV 或 XLSX，最大 50 MB', send: '上传', reportTitle: '上传报告',
@@ -139,6 +141,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       f: { empty: '文件为空：需要一行表头和至少一行数据。', columns: '缺少必填列：mpn 和 quantity。', other: '无法读取文件。' } },
     en: { title: 'Upload your stock list', lead: 'Each upload replaces your previous list. Rejected lines are listed with the reason: correct them and upload again.',
       live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update',
+      operator: 'Central.Parts operator access: you are acting for this company (link valid until {t}).',
       ttl: 'Offers are shown to buyers for {n} days after your last upload, then marked “to reconfirm” and hidden. Upload again regularly.',
       uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency; optional but appreciated (especially from manufacturers and authorized distributors; they will also count towards your supplier rating later): description, datasheet-url, distributor-url, case, lifecycle, eccn, hts-code; please give the full manufacturer name.',
       template: 'Download the template', pick: 'Choose a file: CSV or XLSX, up to 50 MB', send: 'Upload', reportTitle: 'Upload report',
@@ -156,6 +159,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       f: { empty: 'Empty file: a header line and at least one data line are expected.', columns: 'Required columns missing: mpn and quantity.', other: 'The file could not be read.' } },
     fr: { title: 'Charger votre liste de stock', lead: 'Chaque chargement remplace votre liste précédente. Les lignes refusées sont listées avec leur raison : corrigez-les et rechargez le fichier.',
       live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour',
+      operator: 'Accès opérateur Central.Parts : vous agissez pour cette société (lien valable jusqu’à {t}).',
       ttl: 'Les offres sont montrées aux acheteurs pendant {n} jours après votre dernier chargement, puis passent « à reconfirmer » et ne sont plus montrées. Rechargez votre liste régulièrement.',
       uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency ; facultatives mais appréciées (surtout des fabricants et distributeurs agréés ; elles compteront aussi plus tard dans la notation du fournisseur) : description, datasheet-url, distributor-url, case (boîtier), lifecycle (cycle de vie), eccn, hts-code ; indiquer le nom complet du fabricant.',
       template: 'Télécharger le modèle', pick: 'Choisir un fichier : CSV ou XLSX, 50 Mo au plus', send: 'Charger', reportTitle: 'Rapport de chargement',
@@ -204,6 +208,9 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   function renderStatus() {
     if (!me) return;
     $('org-name').textContent = me.name;
+    // Lien ouvert depuis le back office (ADR 0021, complément) : l'opérateur voit qu'il agit pour le fournisseur.
+    $('operator').hidden = !me.operator;
+    $('operator').textContent = me.operator ? fill(t().operator, { t: date(me.expires_at) }) : '';
     $('ttl-text').textContent = fill(t().ttl, { n: me.ttl_days });
     var s = me.status || {};
     $('n-live').textContent = s.live || 0;

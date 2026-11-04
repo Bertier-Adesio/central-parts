@@ -14,6 +14,8 @@ const { chromium } = pw.default || pw;
 const BASE = process.env.BASE || 'http://localhost:8765';
 const SUPA = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
 const TOKEN = 'a'.repeat(48);
+const OP_TOKEN = 'c'.repeat(48); // lien ouvert depuis le back office (accès opérateur, 8 heures)
+const OP_EXPIRES = '2026-11-04T18:30:00Z';
 const fixture = (n) => new URL('./fixtures/' + n, import.meta.url).pathname;
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -56,9 +58,11 @@ async function listes(route) {
   const req = route.request(), path = new URL(req.url()).pathname.replace('/functions/v1/listes', '');
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
   if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } });
-  if (req.headers().authorization !== 'Bearer ' + TOKEN) return reply({ error: 'link_invalid' }, 401);
+  const operator = req.headers().authorization === 'Bearer ' + OP_TOKEN;
+  if (req.headers().authorization !== 'Bearer ' + TOKEN && !operator) return reply({ error: 'link_invalid' }, 401);
   const live = [...state.lots.values()].filter((l) => l.qty > 0);
-  if (path === '/me') return reply({ name: VENDOR, currency: 'USD', ttl_days: 7, status: { live: live.length, to_reconfirm: 0, last_confirmed: live[0]?.confirmed_at || null } });
+  if (path === '/me') return reply({ name: VENDOR, currency: 'USD', ttl_days: 7, status: { live: live.length, to_reconfirm: 0, last_confirmed: live[0]?.confirmed_at || null },
+    operator, expires_at: operator ? OP_EXPIRES : null });
   if (path === '/upload-url') {
     const { file_name, currency } = JSON.parse(req.postData() || '{}');
     if (!['USD', 'CNH', 'EUR', 'HKD'].includes(currency)) return reply({ error: 'currency' }, 422);
@@ -131,6 +135,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok((await page.textContent('#org-name')) === VENDOR && (await page.textContent('#n-live')) === '0', 'lien valable : vendeur et compteur affichés');
   ok((await page.textContent('#ttl-text')).includes('7 天'), 'seuil de 7 jours expliqué');
   ok(await page.getAttribute('a[download]', 'href') === 'modele.csv', 'modèle téléchargeable');
+  ok(await page.isHidden('#operator'), 'lien du vendeur : pas de bandeau opérateur');
 
   await page.setInputFiles('#file', fixture('liste-partenaire.csv'));
   await page.click('#send');
@@ -170,6 +175,23 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page vendeur non indexée');
   ok(await noScroll(page), '390 px : pas de défilement horizontal');
   ok(errors.length === 0, 'page vendeur : aucune erreur console ' + errors.join(' | '));
+  await page.close();
+}
+
+// ---------------------------------------------------------------- 1 bis. lien ouvert depuis le back office
+{
+  const { page, errors } = await newPage(390);
+  await page.goto(BASE + '/depot/lien/#k=' + OP_TOKEN);
+  await page.waitForSelector('#upload-card:not([hidden])');
+  const banner = () => page.textContent('#operator');
+  ok(await page.isVisible('#operator') && (await banner()).includes('运营人员') && (await page.textContent('#org-name')) === VENDOR,
+    'accès opérateur : bandeau affiché, dépôt du fournisseur ouvert');
+  await page.click('[data-lang=en]');
+  ok((await banner()).includes('Central.Parts operator access'), 'accès opérateur : bandeau EN');
+  await page.click('[data-lang=fr]');
+  ok((await banner()).includes('Accès opérateur Central.Parts') && (await banner()).includes('2026'), 'accès opérateur : bandeau FR et échéance');
+  ok(await noScroll(page), 'accès opérateur, 390 px : pas de défilement horizontal');
+  ok(errors.length === 0, 'accès opérateur : aucune erreur console ' + errors.join(' | '));
   await page.close();
 }
 

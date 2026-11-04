@@ -78,6 +78,7 @@ ok(norm(await page.textContent('#d-name')).includes('香港測試元件有限公
 await page.click('button[data-org="ORG-0107"]');
 await page.waitForSelector('#d-org:text("ORG-0107")');
 ok(norm(await page.textContent('#d-region')) === 'Chine continentale', 'Chine : pays / région');
+ok(!(await page.$('#d-depot')), 'fournisseur en attente : pas d\'accès à son dépôt');
 ok(norm(await page.textContent('#d-code-l')) === 'Credit code (Mainland China)', 'Chine : libellé « Credit code (Mainland China) »');
 ok(norm(await page.textContent('#d-code')) === '91350100M000100Y43' && norm(await page.textContent('#d-code')).length === 18, 'Chine : numéro de 18 caractères complet');
 const fiche = norm(await page.textContent('#sup-detail'));
@@ -136,6 +137,15 @@ await page.waitForSelector('button[data-org="ORG-0110"]');
 await page.click('button[data-org="ORG-0110"]');
 await page.waitForSelector('#d-org:text("ORG-0110")');
 ok(norm(await page.textContent('#d-cur')) === 'USD (lue dans le fichier, 8 lignes) · USD (choisie au dépôt, 2 lignes)', 'fiche : devise du dernier import et provenance');
+
+// 8 ter. Accès au dépôt d'un fournisseur approuvé (ADR 0021, complément) : lien de 8 heures, ouvert dans un nouvel onglet.
+await page.click('#d-depot');
+await page.waitForSelector('#d-depot-link');
+const depotHref = await page.getAttribute('#d-depot-link', 'href');
+ok(/^https:\/\/central\.parts\/depot\/lien\/#k=[0-9a-f]{48}$/.test(depotHref) && await page.getAttribute('#d-depot-link', 'target') === '_blank'
+  && (await page.getAttribute('#d-depot-link', 'rel')).includes('noopener'), 'dépôt : lien personnel ouvert dans un nouvel onglet');
+ok(norm(await page.textContent('#d-depot-link')).includes('valable jusqu\'à') && mock.state.depotLinks?.length === 1 && mock.state.depotLinks[0].org === 'ORG-0110',
+  'dépôt : lien demandé pour ce fournisseur, échéance affichée');
 
 // 9. Stocks et offres : résumé, 1 812 références paginées, recherche, paliers ; aucune action d'écriture.
 await page.click('#tab-stock');

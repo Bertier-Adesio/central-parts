@@ -233,6 +233,13 @@ export function createMock() {
         state.notified.push({ org: o.org_id, kind: 'rejected', reason: why });
         return [200, { org_id: o.org_id, status: 'rejected' }];
       }
+      if (path === '/depot-link') {
+        // Comme admin_depot_link : fournisseur approuvé seulement, lien de 8 heures inscrit au journal.
+        if (o.status !== 'validated') return [409, { error: 'not_allowed' }];
+        const expires_at = new Date(Date.now() + 8 * 3600e3).toISOString();
+        (state.depotLinks ||= []).push({ org: o.org_id, expires_at });
+        return [200, { url: 'https://central.parts/depot/lien/#k=' + 'd'.repeat(48), expires_at }];
+      }
       if (path === '/pending') {
         if (o.status === 'pending') return [409, { error: 'already_pending' }];
         decide(o, 'pending', String(body.reason || '').trim()); o.status = 'pending'; o.rejected_reason = null; o.decided_at = new Date().toISOString();

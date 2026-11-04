@@ -48,3 +48,12 @@ Les vendeurs approuvés doivent charger leurs listes de composants simplement, �
 - L'opérateur crée les liens depuis l'éditeur SQL de Supabase (`supabase/README.md`) et les transmet au vendeur par le canal de son choix.
 - Toute offre non rechargée disparaît après le seuil : prévenir les vendeurs qu'il faut recharger leur liste régulièrement.
 - Si la migration 20261101000010 (marges par vendeur) est appliquée après celle-ci, rejouer `20261102000012_listes_vendeurs.sql` (rejouable) pour rétablir l'expiration dans la recherche publique.
+
+## Complément du 4 novembre 2026 : accès du back office au dépôt d'un fournisseur
+
+Décision de Bertier : « j'ai besoin d'avoir un accès back office au dépôt des fournisseurs » (migration `20261104000031_acces_depot_admin.sql`).
+
+- Dans `/admin/`, la fiche d'un fournisseur **approuvé** porte un bouton « Ouvrir son dépôt (8 h) ». La fonction `admin_depot_link` crée un lien personnel au nom de l'administrateur (`depot_links.created_by`), valable 8 heures (`expires_at`), et inscrit l'ouverture au journal (`events`).
+- Le lien ouvre la page `/depot/lien/` du fournisseur dans un nouvel onglet : charger un fichier de stock pour lui, voir ses imports et leurs rapports, reconfirmer ses offres. Un bandeau rappelle l'accès opérateur et son échéance. Les fichiers sont chargés au nom du fournisseur, comme s'il les avait déposés.
+- `depot_link_identity` refuse désormais les liens expirés ; les liens remis aux vendeurs restent sans échéance.
+- Le jeton n'est montré qu'une fois et n'est jamais stocké en clair (empreinte SHA-256, comme les autres liens).

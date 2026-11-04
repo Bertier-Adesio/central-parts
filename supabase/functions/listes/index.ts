@@ -42,7 +42,8 @@ Deno.serve(async (req) => {
 
     if (req.method === 'GET' && path.endsWith('/me')) {
       const { data: status } = await db.rpc('seller_offer_status', { p_org: org });
-      return json({ name: who.name, currency: who.currency, ttl_days: who.ttl_days, status });
+      return json({ name: who.name, currency: who.currency, ttl_days: who.ttl_days, status,
+        operator: who.operator === true, expires_at: who.expires_at ?? null });
     }
 
     if (req.method === 'POST' && path.endsWith('/upload-url')) {
