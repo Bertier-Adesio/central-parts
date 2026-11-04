@@ -11,6 +11,8 @@
 //   POST /admin/approve   {org}             → approuve (même fonction que « approve ORG-… » du robot)
 //   POST /admin/reject    {org, reason}     → refuse, motif obligatoire (même fonction que « reject ORG-… motif »)
 //   POST /admin/pending   {org, reason?}    → remet en attente (aucun message au fournisseur)
+//   POST /admin/depot-link {org}            → lien vers le dépôt d'un fournisseur approuvé, au nom de l'administrateur,
+//                                             valable 8 heures et inscrit au journal (ADR 0021, complément)
 //   GET  /admin/stock                       → par fournisseur : références, dernier import, sources, devise
 //   GET  /admin/lots?org=&q=&offset=        → références et paliers de prix, 50 par page (lecture seule)
 //   GET  /admin/rfq?status=pending_validation → RFQ des plateformes (ADR 0023) ; status vide : toutes (100 dernières)
@@ -198,6 +200,11 @@ Deno.serve(async (req) => {
         if (r.res) return r.res;
         later(tellSupplier(org, REJECTED(why)));
         return json(r.data);
+      }
+      if (path === '/depot-link') {
+        const r = await call('admin_depot_link', { p_org: org });
+        if (r.res) return r.res;
+        return json({ url: new URL('/depot/lien/', SITE).href + '#k=' + r.data.token, expires_at: r.data.expires_at });
       }
       if (path === '/pending') {
         return send('admin_reset_pending', { p_org: org, p_reason: typeof reason === 'string' ? reason.trim() || null : null });
