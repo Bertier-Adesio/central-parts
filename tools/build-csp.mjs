@@ -22,7 +22,7 @@ const POLICY = {
   'default-src': ["'self'"],
   'script-src': ["'self'"],                       // + empreintes des scripts en ligne
   'style-src': ["'self'", "'unsafe-inline'"],     // styles en ligne des pages (attributs style), sans risque d'exécution
-  'img-src': ["'self'", 'data:', 'https://mp.weixin.qq.com'], // QR code de connexion WeChat (/depot/)
+  'img-src': ["'self'", 'data:', 'https://mp.weixin.qq.com', SUPABASE], // QR code WeChat (/depot/), logos des fabricants (/fabricants/)
   'font-src': ["'self'"],
   'connect-src': ["'self'", SUPABASE],            // fonctions Edge et dépôt des fichiers (stockage Supabase)
   'form-action': ["'self'", 'mailto:'],           // formulaire de contact de l'accueil (mailto)

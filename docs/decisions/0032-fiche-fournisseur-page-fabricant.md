@@ -1,0 +1,40 @@
+# 0032 — Fiche fournisseur complète et page publique du fabricant
+
+- Date : 2026-11-05
+- Statut : acceptée (Bertier, 5 novembre 2026 : « back office + page publique sous ma direction »)
+
+## Contexte
+
+Les annuaires de composants (NetComponents) montrent pour chaque fournisseur une fiche détaillée : année de création, description, sites, heure locale, langues parlées, contacts, moyens de paiement, commande minimum, note des acheteurs. Central.Parts doit connaître ses fournisseurs aussi bien, mais le vendeur reste anonyme pour l'acheteur (ADR 0021) : une fiche publique avec des contacts permettrait de contourner la plateforme.
+
+Un fabricant est un cas à part : sa marque figure déjà dans la colonne « fabricant » de ses offres, l'anonymat ne le protège pas, et une page de présentation est un argument de vente pour lui comme pour l'acheteur.
+
+## Décision
+
+- **Fiche société dans le back office** (`/admin/`, fiche du fournisseur) :
+  - présentation et positionnement en FR, EN et 中文 ;
+  - année de création, siège, site de production, surface, effectif, pièces livrées par an ;
+  - chiffre d'affaires et site web, internes ;
+  - certifications, langues parlées, moyens et conditions de paiement, commande minimum ;
+  - marques fabriquées et logo.
+
+  Ce sont des colonnes de `organizations`, toutes modifiables depuis la fiche. Les données réelles sont saisies là, jamais dans le dépôt.
+- **Contacts par société** (`seller_contacts`), rattachables à un site d'expédition : nom, fonction, e-mail, téléphone, WeChat, langues, et adresse préférée pour les demandes de prix ou pour les bons de commande. Lus par les administrateurs seulement, jamais montrés aux acheteurs.
+- **Logo** : compartiment de stockage public `seller-logos`, dans le dossier de la société. Formats PNG, JPEG ou WebP, 1 Mo au plus. Le SVG est exclu, car il peut porter un script.
+- **Page publique `/fabricants/?b=MARQUE`** :
+  - **Conditions :** seulement pour un fournisseur approuvé, avec au moins une marque et une présentation, et seulement quand un administrateur la publie (`admin_supplier_publish`, au journal, avec l'accord du fabricant).
+  - **Contenu :** la présentation, le logo, les chiffres, les certifications, les langues et le nombre d'offres en ligne.
+  - **Jamais affichés :** contact, adresse, site web, chiffre d'affaires, conditions de paiement, identifiant interne ou pseudonyme.
+  - Vider la présentation ou les marques retire la page.
+- **Offres** (`/offres/`) :
+  - la marque d'un fabricant qui a une page publiée renvoie vers cette page ;
+  - les offres du fabricant lui-même portent « Direct fabricant » ;
+  - toutes les autres offres restent « Fournisseur partenaire ».
+- **CSP** (ADR 0031) : les images peuvent venir du domaine Supabase (logos).
+
+## Conséquences
+
+- Avant de publier une page, vérifier l'accord écrit du fabricant sur les textes et les chiffres.
+- Les adresses e-mail « RFQ » et « Commandes » sont enregistrées, mais rien n'est encore envoyé par e-mail. L'envoi viendra avec le service d'e-mail des comptes acheteurs (ADR 0017). Les avis restent dans WeChat.
+- La page fabricant n'est pas indexée (`noindex`), comme les offres, tant que le lancement public n'est pas décidé.
+- La notation en cinq critères (réactivité, cotation, expédition, conformité, retours) viendra après les premières commandes, à partir des flux de la plateforme.

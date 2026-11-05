@@ -22,6 +22,12 @@
 //   POST /admin/requests/approve {ref}      → valide et prévient le fournisseur dans WeChat (même fonction que « approve PR-… »)
 //   POST /admin/requests/reject  {ref, reason} → refuse, motif interne obligatoire (même fonction que « reject PR-… motif »)
 //   GET  /admin/supplier-addresses?org=ORG-0107 → adresses d'expédition du vendeur (ADR 0030)
+//   GET  /admin/supplier-profile?org=ORG-0107   → fiche société : présentation, chiffres, marques, logo, contacts (ADR 0032)
+//   POST /admin/supplier-profile {org, profile} → enregistre la fiche (clé absente : inchangée)
+//   POST /admin/supplier-publish {org, on}      → publie ou retire la page publique du fabricant (/fabricants/)
+//   POST /admin/supplier-contact {org, contact} → ajoute (sans id) ou modifie un contact
+//   POST /admin/supplier-contact/delete {org, id} → retire un contact
+//   POST /admin/logo-upload-url {org, type}     → lien signé pour déposer le logo (PNG, JPEG, WebP, 1 Mo)
 //   GET  /admin/supplier-score?org=ORG-0107 → taux de traitement des RFQ d'un fournisseur (jamais montré à une plateforme)
 //   GET  /admin/offer-views?org=ORG-0107    → consultations de ses offres par l'API d'offres, 8 semaines (ADR 0024)
 //   GET  /admin/data-quality?org=ORG-0107   → complétude de ses fiches produit (future composante de sa notation)
@@ -135,6 +141,7 @@ Deno.serve(async (req) => {
         if (status && !/^[a-z_]{1,32}$/.test(status)) return json({ error: 'status' }, 422);
         return send('admin_requests', { p_status: status });
       }
+      if (path === '/supplier-profile') return send('admin_supplier_profile', { p_org: q('org') });
       if (path === '/supplier-addresses') return send('admin_seller_addresses', { p_org: q('org') });
       if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
       if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
@@ -185,8 +192,25 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'POST') {
-      const { org, reason } = await body();
+      const b = await body();
+      const { org, reason } = b;
       if (typeof org !== 'string' || !/^[A-Z0-9-]{1,32}$/.test(org)) return json({ error: 'org' }, 422);
+      // Fiche société et page publique du fabricant (ADR 0032).
+      if (path === '/supplier-profile') return send('admin_supplier_profile_save', { p_org: org, p: b.profile || {} });
+      if (path === '/supplier-publish') return send('admin_supplier_publish', { p_org: org, p_on: b.on === true });
+      if (path === '/supplier-contact') return send('admin_seller_contact_save', { p_org: org, p: b.contact || {} });
+      if (path === '/supplier-contact/delete') return send('admin_seller_contact_delete', { p_org: org, p_id: String(b.id || '') });
+      if (path === '/logo-upload-url') {
+        const ext = ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>)[String(b.type)];
+        if (!ext) return json({ error: 'format' }, 422);
+        const chk = await call('admin_supplier_profile', { p_org: org }); // contrôle administrateur et fournisseur
+        if (chk.res) return chk.res;
+        const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+        const key = `${org}/logo-${Date.now()}.${ext}`;
+        const { data, error } = await svc.storage.from('seller-logos').createSignedUploadUrl(key);
+        if (error) return json({ error: 'storage' }, 500);
+        return json({ signed_url: data.signedUrl, path: key, public_url: `${URL_}/storage/v1/object/public/seller-logos/${key}` });
+      }
       if (path === '/approve') {
         const r = await call('admin_approve', { p_org: org });
         if (r.res) return r.res;
