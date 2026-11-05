@@ -22,12 +22,17 @@
 //   POST /admin/requests/approve {ref}      → valide et prévient le fournisseur dans WeChat (même fonction que « approve PR-… »)
 //   POST /admin/requests/reject  {ref, reason} → refuse, motif interne obligatoire (même fonction que « reject PR-… motif »)
 //   GET  /admin/supplier-addresses?org=ORG-0107 → adresses d'expédition du vendeur (ADR 0030)
-//   GET  /admin/supplier-profile?org=ORG-0107   → fiche société : présentation, chiffres, marques, logo, contacts (ADR 0032)
+//   GET  /admin/supplier-profile?org=ORG-0107   → fiche société : présentation, chiffres, paiement, contacts, fabricants rattachés (ADR 0032)
 //   POST /admin/supplier-profile {org, profile} → enregistre la fiche (clé absente : inchangée)
-//   POST /admin/supplier-publish {org, on}      → publie ou retire la page publique du fabricant (/fabricants/)
+//   GET  /admin/manufacturers                   → fabricants, leurs marques, leurs comptes rattachés et leur page publique
+//   GET  /admin/manufacturer?id=MFR-0001        → fiche d'un fabricant
+//   POST /admin/manufacturer {id?, manufacturer} → crée (sans id) ou modifie un fabricant
+//   POST /admin/manufacturer/link {id, org, role} → rattache un compte : role self (le fabricant lui-même) ou authorized
+//   POST /admin/manufacturer/unlink {id, org}   → détache un compte
+//   POST /admin/manufacturer/publish {id, on}   → publie ou retire la page publique du fabricant (/fabricants/)
 //   POST /admin/supplier-contact {org, contact} → ajoute (sans id) ou modifie un contact
 //   POST /admin/supplier-contact/delete {org, id} → retire un contact
-//   POST /admin/logo-upload-url {org, type}     → lien signé pour déposer le logo (PNG, JPEG, WebP, 1 Mo)
+//   POST /admin/logo-upload-url {id, type}      → lien signé pour déposer le logo d'un fabricant (PNG, JPEG, WebP, 1 Mo)
 //   GET  /admin/supplier-score?org=ORG-0107 → taux de traitement des RFQ d'un fournisseur (jamais montré à une plateforme)
 //   GET  /admin/offer-views?org=ORG-0107    → consultations de ses offres par l'API d'offres, 8 semaines (ADR 0024)
 //   GET  /admin/data-quality?org=ORG-0107   → complétude de ses fiches produit (future composante de sa notation)
@@ -142,6 +147,8 @@ Deno.serve(async (req) => {
         return send('admin_requests', { p_status: status });
       }
       if (path === '/supplier-profile') return send('admin_supplier_profile', { p_org: q('org') });
+      if (path === '/manufacturers') return send('admin_manufacturers');
+      if (path === '/manufacturer') return send('admin_manufacturer', { p_id: q('id') });
       if (path === '/supplier-addresses') return send('admin_seller_addresses', { p_org: q('org') });
       if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
       if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
@@ -191,26 +198,37 @@ Deno.serve(async (req) => {
       return json({ ...card, notified });
     }
 
-    if (req.method === 'POST') {
+    // Fabricants (migration 20261105000033) : identifiés par leur id MFR-…, pas par une société.
+    if (req.method === 'POST' && (path.startsWith('/manufacturer') || path === '/logo-upload-url')) {
       const b = await body();
-      const { org, reason } = b;
-      if (typeof org !== 'string' || !/^[A-Z0-9-]{1,32}$/.test(org)) return json({ error: 'org' }, 422);
-      // Fiche société et page publique du fabricant (ADR 0032).
-      if (path === '/supplier-profile') return send('admin_supplier_profile_save', { p_org: org, p: b.profile || {} });
-      if (path === '/supplier-publish') return send('admin_supplier_publish', { p_org: org, p_on: b.on === true });
-      if (path === '/supplier-contact') return send('admin_seller_contact_save', { p_org: org, p: b.contact || {} });
-      if (path === '/supplier-contact/delete') return send('admin_seller_contact_delete', { p_org: org, p_id: String(b.id || '') });
+      const id = typeof b.id === 'string' && /^MFR-[0-9]{1,10}$/.test(b.id) ? b.id : null;
+      if (path === '/manufacturer') return send('admin_manufacturer_save', { p_id: id, p: b.manufacturer || {} });
+      if (!id) return json({ error: 'id' }, 422);
+      if (path === '/manufacturer/link') return send('admin_manufacturer_link', { p_id: id, p_org: String(b.org || ''), p_role: String(b.role || '') });
+      if (path === '/manufacturer/unlink') return send('admin_manufacturer_unlink', { p_id: id, p_org: String(b.org || '') });
+      if (path === '/manufacturer/publish') return send('admin_manufacturer_publish', { p_id: id, p_on: b.on === true });
       if (path === '/logo-upload-url') {
         const ext = ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>)[String(b.type)];
         if (!ext) return json({ error: 'format' }, 422);
-        const chk = await call('admin_supplier_profile', { p_org: org }); // contrôle administrateur et fournisseur
+        const chk = await call('admin_manufacturer', { p_id: id }); // contrôle administrateur et fabricant
         if (chk.res) return chk.res;
         const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-        const key = `${org}/logo-${Date.now()}.${ext}`;
+        const key = `${id}/logo-${Date.now()}.${ext}`;
         const { data, error } = await svc.storage.from('seller-logos').createSignedUploadUrl(key);
         if (error) return json({ error: 'storage' }, 500);
         return json({ signed_url: data.signedUrl, path: key, public_url: `${URL_}/storage/v1/object/public/seller-logos/${key}` });
       }
+      return json({ error: 'not_found' }, 404);
+    }
+
+    if (req.method === 'POST') {
+      const b = await body();
+      const { org, reason } = b;
+      if (typeof org !== 'string' || !/^[A-Z0-9-]{1,32}$/.test(org)) return json({ error: 'org' }, 422);
+      // Fiche société et contacts (ADR 0032).
+      if (path === '/supplier-profile') return send('admin_supplier_profile_save', { p_org: org, p: b.profile || {} });
+      if (path === '/supplier-contact') return send('admin_seller_contact_save', { p_org: org, p: b.contact || {} });
+      if (path === '/supplier-contact/delete') return send('admin_seller_contact_delete', { p_org: org, p_id: String(b.id || '') });
       if (path === '/approve') {
         const r = await call('admin_approve', { p_org: org });
         if (r.res) return r.res;

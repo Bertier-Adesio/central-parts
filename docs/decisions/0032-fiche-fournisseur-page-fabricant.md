@@ -39,12 +39,26 @@ Un fabricant est un cas à part : sa marque figure déjà dans la colonne « fab
 - La page fabricant n'est pas indexée (`noindex`), comme les offres, tant que le lancement public n'est pas décidé.
 - La notation en cinq critères (réactivité, cotation, expédition, conformité, retours) viendra après les premières commandes, à partir des flux de la plateforme.
 
-## Complément du 5 novembre 2026 : fabricant distribué par un distributeur agréé
+## Complément du 5 novembre 2026 : fabricants et distributeurs
 
-Le compte qui dépose le stock n'est pas toujours le fabricant : un distributeur agréé peut déposer les offres d'une marque (décision de Bertier, migration `20261105000033_fabricant_distributeur.sql`).
+Décisions de Bertier :
+- « dans le back office un (ou plusieurs) fabricant peut être attaché à un distributeur ; un fabricant peut se distribuer soi-même » ;
+- « on peut dire que les fabricants concernés sont distribués par Central.Parts en Europe ; ça ne s'applique pas aux revendeurs, brokers, excès d'inventaire ».
 
-- **Nom du fabricant** (`brand_name`) : c'est le nom affiché sur la page publique, jamais celui de la société du compte. Il est obligatoire pour publier ; l'effacer retire la page.
-- **Rôle du compte** (`brand_role`), choisi dans la fiche :
-  - « le fabricant de ces marques » : ses offres portent « Direct fabricant » ;
-  - « distributeur agréé de ces marques » : ses offres portent « Distributeur agréé », et la page fabricant parle d'offres « par son distributeur agréé ».
-- Le nom du distributeur n'apparaît nulle part côté acheteur.
+Mise en œuvre : migration `20261105000033_fabricants_distributeurs.sql`.
+
+- **Le fabricant devient une fiche à part** (`manufacturers`, onglet « Fabricants » du back office). Elle porte :
+  - le nom affiché sur la page publique ;
+  - les marques (une marque appartient à un seul fabricant) ;
+  - la présentation, les chiffres et le logo ;
+  - la page publique.
+
+  Les champs de page publique de la fiche société (marques, logo, publication) passent sur la fiche du fabricant. La fiche société garde la présentation, les chiffres, le paiement et les contacts du compte, à usage interne. La migration reprend les fiches déjà saisies et remet leur page à « non publiée ».
+- **Rattachements** (`manufacturer_distributors`) :
+  - un compte fournisseur est rattaché à un fabricant comme **fabricant lui-même** (un seul compte par fabricant) ou comme **distributeur agréé** ;
+  - un distributeur peut porter plusieurs fabricants, et un fabricant peut avoir plusieurs distributeurs ;
+  - seul un compte de type fabricant ou distributeur peut être rattaché, jamais un revendeur, un broker ni un excédent de stock (refusé par la base).
+- **Distribution en Europe par Central.Parts.**
+  - Ce sont les offres d'un compte rattaché, pour les marques du fabricant, qui portent « Direct fabricant » ou « Distributeur agréé », avec la mention « Distribué en Europe par Central.Parts ».
+  - Les offres de la même marque venant d'autres sources restent « Fournisseur partenaire », et la page fabricant le précise.
+  - La page compte les offres par canal. Elle n'affiche jamais le nom ni le pseudonyme des distributeurs.

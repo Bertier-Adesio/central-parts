@@ -61,7 +61,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
 </header>
 
 <main class="wrap">
-  <p class="eyebrow" data-t="eyebrow">Fabricant partenaire de Central.Parts</p>
+  <p class="eyebrow" data-t="eyebrow">Distribué en Europe par Central.Parts</p>
   <noscript><p class="msg">Cette page a besoin de JavaScript. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
   <p class="msg" id="msg" role="status" hidden></p>
 
@@ -80,7 +80,8 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
     <section class="card">
       <h2 data-t="buyTitle">Acheter auprès de ce fabricant</h2>
       <p id="offers-n"></p>
-      <p data-t="buyText">Les offres de ce fabricant sont publiées sur Central.Parts, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.</p>
+      <p data-t="buyText">Central.Parts distribue ce fabricant en Europe : ses offres viennent du fabricant lui-même ou de son distributeur agréé, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.</p>
+      <p class="muted" data-t="scope">La distribution par Central.Parts ne couvre que ces offres, marquées « Direct fabricant » ou « Distributeur agréé ». Les offres de la même marque venant d’autres sources (revendeurs, brokers, excédents de stock) n’en font pas partie.</p>
       <p><a class="btn" id="to-offers" href="/offres/" data-t="toOffers">Voir les offres</a></p>
       <p class="muted" id="updated"></p>
     </section>
@@ -92,28 +93,31 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
   'use strict';
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/offers/manufacturer';
   var T = {
-    fr: { eyebrow: 'Fabricant partenaire de Central.Parts', aboutTitle: 'Présentation', certTitle: 'Certifications',
+    fr: { eyebrow: 'Distribué en Europe par Central.Parts', aboutTitle: 'Présentation', certTitle: 'Certifications',
       buyTitle: 'Acheter auprès de ce fabricant', toOffers: 'Voir les offres', home: '/',
-      buyText: 'Les offres de ce fabricant sont publiées sur Central.Parts, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.',
+      buyText: 'Central.Parts distribue ce fabricant en Europe : ses offres viennent du fabricant lui-même ou de son distributeur agréé, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.',
+      scope: 'La distribution par Central.Parts ne couvre que ces offres, marquées « Direct fabricant » ou « Distributeur agréé ». Les offres de la même marque venant d’autres sources (revendeurs, brokers, excédents de stock) n’en font pas partie.',
       founded: 'Création', hq: 'Siège', production: 'Production', area: 'Surface de production', staff: 'Personnes',
       units: 'Pièces livrées par an', langs: 'Langues parlées', brands: 'Marques',
-      offers: '{n} offre(s) en ligne en direct du fabricant.', offersAuth: '{n} offre(s) en ligne par son distributeur agréé.', noOffers: 'Aucune offre en ligne pour l’instant : demandez un prix depuis la page des offres.',
+      offers: '{n} offre(s) en ligne en direct du fabricant.', offersAuth: '{n} offre(s) en ligne par son distributeur agréé.', offersBoth: '{d} offre(s) en direct du fabricant et {a} par son distributeur agréé.', noOffers: 'Aucune offre en ligne pour l’instant : demandez un prix depuis la page des offres.',
       updated: 'Mis à jour le {d}.', notFound: 'Aucune page publiée pour cette marque.', network: 'Erreur réseau, réessayez.', other: 'Page indisponible, réessayez plus tard.',
       rate: 'Trop de demandes : réessayez dans une minute.', m2: '{n} m²', billion: '{n} milliard(s)', million: '{n} million(s)' },
-    en: { eyebrow: 'Central.Parts partner manufacturer', aboutTitle: 'Company overview', certTitle: 'Certifications',
+    en: { eyebrow: 'Distributed in Europe by Central.Parts', aboutTitle: 'Company overview', certTitle: 'Certifications',
       buyTitle: 'Buy from this manufacturer', toOffers: 'See the offers', home: '/en/',
-      buyText: 'This manufacturer’s offers are published on Central.Parts, priced in euros, with the update date of each offer. Price requests and orders go through Central.Parts.',
+      buyText: 'Central.Parts distributes this manufacturer in Europe: its offers come from the manufacturer itself or its authorized distributor, priced in euros, with the update date of each offer. Price requests and orders go through Central.Parts.',
+      scope: 'Distribution by Central.Parts only covers these offers, marked “Manufacturer direct” or “Authorized distributor”. Offers of the same brand from other sources (resellers, brokers, excess inventory) are not part of it.',
       founded: 'Founded', hq: 'Headquarters', production: 'Production', area: 'Production area', staff: 'People',
       units: 'Units shipped per year', langs: 'Languages spoken', brands: 'Brands',
-      offers: '{n} live offer(s) direct from the manufacturer.', offersAuth: '{n} live offer(s) through its authorized distributor.', noOffers: 'No live offer yet: request a price from the offers page.',
+      offers: '{n} live offer(s) direct from the manufacturer.', offersAuth: '{n} live offer(s) through its authorized distributor.', offersBoth: '{d} offer(s) direct from the manufacturer and {a} through its authorized distributor.', noOffers: 'No live offer yet: request a price from the offers page.',
       updated: 'Updated {d}.', notFound: 'No page published for this brand.', network: 'Network error, please try again.', other: 'Page unavailable, please try again later.',
       rate: 'Too many requests: try again in a minute.', m2: '{n} m²', billion: '{n} billion', million: '{n} million' },
-    zh: { eyebrow: 'Central.Parts 合作制造商', aboutTitle: '公司简介', certTitle: '认证',
+    zh: { eyebrow: '由 Central.Parts 在欧洲分销', aboutTitle: '公司简介', certTitle: '认证',
       buyTitle: '向该制造商采购', toOffers: '查看报价', home: '/zh/',
-      buyText: '该制造商的报价发布在 Central.Parts 上，以欧元计价，并标明每条报价的更新日期。询价和订单均通过 Central.Parts 处理。',
+      buyText: 'Central.Parts 在欧洲分销该制造商：报价来自制造商本身或其授权代理商，以欧元计价，并标明每条报价的更新日期。询价和订单均通过 Central.Parts 处理。',
+      scope: 'Central.Parts 的分销仅涵盖标有「原厂直供」或「授权代理商」的报价。同一品牌来自其他渠道（贸易商、经纪商、库存积压）的报价不在此列。',
       founded: '成立年份', hq: '总部', production: '生产基地', area: '生产面积', staff: '员工人数',
       units: '年出货量', langs: '工作语言', brands: '品牌',
-      offers: '原厂直供在线报价 {n} 条。', offersAuth: '授权代理商在线报价 {n} 条。', noOffers: '暂无在线报价：请在报价页面询价。',
+      offers: '原厂直供在线报价 {n} 条。', offersAuth: '授权代理商在线报价 {n} 条。', offersBoth: '原厂直供报价 {d} 条，授权代理商报价 {a} 条。', noOffers: '暂无在线报价：请在报价页面询价。',
       updated: '更新日期：{d}。', notFound: '该品牌尚未发布页面。', network: '网络错误，请重试。', other: '页面暂不可用，请稍后再试。',
       rate: '请求过于频繁，请一分钟后再试。', m2: '{n} 平方米', billion: '{n} 亿', million: '{n} 万' }
   };
@@ -162,7 +166,9 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
     $('about').innerHTML = tri(page.about).split(/\n\s*\n|\n/).filter(Boolean).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
     $('cert-card').hidden = !(page.certifications || []).length;
     $('certs').innerHTML = (page.certifications || []).map(function (c) { return '<span class="tag">' + esc(c) + '</span>'; }).join('');
-    $('offers-n').textContent = page.offers ? fill(page.channel === 'authorized_distributor' ? t().offersAuth : t().offers, { n: page.offers }) : t().noOffers;
+    // Offres du canal officiel seulement (migration 20261105000033) : fabricant lui-même et distributeurs agréés.
+    var d = page.offers_direct || 0, a = page.offers_authorized || 0;
+    $('offers-n').textContent = d && a ? fill(t().offersBoth, { d: d, a: a }) : d ? fill(t().offers, { n: d }) : a ? fill(t().offersAuth, { n: a }) : t().noOffers;
     $('to-offers').href = '/offres/?lang=' + lang;
     $('updated').textContent = page.updated_at ? fill(t().updated, { d: new Date(page.updated_at).toLocaleDateString(LOCALE[lang]) }) : '';
   }
