@@ -52,7 +52,8 @@ begin
     'positioning', jsonb_build_object('en', 'Analog and discrete'), 'hq_city', 'Shenzhen', 'production_site', 'Chongqing',
     'area_m2', 12000, 'staff', 120, 'annual_units', 3000000000, 'revenue_usd', 70000000,
     'certifications', jsonb_build_array('ISO 9001', 'IATF 16949', 'ISO 9001', ' '), 'languages', jsonb_build_array('zh', 'en'),
-    'payment_methods', jsonb_build_array('T/T'), 'min_order_usd', 50, 'brands', jsonb_build_array('Marque Test')));
+    'payment_methods', jsonb_build_array('T/T'), 'min_order_usd', 50, 'brands', jsonb_build_array('Marque Test'),
+    'brand_name', 'Fabricant Marque Test (fictif)'));
   perform tests.eq('fiche : présentation nettoyée (clés fr, en, zh, vides retirées)', r->'about', '{"fr": "Présentation fictive.", "en": "Fictitious overview."}'::jsonb);
   perform tests.eq('fiche : listes sans doublon ni vide', r->'certifications', '["IATF 16949", "ISO 9001"]'::jsonb);
   perform tests.eq('fiche : chiffres enregistrés', (r->>'annual_units') || ' ' || (r->>'staff') || ' ' || (r->>'revenue_usd'), '3000000000 120 70000000');

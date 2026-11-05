@@ -40,7 +40,7 @@ table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-me
 .mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);font-size:var(--text-base);overflow-wrap:anywhere}
 .mfr{color:var(--fg-2)}
 a.mfr{text-decoration:underline;text-underline-offset:2px}
-.tag.direct{background:var(--status-success-bg);color:var(--status-success)}
+.tag.direct,.tag.auth{background:var(--status-success-bg);color:var(--status-success)}
 .tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
 .price{font-weight:var(--weight-semibold);white-space:nowrap}
 .num{font-variant-numeric:tabular-nums}
@@ -119,7 +119,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
-      partner: 'Fournisseur partenaire', direct: 'Direct fabricant', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
+      partner: 'Fournisseur partenaire', direct: 'Direct fabricant', auth: 'Distributeur agréé', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
       termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
       cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
@@ -132,7 +132,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
-      partner: 'Partner Supplier', direct: 'Manufacturer direct', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
+      partner: 'Partner Supplier', direct: 'Manufacturer direct', auth: 'Authorized distributor', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
       termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
       cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
@@ -145,7 +145,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       placeholder: '制造商型号，例如 TPS25990', go: '搜索',
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
-      partner: '合作供应商', direct: '原厂直供', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
+      partner: '合作供应商', direct: '原厂直供', auth: '授权代理商', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
       termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
       cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
@@ -198,11 +198,13 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
       if (o.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(o.price_1k, o.currency || data.currency)) + '</div>';
       return '<tr>' +
-        // Fabricant avec une page publique (ADR 0032) : lien vers /fabricants/ ; offre du fabricant lui-même : « Direct fabricant ».
+        // Fabricant avec une page publique (ADR 0032) : lien vers /fabricants/ ; offre du fabricant lui-même : « Direct fabricant » ;
+        // offre de son distributeur agréé (migration 20261105000033) : « Distributeur agréé ».
         '<td class="first"><div class="mpn">' + esc(o.mpn) + '</div>' + (o.brand_page
           ? '<a class="mfr" href="/fabricants/?b=' + encodeURIComponent(o.brand_page) + '&amp;lang=' + lang + '" title="' + esc(t().brandTitle) + '">' + esc(o.manufacturer) + '</a>'
           : '<div class="mfr">' + esc(o.manufacturer) + '</div>') + '</td>' +
-        '<td data-label="' + esc(t().thSupplier) + '">' + (o.factory_direct ? '<span class="tag direct">' + esc(t().direct) + '</span>' : '<span class="tag">' + esc(t().partner) + '</span>') + '</td>' +
+        '<td data-label="' + esc(t().thSupplier) + '">' + (o.factory_direct ? '<span class="tag direct">' + esc(t().direct) + '</span>' : o.authorized_distributor ? '<span class="tag auth">' + esc(t().auth) + '</span>'
+          : '<span class="tag">' + esc(t().partner) + '</span>') + '</td>' +
         '<td data-label="' + esc(t().thAvail) + '" class="num">' + esc(o.availability) + '</td>' +
         '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(Number(o.spq).toLocaleString(LOCALE[lang])) + '</div>' : '') + '</td>' +
         '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +

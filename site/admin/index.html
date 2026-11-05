@@ -491,11 +491,13 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var pub = p.public_page
       ? '<p class="msg ok" id="pf-pub">Page publique en ligne, publiée par ' + esc(p.public_page_by) + ' le ' + esc(dt(p.public_page_at)) +
         ' : <a href="/fabricants/?b=' + encodeURIComponent(p.brands[0]) + '" target="_blank" rel="noopener" id="pf-pub-link">voir la page ' + esc(p.brands[0]) + '</a></p>'
-      : '<p class="muted" id="pf-pub">Page publique non publiée' + (p.can_publish ? '.' : ' : il faut une marque, une présentation et une société approuvée.') + '</p>';
+      : '<p class="muted" id="pf-pub">Page publique non publiée' + (p.can_publish ? '.' : ' : il faut une marque, le nom du fabricant, une présentation et une société approuvée.') + '</p>';
     box.innerHTML =
       (p.logo_path ? '<img class="logo-s" id="pf-logo" src="' + esc(logoUrl(p.logo_path)) + '" alt="Logo">' : '') +
       '<dl class="kv" id="pf-view">' +
-      '<dt>Marques fabriquées</dt><dd id="pf-brands">' + list(p.brands) + '</dd>' +
+      '<dt>Marques</dt><dd id="pf-brands">' + list(p.brands) + '</dd>' +
+      '<dt>Ce compte est</dt><dd id="pf-role">' + (p.brand_role === 'authorized_distributor' ? 'Distributeur agréé de ces marques' : 'Le fabricant de ces marques') + '</dd>' +
+      '<dt>Nom du fabricant (page publique)</dt><dd id="pf-bname">' + opt(p.brand_name) + '</dd>' +
       '<dt>Création</dt><dd>' + opt(p.founded_year) + '</dd>' +
       '<dt>Site web (interne)</dt><dd class="mono">' + opt(p.website) + '</dd>' +
       '<dt>Siège</dt><dd>' + opt(p.hq_city) + '</dd>' +
@@ -530,7 +532,11 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function area(id, label, value) { return '<label class="f">' + label + '<textarea id="' + id + '" maxlength="4000">' + esc(value || '') + '</textarea></label>'; }
   function profileForm(p) {
     return '<form id="pf-form"><div class="pf-grid">' +
-      field('pf-brands-i', 'Marques fabriquées (séparées par des virgules)', (p.brands || []).join(', ')) +
+      field('pf-brands-i', 'Marques (séparées par des virgules)', (p.brands || []).join(', ')) +
+      '<label class="f">Ce compte est<select id="pf-role-i"><option value="manufacturer"' + (p.brand_role !== 'authorized_distributor' ? ' selected' : '') +
+        '>le fabricant de ces marques</option><option value="authorized_distributor"' + (p.brand_role === 'authorized_distributor' ? ' selected' : '') +
+        '>distributeur agréé de ces marques</option></select></label>' +
+      field('pf-bname-i', 'Nom du fabricant (affiché sur la page publique)', p.brand_name) +
       field('pf-year', 'Année de création', p.founded_year, 'number', ' min="1800" max="2100"') +
       field('pf-web', 'Site web (interne, jamais publié)', p.website, 'url') +
       field('pf-hq', 'Siège (ville, pays)', p.hq_city) +
@@ -581,7 +587,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       ev.preventDefault();
       $('pf-save').disabled = true;
       uploadLogo(org, $('pf-logo-f').files[0]).then(function (logo) {
-        var profile = { brands: csv('pf-brands-i'), founded_year: val('pf-year'), website: val('pf-web'), hq_city: val('pf-hq'),
+        var profile = { brands: csv('pf-brands-i'), brand_role: $('pf-role-i').value, brand_name: val('pf-bname-i'), founded_year: val('pf-year'), website: val('pf-web'), hq_city: val('pf-hq'),
           production_site: val('pf-prod'), area_m2: val('pf-area'), staff: val('pf-staff'), annual_units: val('pf-units'),
           revenue_usd: val('pf-rev'), min_order_usd: val('pf-min'), certifications: csv('pf-cert'), languages: csv('pf-langs').map(function (s) { return s.toLowerCase(); }),
           payment_methods: csv('pf-pay'), payment_terms: val('pf-terms'),
@@ -615,7 +621,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       api('POST', '/supplier-contact/delete', { org: org, id: id }).then(function (p) { prof = p; renderProfile(); }).catch(profErr);
     }
     if ((a === 'publish' || a === 'unpublish') && window.confirm(a === 'publish'
-      ? 'Publier la page de ' + prof.brands.join(', ') + ' sur central.parts/fabricants/ ? Elle montre la présentation, le logo et les chiffres, jamais les contacts ni le chiffre d\'affaires. Vérifiez l\'accord du fabricant.'
+      ? 'Publier la page de ' + prof.brand_name + ' (' + prof.brands.join(', ') + ') sur central.parts/fabricants/ ? Elle montre la présentation, le logo et les chiffres, jamais les contacts ni le chiffre d\'affaires. Vérifiez l\'accord du fabricant.'
       : 'Retirer la page publique ? Les offres ne renverront plus vers elle.')) {
       api('POST', '/supplier-publish', { org: org, on: a === 'publish' }).then(function (p) {
         prof = p; renderProfile(); show(a === 'publish' ? 'Page fabricant publiée.' : 'Page fabricant retirée.', 'ok');

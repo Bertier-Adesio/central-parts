@@ -29,10 +29,12 @@ async function offers(route) {
   const u = new URL(route.request().url());
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
   if (u.pathname.endsWith('/manufacturer')) {
-    return ['marque démo', 'md'].includes((u.searchParams.get('brand') || '').toLowerCase()) ? reply(PAGE) : reply({ error: 'not_found' }, 404);
+    const b = (u.searchParams.get('brand') || '').toLowerCase();
+    // « MD » : même fabricant, présenté par son distributeur agréé (migration 20261105000033).
+    return b === 'marque démo' ? reply(PAGE) : b === 'md' ? reply({ ...PAGE, channel: 'authorized_distributor' }) : reply({ error: 'not_found' }, 404);
   }
   return reply({ query: '', currency: 'EUR', ttl_days: 7, ttl_days_manufacturer: 14, rates_at: '2026-11-04T15:00:00Z',
-    offers: [offer('MDTEST001', true), offer('MDTEST002', false), offer('XYZ123', false, 'Autre')] });
+    offers: [offer('MDTEST001', true), offer('MDTEST002', false), offer('XYZ123', false, 'Autre'), { ...offer('MDTEST003', false), authorized_distributor: true }] });
 }
 
 const browser = await chromium.launch();
@@ -56,8 +58,9 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   const rows = await page.$$eval('#rows tr', (t) => t.map((r) => r.textContent));
   ok(rows[0].includes('Direct fabricant') && !rows[0].includes('Fournisseur partenaire'), 'offre du fabricant : « Direct fabricant »');
   ok(rows[1].includes('Fournisseur partenaire') && rows[2].includes('Fournisseur partenaire'), 'autres offres : vendeur anonyme');
+  ok(rows[3].includes('Distributeur agréé') && !rows[3].includes('Direct fabricant'), 'offre du distributeur agréé : « Distributeur agréé »');
   const links = await page.$$eval('#rows a.mfr', (a) => a.map((x) => x.getAttribute('href')));
-  ok(links.length === 2 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
+  ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
   await page.click('[data-lang=zh]');
   ok((await page.textContent('#rows tr:first-child')).includes('原厂直供') && (await page.getAttribute('#rows a.mfr', 'href')).endsWith('lang=zh'), '中文 : 原厂直供, lien dans la langue');
   ok(errors.length === 0, 'offres : aucune erreur console ' + errors.join(' | '));
@@ -91,6 +94,9 @@ for (const width of [1280, 390]) {
 // ---------------------------------------------------------------- 3. marque sans page, sans JavaScript
 {
   const { page, errors } = await newPage(390);
+  await page.goto(BASE + '/fabricants/?b=MD&lang=fr');
+  await page.waitForSelector('#page:not([hidden])');
+  ok((await page.textContent('#offers-n')).includes('par son distributeur agréé'), 'distributeur agréé : offres présentées comme telles');
   await page.goto(BASE + '/fabricants/?b=Inconnue&lang=fr');
   await page.waitForSelector('#msg:not([hidden])');
   ok((await page.textContent('#msg')).includes('Aucune page publiée') && await page.isHidden('#page'), 'marque sans page : message, rien d\'autre');

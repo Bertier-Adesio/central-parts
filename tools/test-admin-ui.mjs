@@ -175,12 +175,15 @@ await page.fill('#pf-rev', '70000000');
 await page.fill('#pf-cert', 'ISO 9001, IATF 16949');
 await page.fill('#pf-langs', 'zh, EN');
 await page.fill('#pf-about-zh', '虚构的制造商。');
+await page.selectOption('#pf-role-i', 'authorized_distributor');
+await page.fill('#pf-bname-i', 'Fabricant Marque Démo (fictif)');
 await page.setInputFiles('#pf-logo-f', { name: 'logo.png', mimeType: 'image/png', buffer: PNG });
 await page.click('#pf-save');
 await page.waitForSelector('#pf-view');
 const pv = norm(await page.textContent('#pf-view'));
 ok(pv.includes('Marque Démo, MD') && pv.includes('3 000 000 000') && pv.includes('70 000 000 USD') && pv.includes('中文, English') && pv.includes('虚构的制造商'),
   'fiche : marques, chiffres, CA interne, langues et présentation affichés');
+ok(pv.includes('Distributeur agréé de ces marques') && pv.includes('Fabricant Marque Démo (fictif)'), 'fiche : distributeur agréé, nom du fabricant pour la page publique');
 ok(uploads.some((u) => u.includes('/seller-logos/ORG-0110/')) && await page.getAttribute('#pf-logo', 'src') === BASE + '/storage/v1/object/public/seller-logos/ORG-0110/logo-1.png',
   'fiche : logo déposé dans le dossier du fournisseur, affiché');
 ok(!(await page.isDisabled('button[data-pf=publish]')), 'fiche complète : publication possible');

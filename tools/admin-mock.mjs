@@ -116,8 +116,8 @@ export function createMock() {
   // Fiche société (ADR 0032), comme admin_supplier_profile : vide au départ, contacts à part.
   const profile = (o) => {
     const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, brands: [], certifications: [], languages: [],
-      payment_methods: [], contacts: [], public_page: false, logo_path: null };
-    p.can_publish = o.status === 'validated' && p.brands.length > 0 && Object.keys(p.about).length > 0;
+      payment_methods: [], contacts: [], public_page: false, logo_path: null, brand_name: null, brand_role: 'manufacturer' };
+    p.can_publish = o.status === 'validated' && p.brands.length > 0 && Object.keys(p.about).length > 0 && !!p.brand_name;
     return p;
   };
   const tri = (x) => Object.fromEntries(Object.entries(x || {}).filter(([k, v]) => ['fr', 'en', 'zh'].includes(k) && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
@@ -234,7 +234,8 @@ export function createMock() {
         const p = profile(o), f = body.profile || {};
         if (f.website && !/^https?:\/\//.test(f.website)) return [422, { error: 'invalid', detail: 'Site web : adresse http(s) attendue' }];
         for (const k of ['founded_year', 'area_m2', 'staff', 'annual_units', 'revenue_usd', 'min_order_usd']) if (k in f) p[k] = f[k] === '' ? null : Number(f[k]);
-        for (const k of ['website', 'hq_city', 'production_site', 'payment_terms', 'logo_path']) if (k in f) p[k] = f[k] || null;
+        for (const k of ['website', 'hq_city', 'production_site', 'payment_terms', 'logo_path', 'brand_name']) if (k in f) p[k] = f[k] || null;
+        if ('brand_role' in f) p.brand_role = f.brand_role;
         for (const k of ['brands', 'certifications', 'languages', 'payment_methods']) if (k in f) p[k] = [...new Set(f[k])];
         for (const k of ['about', 'positioning']) if (k in f) p[k] = tri(f[k]);
         return [200, profile(o)];

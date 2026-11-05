@@ -38,3 +38,13 @@ Un fabricant est un cas à part : sa marque figure déjà dans la colonne « fab
 - Les adresses e-mail « RFQ » et « Commandes » sont enregistrées, mais rien n'est encore envoyé par e-mail. L'envoi viendra avec le service d'e-mail des comptes acheteurs (ADR 0017). Les avis restent dans WeChat.
 - La page fabricant n'est pas indexée (`noindex`), comme les offres, tant que le lancement public n'est pas décidé.
 - La notation en cinq critères (réactivité, cotation, expédition, conformité, retours) viendra après les premières commandes, à partir des flux de la plateforme.
+
+## Complément du 5 novembre 2026 : fabricant distribué par un distributeur agréé
+
+Le compte qui dépose le stock n'est pas toujours le fabricant : un distributeur agréé peut déposer les offres d'une marque (décision de Bertier, migration `20261105000033_fabricant_distributeur.sql`).
+
+- **Nom du fabricant** (`brand_name`) : c'est le nom affiché sur la page publique, jamais celui de la société du compte. Il est obligatoire pour publier ; l'effacer retire la page.
+- **Rôle du compte** (`brand_role`), choisi dans la fiche :
+  - « le fabricant de ces marques » : ses offres portent « Direct fabricant » ;
+  - « distributeur agréé de ces marques » : ses offres portent « Distributeur agréé », et la page fabricant parle d'offres « par son distributeur agréé ».
+- Le nom du distributeur n'apparaît nulle part côté acheteur.

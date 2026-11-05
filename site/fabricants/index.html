@@ -97,7 +97,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
       buyText: 'Les offres de ce fabricant sont publiées sur Central.Parts, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.',
       founded: 'Création', hq: 'Siège', production: 'Production', area: 'Surface de production', staff: 'Personnes',
       units: 'Pièces livrées par an', langs: 'Langues parlées', brands: 'Marques',
-      offers: '{n} offre(s) en ligne en direct du fabricant.', noOffers: 'Aucune offre en ligne pour l’instant : demandez un prix depuis la page des offres.',
+      offers: '{n} offre(s) en ligne en direct du fabricant.', offersAuth: '{n} offre(s) en ligne par son distributeur agréé.', noOffers: 'Aucune offre en ligne pour l’instant : demandez un prix depuis la page des offres.',
       updated: 'Mis à jour le {d}.', notFound: 'Aucune page publiée pour cette marque.', network: 'Erreur réseau, réessayez.', other: 'Page indisponible, réessayez plus tard.',
       rate: 'Trop de demandes : réessayez dans une minute.', m2: '{n} m²', billion: '{n} milliard(s)', million: '{n} million(s)' },
     en: { eyebrow: 'Central.Parts partner manufacturer', aboutTitle: 'Company overview', certTitle: 'Certifications',
@@ -105,7 +105,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
       buyText: 'This manufacturer’s offers are published on Central.Parts, priced in euros, with the update date of each offer. Price requests and orders go through Central.Parts.',
       founded: 'Founded', hq: 'Headquarters', production: 'Production', area: 'Production area', staff: 'People',
       units: 'Units shipped per year', langs: 'Languages spoken', brands: 'Brands',
-      offers: '{n} live offer(s) direct from the manufacturer.', noOffers: 'No live offer yet: request a price from the offers page.',
+      offers: '{n} live offer(s) direct from the manufacturer.', offersAuth: '{n} live offer(s) through its authorized distributor.', noOffers: 'No live offer yet: request a price from the offers page.',
       updated: 'Updated {d}.', notFound: 'No page published for this brand.', network: 'Network error, please try again.', other: 'Page unavailable, please try again later.',
       rate: 'Too many requests: try again in a minute.', m2: '{n} m²', billion: '{n} billion', million: '{n} million' },
     zh: { eyebrow: 'Central.Parts 合作制造商', aboutTitle: '公司简介', certTitle: '认证',
@@ -113,7 +113,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
       buyText: '该制造商的报价发布在 Central.Parts 上，以欧元计价，并标明每条报价的更新日期。询价和订单均通过 Central.Parts 处理。',
       founded: '成立年份', hq: '总部', production: '生产基地', area: '生产面积', staff: '员工人数',
       units: '年出货量', langs: '工作语言', brands: '品牌',
-      offers: '原厂直供在线报价 {n} 条。', noOffers: '暂无在线报价：请在报价页面询价。',
+      offers: '原厂直供在线报价 {n} 条。', offersAuth: '授权代理商在线报价 {n} 条。', noOffers: '暂无在线报价：请在报价页面询价。',
       updated: '更新日期：{d}。', notFound: '该品牌尚未发布页面。', network: '网络错误，请重试。', other: '页面暂不可用，请稍后再试。',
       rate: '请求过于频繁，请一分钟后再试。', m2: '{n} 平方米', billion: '{n} 亿', million: '{n} 万' }
   };
@@ -162,7 +162,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
     $('about').innerHTML = tri(page.about).split(/\n\s*\n|\n/).filter(Boolean).map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
     $('cert-card').hidden = !(page.certifications || []).length;
     $('certs').innerHTML = (page.certifications || []).map(function (c) { return '<span class="tag">' + esc(c) + '</span>'; }).join('');
-    $('offers-n').textContent = page.offers ? fill(t().offers, { n: page.offers }) : t().noOffers;
+    $('offers-n').textContent = page.offers ? fill(page.channel === 'authorized_distributor' ? t().offersAuth : t().offers, { n: page.offers }) : t().noOffers;
     $('to-offers').href = '/offres/?lang=' + lang;
     $('updated').textContent = page.updated_at ? fill(t().updated, { d: new Date(page.updated_at).toLocaleDateString(LOCALE[lang]) }) : '';
   }
