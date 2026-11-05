@@ -112,7 +112,16 @@ export function createMock() {
       ship_to: 'DE', currency: 'EUR', created_at: day(32, 11), validated_by: 'admin:' + ADMIN_EMAIL,
       sellers: [{ org: 'ORG-0110', notify: 'sent', response: 'pending' }], bids: 0 },
   ];
-  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [] };
+  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {} };
+  // Fiche société (ADR 0032), comme admin_supplier_profile : vide au départ, contacts à part.
+  const profile = (o) => {
+    const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, brands: [], certifications: [], languages: [],
+      payment_methods: [], contacts: [], public_page: false, logo_path: null };
+    p.can_publish = o.status === 'validated' && p.brands.length > 0 && Object.keys(p.about).length > 0;
+    return p;
+  };
+  const tri = (x) => Object.fromEntries(Object.entries(x || {}).filter(([k, v]) => ['fr', 'en', 'zh'].includes(k) && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
+  let contactSeq = 0;
   const find = (id) => orgs.find((o) => o.org_id === id);
   const lines = (id) => lots.filter((l) => l.org_id === id && l.qty > 0).length;
   const decide = (o, action, reason) => {
@@ -167,6 +176,10 @@ export function createMock() {
         const s = query.has('status') ? query.get('status') : 'pending_validation';
         return [200, rfqs.filter((d) => !s || d.status === s)];
       }
+      if (path === '/supplier-profile') {
+        const o = find(query.get('org'));
+        return o ? [200, profile(o)] : [409, { error: 'not_allowed' }];
+      }
       if (path === '/supplier-addresses') {
         return [200, query.get('org') === 'ORG-0110' ? [
           { id: 'ADR-0001', label: 'Entrepôt Shenzhen (fictif)', address: 'Futian, bâtiment 1', postal_code: '518000', city: 'Shenzhen', country: 'CN', contact: '李先生', phone: null, is_default: true, lots: 10 },
@@ -217,6 +230,39 @@ export function createMock() {
     if (method === 'POST') {
       const o = find(body.org);
       if (!o) return [409, { error: 'not_allowed' }];
+      if (path === '/supplier-profile') {
+        const p = profile(o), f = body.profile || {};
+        if (f.website && !/^https?:\/\//.test(f.website)) return [422, { error: 'invalid', detail: 'Site web : adresse http(s) attendue' }];
+        for (const k of ['founded_year', 'area_m2', 'staff', 'annual_units', 'revenue_usd', 'min_order_usd']) if (k in f) p[k] = f[k] === '' ? null : Number(f[k]);
+        for (const k of ['website', 'hq_city', 'production_site', 'payment_terms', 'logo_path']) if (k in f) p[k] = f[k] || null;
+        for (const k of ['brands', 'certifications', 'languages', 'payment_methods']) if (k in f) p[k] = [...new Set(f[k])];
+        for (const k of ['about', 'positioning']) if (k in f) p[k] = tri(f[k]);
+        return [200, profile(o)];
+      }
+      if (path === '/supplier-publish') {
+        const p = profile(o);
+        if (body.on && !p.can_publish) return [422, { error: 'invalid', detail: 'Page publique : société approuvée, marque et présentation requises' }];
+        Object.assign(p, { public_page: !!body.on, public_page_by: 'admin:' + ADMIN_EMAIL, public_page_at: new Date().toISOString() });
+        return [200, profile(o)];
+      }
+      if (path === '/supplier-contact') {
+        const p = profile(o), c = body.contact || {};
+        if (!String(c.name || '').trim() || (c.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email))) return [422, { error: 'invalid', detail: 'Contact invalide : nom obligatoire, e-mail au bon format' }];
+        const row = { ...c, email: c.email ? c.email.toLowerCase() : null, id: c.id || 'CTC-' + String(++contactSeq).padStart(4, '0') };
+        const i = p.contacts.findIndex((x) => x.id === row.id);
+        if (i >= 0) p.contacts[i] = row; else p.contacts.push(row);
+        return [200, profile(o)];
+      }
+      if (path === '/supplier-contact/delete') {
+        const p = profile(o);
+        p.contacts = p.contacts.filter((x) => x.id !== body.id);
+        return [200, profile(o)];
+      }
+      if (path === '/logo-upload-url') {
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(body.type)) return [422, { error: 'format' }];
+        const key = `${o.org_id}/logo-1.png`;
+        return [200, { signed_url: '/storage/v1/object/upload/sign/seller-logos/' + key, path: key }];
+      }
       if (path === '/approve') {
         if (o.status !== 'validated') {
           if (!/^V-\d+$/.test(o.alias)) o.alias = 'V-' + (Math.max(...orgs.map((x) => +(/^V-(\d+)$/.exec(x.alias) || [0, 0])[1])) + 1);

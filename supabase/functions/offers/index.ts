@@ -5,6 +5,9 @@
 //   GET /offers?q=TPS&cur=EUR → { query, currency, ttl_days, offers: [{ mpn, manufacturer, supplier: "partner",
 //        seller_category, source, ship_from, availability, moq, price_from, updated_at }] }
 //   Sans q : les 50 offres confirmées le plus récemment. Seules les offres à jour (seuil d'expiration) sont rendues.
+//   brand_page : marque dont le fabricant a une page publique ; factory_direct : offre du fabricant lui-même (ADR 0032).
+//   GET /offers/manufacturer?brand=UMW → page publique du fabricant (/fabricants/) : présentation, logo, chiffres ;
+//        jamais de contact, d'adresse, de site web ni de chiffre d'affaires. 404 si la page n'est pas publiée.
 //
 // Le vendeur n'est jamais identifiable : ni nom, ni pseudonyme, ni SKU, ni lien.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
@@ -27,6 +30,15 @@ Deno.serve(async (req) => {
   const u = new URL(req.url);
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || '';
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+  if (u.pathname.endsWith('/manufacturer')) {
+    const brand = (u.searchParams.get('brand') || '').trim().slice(0, 60);
+    const { data, error } = await db.rpc('public_manufacturer', { p_ip: ip, p_brand: brand });
+    if (error) return json({ error: error.code === 'CP429' ? 'rate_limited' : 'server' }, error.code === 'CP429' ? 429 : 500);
+    if (!data) return json({ error: 'not_found' }, 404);
+    const logo = data.logo_path ? `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/seller-logos/${data.logo_path}` : null;
+    const { logo_path: _, ...page } = data;
+    return json({ ...page, logo_url: logo });
+  }
   const { data, error } = await db.rpc('partner_offers', { p_ip: ip, q: u.searchParams.get('q') || '', p_currency: u.searchParams.get('cur') || 'EUR' });
   if (error) {
     if (error.code === '22023') return json({ error: 'too_short' }, 422);

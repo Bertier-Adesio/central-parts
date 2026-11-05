@@ -36,7 +36,7 @@ h3{font-size:var(--text-md);margin:20px 0 8px}
 .btn-ok{background:var(--status-success);color:var(--fg-inverse)}
 .btn-danger{background:var(--status-danger);color:var(--fg-inverse)}
 .btn[disabled]{opacity:.5;cursor:default}
-input[type=email],input[type=search],select,textarea{box-sizing:border-box;width:100%;min-height:var(--control-h-md);padding:6px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+input[type=email],input[type=search],input[type=text],input[type=number],input[type=url],input[type=tel],input[type=file],select,textarea{box-sizing:border-box;width:100%;min-height:var(--control-h-md);padding:6px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
 textarea{min-height:88px;resize:vertical}
 label.f{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
 label.f input,label.f textarea,label.f select{margin:4px 0 0}
@@ -77,6 +77,10 @@ dl.kv dt{color:var(--fg-3)}
 dl.kv dd{margin:0;overflow-wrap:anywhere}
 .mono{font-family:var(--font-mono)}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0 12px}
+.logo-s{width:64px;height:64px;object-fit:contain;border:1px solid var(--border-1);border-radius:var(--radius-sm);background:var(--bg-surface);margin:0 0 12px}
+.pre{white-space:pre-wrap}
+label.f input[type=checkbox]{margin:0 6px 0 0}
 ol.log{list-style:none;margin:0;padding:0;font-size:var(--text-sm)}
 ol.log li{border-left:3px solid var(--border-2);padding:4px 0 4px 12px;margin:0 0 8px}
 ol.log li.approved{border-left-color:var(--status-success)}
@@ -437,6 +441,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (o.status === 'validated' ? '<h3>Dépôt du fournisseur</h3><p class="muted">Charger un fichier de stock pour lui, voir ses imports, reconfirmer ses offres. ' +
           'Lien personnel à votre nom, valable 8 heures, inscrit au journal ; les fichiers sont chargés au nom du fournisseur.</p>' +
           '<div class="actions"><button class="btn btn-line" type="button" id="d-depot">Ouvrir son dépôt (8 h)</button></div><p id="d-depot-out"></p>' : '') +
+        '<h3>Fiche société</h3><div id="d-profile" class="muted">…</div>' +
         '<h3>Adresses d\'expédition</h3><div id="d-addr" class="muted">…</div>' +
         '<h3>Journal des décisions</h3>' +
         ((o.decisions || []).length ? '<ol class="log" id="d-log">' + o.decisions.map(function (d) {
@@ -455,9 +460,168 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         }).join('') + '</ul>' : 'Aucune adresse : le lieu affiché vient de la ville de la société.';
       }).catch(function () { if ($('d-addr')) $('d-addr').textContent = '—'; });
       $('sup-detail').dataset.name = o.name;
+      loadProfile(o.org_id);
       $('sup-detail').scrollIntoView({ block: 'nearest' });
     }).catch(fail);
   }
+
+  // ------------------------------------------------------------ fiche société et page publique du fabricant (ADR 0032)
+  // Données saisies ici seulement (jamais dans le dépôt). La page publique ne montre ni contact, ni adresse, ni site web,
+  // ni chiffre d'affaires ; elle n'est en ligne que si un administrateur la publie.
+  var STORAGE = LOCAL ? location.origin : 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
+  var logoUrl = function (p) { return p ? STORAGE + '/storage/v1/object/public/seller-logos/' + p : ''; };
+  var LANGS = { zh: '中文', en: 'English', fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어', es: 'Español', it: 'Italiano', ru: 'Русский' };
+  var prof = null;
+  var list = function (a) { return (a || []).length ? a.map(esc).join(', ') : '—'; };
+  var opt = function (v) { return v == null || v === '' ? '—' : esc(v); };
+  function profErr(e) {
+    if (e && e.code === 'invalid') { show('Valeur refusée : ' + (e.detail || 'vérifiez la fiche') + '.', 'err'); return; }
+    fail(e);
+  }
+  function loadProfile(org) {
+    return api('GET', '/supplier-profile?org=' + encodeURIComponent(org)).then(function (p) { prof = p; renderProfile(); })
+      .catch(function (e) { if ($('d-profile')) $('d-profile').textContent = '—'; profErr(e); });
+  }
+  function renderProfile(edit) {
+    var box = $('d-profile'), p = prof;
+    if (!box || !p || $('sup-detail').dataset.org !== p.org_id) return;
+    box.classList.remove('muted');
+    if (edit) { box.innerHTML = profileForm(p); return; }
+    var about = ['fr', 'en', 'zh'].map(function (k) { return p.about[k] ? '<dt>Présentation ' + k.toUpperCase() + '</dt><dd class="pre">' + esc(p.about[k]) + '</dd>' : ''; }).join('');
+    var pub = p.public_page
+      ? '<p class="msg ok" id="pf-pub">Page publique en ligne, publiée par ' + esc(p.public_page_by) + ' le ' + esc(dt(p.public_page_at)) +
+        ' : <a href="/fabricants/?b=' + encodeURIComponent(p.brands[0]) + '" target="_blank" rel="noopener" id="pf-pub-link">voir la page ' + esc(p.brands[0]) + '</a></p>'
+      : '<p class="muted" id="pf-pub">Page publique non publiée' + (p.can_publish ? '.' : ' : il faut une marque, une présentation et une société approuvée.') + '</p>';
+    box.innerHTML =
+      (p.logo_path ? '<img class="logo-s" id="pf-logo" src="' + esc(logoUrl(p.logo_path)) + '" alt="Logo">' : '') +
+      '<dl class="kv" id="pf-view">' +
+      '<dt>Marques fabriquées</dt><dd id="pf-brands">' + list(p.brands) + '</dd>' +
+      '<dt>Création</dt><dd>' + opt(p.founded_year) + '</dd>' +
+      '<dt>Site web (interne)</dt><dd class="mono">' + opt(p.website) + '</dd>' +
+      '<dt>Siège</dt><dd>' + opt(p.hq_city) + '</dd>' +
+      '<dt>Production</dt><dd>' + opt(p.production_site) + '</dd>' +
+      '<dt>Surface de production</dt><dd>' + (p.area_m2 ? num(p.area_m2) + ' m²' : '—') + '</dd>' +
+      '<dt>Personnes</dt><dd>' + (p.staff ? num(p.staff) : '—') + '</dd>' +
+      '<dt>Pièces livrées par an</dt><dd>' + (p.annual_units ? num(p.annual_units) : '—') + '</dd>' +
+      '<dt>Chiffre d\'affaires (interne)</dt><dd>' + (p.revenue_usd ? num(p.revenue_usd) + ' USD' : '—') + '</dd>' +
+      '<dt>Positionnement</dt><dd>' + opt(p.positioning.fr || p.positioning.en || p.positioning.zh) + '</dd>' +
+      '<dt>Certifications</dt><dd>' + list(p.certifications) + '</dd>' +
+      '<dt>Langues parlées</dt><dd>' + list((p.languages || []).map(function (c) { return LANGS[c] || c; })) + '</dd>' +
+      '<dt>Paiement</dt><dd>' + list(p.payment_methods) + (p.payment_terms ? ' · ' + esc(p.payment_terms) : '') + '</dd>' +
+      '<dt>Commande minimum</dt><dd>' + (p.min_order_usd != null ? num(p.min_order_usd) + ' USD' : '—') + '</dd>' + about +
+      '</dl>' + pub +
+      '<div class="actions"><button class="btn btn-line" type="button" data-pf="edit">Modifier la fiche</button>' +
+      (p.public_page ? '<button class="btn btn-line" type="button" data-pf="unpublish">Retirer la page publique</button>'
+        : '<button class="btn btn-ok" type="button" data-pf="publish"' + (p.can_publish ? '' : ' disabled') + '>Publier la page fabricant</button>') + '</div>' +
+      '<h3>Contacts</h3><p class="muted">Jamais affichés aux acheteurs. « RFQ » et « Commandes » : adresses préférées du fournisseur.</p>' +
+      (p.contacts.length ? '<ul class="addr" id="pf-contacts">' + p.contacts.map(function (c) {
+        return '<li data-id="' + esc(c.id) + '"><strong>' + esc(c.name) + '</strong>' + (c.role ? ', ' + esc(c.role) : '') +
+          (c.for_rfq ? ' <span class="badge validated">RFQ</span>' : '') + (c.for_po ? ' <span class="badge validated">Commandes</span>' : '') +
+          '<br><span class="mono">' + esc([c.email, c.phone, c.wechat ? 'WeChat ' + c.wechat : ''].filter(Boolean).join(' · ') || '—') + '</span>' +
+          (c.languages.length ? '<br><span class="muted">' + list(c.languages.map(function (x) { return LANGS[x] || x; })) + '</span>' : '') +
+          ' <button class="btn btn-line" type="button" data-pf="cedit" data-id="' + esc(c.id) + '">Modifier</button>' +
+          ' <button class="btn btn-line" type="button" data-pf="cdel" data-id="' + esc(c.id) + '">Retirer</button></li>';
+      }).join('') + '</ul>' : '<p class="muted" id="pf-contacts">Aucun contact.</p>') +
+      '<div id="pf-cform"></div><div class="actions"><button class="btn btn-line" type="button" data-pf="cadd">Ajouter un contact</button></div>';
+  }
+  function field(id, label, value, type, extra) {
+    return '<label class="f">' + label + '<input type="' + (type || 'text') + '" id="' + id + '" value="' + esc(value == null ? '' : value) + '"' + (extra || '') + '></label>';
+  }
+  function area(id, label, value) { return '<label class="f">' + label + '<textarea id="' + id + '" maxlength="4000">' + esc(value || '') + '</textarea></label>'; }
+  function profileForm(p) {
+    return '<form id="pf-form"><div class="pf-grid">' +
+      field('pf-brands-i', 'Marques fabriquées (séparées par des virgules)', (p.brands || []).join(', ')) +
+      field('pf-year', 'Année de création', p.founded_year, 'number', ' min="1800" max="2100"') +
+      field('pf-web', 'Site web (interne, jamais publié)', p.website, 'url') +
+      field('pf-hq', 'Siège (ville, pays)', p.hq_city) +
+      field('pf-prod', 'Production (ville, pays)', p.production_site) +
+      field('pf-area', 'Surface de production (m²)', p.area_m2, 'number', ' min="1"') +
+      field('pf-staff', 'Nombre de personnes', p.staff, 'number', ' min="1"') +
+      field('pf-units', 'Pièces livrées par an', p.annual_units, 'number', ' min="1"') +
+      field('pf-rev', 'Chiffre d\'affaires annuel, USD (interne)', p.revenue_usd, 'number', ' min="1"') +
+      field('pf-min', 'Commande minimum, USD', p.min_order_usd, 'number', ' min="0"') +
+      field('pf-cert', 'Certifications (virgules)', (p.certifications || []).join(', ')) +
+      field('pf-langs', 'Langues parlées (codes : zh, en, fr…)', (p.languages || []).join(', ')) +
+      field('pf-pay', 'Moyens de paiement (virgules)', (p.payment_methods || []).join(', ')) +
+      field('pf-terms', 'Conditions de paiement', p.payment_terms) +
+      '</div>' +
+      field('pf-pos-fr', 'Positionnement FR (une phrase)', p.positioning.fr) +
+      field('pf-pos-en', 'Positionnement EN', p.positioning.en) +
+      field('pf-pos-zh', 'Positionnement 中文', p.positioning.zh) +
+      area('pf-about-fr', 'Présentation FR', p.about.fr) + area('pf-about-en', 'Présentation EN', p.about.en) + area('pf-about-zh', 'Présentation 中文', p.about.zh) +
+      '<label class="f">Logo (PNG, JPEG ou WebP, 1 Mo au plus)<input type="file" id="pf-logo-f" accept="image/png,image/jpeg,image/webp"></label>' +
+      '<div class="actions"><button class="btn btn-main" type="submit" id="pf-save">Enregistrer la fiche</button>' +
+      '<button class="btn btn-line" type="button" data-pf="cancel">Annuler</button></div></form>';
+  }
+  function contactForm(c) {
+    c = c || { languages: [] };
+    return '<form id="pf-cf" data-id="' + esc(c.id || '') + '"><div class="pf-grid">' +
+      field('cf-name', 'Nom', c.name, 'text', ' required maxlength="120"') + field('cf-role', 'Fonction', c.role) +
+      field('cf-email', 'E-mail', c.email, 'email') + field('cf-phone', 'Téléphone', c.phone, 'tel') +
+      field('cf-wechat', 'WeChat', c.wechat) + field('cf-langs', 'Langues (zh, en…)', (c.languages || []).join(', ')) +
+      '</div><label class="f"><input type="checkbox" id="cf-rfq"' + (c.for_rfq ? ' checked' : '') + '> Adresse préférée pour les demandes de prix (RFQ)</label>' +
+      '<label class="f"><input type="checkbox" id="cf-po"' + (c.for_po ? ' checked' : '') + '> Adresse préférée pour les bons de commande</label>' +
+      '<div class="actions"><button class="btn btn-main" type="submit">Enregistrer le contact</button>' +
+      '<button class="btn btn-line" type="button" data-pf="ccancel">Annuler</button></div></form>';
+  }
+  var csv = function (id) { return $(id).value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); };
+  var val = function (id) { return $(id).value.trim(); };
+  function uploadLogo(org, f) {
+    if (!f) return Promise.resolve(null);
+    if (f.size > 1048576) return Promise.reject({ code: 'invalid', detail: 'logo de plus de 1 Mo' });
+    return api('POST', '/logo-upload-url', { org: org, type: f.type }).then(function (u) {
+      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
+      return fetch(u.signed_url, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: fd })
+        .then(function (r) { if (!r.ok) throw { code: 'invalid', detail: 'dépôt du logo refusé' }; return u.path; });
+    });
+  }
+  $('sup-detail').addEventListener('submit', function (ev) {
+    var org = this.dataset.org;
+    if (ev.target.id === 'pf-form') {
+      ev.preventDefault();
+      $('pf-save').disabled = true;
+      uploadLogo(org, $('pf-logo-f').files[0]).then(function (logo) {
+        var profile = { brands: csv('pf-brands-i'), founded_year: val('pf-year'), website: val('pf-web'), hq_city: val('pf-hq'),
+          production_site: val('pf-prod'), area_m2: val('pf-area'), staff: val('pf-staff'), annual_units: val('pf-units'),
+          revenue_usd: val('pf-rev'), min_order_usd: val('pf-min'), certifications: csv('pf-cert'), languages: csv('pf-langs').map(function (s) { return s.toLowerCase(); }),
+          payment_methods: csv('pf-pay'), payment_terms: val('pf-terms'),
+          positioning: { fr: val('pf-pos-fr'), en: val('pf-pos-en'), zh: val('pf-pos-zh') },
+          about: { fr: val('pf-about-fr'), en: val('pf-about-en'), zh: val('pf-about-zh') } };
+        if (logo) profile.logo_path = logo;
+        return api('POST', '/supplier-profile', { org: org, profile: profile });
+      }).then(function (p) { prof = p; renderProfile(); show('Fiche enregistrée.', 'ok'); })
+        .catch(function (e) { if ($('pf-save')) $('pf-save').disabled = false; profErr(e); });
+    }
+    if (ev.target.id === 'pf-cf') {
+      ev.preventDefault();
+      var c = { id: ev.target.getAttribute('data-id') || null, name: val('cf-name'), role: val('cf-role'), email: val('cf-email'),
+        phone: val('cf-phone'), wechat: val('cf-wechat'), languages: csv('cf-langs').map(function (s) { return s.toLowerCase(); }),
+        for_rfq: $('cf-rfq').checked, for_po: $('cf-po').checked };
+      api('POST', '/supplier-contact', { org: org, contact: c }).then(function (p) { prof = p; renderProfile(); show('Contact enregistré.', 'ok'); }).catch(profErr);
+    }
+  });
+  $('sup-detail').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-pf]');
+    if (!b || !prof) return;
+    var a = b.getAttribute('data-pf'), org = this.dataset.org, id = b.getAttribute('data-id');
+    if (a === 'edit') renderProfile(true);
+    if (a === 'cancel') renderProfile();
+    if (a === 'cadd' || a === 'cedit') {
+      $('pf-cform').innerHTML = contactForm(a === 'cedit' ? prof.contacts.filter(function (c) { return c.id === id; })[0] : null);
+      $('cf-name').focus();
+    }
+    if (a === 'ccancel') $('pf-cform').innerHTML = '';
+    if (a === 'cdel' && window.confirm('Retirer ce contact ?')) {
+      api('POST', '/supplier-contact/delete', { org: org, id: id }).then(function (p) { prof = p; renderProfile(); }).catch(profErr);
+    }
+    if ((a === 'publish' || a === 'unpublish') && window.confirm(a === 'publish'
+      ? 'Publier la page de ' + prof.brands.join(', ') + ' sur central.parts/fabricants/ ? Elle montre la présentation, le logo et les chiffres, jamais les contacts ni le chiffre d\'affaires. Vérifiez l\'accord du fabricant.'
+      : 'Retirer la page publique ? Les offres ne renverront plus vers elle.')) {
+      api('POST', '/supplier-publish', { org: org, on: a === 'publish' }).then(function (p) {
+        prof = p; renderProfile(); show(a === 'publish' ? 'Page fabricant publiée.' : 'Page fabricant retirée.', 'ok');
+      }).catch(profErr);
+    }
+  });
 
   // ------------------------------------------------------------ décisions, avec confirmation explicite
   var pending = null;

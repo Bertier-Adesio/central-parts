@@ -20,6 +20,15 @@ async function api(route) {
   return route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
 }
 
+// Stockage simulé (logos, ADR 0032) : dépôt par lien signé, lecture du logo déposé.
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+const uploads = [];
+async function storage(route) {
+  const req = route.request();
+  if (req.method() === 'PUT') { uploads.push(new URL(req.url()).pathname); return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }); }
+  return route.fulfill({ status: 200, contentType: 'image/png', body: PNG });
+}
+
 const browser = await chromium.launch();
 async function open(viewport) {
   const page = await browser.newPage({ viewport, locale: 'fr-FR' });
@@ -27,6 +36,7 @@ async function open(viewport) {
   page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|409|422)/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.route(BASE + '/functions/v1/admin/**', api);
+  await page.route(BASE + '/storage/**', storage);
   await page.route(/^(?!http:\/\/localhost)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
   return { page, errors };
 }
@@ -146,6 +156,57 @@ ok(/^https:\/\/central\.parts\/depot\/lien\/#k=[0-9a-f]{48}$/.test(depotHref) &&
   && (await page.getAttribute('#d-depot-link', 'rel')).includes('noopener'), 'dépôt : lien personnel ouvert dans un nouvel onglet');
 ok(norm(await page.textContent('#d-depot-link')).includes('valable jusqu\'à') && mock.state.depotLinks?.length === 1 && mock.state.depotLinks[0].org === 'ORG-0110',
   'dépôt : lien demandé pour ce fournisseur, échéance affichée');
+
+// 8 quater. Fiche société et page publique du fabricant (ADR 0032) : saisie, logo, contacts, publication sous contrôle.
+await page.waitForSelector('#pf-view');
+ok(await page.isDisabled('button[data-pf=publish]') && norm(await page.textContent('#pf-pub')).includes('non publiée'), 'fiche vide : publication impossible');
+await page.click('button[data-pf=edit]');
+await page.fill('#pf-brands-i', 'Marque Démo, MD');
+await page.fill('#pf-year', '2013');
+await page.fill('#pf-web', 'ftp://exemple');
+await page.fill('#pf-about-en', 'Fictitious manufacturer of analog and discrete parts.');
+await page.click('#pf-save');
+await page.waitForSelector('#msg.err');
+ok(norm(await page.textContent('#msg')).includes('Site web'), 'fiche : site web invalide refusé, message clair');
+await page.fill('#pf-web', 'https://fabricant.example');
+await page.fill('#pf-staff', '120');
+await page.fill('#pf-units', '3000000000');
+await page.fill('#pf-rev', '70000000');
+await page.fill('#pf-cert', 'ISO 9001, IATF 16949');
+await page.fill('#pf-langs', 'zh, EN');
+await page.fill('#pf-about-zh', '虚构的制造商。');
+await page.setInputFiles('#pf-logo-f', { name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+await page.click('#pf-save');
+await page.waitForSelector('#pf-view');
+const pv = norm(await page.textContent('#pf-view'));
+ok(pv.includes('Marque Démo, MD') && pv.includes('3 000 000 000') && pv.includes('70 000 000 USD') && pv.includes('中文, English') && pv.includes('虚构的制造商'),
+  'fiche : marques, chiffres, CA interne, langues et présentation affichés');
+ok(uploads.some((u) => u.includes('/seller-logos/ORG-0110/')) && await page.getAttribute('#pf-logo', 'src') === BASE + '/storage/v1/object/public/seller-logos/ORG-0110/logo-1.png',
+  'fiche : logo déposé dans le dossier du fournisseur, affiché');
+ok(!(await page.isDisabled('button[data-pf=publish]')), 'fiche complète : publication possible');
+let confirmText = '';
+page.once('dialog', (d) => { confirmText = d.message(); d.accept(); });
+await page.click('button[data-pf=publish]');
+await page.waitForSelector('#pf-pub-link');
+ok(confirmText.includes('accord du fabricant') && await page.getAttribute('#pf-pub-link', 'href') === '/fabricants/?b=Marque%20D%C3%A9mo',
+  'publication : confirmation explicite, lien vers la page publique');
+ok(norm(await page.textContent('#pf-pub')).includes(ADMIN_EMAIL), 'publication : au nom de l\'administrateur');
+await page.click('button[data-pf=cadd]');
+await page.fill('#cf-name', 'Contact démo (fictif)');
+await page.fill('#cf-email', 'pas-un-email');
+await page.click('#pf-cf button[type=submit]');
+ok(!(await page.evaluate(() => document.getElementById('cf-email').validity.valid)) && !(await page.$('#pf-contacts li')), 'contact : e-mail invalide bloqué avant envoi');
+await page.fill('#cf-email', 'Ventes@Fabricant.Example');
+await page.check('#cf-rfq');
+await page.check('#cf-po');
+await page.click('#pf-cf button[type=submit]');
+await page.waitForSelector('#pf-contacts li');
+const ctc = norm(await page.textContent('#pf-contacts'));
+ok(ctc.includes('ventes@fabricant.example') && ctc.includes('RFQ') && ctc.includes('Commandes'), 'contact : ajouté, adresses préférées RFQ et commandes');
+page.once('dialog', (d) => d.accept());
+await page.click('button[data-pf=unpublish]');
+await page.waitForSelector('button[data-pf=publish]');
+ok(norm(await page.textContent('#pf-pub')).includes('non publiée'), 'page publique retirée');
 
 // 9. Stocks et offres : résumé, 1 812 références paginées, recherche, paliers ; aucune action d'écriture.
 await page.click('#tab-stock');

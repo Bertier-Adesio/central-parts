@@ -104,7 +104,7 @@ begin
     (select mpn || ' ' || zone || ' ' || currency || ' ' || client_org_id from public.demands where id = d1), 'RFQTEST555 DE EUR PLAT');
   perform tests.eq('rejeu, même corps : même réponse', public.create_rfq('PLAT', 'idem-1', 'hash-1', body, false, t0 + interval '1 hour'), r);
   perform tests.eq('rejeu : rien de créé', (select count(*) from public.demands where batch_ref = r->>'rfq_id'), 2::bigint);
-  perform tests.fails('rejeu, autre corps : 409', format('select public.create_rfq(%L, %L, %L, %L)', 'PLAT', 'idem-1', 'hash-2', body), 'CP409');
+  perform tests.fails('rejeu, autre corps : 409', format('select public.create_rfq(%L, %L, %L, %L, false, %L)', 'PLAT', 'idem-1', 'hash-2', body, t0 + interval '2 hours'), 'CP409');
   perform tests.eq('CNY accepté comme CNH',
     public.create_rfq('PLAT2', 'idem-cny', 'h', jsonb_set(jsonb_set(body, '{currency}', '"cny"'), '{lines}', '[{"mpn": "RFQTEST555", "quantity": 1}]'), false, t0)->'demands'->0->>'status',
     'pending_validation');
