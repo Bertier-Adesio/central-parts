@@ -211,12 +211,18 @@ ok(options.includes('ORG-0110') && options.includes('ORG-0111') && options.lengt
 await page.selectOption('#ml-org', 'ORG-0110');
 await page.selectOption('#ml-role', 'authorized');
 await page.click('#mf-link button[type=submit]');
-await page.waitForFunction(() => /Distributeur agréé/.test(document.getElementById('mf-dists').textContent));
+await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 1);
 await page.selectOption('#ml-org', 'ORG-0111');
 await page.selectOption('#ml-role', 'self');
 await page.click('#mf-link button[type=submit]');
-await page.waitForFunction(() => /Fabricant lui-même/.test(document.getElementById('mf-dists').textContent));
-ok((await page.$$('#mf-dists li')).length === 2 && (await page.$$('#ml-org option')).length === 0, 'deux comptes rattachés : distributeur agréé et fabricant lui-même');
+await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 2);
+ok((await page.$$('#mf-dists li')).length === 2 && (await page.$$('#ml-org option')).length === 0, 'deux comptes rattachés : distributeur agréé et direct fabricant');
+// Rôle modifiable sans détacher (migration 20261105000034) : le distributeur passe en direct fabricant, puis revient.
+await page.selectOption('#mf-dists select[data-org="ORG-0110"]', 'self');
+await page.waitForFunction(() => /Rôle modifié : Direct fabricant/.test(document.getElementById('msg').textContent));
+ok(mock.state.mfrs[0].links.every((d) => d.role === 'self') && norm(await page.textContent('#msg')).includes('Rôle modifié'), 'rôle changé : deux comptes direct fabricant');
+await page.selectOption('#mf-dists select[data-org="ORG-0110"]', 'authorized');
+await page.waitForFunction(() => /Rôle modifié : Distributeur agréé/.test(document.getElementById('msg').textContent));
 await page.click('button[data-mf=edit]');
 await page.fill('#mf-about-en', 'Fictitious manufacturer of analog and discrete parts.');
 await page.fill('#mf-about-zh', '虚构的制造商。');
