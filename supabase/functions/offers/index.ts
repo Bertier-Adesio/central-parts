@@ -6,7 +6,7 @@
 //        seller_category, source, ship_from, availability, moq, price_from, updated_at }] }
 //   Sans q : les 50 offres confirmées le plus récemment. Seules les offres à jour (seuil d'expiration) sont rendues.
 //   brand_page : marque dont le fabricant a une page publique ; factory_direct : offre du fabricant lui-même (ADR 0032).
-//   GET /offers/manufacturer?brand=UMW → page publique du fabricant (/fabricants/) : présentation, logo, chiffres ;
+//   GET /offers/manufacturer?brand=MARQUE → page publique du fabricant (/fabricants/) : présentation, logo, chiffres ;
 //        jamais de contact, d'adresse, de site web ni de chiffre d'affaires. 404 si la page n'est pas publiée.
 //
 // Le vendeur n'est jamais identifiable : ni nom, ni pseudonyme, ni SKU, ni lien.

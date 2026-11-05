@@ -18,7 +18,7 @@ const PAGE = {
   about: { fr: 'Fabricant fictif de composants analogiques et discrets.\nDeuxième paragraphe.', en: 'Fictitious manufacturer of analog and discrete parts.', zh: '虚构的模拟和分立器件制造商。' },
   positioning: { fr: 'Analogique et discret', en: 'Analog and discrete' }, hq_city: 'Shenzhen', production_site: 'Chongqing', country: 'CN',
   area_m2: 12000, staff: 120, annual_units: 3000000000, certifications: ['IATF 16949', 'ISO 9001'], languages: ['zh', 'en'],
-  offers: 2, updated_at: '2026-11-04T10:00:00Z', logo_url: SUPA + '/storage/v1/object/public/seller-logos/ORG-0110/logo-1.png',
+  offers_direct: 2, offers_authorized: 0, updated_at: '2026-11-04T10:00:00Z', logo_url: SUPA + '/storage/v1/object/public/seller-logos/ORG-0110/logo-1.png',
 };
 const offer = (mpn, direct, brand) => ({ mpn, manufacturer: brand || 'Marque Démo', brand_page: brand === 'Autre' ? null : 'Marque Démo', factory_direct: direct,
   supplier: 'partner', source: direct ? 'manufacturer' : 'distributor', ship_from: 'CN', currency: 'EUR', availability: '10000+', moq: 100, spq: 1,
@@ -29,10 +29,12 @@ async function offers(route) {
   const u = new URL(route.request().url());
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
   if (u.pathname.endsWith('/manufacturer')) {
-    return ['marque démo', 'md'].includes((u.searchParams.get('brand') || '').toLowerCase()) ? reply(PAGE) : reply({ error: 'not_found' }, 404);
+    const b = (u.searchParams.get('brand') || '').toLowerCase();
+    // « MD » : même fabricant, présenté par son distributeur agréé (migration 20261105000033).
+    return b === 'marque démo' ? reply(PAGE) : b === 'md' ? reply({ ...PAGE, offers_direct: 0, offers_authorized: 3 }) : reply({ error: 'not_found' }, 404);
   }
   return reply({ query: '', currency: 'EUR', ttl_days: 7, ttl_days_manufacturer: 14, rates_at: '2026-11-04T15:00:00Z',
-    offers: [offer('MDTEST001', true), offer('MDTEST002', false), offer('XYZ123', false, 'Autre')] });
+    offers: [offer('MDTEST001', true), offer('MDTEST002', false), offer('XYZ123', false, 'Autre'), { ...offer('MDTEST003', false), authorized_distributor: true }] });
 }
 
 const browser = await chromium.launch();
@@ -55,9 +57,11 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   await page.waitForSelector('#table:not([hidden])');
   const rows = await page.$$eval('#rows tr', (t) => t.map((r) => r.textContent));
   ok(rows[0].includes('Direct fabricant') && !rows[0].includes('Fournisseur partenaire'), 'offre du fabricant : « Direct fabricant »');
+  ok(await page.getAttribute('#rows tr:first-child .tag', 'title') === 'Distribué en Europe par Central.Parts', 'badge : distribution en Europe par Central.Parts');
   ok(rows[1].includes('Fournisseur partenaire') && rows[2].includes('Fournisseur partenaire'), 'autres offres : vendeur anonyme');
+  ok(rows[3].includes('Distributeur agréé') && !rows[3].includes('Direct fabricant'), 'offre du distributeur agréé : « Distributeur agréé »');
   const links = await page.$$eval('#rows a.mfr', (a) => a.map((x) => x.getAttribute('href')));
-  ok(links.length === 2 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
+  ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
   await page.click('[data-lang=zh]');
   ok((await page.textContent('#rows tr:first-child')).includes('原厂直供') && (await page.getAttribute('#rows a.mfr', 'href')).endsWith('lang=zh'), '中文 : 原厂直供, lien dans la langue');
   ok(errors.length === 0, 'offres : aucune erreur console ' + errors.join(' | '));
@@ -73,7 +77,8 @@ for (const width of [1280, 390]) {
   ok((await page.textContent('h1')) === PAGE.name && await page.isVisible('#logo') && (await page.getAttribute('#logo', 'src')) === PAGE.logo_url, width + ' px : nom et logo');
   ok(text.includes('2013') && text.includes('12 000 m²') && text.includes('120+') && text.includes('3 milliard(s)') && text.includes('Chongqing'), width + ' px : chiffres clés');
   ok((await page.$$('#about p')).length === 2 && text.includes('Fabricant fictif'), width + ' px : présentation FR en paragraphes');
-  ok(text.includes('ISO 9001') && text.includes('中文, English') && text.includes('2 offre(s) en ligne'), width + ' px : certifications, langues, offres');
+  ok(text.includes('ISO 9001') && text.includes('中文, English') && text.includes('2 offre(s) en ligne en direct'), width + ' px : certifications, langues, offres');
+  ok(text.includes('Distribué en Europe par Central.Parts') && text.includes('revendeurs, brokers, excédents de stock'), width + ' px : distribution en Europe, limitée au canal officiel');
   ok(!/@|https?:\/\/(?!localhost)|USD|téléphone|WeChat/i.test(text), width + ' px : ni contact, ni site web, ni chiffre d\'affaires');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
   if (width === 1280) {
@@ -91,6 +96,9 @@ for (const width of [1280, 390]) {
 // ---------------------------------------------------------------- 3. marque sans page, sans JavaScript
 {
   const { page, errors } = await newPage(390);
+  await page.goto(BASE + '/fabricants/?b=MD&lang=fr');
+  await page.waitForSelector('#page:not([hidden])');
+  ok((await page.textContent('#offers-n')).includes('3 offre(s) en ligne par son distributeur agréé'), 'distributeur agréé : offres présentées comme telles');
   await page.goto(BASE + '/fabricants/?b=Inconnue&lang=fr');
   await page.waitForSelector('#msg:not([hidden])');
   ok((await page.textContent('#msg')).includes('Aucune page publiée') && await page.isHidden('#page'), 'marque sans page : message, rien d\'autre');

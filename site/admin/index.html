@@ -161,6 +161,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     <nav class="tabs" role="tablist">
       <button type="button" role="tab" id="tab-sup" aria-selected="true" aria-controls="p-sup">Fournisseurs</button>
       <button type="button" role="tab" id="tab-req" aria-selected="false" aria-controls="p-req">Demandes<span class="count" id="req-count" hidden></span></button>
+      <button type="button" role="tab" id="tab-mfr" aria-selected="false" aria-controls="p-mfr">Fabricants</button>
       <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="p-stock">Stocks et offres</button>
     </nav>
 
@@ -191,6 +192,15 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
           <button type="button" class="btn btn-line back" id="back">← Liste</button>
           <div class="card" id="sup-detail"><p class="muted">Choisissez une société dans la liste.</p></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Fabricants (ADR 0032) : marques, présentation, page publique, comptes rattachés (fabricant lui-même, distributeur agréé). -->
+    <div id="p-mfr" role="tabpanel" hidden>
+      <div class="actions" style="margin:0 0 12px"><button class="btn btn-main" type="button" id="mfr-new">Nouveau fabricant</button></div>
+      <div class="split">
+        <div class="list-col"><ul class="rows" id="mfr-list"></ul></div>
+        <div class="detail-col"><div class="card" id="mfr-detail"><p class="muted">Choisissez un fabricant dans la liste.</p></div></div>
       </div>
     </div>
 
@@ -363,17 +373,19 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
 
   // ------------------------------------------------------------ onglets
   function tab(which) {
-    ['sup', 'req', 'stock'].forEach(function (k) {
+    ['sup', 'req', 'mfr', 'stock'].forEach(function (k) {
       $('tab-' + k).setAttribute('aria-selected', String(which === k));
       $('p-' + k).hidden = which !== k;
     });
     show('');
     if (which === 'stock') loadStock();
     if (which === 'req') loadRequests();
+    if (which === 'mfr') loadManufacturers();
   }
   $('tab-sup').addEventListener('click', function () { tab('sup'); });
   $('tab-req').addEventListener('click', function () { tab('req'); });
   $('tab-stock').addEventListener('click', function () { tab('stock'); });
+  $('tab-mfr').addEventListener('click', function () { tab('mfr'); });
 
   // ------------------------------------------------------------ fournisseurs
   $('filters').addEventListener('click', function (ev) {
@@ -465,15 +477,16 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     }).catch(fail);
   }
 
-  // ------------------------------------------------------------ fiche société et page publique du fabricant (ADR 0032)
-  // Données saisies ici seulement (jamais dans le dépôt). La page publique ne montre ni contact, ni adresse, ni site web,
-  // ni chiffre d'affaires ; elle n'est en ligne que si un administrateur la publie.
+  // ------------------------------------------------------------ fiche société et contacts (ADR 0032)
+  // Données saisies ici seulement (jamais dans le dépôt), à usage interne : jamais montrées aux acheteurs.
   var STORAGE = LOCAL ? location.origin : 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
   var logoUrl = function (p) { return p ? STORAGE + '/storage/v1/object/public/seller-logos/' + p : ''; };
   var LANGS = { zh: '中文', en: 'English', fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어', es: 'Español', it: 'Italiano', ru: 'Русский' };
+  var ROLE = { self: 'Fabricant lui-même', authorized: 'Distributeur agréé' };
   var prof = null;
   var list = function (a) { return (a || []).length ? a.map(esc).join(', ') : '—'; };
   var opt = function (v) { return v == null || v === '' ? '—' : esc(v); };
+  var langs = function (a) { return list((a || []).map(function (c) { return LANGS[c] || c; })); };
   function profErr(e) {
     if (e && e.code === 'invalid') { show('Valeur refusée : ' + (e.detail || 'vérifiez la fiche') + '.', 'err'); return; }
     fail(e);
@@ -482,43 +495,39 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     return api('GET', '/supplier-profile?org=' + encodeURIComponent(org)).then(function (p) { prof = p; renderProfile(); })
       .catch(function (e) { if ($('d-profile')) $('d-profile').textContent = '—'; profErr(e); });
   }
+  function aboutRows(a) {
+    return ['fr', 'en', 'zh'].map(function (k) { return a[k] ? '<dt>Présentation ' + k.toUpperCase() + '</dt><dd class="pre">' + esc(a[k]) + '</dd>' : ''; }).join('');
+  }
   function renderProfile(edit) {
     var box = $('d-profile'), p = prof;
     if (!box || !p || $('sup-detail').dataset.org !== p.org_id) return;
     box.classList.remove('muted');
     if (edit) { box.innerHTML = profileForm(p); return; }
-    var about = ['fr', 'en', 'zh'].map(function (k) { return p.about[k] ? '<dt>Présentation ' + k.toUpperCase() + '</dt><dd class="pre">' + esc(p.about[k]) + '</dd>' : ''; }).join('');
-    var pub = p.public_page
-      ? '<p class="msg ok" id="pf-pub">Page publique en ligne, publiée par ' + esc(p.public_page_by) + ' le ' + esc(dt(p.public_page_at)) +
-        ' : <a href="/fabricants/?b=' + encodeURIComponent(p.brands[0]) + '" target="_blank" rel="noopener" id="pf-pub-link">voir la page ' + esc(p.brands[0]) + '</a></p>'
-      : '<p class="muted" id="pf-pub">Page publique non publiée' + (p.can_publish ? '.' : ' : il faut une marque, une présentation et une société approuvée.') + '</p>';
     box.innerHTML =
-      (p.logo_path ? '<img class="logo-s" id="pf-logo" src="' + esc(logoUrl(p.logo_path)) + '" alt="Logo">' : '') +
       '<dl class="kv" id="pf-view">' +
-      '<dt>Marques fabriquées</dt><dd id="pf-brands">' + list(p.brands) + '</dd>' +
       '<dt>Création</dt><dd>' + opt(p.founded_year) + '</dd>' +
-      '<dt>Site web (interne)</dt><dd class="mono">' + opt(p.website) + '</dd>' +
+      '<dt>Site web</dt><dd class="mono">' + opt(p.website) + '</dd>' +
       '<dt>Siège</dt><dd>' + opt(p.hq_city) + '</dd>' +
-      '<dt>Production</dt><dd>' + opt(p.production_site) + '</dd>' +
-      '<dt>Surface de production</dt><dd>' + (p.area_m2 ? num(p.area_m2) + ' m²' : '—') + '</dd>' +
       '<dt>Personnes</dt><dd>' + (p.staff ? num(p.staff) : '—') + '</dd>' +
-      '<dt>Pièces livrées par an</dt><dd>' + (p.annual_units ? num(p.annual_units) : '—') + '</dd>' +
-      '<dt>Chiffre d\'affaires (interne)</dt><dd>' + (p.revenue_usd ? num(p.revenue_usd) + ' USD' : '—') + '</dd>' +
-      '<dt>Positionnement</dt><dd>' + opt(p.positioning.fr || p.positioning.en || p.positioning.zh) + '</dd>' +
+      '<dt>Chiffre d\'affaires</dt><dd>' + (p.revenue_usd ? num(p.revenue_usd) + ' USD' : '—') + '</dd>' +
       '<dt>Certifications</dt><dd>' + list(p.certifications) + '</dd>' +
-      '<dt>Langues parlées</dt><dd>' + list((p.languages || []).map(function (c) { return LANGS[c] || c; })) + '</dd>' +
+      '<dt>Langues parlées</dt><dd>' + langs(p.languages) + '</dd>' +
       '<dt>Paiement</dt><dd>' + list(p.payment_methods) + (p.payment_terms ? ' · ' + esc(p.payment_terms) : '') + '</dd>' +
-      '<dt>Commande minimum</dt><dd>' + (p.min_order_usd != null ? num(p.min_order_usd) + ' USD' : '—') + '</dd>' + about +
-      '</dl>' + pub +
-      '<div class="actions"><button class="btn btn-line" type="button" data-pf="edit">Modifier la fiche</button>' +
-      (p.public_page ? '<button class="btn btn-line" type="button" data-pf="unpublish">Retirer la page publique</button>'
-        : '<button class="btn btn-ok" type="button" data-pf="publish"' + (p.can_publish ? '' : ' disabled') + '>Publier la page fabricant</button>') + '</div>' +
+      '<dt>Commande minimum</dt><dd>' + (p.min_order_usd != null ? num(p.min_order_usd) + ' USD' : '—') + '</dd>' + aboutRows(p.about) +
+      '</dl>' +
+      '<div class="actions"><button class="btn btn-line" type="button" data-pf="edit">Modifier la fiche</button></div>' +
+      '<h3>Fabricants rattachés</h3>' +
+      (p.manufacturers.length ? '<ul class="addr" id="pf-mfrs">' + p.manufacturers.map(function (m) {
+        return '<li><strong>' + esc(m.name) + '</strong> · ' + list(m.brands) + ' <span class="badge validated">' + esc(ROLE[m.role] || m.role) + '</span>' +
+          (m.public_page ? ' <span class="badge">page publiée</span>' : '') +
+          ' <button class="btn btn-line" type="button" data-pf="mopen" data-id="' + esc(m.id) + '">Ouvrir</button></li>';
+      }).join('') + '</ul>' : '<p class="muted" id="pf-mfrs">Aucun fabricant rattaché. Rattachez-le depuis l\'onglet Fabricants (fabricant ou distributeur seulement).</p>') +
       '<h3>Contacts</h3><p class="muted">Jamais affichés aux acheteurs. « RFQ » et « Commandes » : adresses préférées du fournisseur.</p>' +
       (p.contacts.length ? '<ul class="addr" id="pf-contacts">' + p.contacts.map(function (c) {
         return '<li data-id="' + esc(c.id) + '"><strong>' + esc(c.name) + '</strong>' + (c.role ? ', ' + esc(c.role) : '') +
           (c.for_rfq ? ' <span class="badge validated">RFQ</span>' : '') + (c.for_po ? ' <span class="badge validated">Commandes</span>' : '') +
           '<br><span class="mono">' + esc([c.email, c.phone, c.wechat ? 'WeChat ' + c.wechat : ''].filter(Boolean).join(' · ') || '—') + '</span>' +
-          (c.languages.length ? '<br><span class="muted">' + list(c.languages.map(function (x) { return LANGS[x] || x; })) + '</span>' : '') +
+          (c.languages.length ? '<br><span class="muted">' + langs(c.languages) + '</span>' : '') +
           ' <button class="btn btn-line" type="button" data-pf="cedit" data-id="' + esc(c.id) + '">Modifier</button>' +
           ' <button class="btn btn-line" type="button" data-pf="cdel" data-id="' + esc(c.id) + '">Retirer</button></li>';
       }).join('') + '</ul>' : '<p class="muted" id="pf-contacts">Aucun contact.</p>') +
@@ -530,26 +539,17 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function area(id, label, value) { return '<label class="f">' + label + '<textarea id="' + id + '" maxlength="4000">' + esc(value || '') + '</textarea></label>'; }
   function profileForm(p) {
     return '<form id="pf-form"><div class="pf-grid">' +
-      field('pf-brands-i', 'Marques fabriquées (séparées par des virgules)', (p.brands || []).join(', ')) +
       field('pf-year', 'Année de création', p.founded_year, 'number', ' min="1800" max="2100"') +
-      field('pf-web', 'Site web (interne, jamais publié)', p.website, 'url') +
+      field('pf-web', 'Site web', p.website, 'url') +
       field('pf-hq', 'Siège (ville, pays)', p.hq_city) +
-      field('pf-prod', 'Production (ville, pays)', p.production_site) +
-      field('pf-area', 'Surface de production (m²)', p.area_m2, 'number', ' min="1"') +
       field('pf-staff', 'Nombre de personnes', p.staff, 'number', ' min="1"') +
-      field('pf-units', 'Pièces livrées par an', p.annual_units, 'number', ' min="1"') +
-      field('pf-rev', 'Chiffre d\'affaires annuel, USD (interne)', p.revenue_usd, 'number', ' min="1"') +
+      field('pf-rev', 'Chiffre d\'affaires annuel, USD', p.revenue_usd, 'number', ' min="1"') +
       field('pf-min', 'Commande minimum, USD', p.min_order_usd, 'number', ' min="0"') +
       field('pf-cert', 'Certifications (virgules)', (p.certifications || []).join(', ')) +
       field('pf-langs', 'Langues parlées (codes : zh, en, fr…)', (p.languages || []).join(', ')) +
       field('pf-pay', 'Moyens de paiement (virgules)', (p.payment_methods || []).join(', ')) +
       field('pf-terms', 'Conditions de paiement', p.payment_terms) +
-      '</div>' +
-      field('pf-pos-fr', 'Positionnement FR (une phrase)', p.positioning.fr) +
-      field('pf-pos-en', 'Positionnement EN', p.positioning.en) +
-      field('pf-pos-zh', 'Positionnement 中文', p.positioning.zh) +
-      area('pf-about-fr', 'Présentation FR', p.about.fr) + area('pf-about-en', 'Présentation EN', p.about.en) + area('pf-about-zh', 'Présentation 中文', p.about.zh) +
-      '<label class="f">Logo (PNG, JPEG ou WebP, 1 Mo au plus)<input type="file" id="pf-logo-f" accept="image/png,image/jpeg,image/webp"></label>' +
+      '</div>' + area('pf-about-fr', 'Présentation FR', p.about.fr) + area('pf-about-en', 'Présentation EN', p.about.en) + area('pf-about-zh', 'Présentation 中文', p.about.zh) +
       '<div class="actions"><button class="btn btn-main" type="submit" id="pf-save">Enregistrer la fiche</button>' +
       '<button class="btn btn-line" type="button" data-pf="cancel">Annuler</button></div></form>';
   }
@@ -565,38 +565,23 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       '<button class="btn btn-line" type="button" data-pf="ccancel">Annuler</button></div></form>';
   }
   var csv = function (id) { return $(id).value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); };
+  var csvLow = function (id) { return csv(id).map(function (s) { return s.toLowerCase(); }); };
   var val = function (id) { return $(id).value.trim(); };
-  function uploadLogo(org, f) {
-    if (!f) return Promise.resolve(null);
-    if (f.size > 1048576) return Promise.reject({ code: 'invalid', detail: 'logo de plus de 1 Mo' });
-    return api('POST', '/logo-upload-url', { org: org, type: f.type }).then(function (u) {
-      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
-      return fetch(u.signed_url, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: fd })
-        .then(function (r) { if (!r.ok) throw { code: 'invalid', detail: 'dépôt du logo refusé' }; return u.path; });
-    });
-  }
   $('sup-detail').addEventListener('submit', function (ev) {
     var org = this.dataset.org;
     if (ev.target.id === 'pf-form') {
       ev.preventDefault();
       $('pf-save').disabled = true;
-      uploadLogo(org, $('pf-logo-f').files[0]).then(function (logo) {
-        var profile = { brands: csv('pf-brands-i'), founded_year: val('pf-year'), website: val('pf-web'), hq_city: val('pf-hq'),
-          production_site: val('pf-prod'), area_m2: val('pf-area'), staff: val('pf-staff'), annual_units: val('pf-units'),
-          revenue_usd: val('pf-rev'), min_order_usd: val('pf-min'), certifications: csv('pf-cert'), languages: csv('pf-langs').map(function (s) { return s.toLowerCase(); }),
-          payment_methods: csv('pf-pay'), payment_terms: val('pf-terms'),
-          positioning: { fr: val('pf-pos-fr'), en: val('pf-pos-en'), zh: val('pf-pos-zh') },
-          about: { fr: val('pf-about-fr'), en: val('pf-about-en'), zh: val('pf-about-zh') } };
-        if (logo) profile.logo_path = logo;
-        return api('POST', '/supplier-profile', { org: org, profile: profile });
-      }).then(function (p) { prof = p; renderProfile(); show('Fiche enregistrée.', 'ok'); })
+      var profile = { founded_year: val('pf-year'), website: val('pf-web'), hq_city: val('pf-hq'), staff: val('pf-staff'), revenue_usd: val('pf-rev'),
+        min_order_usd: val('pf-min'), certifications: csv('pf-cert'), languages: csvLow('pf-langs'), payment_methods: csv('pf-pay'),
+        payment_terms: val('pf-terms'), about: { fr: val('pf-about-fr'), en: val('pf-about-en'), zh: val('pf-about-zh') } };
+      api('POST', '/supplier-profile', { org: org, profile: profile }).then(function (p) { prof = p; renderProfile(); show('Fiche enregistrée.', 'ok'); })
         .catch(function (e) { if ($('pf-save')) $('pf-save').disabled = false; profErr(e); });
     }
     if (ev.target.id === 'pf-cf') {
       ev.preventDefault();
       var c = { id: ev.target.getAttribute('data-id') || null, name: val('cf-name'), role: val('cf-role'), email: val('cf-email'),
-        phone: val('cf-phone'), wechat: val('cf-wechat'), languages: csv('cf-langs').map(function (s) { return s.toLowerCase(); }),
-        for_rfq: $('cf-rfq').checked, for_po: $('cf-po').checked };
+        phone: val('cf-phone'), wechat: val('cf-wechat'), languages: csvLow('cf-langs'), for_rfq: $('cf-rfq').checked, for_po: $('cf-po').checked };
       api('POST', '/supplier-contact', { org: org, contact: c }).then(function (p) { prof = p; renderProfile(); show('Contact enregistré.', 'ok'); }).catch(profErr);
     }
   });
@@ -606,6 +591,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var a = b.getAttribute('data-pf'), org = this.dataset.org, id = b.getAttribute('data-id');
     if (a === 'edit') renderProfile(true);
     if (a === 'cancel') renderProfile();
+    if (a === 'mopen') { tab('mfr'); openManufacturer(id); }
     if (a === 'cadd' || a === 'cedit') {
       $('pf-cform').innerHTML = contactForm(a === 'cedit' ? prof.contacts.filter(function (c) { return c.id === id; })[0] : null);
       $('cf-name').focus();
@@ -614,11 +600,140 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (a === 'cdel' && window.confirm('Retirer ce contact ?')) {
       api('POST', '/supplier-contact/delete', { org: org, id: id }).then(function (p) { prof = p; renderProfile(); }).catch(profErr);
     }
+  });
+
+  // ------------------------------------------------------------ fabricants et distributeurs (migration 20261105000033)
+  // Un fabricant a ses marques, sa présentation et sa page publique /fabricants/ ; il est rattaché aux comptes qui
+  // vendent ses marques : lui-même (« Direct fabricant ») ou un distributeur agréé. Ces fabricants sont distribués en
+  // Europe par Central.Parts ; jamais un revendeur, un broker ni un excédent de stock (refusé par la base).
+  var mfrs = [], mfr = null, sellers = [];
+  function loadManufacturers() {
+    return Promise.all([api('GET', '/manufacturers'), api('GET', '/suppliers?status=validated')]).then(function (r) {
+      mfrs = r[0]; sellers = (r[1].rows || []).filter(function (o) { return o.profile === 'Manufacturer' || o.profile === 'Distributor'; });
+      renderMfrList();
+      if (mfr) openManufacturer(mfr.id);
+    }).catch(fail);
+  }
+  function renderMfrList() {
+    $('mfr-list').innerHTML = mfrs.length ? mfrs.map(function (m) {
+      return '<li><button type="button" data-mfr="' + esc(m.id) + '"' + (mfr && mfr.id === m.id ? ' aria-current="true"' : '') + '>' +
+        '<div class="r1"><strong>' + esc(m.name) + '</strong><span class="badge' + (m.public_page ? ' validated' : '') + '">' + (m.public_page ? 'Page publiée' : 'Non publiée') + '</span></div>' +
+        '<div class="r2">' + esc(m.id) + ' · ' + list(m.brands) + ' · ' + m.distributors.length + ' compte(s)</div></button></li>';
+    }).join('') : '<li class="empty">Aucun fabricant.</li>';
+  }
+  function openManufacturer(id) {
+    return api('GET', '/manufacturer?id=' + encodeURIComponent(id)).then(function (m) { mfr = m; renderMfrList(); renderMfr(); }).catch(profErr);
+  }
+  function renderMfr(edit) {
+    var box = $('mfr-detail'), m = mfr;
+    if (edit || !m) { box.innerHTML = mfrForm(m || { brands: [], about: {}, positioning: {}, certifications: [], languages: [] }); return; }
+    var pub = m.public_page
+      ? '<p class="msg ok" id="mf-pub">Page publique en ligne, publiée par ' + esc(m.public_page_by) + ' le ' + esc(dt(m.public_page_at)) +
+        ' : <a href="/fabricants/?b=' + encodeURIComponent(m.brands[0]) + '" target="_blank" rel="noopener" id="mf-pub-link">voir la page ' + esc(m.brands[0]) + '</a></p>'
+      : '<p class="muted" id="mf-pub">Page publique non publiée' + (m.can_publish ? '.' : ' : il faut au moins une marque et une présentation.') + '</p>';
+    var linked = m.distributors.map(function (d) { return d.org_id; });
+    box.innerHTML =
+      '<div class="r1"><h2 id="mf-name">' + esc(m.name) + '</h2><span class="mono">' + esc(m.id) + '</span></div>' +
+      (m.logo_path ? '<img class="logo-s" id="mf-logo" src="' + esc(logoUrl(m.logo_path)) + '" alt="Logo">' : '') +
+      '<dl class="kv" id="mf-view">' +
+      '<dt>Marques</dt><dd id="mf-brands">' + list(m.brands) + '</dd>' +
+      '<dt>Création</dt><dd>' + opt(m.founded_year) + '</dd>' +
+      '<dt>Site web (interne)</dt><dd class="mono">' + opt(m.website) + '</dd>' +
+      '<dt>Siège</dt><dd>' + opt(m.hq_city) + '</dd>' +
+      '<dt>Production</dt><dd>' + opt(m.production_site) + '</dd>' +
+      '<dt>Surface de production</dt><dd>' + (m.area_m2 ? num(m.area_m2) + ' m²' : '—') + '</dd>' +
+      '<dt>Personnes</dt><dd>' + (m.staff ? num(m.staff) : '—') + '</dd>' +
+      '<dt>Pièces livrées par an</dt><dd>' + (m.annual_units ? num(m.annual_units) : '—') + '</dd>' +
+      '<dt>Chiffre d\'affaires (interne)</dt><dd>' + (m.revenue_usd ? num(m.revenue_usd) + ' USD' : '—') + '</dd>' +
+      '<dt>Positionnement</dt><dd>' + opt(m.positioning.fr || m.positioning.en || m.positioning.zh) + '</dd>' +
+      '<dt>Certifications</dt><dd>' + list(m.certifications) + '</dd>' +
+      '<dt>Langues parlées</dt><dd>' + langs(m.languages) + '</dd>' + aboutRows(m.about) +
+      '</dl>' + pub +
+      '<div class="actions"><button class="btn btn-line" type="button" data-mf="edit">Modifier le fabricant</button>' +
+      (m.public_page ? '<button class="btn btn-line" type="button" data-mf="unpublish">Retirer la page publique</button>'
+        : '<button class="btn btn-ok" type="button" data-mf="publish"' + (m.can_publish ? '' : ' disabled') + '>Publier la page fabricant</button>') + '</div>' +
+      '<h3>Comptes rattachés</h3><p class="muted">Leurs offres de ces marques portent « Direct fabricant » ou « Distributeur agréé » : distribution en Europe par Central.Parts. ' +
+      'Fabricant ou distributeur seulement : jamais un revendeur, un broker ni un excédent de stock.</p>' +
+      (m.distributors.length ? '<ul class="addr" id="mf-dists">' + m.distributors.map(function (d) {
+        return '<li><strong>' + esc(d.name) + '</strong> <span class="mono">' + esc(d.org_id) + '</span> <span class="badge validated">' + esc(ROLE[d.role] || d.role) + '</span>' +
+          ' <span class="muted">· ' + num(d.offers) + ' offre(s) de ces marques</span>' +
+          ' <button class="btn btn-line" type="button" data-mf="unlink" data-org="' + esc(d.org_id) + '">Détacher</button></li>';
+      }).join('') + '</ul>' : '<p class="muted" id="mf-dists">Aucun compte rattaché.</p>') +
+      '<form id="mf-link" class="tools" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto">' +
+      '<label class="f" style="margin:0">Compte fournisseur<select id="ml-org">' + sellers.filter(function (o) { return linked.indexOf(o.org_id) < 0; }).map(function (o) {
+        return '<option value="' + esc(o.org_id) + '">' + esc(o.name) + ' (' + esc(o.org_id) + ')</option>'; }).join('') + '</select></label>' +
+      '<label class="f" style="margin:0">Rôle<select id="ml-role"><option value="authorized">Distributeur agréé</option><option value="self">Fabricant lui-même</option></select></label>' +
+      '<button class="btn btn-main" type="submit">Rattacher</button></form>';
+  }
+  function mfrForm(m) {
+    return '<form id="mf-form"><h2>' + (m.id ? 'Modifier ' + esc(m.name) : 'Nouveau fabricant') + '</h2><div class="pf-grid">' +
+      field('mf-name-i', 'Nom du fabricant (affiché sur la page publique)', m.name, 'text', ' required maxlength="200"') +
+      field('mf-brands-i', 'Marques (virgules, comme dans les fichiers de stock)', (m.brands || []).join(', ')) +
+      field('mf-year', 'Année de création', m.founded_year, 'number', ' min="1800" max="2100"') +
+      field('mf-web', 'Site web (interne, jamais publié)', m.website, 'url') +
+      field('mf-hq', 'Siège (ville, pays)', m.hq_city) +
+      field('mf-prod', 'Production (ville, pays)', m.production_site) +
+      field('mf-area', 'Surface de production (m²)', m.area_m2, 'number', ' min="1"') +
+      field('mf-staff', 'Nombre de personnes', m.staff, 'number', ' min="1"') +
+      field('mf-units', 'Pièces livrées par an', m.annual_units, 'number', ' min="1"') +
+      field('mf-rev', 'Chiffre d\'affaires annuel, USD (interne)', m.revenue_usd, 'number', ' min="1"') +
+      field('mf-cert', 'Certifications (virgules)', (m.certifications || []).join(', ')) +
+      field('mf-langs', 'Langues parlées (codes : zh, en, fr…)', (m.languages || []).join(', ')) +
+      '</div>' +
+      field('mf-pos-fr', 'Positionnement FR (une phrase)', m.positioning.fr) + field('mf-pos-en', 'Positionnement EN', m.positioning.en) +
+      field('mf-pos-zh', 'Positionnement 中文', m.positioning.zh) +
+      area('mf-about-fr', 'Présentation FR', m.about.fr) + area('mf-about-en', 'Présentation EN', m.about.en) + area('mf-about-zh', 'Présentation 中文', m.about.zh) +
+      '<label class="f">Logo (PNG, JPEG ou WebP, 1 Mo au plus)<input type="file" id="mf-logo-f" accept="image/png,image/jpeg,image/webp"></label>' +
+      '<div class="actions"><button class="btn btn-main" type="submit" id="mf-save">Enregistrer le fabricant</button>' +
+      '<button class="btn btn-line" type="button" data-mf="cancel">Annuler</button></div></form>';
+  }
+  function uploadLogo(id, f) {
+    if (!f) return Promise.resolve(null);
+    if (f.size > 1048576) return Promise.reject({ code: 'invalid', detail: 'logo de plus de 1 Mo' });
+    return api('POST', '/logo-upload-url', { id: id, type: f.type }).then(function (u) {
+      var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f);
+      return fetch(u.signed_url, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: fd })
+        .then(function (r) { if (!r.ok) throw { code: 'invalid', detail: 'dépôt du logo refusé' }; return u.path; });
+    });
+  }
+  $('mfr-new').addEventListener('click', function () { mfr = null; renderMfrList(); renderMfr(true); $('mf-name-i').focus(); });
+  $('mfr-list').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-mfr]'); if (b) openManufacturer(b.getAttribute('data-mfr')); });
+  $('mfr-detail').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (ev.target.id === 'mf-form') {
+      $('mf-save').disabled = true;
+      var data = { name: val('mf-name-i'), brands: csv('mf-brands-i'), founded_year: val('mf-year'), website: val('mf-web'), hq_city: val('mf-hq'),
+        production_site: val('mf-prod'), area_m2: val('mf-area'), staff: val('mf-staff'), annual_units: val('mf-units'), revenue_usd: val('mf-rev'),
+        certifications: csv('mf-cert'), languages: csvLow('mf-langs'),
+        positioning: { fr: val('mf-pos-fr'), en: val('mf-pos-en'), zh: val('mf-pos-zh') },
+        about: { fr: val('mf-about-fr'), en: val('mf-about-en'), zh: val('mf-about-zh') } };
+      var file = $('mf-logo-f').files[0], id = mfr && mfr.id;
+      // Nouveau fabricant : créé d'abord, pour que le logo aille dans son dossier.
+      api('POST', '/manufacturer', { id: id, manufacturer: data }).then(function (m) {
+        return uploadLogo(m.id, file).then(function (path) { return path ? api('POST', '/manufacturer', { id: m.id, manufacturer: { logo_path: path } }) : m; });
+      }).then(function (m) { mfr = m; show('Fabricant enregistré.', 'ok'); return loadManufacturers(); })
+        .catch(function (e) { if ($('mf-save')) $('mf-save').disabled = false; profErr(e); });
+    }
+    if (ev.target.id === 'mf-link') {
+      if (!val('ml-org')) return;
+      api('POST', '/manufacturer/link', { id: mfr.id, org: val('ml-org'), role: $('ml-role').value })
+        .then(function (m) { mfr = m; show('Compte rattaché.', 'ok'); return loadManufacturers(); }).catch(profErr);
+    }
+  });
+  $('mfr-detail').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-mf]');
+    if (!b) return;
+    var a = b.getAttribute('data-mf');
+    if (a === 'edit') renderMfr(true);
+    if (a === 'cancel') { if (mfr) renderMfr(); else $('mfr-detail').innerHTML = '<p class="muted">Choisissez un fabricant dans la liste.</p>'; }
+    if (a === 'unlink' && window.confirm('Détacher ce compte ? Ses offres de ces marques ne porteront plus de badge.')) {
+      api('POST', '/manufacturer/unlink', { id: mfr.id, org: b.getAttribute('data-org') }).then(function (m) { mfr = m; return loadManufacturers(); }).catch(profErr);
+    }
     if ((a === 'publish' || a === 'unpublish') && window.confirm(a === 'publish'
-      ? 'Publier la page de ' + prof.brands.join(', ') + ' sur central.parts/fabricants/ ? Elle montre la présentation, le logo et les chiffres, jamais les contacts ni le chiffre d\'affaires. Vérifiez l\'accord du fabricant.'
+      ? 'Publier la page de ' + mfr.name + ' (' + mfr.brands.join(', ') + ') sur central.parts/fabricants/ ? Elle montre la présentation, le logo et les chiffres, jamais les contacts, les distributeurs ni le chiffre d\'affaires. Vérifiez l\'accord du fabricant.'
       : 'Retirer la page publique ? Les offres ne renverront plus vers elle.')) {
-      api('POST', '/supplier-publish', { org: org, on: a === 'publish' }).then(function (p) {
-        prof = p; renderProfile(); show(a === 'publish' ? 'Page fabricant publiée.' : 'Page fabricant retirée.', 'ok');
+      api('POST', '/manufacturer/publish', { id: mfr.id, on: a === 'publish' }).then(function (m) {
+        mfr = m; show(a === 'publish' ? 'Page fabricant publiée.' : 'Page fabricant retirée.', 'ok'); return loadManufacturers();
       }).catch(profErr);
     }
   });

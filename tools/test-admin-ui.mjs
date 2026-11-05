@@ -157,56 +157,97 @@ ok(/^https:\/\/central\.parts\/depot\/lien\/#k=[0-9a-f]{48}$/.test(depotHref) &&
 ok(norm(await page.textContent('#d-depot-link')).includes('valable jusqu\'à') && mock.state.depotLinks?.length === 1 && mock.state.depotLinks[0].org === 'ORG-0110',
   'dépôt : lien demandé pour ce fournisseur, échéance affichée');
 
-// 8 quater. Fiche société et page publique du fabricant (ADR 0032) : saisie, logo, contacts, publication sous contrôle.
+// 8 quater. Fiche société et contacts (ADR 0032) ; fabricants, distributeurs et page publique (migration 20261105000033).
 await page.waitForSelector('#pf-view');
-ok(await page.isDisabled('button[data-pf=publish]') && norm(await page.textContent('#pf-pub')).includes('non publiée'), 'fiche vide : publication impossible');
+ok(norm(await page.textContent('#pf-mfrs')).includes('Aucun fabricant rattaché'), 'fiche société : aucun fabricant rattaché');
 await page.click('button[data-pf=edit]');
-await page.fill('#pf-brands-i', 'Marque Démo, MD');
-await page.fill('#pf-year', '2013');
 await page.fill('#pf-web', 'ftp://exemple');
-await page.fill('#pf-about-en', 'Fictitious manufacturer of analog and discrete parts.');
 await page.click('#pf-save');
 await page.waitForSelector('#msg.err');
 ok(norm(await page.textContent('#msg')).includes('Site web'), 'fiche : site web invalide refusé, message clair');
-await page.fill('#pf-web', 'https://fabricant.example');
-await page.fill('#pf-staff', '120');
-await page.fill('#pf-units', '3000000000');
-await page.fill('#pf-rev', '70000000');
-await page.fill('#pf-cert', 'ISO 9001, IATF 16949');
+await page.fill('#pf-web', 'https://distributeur.example');
+await page.fill('#pf-staff', '170');
+await page.fill('#pf-rev', '1000000');
 await page.fill('#pf-langs', 'zh, EN');
-await page.fill('#pf-about-zh', '虚构的制造商。');
-await page.setInputFiles('#pf-logo-f', { name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+await page.fill('#pf-about-en', 'Fictitious distributor.');
 await page.click('#pf-save');
 await page.waitForSelector('#pf-view');
 const pv = norm(await page.textContent('#pf-view'));
-ok(pv.includes('Marque Démo, MD') && pv.includes('3 000 000 000') && pv.includes('70 000 000 USD') && pv.includes('中文, English') && pv.includes('虚构的制造商'),
-  'fiche : marques, chiffres, CA interne, langues et présentation affichés');
-ok(uploads.some((u) => u.includes('/seller-logos/ORG-0110/')) && await page.getAttribute('#pf-logo', 'src') === BASE + '/storage/v1/object/public/seller-logos/ORG-0110/logo-1.png',
-  'fiche : logo déposé dans le dossier du fournisseur, affiché');
-ok(!(await page.isDisabled('button[data-pf=publish]')), 'fiche complète : publication possible');
-let confirmText = '';
-page.once('dialog', (d) => { confirmText = d.message(); d.accept(); });
-await page.click('button[data-pf=publish]');
-await page.waitForSelector('#pf-pub-link');
-ok(confirmText.includes('accord du fabricant') && await page.getAttribute('#pf-pub-link', 'href') === '/fabricants/?b=Marque%20D%C3%A9mo',
-  'publication : confirmation explicite, lien vers la page publique');
-ok(norm(await page.textContent('#pf-pub')).includes(ADMIN_EMAIL), 'publication : au nom de l\'administrateur');
+ok(pv.includes('1 000 000 USD') && pv.includes('中文, English') && pv.includes('Fictitious distributor.'), 'fiche société : chiffres, langues et présentation affichés');
 await page.click('button[data-pf=cadd]');
 await page.fill('#cf-name', 'Contact démo (fictif)');
 await page.fill('#cf-email', 'pas-un-email');
 await page.click('#pf-cf button[type=submit]');
 ok(!(await page.evaluate(() => document.getElementById('cf-email').validity.valid)) && !(await page.$('#pf-contacts li')), 'contact : e-mail invalide bloqué avant envoi');
-await page.fill('#cf-email', 'Ventes@Fabricant.Example');
+await page.fill('#cf-email', 'Ventes@Distributeur.Example');
 await page.check('#cf-rfq');
 await page.check('#cf-po');
 await page.click('#pf-cf button[type=submit]');
 await page.waitForSelector('#pf-contacts li');
 const ctc = norm(await page.textContent('#pf-contacts'));
-ok(ctc.includes('ventes@fabricant.example') && ctc.includes('RFQ') && ctc.includes('Commandes'), 'contact : ajouté, adresses préférées RFQ et commandes');
+ok(ctc.includes('ventes@distributeur.example') && ctc.includes('RFQ') && ctc.includes('Commandes'), 'contact : ajouté, adresses préférées RFQ et commandes');
+
+// Fabricants : création, logo, rattachement du distributeur agréé et du fabricant lui-même, publication.
+await page.click('#tab-mfr');
+await page.waitForSelector('#mfr-list li');
+ok(norm(await page.textContent('#mfr-list')).includes('Aucun fabricant'), 'fabricants : liste vide au départ');
+await page.click('#mfr-new');
+await page.fill('#mf-name-i', 'Fabricant Démo (fictif)');
+await page.fill('#mf-brands-i', 'Marque Démo, MD');
+await page.fill('#mf-year', '2013');
+await page.fill('#mf-units', '3000000000');
+await page.fill('#mf-rev', '70000000');
+await page.fill('#mf-cert', 'ISO 9001, IATF 16949');
+await page.setInputFiles('#mf-logo-f', { name: 'logo.png', mimeType: 'image/png', buffer: PNG });
+await page.click('#mf-save');
+await page.waitForSelector('#mf-view');
+const mv = norm(await page.textContent('#mf-view'));
+ok(mv.includes('Marque Démo, MD') && mv.includes('3 000 000 000') && mv.includes('70 000 000 USD'), 'fabricant : créé, marques et chiffres affichés');
+ok(uploads.some((u) => u.includes('/seller-logos/MFR-0001/')) && await page.getAttribute('#mf-logo', 'src') === BASE + '/storage/v1/object/public/seller-logos/MFR-0001/logo-1.png',
+  'fabricant : logo déposé dans son dossier, affiché');
+ok(await page.isDisabled('button[data-mf=publish]') && norm(await page.textContent('#mf-pub')).includes('il faut'), 'sans présentation : publication impossible');
+const options = await page.$$eval('#ml-org option', (o) => o.map((x) => x.value));
+ok(options.includes('ORG-0110') && options.includes('ORG-0111') && options.length === 2, 'rattachement : seulement les fabricants et distributeurs approuvés');
+await page.selectOption('#ml-org', 'ORG-0110');
+await page.selectOption('#ml-role', 'authorized');
+await page.click('#mf-link button[type=submit]');
+await page.waitForFunction(() => /Distributeur agréé/.test(document.getElementById('mf-dists').textContent));
+await page.selectOption('#ml-org', 'ORG-0111');
+await page.selectOption('#ml-role', 'self');
+await page.click('#mf-link button[type=submit]');
+await page.waitForFunction(() => /Fabricant lui-même/.test(document.getElementById('mf-dists').textContent));
+ok((await page.$$('#mf-dists li')).length === 2 && (await page.$$('#ml-org option')).length === 0, 'deux comptes rattachés : distributeur agréé et fabricant lui-même');
+await page.click('button[data-mf=edit]');
+await page.fill('#mf-about-en', 'Fictitious manufacturer of analog and discrete parts.');
+await page.fill('#mf-about-zh', '虚构的制造商。');
+await page.click('#mf-save');
+await page.waitForSelector('#mf-view');
+ok(norm(await page.textContent('#mf-view')).includes('虚构的制造商') && norm(await page.textContent('#mf-view')).includes('2013'), 'modification : présentation ajoutée, chiffres conservés');
+let confirmText = '';
+page.once('dialog', (d) => { confirmText = d.message(); d.accept(); });
+await page.click('button[data-mf=publish]');
+await page.waitForSelector('#mf-pub-link');
+ok(confirmText.includes('accord du fabricant') && await page.getAttribute('#mf-pub-link', 'href') === '/fabricants/?b=Marque%20D%C3%A9mo',
+  'publication : confirmation explicite, lien vers la page publique');
+ok(norm(await page.textContent('#mf-pub')).includes(ADMIN_EMAIL) && norm(await page.textContent('#mfr-list')).includes('Page publiée'), 'publication : au nom de l\'administrateur, liste à jour');
+await page.click('#tab-sup');
+await page.click('button[data-org="ORG-0110"]');
+await page.waitForSelector('#pf-mfrs li');
+ok(norm(await page.textContent('#pf-mfrs')).includes('Fabricant Démo (fictif)') && norm(await page.textContent('#pf-mfrs')).includes('Distributeur agréé'),
+  'fiche du distributeur : fabricant rattaché affiché');
+await page.click('button[data-pf=mopen]');
+await page.waitForSelector('#mf-view');
 page.once('dialog', (d) => d.accept());
-await page.click('button[data-pf=unpublish]');
-await page.waitForSelector('button[data-pf=publish]');
-ok(norm(await page.textContent('#pf-pub')).includes('non publiée'), 'page publique retirée');
+await page.click('button[data-mf=unpublish]');
+await page.waitForSelector('button[data-mf=publish]');
+ok(norm(await page.textContent('#mf-pub')).includes('non publiée'), 'page publique retirée');
+page.once('dialog', (d) => d.accept());
+await page.click('#mf-dists button[data-org="ORG-0110"]');
+await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 1);
+ok((await page.$$('#ml-org option')).length === 1, 'distributeur détaché, de nouveau proposé');
+await page.click('#tab-sup');
+await page.click('button[data-org="ORG-0110"]');
+await page.waitForSelector('#d-org:text("ORG-0110")');
 
 // 9. Stocks et offres : résumé, 1 812 références paginées, recherche, paliers ; aucune action d'écriture.
 await page.click('#tab-stock');
