@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<!-- Suivi d'une recherche payante de composants rares (ADR 0033). Écrite à la main, pas générée. Non indexée.
+     Lien personnel /sourcing/suivi/#JETON (fragment : jamais envoyé au serveur web ni écrit dans les journaux) ;
+     la fonction Edge « sourcing » (route /status) vérifie le jeton par son empreinte. Textes chinois : à faire relire. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi de recherche · Search status · 寻源进度 — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
+main.wrap{padding:32px 16px 64px}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.badge{display:inline-block;font-size:var(--text-sm);padding:2px 10px;border-radius:var(--radius-pill);background:var(--status-info-bg);color:var(--status-info)}
+.badge.ok{background:var(--status-success-bg);color:var(--status-success)}
+.badge.ko{background:var(--status-danger-bg);color:var(--status-danger)}
+dl{display:grid;grid-template-columns:minmax(120px,2fr) minmax(0,3fr);gap:6px 16px;margin:12px 0 0;font-size:var(--text-sm)}
+dt{color:var(--fg-3)}
+dd{margin:0;overflow-wrap:anywhere}
+.note{white-space:pre-wrap}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+[hidden]{display:none!important}
+/* Menu de navigation commun des pages acheteur (dans l'en-tête, sous la marque). */
+.hdr .topnav .wrap{display:flex;justify-content:flex-start;align-items:center;gap:20px;height:40px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:var(--text-sm)}
+.topnav a{color:var(--fg-inverse-2);text-decoration:none}
+.topnav a:hover{color:var(--fg-inverse)}
+.topnav a[aria-current=page]{color:var(--fg-inverse);font-weight:var(--weight-medium)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/" id="home">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <div class="langs" role="group" aria-label="Langue / Language / 语言">
+      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+  <nav class="topnav" aria-label="Navigation">
+    <div class="wrap">
+      <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
+      <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
+      <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件" aria-current="page">Composants rares</a>
+      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件">Conditions commerciales</a>
+      <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API">API</a>
+      <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+  <h1 data-t="title">Votre recherche de composant</h1>
+  <noscript><p class="msg">Cette page a besoin de JavaScript. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
+  <p class="msg" id="msg" role="status" hidden></p>
+  <section class="card" id="card" hidden>
+    <p><span class="badge" id="st"></span></p>
+    <p id="st-text"></p>
+    <dl id="facts"></dl>
+    <div id="note-box" hidden><h2 data-t="noteTitle" style="font-size:var(--text-lg);margin:16px 0 8px">Message de Central.Parts</h2><p class="note" id="note"></p></div>
+    <p class="muted" id="credit"></p>
+  </section>
+  <p class="muted" data-t="keep">Gardez ce lien : il donne accès au suivi de votre demande. Une question ? contact@central.parts</p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/sourcing/status';
+  var T = {
+    fr: { title: 'Votre recherche de composant', noteTitle: 'Message de Central.Parts', home: '/',
+      keep: 'Gardez ce lien : il donne accès au suivi de votre demande. Une question ? contact@central.parts',
+      s: { awaiting_payment: 'Paiement en cours de confirmation', paid: 'Payée : recherche en préparation', in_progress: 'Recherche en cours',
+        offers_sent: 'Offres envoyées', not_found: 'Aucune offre trouvée', cancelled: 'Annulée' },
+      d: { awaiting_payment: 'Nous attendons la confirmation de votre paiement : cette page se met à jour toute seule.',
+        paid: 'Votre paiement est confirmé. Nous lançons la recherche et revenons vers vous par e-mail.',
+        in_progress: 'Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.',
+        offers_sent: 'Nous vous avons envoyé les offres trouvées par e-mail.', not_found: 'Nous n’avons pas trouvé d’offre fiable pour cette référence.',
+        cancelled: 'Cette demande a été annulée.' },
+      ref: 'Demande', mpn: 'Référence', mfr: 'Fabricant', qty: 'Quantité', by: 'Date souhaitée', target: 'Prix cible', cond: 'État accepté',
+      cNew: 'Neuf d’origine uniquement', cAny: 'Neuf ou reconditionné', company: 'Société', paid: 'Frais payés',
+      credit: 'Les frais de recherche ({a} HT) seront déduits de votre commande.', creditUsed: 'Les frais de recherche ont été déduits de votre commande.',
+      e: { link_invalid: 'Ce lien de suivi n’est pas valide. Vérifiez qu’il est complet, ou écrivez à contact@central.parts.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
+    en: { title: 'Your component search', noteTitle: 'Message from Central.Parts', home: '/en/',
+      keep: 'Keep this link: it gives access to your request status. Any question? contact@central.parts',
+      s: { awaiting_payment: 'Payment being confirmed', paid: 'Paid: search being prepared', in_progress: 'Search in progress',
+        offers_sent: 'Offers sent', not_found: 'No offer found', cancelled: 'Cancelled' },
+      d: { awaiting_payment: 'We are waiting for your payment confirmation: this page updates itself.',
+        paid: 'Your payment is confirmed. We are starting the search and will get back to you by email.',
+        in_progress: 'We are querying surplus stock, brokers and our network, and checking every source.',
+        offers_sent: 'We have sent you the offers found by email.', not_found: 'We did not find a reliable offer for this part.',
+        cancelled: 'This request was cancelled.' },
+      ref: 'Request', mpn: 'Part number', mfr: 'Manufacturer', qty: 'Quantity', by: 'Required by', target: 'Target price', cond: 'Accepted condition',
+      cNew: 'New original only', cAny: 'New or refurbished', company: 'Company', paid: 'Fee paid',
+      credit: 'The search fee ({a} excl. VAT) will be deducted from your order.', creditUsed: 'The search fee has been deducted from your order.',
+      e: { link_invalid: 'This status link is not valid. Check that it is complete, or write to contact@central.parts.', network: 'Network error, please try again.', other: 'Status unavailable, please try again later.' } },
+    zh: { title: '您的元器件寻源', noteTitle: 'Central.Parts 留言', home: '/zh/',
+      keep: '请保存此链接，用于查看需求进度。如有疑问：contact@central.parts',
+      s: { awaiting_payment: '支付确认中', paid: '已支付：准备寻源', in_progress: '寻源中', offers_sent: '已发送报价', not_found: '未找到报价', cancelled: '已取消' },
+      d: { awaiting_payment: '正在等待支付确认，本页面会自动更新。', paid: '您的支付已确认。我们正在开始寻源，并将通过邮件联系您。',
+        in_progress: '我们正在向库存积压、经纪商和我们的网络询价，并核实每个来源。', offers_sent: '我们已通过邮件向您发送找到的报价。',
+        not_found: '我们未能为该型号找到可靠的报价。', cancelled: '该需求已取消。' },
+      ref: '需求编号', mpn: '型号', mfr: '制造商', qty: '数量', by: '需求日期', target: '目标价格', cond: '可接受状态',
+      cNew: '仅限全新原装', cAny: '全新或翻新', company: '公司', paid: '已付费用',
+      credit: '寻源费用（{a}，不含税）将从您的订单中抵扣。', creditUsed: '寻源费用已从您的订单中抵扣。',
+      e: { link_invalid: '该跟踪链接无效。请确认链接完整，或发送邮件至 contact@central.parts。', network: '网络错误，请重试。', other: '暂时无法查看进度，请稍后再试。' } }
+  };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var nav = (navigator.language || 'fr').slice(0, 2);
+  var lang = T[params.get('lang')] ? params.get('lang') : T[nav] ? nav : 'en';
+  try { var saved = localStorage.getItem('cp-lang-offres'); if (!params.get('lang') && T[saved]) lang = saved; } catch (e) {}
+  var token = (location.hash || '').replace(/^#/, '');
+  var data = null, err = null, tries = 0;
+  var t = function () { return T[lang]; };
+  var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var money = function (c, cur) { return new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: cur || 'EUR' }).format(c); };
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind === 'err' ? ' err' : ''); m.textContent = text || ''; }
+
+  function render() {
+    if (err) { $('card').hidden = true; say('err', t().e[err] || t().e.other); return; }
+    if (!data) return;
+    say('', '');
+    $('card').hidden = false;
+    var s = data.status;
+    $('st').textContent = t().s[s] || s;
+    $('st').className = 'badge' + (s === 'offers_sent' || s === 'paid' || s === 'in_progress' ? ' ok' : s === 'not_found' || s === 'cancelled' ? ' ko' : '');
+    $('st-text').textContent = t().d[s] || '';
+    var f = [[t().ref, data.id], [t().mpn, data.mpn], [t().mfr, data.manufacturer], [t().qty, Number(data.qty).toLocaleString(LOCALE[lang])],
+      [t().by, data.needed_by ? new Date(data.needed_by).toLocaleDateString(LOCALE[lang]) : null],
+      [t().target, data.target_price ? money(data.target_price, data.target_currency) : null],
+      [t().cond, data.condition === 'any' ? t().cAny : t().cNew], [t().company, data.company],
+      [t().paid, data.paid_at ? money(data.amount_ttc / 100) + ' · ' + new Date(data.paid_at).toLocaleDateString(LOCALE[lang]) : null]];
+    $('facts').innerHTML = f.filter(function (x) { return x[1]; }).map(function (x) { return '<dt>' + esc(x[0]) + '</dt><dd>' + esc(x[1]) + '</dd>'; }).join('');
+    $('note-box').hidden = !data.buyer_note;
+    $('note').textContent = data.buyer_note || '';
+    $('credit').textContent = data.paid_at ? (data.credit_used ? t().creditUsed : fill(t().credit, { a: money(data.amount_ht / 100) })) : '';
+  }
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    $('home').setAttribute('href', t().home);
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    render();
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} applyLang(); });
+  });
+
+  // Retour de la page de paiement : le webhook de Stripe peut arriver quelques secondes après ; nouvel essai toutes les 4 s, 1 min au plus.
+  function load() {
+    if (!/^[0-9a-f]{48}$/.test(token)) { err = 'link_invalid'; render(); return; }
+    fetch(FN, { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
+      .then(function (d) { data = d; err = null; render(); if (d.status === 'awaiting_payment' && ++tries < 15) setTimeout(load, 4000); },
+        function (c) { err = c; render(); });
+  }
+  applyLang();
+  load();
+})();
+// Menu de navigation : libellés et liens dans la langue de la page (suit l'attribut lang de la page).
+(function () {
+  function nav() {
+    var l = (document.documentElement.lang || 'fr').slice(0, 2);
+    document.querySelectorAll('.topnav a[data-fr]').forEach(function (a) {
+      a.textContent = a.getAttribute('data-' + l) || a.getAttribute('data-fr');
+      a.href = a.getAttribute('data-href') + (a.getAttribute('data-href') === '/depot/' ? '' : '?lang=' + l);
+    });
+  }
+  new MutationObserver(nav).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  nav();
+})();
+</script>
+</body>
+</html>

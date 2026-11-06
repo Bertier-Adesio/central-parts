@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<!-- Recherche payante de composants rares ou introuvables (ADR 0033). Écrite à la main, pas générée. Non indexée.
+     L'acheteur professionnel décrit sa référence et paie les frais de recherche par carte : la fonction Edge « sourcing »
+     crée la demande et renvoie l'adresse de la page de paiement Stripe Checkout (seul service tiers du parcours, par
+     simple redirection : aucune ressource tierce n'est chargée par cette page). Textes chinois : à faire relire. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Composants rares · Hard-to-find parts · 稀缺元器件 — Central.Parts</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/tokens.css">
+<style>
+body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
+.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
+.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
+.langs{display:flex;gap:4px}
+.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
+main.wrap{padding:32px 16px 64px}
+.eyebrow{font-size:var(--text-sm);color:var(--fg-3);margin:0 0 8px;letter-spacing:.02em}
+h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
+h2{font-size:var(--text-lg);margin:0 0 12px}
+.lead{color:var(--fg-2);margin:0 0 24px;max-width:760px}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;align-items:start}
+.card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
+.price{font-size:var(--text-2xl);font-weight:var(--weight-semibold);margin:0}
+.steps{margin:0;padding:0 0 0 20px}
+.steps li{margin:0 0 8px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}
+label.f{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+label.f input,label.f select,label.f textarea{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:6px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;font-weight:normal}
+label.f textarea{min-height:80px;resize:vertical}
+.hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 0 0}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:var(--text-sm);margin:0 0 16px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;background:var(--bg-inverse);color:var(--fg-inverse);width:100%}
+.btn[disabled]{opacity:.5;cursor:default}
+.muted{color:var(--fg-3);font-size:var(--text-sm)}
+.msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
+.msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+@media (max-width:760px){.cols{grid-template-columns:minmax(0,1fr)}.grid2{grid-template-columns:minmax(0,1fr)}}
+[hidden]{display:none!important}
+/* Menu de navigation commun des pages acheteur (dans l'en-tête, sous la marque). */
+.hdr .topnav .wrap{display:flex;justify-content:flex-start;align-items:center;gap:20px;height:40px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:var(--text-sm)}
+.topnav a{color:var(--fg-inverse-2);text-decoration:none}
+.topnav a:hover{color:var(--fg-inverse)}
+.topnav a[aria-current=page]{color:var(--fg-inverse);font-weight:var(--weight-medium)}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <a class="brand" href="/" id="home">
+      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span>Central<span class="accent">.</span>Parts</span>
+    </a>
+    <div class="langs" role="group" aria-label="Langue / Language / 语言">
+      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </div>
+  <nav class="topnav" aria-label="Navigation">
+    <div class="wrap">
+      <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
+      <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
+      <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件" aria-current="page">Composants rares</a>
+      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件">Conditions commerciales</a>
+      <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API">API</a>
+      <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow" data-t="eyebrow">Sourcing · Opportunity</p>
+  <h1 data-t="title">Composants rares ou introuvables</h1>
+  <p class="lead" data-t="lead">Une référence introuvable, obsolète ou en pénurie ? Nous la cherchons pour vous auprès des surplus de fabricants et d’EMS, des brokers et de notre réseau de fournisseurs en Asie. Chaque offre trouvée est tracée jusqu’à sa source ; contrôle par un laboratoire partenaire sur demande.</p>
+  <noscript><p class="msg">Cette page a besoin de JavaScript. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
+  <p class="msg" id="msg" role="status" hidden></p>
+
+  <div class="cols">
+    <form class="card" id="form" novalidate>
+      <h2 data-t="partTitle">La référence</h2>
+      <div class="grid2">
+        <label class="f"><span data-t="fMpn">Référence fabricant</span><input id="f-mpn" required maxlength="80" autocomplete="off" spellcheck="false"></label>
+        <label class="f"><span data-t="fMfr">Fabricant (si connu)</span><input id="f-mfr" maxlength="80"></label>
+        <label class="f"><span data-t="fQty">Quantité</span><input id="f-qty" type="number" min="1" step="1" required></label>
+        <label class="f"><span data-t="fDate">Date souhaitée</span><input id="f-date" type="date"></label>
+        <label class="f"><span data-t="fPrice">Prix cible unitaire (facultatif)</span><input id="f-price" type="number" min="0" step="any"></label>
+        <label class="f"><span data-t="fCur">Devise du prix cible</span><select id="f-cur"><option>EUR</option><option>USD</option></select></label>
+      </div>
+      <label class="f"><span data-t="fCond">État accepté</span>
+        <select id="f-cond"><option value="new" data-t="cNew">Neuf d’origine uniquement</option><option value="any" data-t="cAny">Neuf ou reconditionné, selon les offres</option></select></label>
+      <label class="f"><span data-t="fNotes">Précisions (date code, conditionnement, application…)</span><textarea id="f-notes" maxlength="2000"></textarea></label>
+      <h2 data-t="youTitle">Votre société</h2>
+      <div class="grid2">
+        <label class="f"><span data-t="fCompany">Société</span><input id="f-company" required maxlength="200" autocomplete="organization"></label>
+        <label class="f"><span data-t="fContact">Nom et prénom</span><input id="f-contact" required maxlength="200" autocomplete="name"></label>
+        <label class="f"><span data-t="fEmail">E-mail professionnel</span><input id="f-email" type="email" required maxlength="200" autocomplete="email"></label>
+        <label class="f"><span data-t="fCountry">Pays</span><select id="f-country" required></select></label>
+      </div>
+      <label class="f" id="vat-l"><span data-t="fVat">Numéro de TVA intracommunautaire</span><input id="f-vat" maxlength="20" autocomplete="off" spellcheck="false">
+        <span class="hint" data-t="vatHint">Obligatoire dans l’Union européenne, vérifié auprès du service VIES.</span></label>
+      <label class="check"><input type="checkbox" id="f-ok" required><span data-t="accept">J’ai compris : les frais de recherche sont déduits de ma commande et ne sont pas remboursés si je ne commande pas.</span></label>
+      <button class="btn" type="submit" id="send">Payer et lancer la recherche</button>
+      <p class="muted" data-t="payNote">Paiement sécurisé par carte sur la page de notre prestataire de paiement, puis retour sur Central.Parts.</p>
+    </form>
+
+    <div>
+      <section class="card">
+        <p class="price">49 € HT</p>
+        <p class="muted" data-t="perRef">par référence recherchée, déduits de votre commande</p>
+        <p class="muted" id="ttc"></p>
+      </section>
+      <section class="card">
+        <h2 data-t="howTitle">Comment ça marche</h2>
+        <ol class="steps">
+          <li data-t="s1">Vous décrivez la référence et payez les frais de recherche.</li>
+          <li data-t="s2">Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.</li>
+          <li data-t="s3">Vous recevez les offres trouvées par e-mail et suivez votre demande en ligne.</li>
+          <li data-t="s4">Si vous commandez, les frais sont déduits de votre commande.</li>
+        </ol>
+        <p class="muted" data-t="why">Ces frais rémunèrent un vrai travail de recherche et nous permettent de nous consacrer aux demandes sérieuses. Ils ne sont pas remboursés si vous ne commandez pas, y compris si la pièce reste introuvable.</p>
+        <p class="muted"><a href="/conditions/" id="to-terms" data-t="terms">Conditions commerciales</a></p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/sourcing';
+  var EU = ['AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'];
+  var OTHER = ['GB','CH','NO','IS','TR','IL','US','CA','MA','TN','AE','SG','IN','JP','KR'];
+  var T = {
+    fr: { eyebrow: 'Sourcing · Opportunity', title: 'Composants rares ou introuvables',
+      lead: 'Une référence introuvable, obsolète ou en pénurie ? Nous la cherchons pour vous auprès des surplus de fabricants et d’EMS, des brokers et de notre réseau de fournisseurs en Asie. Chaque offre trouvée est tracée jusqu’à sa source ; contrôle par un laboratoire partenaire sur demande.',
+      partTitle: 'La référence', fMpn: 'Référence fabricant', fMfr: 'Fabricant (si connu)', fQty: 'Quantité', fDate: 'Date souhaitée',
+      fPrice: 'Prix cible unitaire (facultatif)', fCur: 'Devise du prix cible', fCond: 'État accepté', cNew: 'Neuf d’origine uniquement',
+      cAny: 'Neuf ou reconditionné, selon les offres', fNotes: 'Précisions (date code, conditionnement, application…)', youTitle: 'Votre société',
+      fCompany: 'Société', fContact: 'Nom et prénom', fEmail: 'E-mail professionnel', fCountry: 'Pays', fVat: 'Numéro de TVA intracommunautaire',
+      vatHint: 'Obligatoire dans l’Union européenne, vérifié auprès du service VIES.', choose: 'Choisir',
+      accept: 'J’ai compris : les frais de recherche sont déduits de ma commande et ne sont pas remboursés si je ne commande pas.',
+      pay: 'Payer {a} et lancer la recherche', payNote: 'Paiement sécurisé par carte sur la page de notre prestataire de paiement, puis retour sur Central.Parts.',
+      perRef: 'par référence recherchée, déduits de votre commande', ttcFR: 'Soit {a} TTC (TVA 20 %).', ttcEU: 'Autoliquidation de la TVA : {a} à payer.',
+      ttcOut: 'Hors Union européenne : {a} à payer, sans TVA.', howTitle: 'Comment ça marche',
+      s1: 'Vous décrivez la référence et payez les frais de recherche.', s2: 'Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.',
+      s3: 'Vous recevez les offres trouvées par e-mail et suivez votre demande en ligne.', s4: 'Si vous commandez, les frais sont déduits de votre commande.',
+      why: 'Ces frais rémunèrent un vrai travail de recherche et nous permettent de nous consacrer aux demandes sérieuses. Ils ne sont pas remboursés si vous ne commandez pas, y compris si la pièce reste introuvable.',
+      terms: 'Conditions commerciales', home: '/', redirect: 'Redirection vers la page de paiement…', cancel: 'Paiement annulé : votre demande n’a pas été lancée. Vous pouvez la modifier et recommencer.',
+      e: { fields: 'Renseignez la référence, la quantité, votre société, votre nom, un e-mail valide et le pays.', vat: 'Le numéro de TVA est obligatoire dans l’Union européenne.',
+        accept: 'Cochez la case pour confirmer que vous avez compris les conditions des frais de recherche.', vat_invalid: 'Ce numéro de TVA n’est pas reconnu par le service VIES.',
+        payment_unavailable: 'Le paiement par carte n’est pas encore ouvert : écrivez-nous à contact@central.parts.', rate_limited: 'Trop de demandes : réessayez dans une minute.',
+        invalid: 'Demande incomplète ou invalide : ', network: 'Erreur réseau, réessayez.', other: 'Envoi impossible pour l’instant : réessayez ou écrivez à contact@central.parts.' } },
+    en: { eyebrow: 'Sourcing · Opportunity', title: 'Hard-to-find and obsolete parts',
+      lead: 'A part you cannot find, obsolete or on allocation? We look for it among manufacturer and EMS surplus, brokers and our supplier network in Asia. Every offer found is traced to its source; testing by a partner laboratory on request.',
+      partTitle: 'The part', fMpn: 'Manufacturer part number', fMfr: 'Manufacturer (if known)', fQty: 'Quantity', fDate: 'Required by',
+      fPrice: 'Target unit price (optional)', fCur: 'Target price currency', fCond: 'Accepted condition', cNew: 'New original only',
+      cAny: 'New or refurbished, depending on offers', fNotes: 'Details (date code, packaging, application…)', youTitle: 'Your company',
+      fCompany: 'Company', fContact: 'Full name', fEmail: 'Business email', fCountry: 'Country', fVat: 'EU VAT number',
+      vatHint: 'Required in the European Union, checked with the VIES service.', choose: 'Choose',
+      accept: 'I understand: the search fee is deducted from my order and is not refunded if I do not order.',
+      pay: 'Pay {a} and start the search', payNote: 'Secure card payment on our payment provider’s page, then back to Central.Parts.',
+      perRef: 'per part number searched, deducted from your order', ttcFR: '{a} including 20 % French VAT.', ttcEU: 'EU reverse charge: {a} to pay.',
+      ttcOut: 'Outside the European Union: {a} to pay, no VAT.', howTitle: 'How it works',
+      s1: 'You describe the part and pay the search fee.', s2: 'We query surplus stock, brokers and our network, and check every source.',
+      s3: 'You receive the offers found by email and follow your request online.', s4: 'If you order, the fee is deducted from your order.',
+      why: 'The fee pays for real search work and lets us focus on serious requests. It is not refunded if you do not order, including when the part cannot be found.',
+      terms: 'Terms of sale', home: '/en/', redirect: 'Redirecting to the payment page…', cancel: 'Payment cancelled: your request was not started. You can edit it and try again.',
+      e: { fields: 'Enter the part number, quantity, company, your name, a valid email and the country.', vat: 'A VAT number is required in the European Union.',
+        accept: 'Tick the box to confirm you understand the search fee terms.', vat_invalid: 'This VAT number is not recognised by the VIES service.',
+        payment_unavailable: 'Card payment is not open yet: write to contact@central.parts.', rate_limited: 'Too many requests: try again in a minute.',
+        invalid: 'Incomplete or invalid request: ', network: 'Network error, please try again.', other: 'Cannot send right now: try again or write to contact@central.parts.' } },
+    zh: { eyebrow: 'Sourcing · Opportunity', title: '稀缺及停产元器件寻源',
+      lead: '找不到的型号、停产或缺货？我们在制造商和 EMS 的库存积压、经纪商以及我们在亚洲的供应商网络中为您寻找。每条找到的报价均可追溯至来源；可应要求由合作实验室检测。',
+      partTitle: '型号', fMpn: '制造商型号', fMfr: '制造商（如已知）', fQty: '数量', fDate: '需求日期',
+      fPrice: '目标单价（可选）', fCur: '目标价格币种', fCond: '可接受状态', cNew: '仅限全新原装',
+      cAny: '全新或翻新，视报价而定', fNotes: '补充说明（批号、包装、用途……）', youTitle: '贵公司',
+      fCompany: '公司', fContact: '姓名', fEmail: '工作邮箱', fCountry: '国家', fVat: '欧盟增值税号',
+      vatHint: '欧盟境内必填，通过 VIES 系统核验。', choose: '请选择',
+      accept: '我已了解：寻源费用将从我的订单中抵扣；如不下单，费用不予退还。',
+      pay: '支付 {a} 并开始寻源', payNote: '在我们的支付服务商页面安全刷卡支付，完成后返回 Central.Parts。',
+      perRef: '每个寻源型号，可从订单中抵扣', ttcFR: '含 20% 法国增值税：{a}。', ttcEU: '欧盟反向征税：应付 {a}。',
+      ttcOut: '欧盟以外：应付 {a}，不含增值税。', howTitle: '流程',
+      s1: '您填写型号并支付寻源费用。', s2: '我们向库存积压、经纪商和我们的网络询价，并核实每个来源。',
+      s3: '您通过邮件收到找到的报价，并可在线跟踪需求。', s4: '如您下单，费用将从订单中抵扣。',
+      why: '该费用用于实际的寻源工作，使我们专注于有诚意的需求。如不下单（包括未找到元器件的情况），费用不予退还。',
+      terms: '交易条件', home: '/zh/', redirect: '正在跳转至支付页面……', cancel: '支付已取消：需求尚未提交。您可以修改后重试。',
+      e: { fields: '请填写型号、数量、公司、姓名、有效邮箱和国家。', vat: '欧盟境内必须填写增值税号。',
+        accept: '请勾选以确认您已了解寻源费用条款。', vat_invalid: 'VIES 系统无法识别该增值税号。',
+        payment_unavailable: '刷卡支付暂未开放：请发送邮件至 contact@central.parts。', rate_limited: '请求过于频繁，请一分钟后再试。',
+        invalid: '需求不完整或无效：', network: '网络错误，请重试。', other: '暂时无法提交：请重试或发送邮件至 contact@central.parts。' } }
+  };
+  var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var nav = (navigator.language || 'fr').slice(0, 2);
+  var lang = T[params.get('lang')] ? params.get('lang') : T[nav] ? nav : 'en';
+  try { var saved = localStorage.getItem('cp-lang-offres'); if (!params.get('lang') && T[saved]) lang = saved; } catch (e) {}
+  var t = function () { return T[lang]; };
+  var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
+  var HT = 4900;
+  var money = function (c) { return new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: 'EUR' }).format(c / 100); };
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind === 'err' ? ' err' : ''); m.textContent = text || ''; }
+
+  // Montant à payer selon le pays (même règle que create_sourcing_request) : France 20 %, Union autoliquidation, hors Union sans TVA.
+  function amount() { var c = $('f-country').value; return c === 'FR' ? Math.round(HT * 1.2) : HT; }
+  function renderPrice() {
+    var c = $('f-country').value, eu = EU.indexOf(c) >= 0;
+    $('vat-l').hidden = c && !eu;
+    $('ttc').textContent = !c ? '' : fill(c === 'FR' ? t().ttcFR : eu ? t().ttcEU : t().ttcOut, { a: money(amount()) });
+    $('send').textContent = fill(t().pay, { a: money(c ? amount() : HT) });
+  }
+  function countries() {
+    var dn = null;
+    try { dn = new Intl.DisplayNames([LOCALE[lang]], { type: 'region' }); } catch (e) {}
+    var name = function (c) { return dn ? dn.of(c) : c; };
+    var cur = $('f-country').value;
+    var list = EU.concat(OTHER).map(function (c) { return [c, name(c)]; }).sort(function (a, b) { return a[1].localeCompare(b[1], LOCALE[lang]); });
+    $('f-country').innerHTML = '<option value="">' + t().choose + '</option>' + list.map(function (x) {
+      return '<option value="' + x[0] + '"' + (x[0] === cur ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('');
+  }
+  function applyLang() {
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    $('home').setAttribute('href', t().home);
+    $('to-terms').href = '/conditions/?lang=' + lang;
+    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
+    document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
+    countries(); renderPrice();
+  }
+  document.querySelectorAll('[data-lang]').forEach(function (b) {
+    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} applyLang(); });
+  });
+  $('f-country').addEventListener('change', renderPrice);
+
+  $('form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = function (id) { return $(id).value.trim(); };
+    var c = v('f-country'), eu = EU.indexOf(c) >= 0;
+    if (!v('f-mpn') || !(+v('f-qty') > 0) || !v('f-company') || !v('f-contact') || !$('f-email').checkValidity() || !v('f-email') || !c) { say('err', t().e.fields); return; }
+    if (eu && !v('f-vat')) { say('err', t().e.vat); $('f-vat').focus(); return; }
+    if (!$('f-ok').checked) { say('err', t().e.accept); return; }
+    $('send').disabled = true;
+    fetch(FN, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      mpn: v('f-mpn'), manufacturer: v('f-mfr'), qty: v('f-qty'), needed_by: v('f-date'), target_price: v('f-price'), target_currency: v('f-cur'),
+      condition: $('f-cond').value, notes: v('f-notes'), company: v('f-company'), contact: v('f-contact'), email: v('f-email'),
+      country: c, vat: eu ? v('f-vat') : '', lang: lang }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); }, function () { throw { error: 'network' }; })
+      .then(function (d) { say('', t().redirect); location.assign(d.url); },
+        function (d) { $('send').disabled = false; say('err', (t().e[d && d.error] || t().e.other) + (d && d.error === 'invalid' && d.detail ? d.detail : '')); });
+  });
+
+  $('f-mpn').value = (params.get('q') || '').slice(0, 80);
+  applyLang();
+  if (params.get('cancel')) say('err', t().cancel);
+})();
+// Menu de navigation : libellés et liens dans la langue de la page (suit l'attribut lang de la page).
+(function () {
+  function nav() {
+    var l = (document.documentElement.lang || 'fr').slice(0, 2);
+    document.querySelectorAll('.topnav a[data-fr]').forEach(function (a) {
+      a.textContent = a.getAttribute('data-' + l) || a.getAttribute('data-fr');
+      a.href = a.getAttribute('data-href') + (a.getAttribute('data-href') === '/depot/' ? '' : '?lang=' + l);
+    });
+  }
+  new MutationObserver(nav).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  nav();
+})();
+</script>
+</body>
+</html>

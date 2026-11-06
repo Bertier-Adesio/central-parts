@@ -20,24 +20,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { notifyOperators } from '../_shared/wechat.ts';
 import { purchaseCartOperatorNote, purchaseRequestOperatorNote } from '../_shared/robot-texts.js';
 import { normalizePhoton, PHOTON_DEFAULT, photonUrl } from '../_shared/address.js';
+import { viesValid } from '../_shared/vies.ts';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
 const ERRORS: Record<string, [string, number]> = { '22023': ['invalid', 422], P0002: ['not_found', 404], CP429: ['rate_limited', 429] };
-
-// Vérification VIES (pays de l'Union) : true, false, ou null si le service ne répond pas ou ne couvre pas le pays.
-async function viesValid(vat: string): Promise<boolean | null> {
-  const m = /^([A-Z]{2})([0-9A-Z]+)$/.exec(vat);
-  if (!m || ['GB', 'CH', 'NO'].includes(m[1])) return null;
-  try {
-    const r = await fetch(`https://ec.europa.eu/taxation_customs/vies/rest-api/ms/${m[1]}/vat/${m[2]}`, { signal: AbortSignal.timeout(4000) });
-    if (!r.ok) return null;
-    const d = await r.json();
-    return typeof d.isValid === 'boolean' ? d.isValid : null;
-  } catch {
-    return null;
-  }
-}
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin') || '';

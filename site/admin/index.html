@@ -184,6 +184,8 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       <ul class="reqs" id="req-list"></ul>
       <h2>API · RFQ des plateformes</h2>
       <ul class="reqs" id="rfq-list"></ul>
+      <h2>Composants rares · recherches payées</h2>
+      <ul class="reqs" id="src-list"></ul>
     </div>
 
     <!-- Approbation des fournisseurs. -->
@@ -964,8 +966,38 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       $('rfq-list').innerHTML = rfq.length ? rfq.map(rfqHtml).join('') : '<li class="empty">' + (f ? 'Aucune RFQ à valider.' : 'Aucune RFQ.') + '</li>';
       var c = res[0].counts || {};
       countRequests(c.pending_validation, f ? rfq.length : rfq.filter(function (d) { return d.status === 'pending_validation'; }).length);
+      loadSourcing();
     }).catch(fail);
   }
+  // ------------------------------------------------------------ recherches payées de composants rares (ADR 0033)
+  // « À valider » : demandes payées pas encore traitées ; « Toutes » : toutes les demandes payées.
+  var SRC = { paid: 'Payée, à traiter', in_progress: 'Recherche en cours', offers_sent: 'Offres envoyées', not_found: 'Introuvable', cancelled: 'Annulée' };
+  function loadSourcing() {
+    return api('GET', '/sourcing?status=' + (state.reqFilter ? 'paid' : '')).then(function (d) {
+      var rows = d.rows || [];
+      $('src-list').innerHTML = rows.length ? rows.map(function (r) {
+        return '<li data-src="' + esc(r.id) + '"><div class="r1"><strong>' + esc(r.id) + ' · ' + esc(r.mpn) + (r.manufacturer ? ' (' + esc(r.manufacturer) + ')' : '') + ' × ' + num(r.qty) + '</strong>' +
+          '<span class="badge ' + (r.status === 'paid' ? 'pending' : r.status === 'not_found' || r.status === 'cancelled' ? 'rejected' : 'validated') + '">' + esc(SRC[r.status] || r.status) + '</span></div>' +
+          '<div class="r2">' + esc(r.company) + ' · ' + esc(r.contact) + ' · <span class="mono">' + esc(r.email) + '</span> · ' + esc(r.country) +
+          (r.vat_number ? ' · TVA ' + esc(r.vat_number) + (r.vat_checked ? ' (VIES vérifié)' : ' (non vérifié)') : '') + '</div>' +
+          '<div class="r2">' + (r.needed_by ? 'Pour le ' + esc(r.needed_by) + ' · ' : '') + (r.target_price ? 'Prix cible ' + esc(r.target_price) + ' ' + esc(r.target_currency) + ' · ' : '') +
+          (r.condition === 'any' ? 'neuf ou reconditionné' : 'neuf d\'origine') + ' · payé ' + price(r.amount_ttc / 100, 'EUR') + ' le ' + esc(dt(r.paid_at)) + '</div>' +
+          (r.notes ? '<p class="pre">' + esc(r.notes) + '</p>' : '') +
+          '<details class="more"><summary>Traiter</summary><form class="src-f" data-id="' + esc(r.id) + '">' +
+          '<label class="f">État<select name="status">' + Object.keys(SRC).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + SRC[k] + '</option>'; }).join('') + '</select></label>' +
+          '<label class="f">Message pour l\'acheteur (visible sur sa page de suivi)<textarea name="buyer_note" maxlength="2000">' + esc(r.buyer_note || '') + '</textarea></label>' +
+          '<label class="f">Note interne<textarea name="admin_note" maxlength="4000">' + esc(r.admin_note || '') + '</textarea></label>' +
+          '<label class="f">Frais déduits sur la demande d\'achat (PR-…)<input type="text" name="credit_used_by" value="' + esc(r.credit_used_by || '') + '"></label>' +
+          '<div class="actions"><button class="btn btn-main" type="submit">Enregistrer</button></div></form></details></li>';
+      }).join('') : '<li class="empty">' + (state.reqFilter ? 'Aucune recherche payée à traiter.' : 'Aucune recherche payée.') + '</li>';
+    }).catch(fail);
+  }
+  $('src-list').addEventListener('submit', function (ev) {
+    var f = ev.target.closest('form.src-f'); if (!f) return;
+    ev.preventDefault();
+    var up = { status: f.status.value, buyer_note: f.buyer_note.value, admin_note: f.admin_note.value, credit_used_by: f.credit_used_by.value };
+    api('POST', '/sourcing/update', { id: f.getAttribute('data-id'), update: up }).then(function () { show('Recherche ' + f.getAttribute('data-id') + ' enregistrée.', 'ok'); loadSourcing(); }).catch(fail);
+  });
   function refreshCount() {
     return Promise.all([api('GET', '/requests?status=pending_validation'), api('GET', '/rfq?status=pending_validation')])
       .then(function (res) { countRequests(((res[0].counts || {}).pending_validation) || 0, (res[1] || []).length); })

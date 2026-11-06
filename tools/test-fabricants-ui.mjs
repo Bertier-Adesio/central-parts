@@ -70,7 +70,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok((await page.getAttribute('#to-mfrs', 'href')) === '/fabricants/?lang=fr', 'offres : lien vers l\'annuaire des fabricants');
   // Menu de navigation commun : page en cours marquée, liens dans la langue de la page.
   const nav = await page.$$eval('.topnav a', (a) => a.map((x) => [x.textContent, x.getAttribute('href'), x.getAttribute('aria-current')]));
-  ok(nav.length === 5 && nav[0][0] === 'Offres' && nav[0][2] === 'page' && nav[1][1] === '/fabricants/?lang=fr' && nav[4][1] === '/depot/', 'menu : 5 liens, page en cours, langue');
+  ok(nav.length === 6 && nav[0][0] === 'Offres' && nav[0][2] === 'page' && nav[1][1] === '/fabricants/?lang=fr' && nav[2][1] === '/sourcing/?lang=fr' && nav[5][1] === '/depot/', 'menu : 6 liens, page en cours, langue');
   ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
   await page.click('[data-lang=zh]');
   ok((await page.textContent('.topnav a[aria-current=page]')) === '报价' && (await page.getAttribute('.topnav a[data-href="/conditions/"]', 'href')) === '/conditions/?lang=zh', 'menu en chinois');

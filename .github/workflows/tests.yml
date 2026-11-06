@@ -54,6 +54,8 @@ jobs:
         run: node tools/test-rfq.mjs
       - name: API d'offres, formats natif, DigiKey et TI (ADR 0024)
         run: node tools/test-catalog.mjs
+      - name: Recherche payante, signature des webhooks Stripe (ADR 0033)
+        run: node tools/test-sourcing.mjs
       - name: Route RFQ, diffusion avec WeChat simulé
         run: deno run --allow-env tools/test-rfq-dispatch.ts
 
@@ -122,5 +124,6 @@ jobs:
           node tools/test-panier-ui.mjs
           node tools/test-csp.mjs
           node tools/test-fabricants-ui.mjs
+          node tools/test-sourcing-ui.mjs
           node tools/test-api-page-ui.mjs
           node tools/test-admin-ui.mjs
