@@ -148,7 +148,9 @@ for (const [cart, pill, lang, read] of [[0, null, 'fr', ''], [1, '1', 'fr', ', 1
 {
   const { page, ctx } = await open('/offres/?lang=fr', { width: 390 });
   await page.click('.sh-menu summary');
-  ok(await page.isVisible('.sh-panel a[data-href="/sourcing/"]') && await page.evaluate(() => document.documentElement.classList.contains('sh-lock')), 'menu ouvert : entrées visibles, défilement verrouillé');
+  // L'événement « toggle » d'un <details> est asynchrone : on attend le verrou plutôt que de le lire tout de suite.
+  const locked = await page.waitForFunction(() => document.documentElement.classList.contains('sh-lock'), null, { timeout: 2000 }).then(() => true, () => false);
+  ok(await page.isVisible('.sh-panel a[data-href="/sourcing/"]') && locked, 'menu ouvert : entrées visibles, défilement verrouillé');
   const rows = await page.$$eval('.sh-panel .sh-row', (l) => l.map((e) => Math.round(e.getBoundingClientRect().height)));
   ok(rows.length === 6 && rows.every((h) => h >= 48), 'menu : 6 lignes de 48 px');
   await page.keyboard.press('Escape');
