@@ -11,6 +11,14 @@ const BASE = process.env.BASE || 'http://localhost:8765';
 const SUPA = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 const PAGE = {
@@ -69,11 +77,11 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   const links = await page.$$eval('#rows a.mfr', (a) => a.map((x) => x.getAttribute('href')));
   ok((await page.getAttribute('#to-mfrs', 'href')) === '/fabricants/?lang=fr', 'offres : lien vers l\'annuaire des fabricants');
   // Menu de navigation commun : page en cours marquée, liens dans la langue de la page.
-  const nav = await page.$$eval('.topnav a', (a) => a.map((x) => [x.textContent, x.getAttribute('href'), x.getAttribute('aria-current')]));
+  const nav = await page.$$eval('.sh-nav a', (a) => a.map((x) => [x.textContent, x.getAttribute('href'), x.getAttribute('aria-current')]));
   ok(nav.length === 6 && nav[0][0] === 'Offres' && nav[0][2] === 'page' && nav[1][1] === '/fabricants/?lang=fr' && nav[2][1] === '/sourcing/?lang=fr' && nav[5][1] === '/depot/', 'menu : 6 liens, page en cours, langue');
   ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
-  await page.click('[data-lang=zh]');
-  ok((await page.textContent('.topnav a[aria-current=page]')) === '报价' && (await page.getAttribute('.topnav a[data-href="/conditions/"]', 'href')) === '/conditions/?lang=zh', 'menu en chinois');
+  await setLang(page, 'zh');
+  ok((await page.textContent('.sh-nav a[aria-current=page]')) === '报价' && (await page.getAttribute('.sh-nav a[data-href="/conditions/"]', 'href')) === '/conditions/?lang=zh', 'menu en chinois');
   ok((await page.textContent('#rows tr:first-child')).includes('原厂直供') && (await page.getAttribute('#rows a.mfr', 'href')).endsWith('lang=zh'), '中文 : 原厂直供, lien dans la langue');
   ok(errors.length === 0, 'offres : aucune erreur console ' + errors.join(' | '));
   await page.close();
@@ -93,9 +101,9 @@ for (const width of [1280, 390]) {
   ok(!/@|https?:\/\/(?!localhost)|USD|téléphone|WeChat/i.test(text), width + ' px : ni contact, ni site web, ni chiffre d\'affaires');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
   if (width === 1280) {
-    await page.click('[data-lang=en]');
+    await setLang(page, 'en');
     ok((await page.textContent('#about')).includes('Fictitious manufacturer') && (await page.textContent('main')).includes('3 billion'), 'EN : présentation et chiffres');
-    await page.click('[data-lang=zh]');
+    await setLang(page, 'zh');
     ok((await page.textContent('#about')).includes('虚构') && (await page.textContent('main')).includes('30 亿'), '中文 : présentation et 30 亿');
     ok((await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh' && await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow',
       'lien vers les offres dans la langue, page non indexée');

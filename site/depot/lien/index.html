@@ -13,16 +13,10 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/tokens.css">
 <link rel="stylesheet" href="/assets/fonts.css">
+<link rel="stylesheet" href="/assets/header.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
-.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
 .wrap{max-width:760px;margin:0 auto;padding:0 16px}
-.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
-.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
-.langs{display:flex;gap:4px}
-.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
-.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
 main.wrap{padding:32px 16px 64px}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 h2{font-size:var(--text-lg);margin:0 0 8px}
@@ -64,21 +58,24 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 </head>
 <body>
 
-<header class="hdr">
-  <div class="wrap">
-    <a class="brand" href="/zh/">
-      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
-      <span>Central<span class="accent">.</span>Parts</span>
-    </a>
-    <div class="langs" role="group" aria-label="Language">
-      <button type="button" data-lang="zh" aria-pressed="true">中文</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+<!-- en-tête partagé : généré par tools/build-header.mjs, ne pas modifier à la main -->
+<a class="sh-skip" href="#main" data-sh="skip">跳到正文</a>
+<header class="site-hdr" data-variant="supplier-link">
+  <div class="sh-bar">
+    <a class="sh-brand" href="/" data-home aria-label="Central.Parts 首页" data-sh-aria="brand"><svg class="sh-mark" viewBox="24 24 432 432" aria-hidden="true" focusable="false"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="sh-dot"/></svg><span class="sh-word">Central<span class="sh-dotc">.</span>Parts</span></a>
+    <span class="sh-tag" data-sh="tagS">供应商中心</span>
+    <div class="sh-tools">
+      <div class="sh-lang" role="group" aria-label="语言" data-sh-aria="lang">
+        <a href="?lang=zh" hreflang="zh" lang="zh-Hans" aria-current="true">中文</a>
+        <a href="?lang=en" hreflang="en" lang="en">EN</a>
+        <a href="?lang=fr" hreflang="fr" lang="fr">FR</a>
+      </div>
     </div>
   </div>
 </header>
+<!-- fin de l'en-tête partagé -->
 
-<main class="wrap">
+<main id="main" class="wrap">
   <h1 data-t="title">上传库存表</h1>
   <p class="lead" data-t="lead">每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。</p>
   <noscript><p class="msg err">本页面需要启用 JavaScript。This page needs JavaScript. Cette page a besoin de JavaScript.</p></noscript>
@@ -198,15 +195,14 @@ details{font-size:var(--text-sm);margin:6px 0 0}
             function () { throw 'network'; });
   }
 
+  // Langue mémorisée par l'en-tête partagé (cp-lang), sauf si l'adresse en impose une.
+  try { var cpl = localStorage.getItem('cp-lang'); if (!new URLSearchParams(location.search).get('lang') && T[cpl]) lang = cpl; } catch (e) {}
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     renderStatus(); renderImports();
   }
-  document.querySelectorAll('[data-lang]').forEach(function (b) {
-    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-depot', lang); } catch (e) {} applyLang(); });
-  });
+  window.cpLang = function (l) { lang = l; try { localStorage.setItem('cp-lang-depot', lang); } catch (e) {} applyLang(); };
 
   function renderStatus() {
     if (!me) return;
@@ -325,6 +321,59 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   if (!token) err('link_invalid');
   else load().catch(err);
 })();
+// --- en-tête partagé : généré par tools/build-header.mjs, ne pas modifier à la main ---
+(function () {
+  'use strict';
+  var hdr = document.querySelector('.site-hdr'); if (!hdr) return;
+  var root = document.documentElement, menu = hdr.querySelector('.sh-menu');
+  var H = {"fr":{"sep":", ","brand":"Central.Parts, accueil","nav":"Navigation principale","offers":"Offres","makers":"Fabricants","rare":"Composants rares","terms":"Conditions commerciales","api":"API","supplier":"Espace fournisseur","help":"Aide","lang":"Langue","menu":"Menu","req":"Panier","one":"{n} référence","many":"{n} références","tagS":"Espace fournisseur","tagB":"Back-office","signed":"Connecté :","out":"Déconnexion","skip":"Aller au contenu"},"en":{"sep":", ","brand":"Central.Parts, home","nav":"Main navigation","offers":"Offers","makers":"Manufacturers","rare":"Hard-to-find parts","terms":"Terms of sale","api":"API","supplier":"Supplier centre","help":"Help","lang":"Language","menu":"Menu","req":"Cart","one":"{n} part number","many":"{n} part numbers","tagS":"Supplier centre","tagB":"Back office","signed":"Signed in:","out":"Sign out","skip":"Skip to content"},"zh":{"sep":"，","brand":"Central.Parts 首页","nav":"主导航","offers":"报价","makers":"制造商","rare":"稀缺元器件","terms":"交易条件","api":"API","supplier":"供应商中心","help":"使用帮助","lang":"语言","menu":"菜单","req":"购物车","one":"{n} 个型号","many":"{n} 个型号","tagS":"供应商中心","tagB":"管理后台","signed":"已登录：","out":"退出登录","skip":"跳到正文"}};
+  function cur() { var l = (root.lang || '').slice(0, 2); return H[l] ? l : 'zh'; }
+  // Lien de langue : garde les autres paramètres (?q=…) et l'ancre.
+  function withLang(l) { var q = new URLSearchParams(location.search); q.set('lang', l); return location.pathname + '?' + q + location.hash; }
+  // Compteur du panier (ADR 0028) : pastille visible, nombre lu dans le nom du lien.
+  function count() {
+    var a = hdr.querySelector('.sh-req'); if (!a) return;
+    var n = 0, h = H[cur()];
+    try { var c = JSON.parse(localStorage.getItem('cp-cart') || '[]'); n = Array.isArray(c) ? c.length : 0; } catch (e) {}
+    var pill = a.querySelector('.sh-n');
+    pill.hidden = !n; pill.textContent = n > 99 ? '99+' : String(n);
+    a.querySelector('.sh-vh').textContent = n ? h.sep + (n === 1 ? h.one : h.many).replace('{n}', n) : '';
+  }
+  function paint() {
+    var l = cur(), h = H[l];
+    document.querySelectorAll('[data-sh]').forEach(function (e) { e.textContent = h[e.getAttribute('data-sh')]; });
+    hdr.querySelectorAll('[data-sh-aria]').forEach(function (e) { e.setAttribute('aria-label', h[e.getAttribute('data-sh-aria')]); });
+    hdr.querySelectorAll('[data-home]').forEach(function (a) { a.href = l === 'fr' ? '/' : '/' + l + '/'; });
+    hdr.querySelectorAll('a[data-href]').forEach(function (a) { var p = a.getAttribute('data-href'); a.href = p === '/depot/' ? p : p + '?lang=' + l; });
+    hdr.querySelectorAll('.sh-lang a').forEach(function (a) {
+      var x = a.getAttribute('hreflang'); a.href = withLang(x);
+      if (x === l) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
+    count();
+  }
+  function close() { if (menu && menu.open) menu.open = false; root.classList.remove('sh-lock'); }
+  // Langue : sans rechargement si la page expose cpLang(l), sinon le lien ?lang= fait la navigation.
+  hdr.querySelectorAll('.sh-lang a').forEach(function (a) {
+    a.addEventListener('click', function (ev) {
+      var l = a.getAttribute('hreflang');
+      try { localStorage.setItem('cp-lang', l); } catch (e) {}
+      if (typeof window.cpLang !== 'function') return;
+      ev.preventDefault(); window.cpLang(l); history.replaceState(history.state, '', withLang(l)); close();
+    });
+  });
+  if (menu) {
+    menu.addEventListener('toggle', function () { root.classList.toggle('sh-lock', menu.open); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && menu.open) { close(); menu.querySelector('summary').focus(); } });
+    menu.addEventListener('click', function (ev) { if (ev.target === menu) close(); });   // voile (::after du menu ouvert)
+    var wide = window.matchMedia('(min-width: 1140px)'), onWide = function () { if (wide.matches) close(); };
+    if (wide.addEventListener) wide.addEventListener('change', onWide); else wide.addListener(onWide);
+  }
+  window.cpCount = count;
+  window.addEventListener('storage', function (ev) { if (ev.key === 'cp-cart') count(); });
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['lang'] });
+  paint();
+})();
+// --- fin de l'en-tête partagé ---
 </script>
 </body>
 </html>

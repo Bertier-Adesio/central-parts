@@ -19,6 +19,14 @@ const OP_EXPIRES = '2026-11-04T18:30:00Z';
 const fixture = (n) => new URL('./fixtures/' + n, import.meta.url).pathname;
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 
 // ---------------------------------------------------------------- serveur simulé
 const VENDOR = 'Vendeur de démonstration (fictif)';
@@ -174,9 +182,9 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   // Le compteur se met à jour après le message d'import (second appel) : on l'attend, sans changer la valeur attendue.
   await page.waitForFunction(() => document.getElementById('n-live').textContent === '1', null, { timeout: 5000 }).catch(() => {});
   ok((await page.textContent('#n-live')) === '1', 'remplacement : 1 offre en ligne après la liste fausse');
-  await page.click('[data-lang=en]');
+  await setLang(page, 'en');
   ok((await page.textContent('#imports .imp:first-child')).includes('Price breaks: quantities must increase'), 'rapport EN : raisons traduites');
-  await page.click('[data-lang=fr]');
+  await setLang(page, 'fr');
   const fr = await page.textContent('#imports .imp:first-child');
   ok(fr.includes('Quantité invalide') && fr.includes('Référence (mpn) vide') && fr.includes('Ligne'), 'rapport FR : raisons traduites');
   ok(await page.evaluate(() => document.documentElement.lang) === 'fr', 'langue de la page suivie');
@@ -198,9 +206,9 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   const banner = () => page.textContent('#operator');
   ok(await page.isVisible('#operator') && (await banner()).includes('运营人员') && (await page.textContent('#org-name')) === VENDOR,
     'accès opérateur : bandeau affiché, dépôt du fournisseur ouvert');
-  await page.click('[data-lang=en]');
+  await setLang(page, 'en');
   ok((await banner()).includes('Central.Parts operator access'), 'accès opérateur : bandeau EN');
-  await page.click('[data-lang=fr]');
+  await setLang(page, 'fr');
   ok((await banner()).includes('Accès opérateur Central.Parts') && (await banner()).includes('2026'), 'accès opérateur : bandeau FR et échéance');
   ok(await noScroll(page), 'accès opérateur, 390 px : pas de défilement horizontal');
   ok(errors.length === 0, 'accès opérateur : aucune erreur console ' + errors.join(' | '));
@@ -259,9 +267,9 @@ for (const width of [1280, 390]) {
     await page.fill('#q', '');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
-    await page.click('[data-lang=zh]');
+    await setLang(page, 'zh');
     ok((await page.textContent('#rows')).includes('合作供应商') && (await page.textContent('h1')) === '我们的报价', '中文 : 合作供应商');
-    await page.click('[data-lang=en]');
+    await setLang(page, 'en');
     ok((await page.textContent('#rows')).includes('Partner Supplier'), 'EN : Partner Supplier');
     ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page acheteur non indexée');
     // « Demander » est devenu « Ajouter au panier » (ADR 0028) : plus de lien mailto.
@@ -301,7 +309,7 @@ for (const width of [1280, 390]) {
   const { page, errors } = await newPage(390);
   await page.goto(BASE + '/depot/lien/?lang=en#k=' + 'b'.repeat(48));
   await page.waitForSelector('#msg:not([hidden])');
-  ok(await page.getAttribute('html', 'lang') === 'en' && await page.getAttribute('[data-lang=en]', 'aria-pressed') === 'true', 'dépôt par lien : ?lang=en respecté');
+  ok(await page.getAttribute('html', 'lang') === 'en' && await page.getAttribute('.sh-lang a[hreflang=en]', 'aria-current') === 'true', 'dépôt par lien : ?lang=en respecté');
   ok(errors.length === 0, 'dépôt par lien ?lang : aucune erreur console ' + errors.join(' | '));
   await page.close();
 }

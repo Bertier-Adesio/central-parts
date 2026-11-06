@@ -46,6 +46,8 @@ jobs:
         run: node tools/test-import.mjs
       - name: En-tête CSP à jour (empreintes des scripts en ligne)
         run: node tools/build-csp.mjs --check
+      - name: En-tête partagé à jour (tools/build-header.mjs)
+        run: node tools/build-header.mjs --check
       - name: Règles métier de la maquette
         run: node tools/test-app.mjs
       - name: Vérification de type des fonctions Edge
@@ -123,6 +125,7 @@ jobs:
           node tools/test-listes-ui.mjs
           node tools/test-panier-ui.mjs
           node tools/test-csp.mjs
+          node tools/test-header-ui.mjs
           node tools/test-fabricants-ui.mjs
           node tools/test-sourcing-ui.mjs
           node tools/test-api-page-ui.mjs

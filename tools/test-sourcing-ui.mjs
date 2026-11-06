@@ -14,6 +14,14 @@ const CHECKOUT = 'https://pay.gocardless.com/billing/static/flow?id=BRF_FICTIF';
 const TOKEN = 'c'.repeat(48), PF_TOKEN = 'e'.repeat(48);
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 const state = { sent: [], statusCalls: 0, external: [] };
 
 async function sourcing(route) {
@@ -66,7 +74,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   await page.waitForSelector('#to-sourcing:not([hidden])');
   ok((await page.textContent('#to-sourcing-a')).includes('49 € HT') && (await page.getAttribute('#to-sourcing-a', 'href')) === '/sourcing/?lang=fr&q=CM8071505024905',
     'offres sans résultat : lien vers la recherche de sourcing, référence transmise');
-  ok((await page.getAttribute('.topnav a[data-href="/sourcing/"]', 'href')) === '/sourcing/?lang=fr', 'menu : « Composants rares »');
+  ok((await page.getAttribute('.sh-nav a[data-href="/sourcing/"]', 'href')) === '/sourcing/?lang=fr', 'menu : « Composants rares »');
   ok(errors.length === 0, 'offres : aucune erreur console ' + errors.join(' | '));
   await page.close();
 }
@@ -76,7 +84,7 @@ for (const width of [1280, 390]) {
   const { page, errors } = await newPage(width);
   await page.goto(BASE + '/sourcing/?lang=fr&q=CM8071505024905');
   ok((await page.inputValue('#f-mpn')) === 'CM8071505024905' && (await page.textContent('h1')) === 'Composants rares ou introuvables', width + ' px : référence pré-remplie');
-  ok((await page.textContent('#send')).includes('49,00') && (await page.getAttribute('.topnav a[aria-current=page]', 'data-href')) === '/sourcing/', width + ' px : 49 € HT affiché, menu');
+  ok((await page.textContent('#send')).includes('49,00') && (await page.getAttribute('.sh-nav a[aria-current=page]', 'data-href')) === '/sourcing/', width + ' px : 49 € HT affiché, menu');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
   if (width === 1280) {
     await page.click('#send');
@@ -127,8 +135,8 @@ for (const width of [1280, 390]) {
       'proforma : demande enregistrée, suivi « en attente de votre virement »');
     await page.waitForTimeout(4500);
     ok(state.pfCalls === 1, 'proforma : pas d\'interrogation en boucle');
-    await page.click('[data-lang=zh]');
-    ok((await page.textContent('h1')).includes('寻源') && (await page.textContent('.topnav a[aria-current=page]')) === '稀缺元器件', '中文 : titre et menu');
+    await setLang(page, 'zh');
+    ok((await page.textContent('h1')).includes('寻源') && (await page.textContent('.sh-nav a[aria-current=true]')) === '稀缺元器件', '中文 : titre et menu');
   }
   ok(errors.length === 0, width + ' px : aucune erreur console ' + errors.join(' | '));
   await page.close();
@@ -144,7 +152,7 @@ for (const width of [1280, 390]) {
   const txt = (await page.textContent('#card')).replace(/[  ]/g, ' ');
   ok(state.statusCalls >= 2 && txt.includes('CM8071505024905') && txt.includes('Deux offres envoyées') && txt.includes('(49,00 € HT) seront déduits'), 'mise à jour automatique : offres envoyées, note, déduction');
   ok(await noScroll(page), 'suivi, 390 px : pas de défilement horizontal');
-  await page.click('[data-lang=en]');
+  await setLang(page, 'en');
   ok((await page.textContent('#st')) === 'Offers sent', 'suivi EN');
   // Autre adresse (pas seulement un autre fragment) : la page se recharge.
   await page.goto(BASE + '/sourcing/suivi/?lang=fr&v=2#' + 'd'.repeat(48));

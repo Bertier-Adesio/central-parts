@@ -43,6 +43,7 @@
   --border-1: var(--n-200);
   --border-2: var(--n-300);
   --border-strong: var(--n-900);
+  --border-inverse: var(--n-700);   /* bordures sur fond --bg-inverse (en-tête partagé) */
   --accent: var(--cp-red);
   --accent-hover: var(--cp-red-deep);
   --accent-fg: #ffffff;
@@ -103,6 +104,8 @@
   --control-h-md: 36px;
   --control-h-lg: 44px;
   --content-max: 1280px;
+  --header-h: 60px;      /* en-tête partagé, à partir de 1140 px */
+  --header-h-sm: 56px;   /* en-tête partagé, sous 1140 px */
   --border-width: 1px;
 }
 
@@ -117,6 +120,7 @@
   --shadow-2: 0 1px 2px rgba(21, 23, 28, 0.06), 0 4px 12px -4px rgba(21, 23, 28, 0.10);
   --shadow-pop: 0 12px 32px -12px rgba(21, 23, 28, 0.32), 0 0 0 1px rgba(21, 23, 28, 0.06);
   --focus-ring: 0 0 0 2px #fbfaf8, 0 0 0 4px #d7262e;
+  --focus-ring-inverse: 0 0 0 2px var(--bg-inverse), 0 0 0 4px var(--fg-inverse);   /* focus sur fond sombre */
 }
 
 :root {

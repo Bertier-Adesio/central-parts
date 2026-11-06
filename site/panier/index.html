@@ -13,16 +13,10 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/tokens.css">
 <link rel="stylesheet" href="/assets/fonts.css">
+<link rel="stylesheet" href="/assets/header.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
-.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
 .wrap{max-width:820px;margin:0 auto;padding:0 16px}
-.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
-.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
-.langs{display:flex;gap:4px}
-.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
-.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
 main.wrap{padding:32px 16px 64px}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 h2{font-size:var(--text-lg);margin:0 0 12px}
@@ -73,40 +67,55 @@ ul.sugg button:hover,ul.sugg button:focus{background:var(--bg-sunken)}
 ul.sugg .src{font-size:var(--text-xs);color:var(--fg-3);padding:4px 12px;border-top:1px solid var(--border-1)}
 .cta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
 [hidden]{display:none!important}
-/* Menu de navigation commun des pages acheteur (dans l'en-tête, sous la marque). */
-.hdr .topnav .wrap{display:flex;justify-content:flex-start;align-items:center;gap:20px;height:40px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:var(--text-sm)}
-.topnav a{color:var(--fg-inverse-2);text-decoration:none}
-.topnav a:hover{color:var(--fg-inverse)}
-.topnav a[aria-current=page]{color:var(--fg-inverse);font-weight:var(--weight-medium)}
 </style>
 </head>
 <body>
 
-<header class="hdr">
-  <div class="wrap">
-    <a class="brand" href="/" id="home">
-      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
-      <span>Central<span class="accent">.</span>Parts</span>
-    </a>
-    <div class="langs" role="group" aria-label="Langue / Language / 语言">
-      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
+<!-- en-tête partagé : généré par tools/build-header.mjs, ne pas modifier à la main -->
+<a class="sh-skip" href="#main" data-sh="skip">Aller au contenu</a>
+<header class="site-hdr" data-variant="public">
+  <div class="sh-bar">
+    <a class="sh-brand" href="/" data-home aria-label="Central.Parts, accueil" data-sh-aria="brand"><svg class="sh-mark" viewBox="24 24 432 432" aria-hidden="true" focusable="false"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="sh-dot"/></svg><span class="sh-word">Central<span class="sh-dotc">.</span>Parts</span></a>
+    <nav class="sh-nav" aria-label="Navigation principale" data-sh-aria="nav">
+      <a href="/offres/" data-href="/offres/" data-sh="offers">Offres</a>
+      <a href="/fabricants/" data-href="/fabricants/" data-sh="makers">Fabricants</a>
+      <a href="/sourcing/" data-href="/sourcing/" data-sh="rare">Composants rares</a>
+      <a href="/conditions/" data-href="/conditions/" data-sh="terms">Conditions commerciales</a>
+      <a href="/api/" data-href="/api/" data-sh="api">API</a>
+      <a class="sh-sep" href="/depot/" data-href="/depot/" data-sh="supplier">Espace fournisseur</a>
+    </nav>
+    <div class="sh-tools">
+      <a class="sh-req" href="/panier/" aria-current="page"><svg class="sh-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span class="sh-req-l" data-sh="req">Panier</span><span class="sh-n" aria-hidden="true" hidden></span><span class="sh-vh"></span></a>
+      <div class="sh-lang" role="group" aria-label="Langue" data-sh-aria="lang">
+        <a href="?lang=fr" hreflang="fr" lang="fr" aria-current="true">FR</a>
+        <a href="?lang=en" hreflang="en" lang="en">EN</a>
+        <a href="?lang=zh" hreflang="zh" lang="zh-Hans">中文</a>
+      </div>
+      <details class="sh-menu">
+        <summary aria-label="Menu" data-sh-aria="menu"><svg class="sh-ico sh-i-open" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg><svg class="sh-ico sh-i-close" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></summary>
+        <div class="sh-panel">
+          <nav aria-label="Navigation principale" data-sh-aria="nav">
+            <a class="sh-row" href="/offres/" data-href="/offres/" data-sh="offers">Offres</a>
+            <a class="sh-row" href="/fabricants/" data-href="/fabricants/" data-sh="makers">Fabricants</a>
+            <a class="sh-row" href="/sourcing/" data-href="/sourcing/" data-sh="rare">Composants rares</a>
+            <a class="sh-row" href="/conditions/" data-href="/conditions/" data-sh="terms">Conditions commerciales</a>
+            <a class="sh-row" href="/api/" data-href="/api/" data-sh="api">API</a>
+            <a class="sh-row" href="/depot/" data-href="/depot/" data-sh="supplier">Espace fournisseur</a>
+          </nav>
+          <p class="sh-lbl" id="sh-l" data-sh="lang">Langue</p>
+          <div class="sh-lang sh-lang-m" role="group" aria-labelledby="sh-l">
+            <a href="?lang=fr" hreflang="fr" lang="fr" aria-current="true">FR</a>
+            <a href="?lang=en" hreflang="en" lang="en">EN</a>
+            <a href="?lang=zh" hreflang="zh" lang="zh-Hans">中文</a>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
-  <nav class="topnav" aria-label="Navigation">
-    <div class="wrap">
-      <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
-      <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
-      <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件">Composants rares</a>
-      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件">Conditions commerciales</a>
-      <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API">API</a>
-      <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
-    </div>
-  </nav>
 </header>
+<!-- fin de l'en-tête partagé -->
 
-<main class="wrap">
+<main id="main" class="wrap">
   <h1 data-t="title">Panier</h1>
   <p class="lead" data-t="lead">Une seule demande pour toutes vos références. Central.Parts vérifie la demande, puis confirme la disponibilité auprès de chaque fournisseur avant de vous envoyer une facture proforma.</p>
   <noscript><p class="msg err">Le panier a besoin de JavaScript. · The cart needs JavaScript. · 购物车需要启用 JavaScript。 · <a href="mailto:contact@central.parts">contact@central.parts</a></p></noscript>
@@ -290,7 +299,7 @@ ul.sugg .src{font-size:var(--text-xs);color:var(--fg-3);padding:4px 12px;border-
     try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a.filter(function (l) { return l && l.mpn && l.source && l.ship_from; }).slice(0, MAX) : []; }
     catch (e) { return []; }
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(cart.map(function (l) { return { mpn: l.mpn, manufacturer: l.manufacturer, source: l.source, ship_from: l.ship_from, qty: l.qty, moq: l.moq, spq: l.spq }; }))); } catch (e) {} }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(cart.map(function (l) { return { mpn: l.mpn, manufacturer: l.manufacturer, source: l.source, ship_from: l.ship_from, qty: l.qty, moq: l.moq, spq: l.spq }; }))); } catch (e) {} if (window.cpCount) cpCount(); }
   // Quantités compatibles avec le fournisseur (migration 20261103000027) : au moins le MOQ, et un multiple du SPQ
   // (conditionnement standard : bobine, plateau). minQty : plus petit multiple du SPQ qui atteint le MOQ.
   function minQty(l) { var moq = Math.max(l.moq || 1, 1), spq = Math.max(l.spq || 1, 1); return spq > 1 ? Math.ceil(moq / spq) * spq : moq; }
@@ -512,17 +521,15 @@ ul.sugg .src{font-size:var(--text-xs);color:var(--fg-3);padding:4px 12px;border-
   });
 
   // ------------------------------------------------------------ langue
+  // Langue mémorisée par l'en-tête partagé (cp-lang), sauf si l'adresse en impose une.
+  try { var cpl = localStorage.getItem('cp-lang'); if (!new URLSearchParams(location.search).get('lang') && T[cpl]) lang = cpl; } catch (e) {}
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
-    $('home').setAttribute('href', t().home);
     $('to-offers').href = $('more').href = t().offers; $('to-search').href = t().search; $('to-terms').href = t().termsHref;
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     fillCountries(); render(); syncForm();
   }
-  document.querySelectorAll('[data-lang]').forEach(function (b) {
-    b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} say('', ''); applyLang(); });
-  });
+  window.cpLang = function (l) { lang = l; try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} say('', ''); applyLang(); };
   // Un autre onglet (offres, recherche) ajoute une référence : le panier suit.
   window.addEventListener('storage', function (ev) {
     if (ev.key !== KEY) return;
@@ -532,18 +539,59 @@ ul.sugg .src{font-size:var(--text-xs);color:var(--fg-3);padding:4px 12px;border-
   applyLang();
   cart.forEach(quote);
 })();
-// Menu de navigation : libellés et liens dans la langue de la page (suit l'attribut lang de la page).
+// --- en-tête partagé : généré par tools/build-header.mjs, ne pas modifier à la main ---
 (function () {
-  function nav() {
-    var l = (document.documentElement.lang || 'fr').slice(0, 2);
-    document.querySelectorAll('.topnav a[data-fr]').forEach(function (a) {
-      a.textContent = a.getAttribute('data-' + l) || a.getAttribute('data-fr');
-      a.href = a.getAttribute('data-href') + (a.getAttribute('data-href') === '/depot/' ? '' : '?lang=' + l);
-    });
+  'use strict';
+  var hdr = document.querySelector('.site-hdr'); if (!hdr) return;
+  var root = document.documentElement, menu = hdr.querySelector('.sh-menu');
+  var H = {"fr":{"sep":", ","brand":"Central.Parts, accueil","nav":"Navigation principale","offers":"Offres","makers":"Fabricants","rare":"Composants rares","terms":"Conditions commerciales","api":"API","supplier":"Espace fournisseur","help":"Aide","lang":"Langue","menu":"Menu","req":"Panier","one":"{n} référence","many":"{n} références","tagS":"Espace fournisseur","tagB":"Back-office","signed":"Connecté :","out":"Déconnexion","skip":"Aller au contenu"},"en":{"sep":", ","brand":"Central.Parts, home","nav":"Main navigation","offers":"Offers","makers":"Manufacturers","rare":"Hard-to-find parts","terms":"Terms of sale","api":"API","supplier":"Supplier centre","help":"Help","lang":"Language","menu":"Menu","req":"Cart","one":"{n} part number","many":"{n} part numbers","tagS":"Supplier centre","tagB":"Back office","signed":"Signed in:","out":"Sign out","skip":"Skip to content"},"zh":{"sep":"，","brand":"Central.Parts 首页","nav":"主导航","offers":"报价","makers":"制造商","rare":"稀缺元器件","terms":"交易条件","api":"API","supplier":"供应商中心","help":"使用帮助","lang":"语言","menu":"菜单","req":"购物车","one":"{n} 个型号","many":"{n} 个型号","tagS":"供应商中心","tagB":"管理后台","signed":"已登录：","out":"退出登录","skip":"跳到正文"}};
+  function cur() { var l = (root.lang || '').slice(0, 2); return H[l] ? l : 'fr'; }
+  // Lien de langue : garde les autres paramètres (?q=…) et l'ancre.
+  function withLang(l) { var q = new URLSearchParams(location.search); q.set('lang', l); return location.pathname + '?' + q + location.hash; }
+  // Compteur du panier (ADR 0028) : pastille visible, nombre lu dans le nom du lien.
+  function count() {
+    var a = hdr.querySelector('.sh-req'); if (!a) return;
+    var n = 0, h = H[cur()];
+    try { var c = JSON.parse(localStorage.getItem('cp-cart') || '[]'); n = Array.isArray(c) ? c.length : 0; } catch (e) {}
+    var pill = a.querySelector('.sh-n');
+    pill.hidden = !n; pill.textContent = n > 99 ? '99+' : String(n);
+    a.querySelector('.sh-vh').textContent = n ? h.sep + (n === 1 ? h.one : h.many).replace('{n}', n) : '';
   }
-  new MutationObserver(nav).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  nav();
+  function paint() {
+    var l = cur(), h = H[l];
+    document.querySelectorAll('[data-sh]').forEach(function (e) { e.textContent = h[e.getAttribute('data-sh')]; });
+    hdr.querySelectorAll('[data-sh-aria]').forEach(function (e) { e.setAttribute('aria-label', h[e.getAttribute('data-sh-aria')]); });
+    hdr.querySelectorAll('[data-home]').forEach(function (a) { a.href = l === 'fr' ? '/' : '/' + l + '/'; });
+    hdr.querySelectorAll('a[data-href]').forEach(function (a) { var p = a.getAttribute('data-href'); a.href = p === '/depot/' ? p : p + '?lang=' + l; });
+    hdr.querySelectorAll('.sh-lang a').forEach(function (a) {
+      var x = a.getAttribute('hreflang'); a.href = withLang(x);
+      if (x === l) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
+    count();
+  }
+  function close() { if (menu && menu.open) menu.open = false; root.classList.remove('sh-lock'); }
+  // Langue : sans rechargement si la page expose cpLang(l), sinon le lien ?lang= fait la navigation.
+  hdr.querySelectorAll('.sh-lang a').forEach(function (a) {
+    a.addEventListener('click', function (ev) {
+      var l = a.getAttribute('hreflang');
+      try { localStorage.setItem('cp-lang', l); } catch (e) {}
+      if (typeof window.cpLang !== 'function') return;
+      ev.preventDefault(); window.cpLang(l); history.replaceState(history.state, '', withLang(l)); close();
+    });
+  });
+  if (menu) {
+    menu.addEventListener('toggle', function () { root.classList.toggle('sh-lock', menu.open); });
+    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && menu.open) { close(); menu.querySelector('summary').focus(); } });
+    menu.addEventListener('click', function (ev) { if (ev.target === menu) close(); });   // voile (::after du menu ouvert)
+    var wide = window.matchMedia('(min-width: 1140px)'), onWide = function () { if (wide.matches) close(); };
+    if (wide.addEventListener) wide.addEventListener('change', onWide); else wide.addListener(onWide);
+  }
+  window.cpCount = count;
+  window.addEventListener('storage', function (ev) { if (ev.key === 'cp-cart') count(); });
+  new MutationObserver(paint).observe(root, { attributes: true, attributeFilter: ['lang'] });
+  paint();
 })();
+// --- fin de l'en-tête partagé ---
 </script>
 </body>
 </html>

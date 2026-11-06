@@ -7,6 +7,14 @@ const { chromium } = pw.default || pw;
 const BASE = process.env.BASE || 'http://localhost:8765';
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 const browser = await chromium.launch();
 const external = [];
 
@@ -30,7 +38,7 @@ for (const width of [390, 1280]) {
   const loaded = await page.$$eval('[data-l=zh] figure img', (l) => l.every((i) => i.naturalWidth > 0));
   ok(imgs.length === 4 && loaded, width + ' px : 4 captures chargées');
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), width + ' px : pas de défilement horizontal');
-  await page.click('#lang');
+  await toggleLang(page);
   ok(await page.isVisible('[data-l=en] h1') && (await page.textContent('h1:visible')) === 'Supplier guide' && await page.evaluate(() => document.documentElement.lang) === 'en', width + ' px : bascule en anglais');
   // Modèles à télécharger : chaque lien répond.
   const hrefs = await page.$$eval('#modeles a[download]', (l) => l.map((a) => a.getAttribute('href')));

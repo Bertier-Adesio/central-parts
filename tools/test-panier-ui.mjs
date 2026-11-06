@@ -9,6 +9,16 @@ const BASE = process.env.BASE || 'http://localhost:8765';
 const FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/';
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+// Compteur du panier dans l'en-tête : pastille masquée quand le panier est vide.
+const cartN = (page) => page.$eval('.sh-req .sh-n', (e) => (e.hidden ? '' : e.textContent));
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 const norm = (t) => (t || '').replace(/[  ]/g, ' ');
 
 // Offres fictives, prix en euros comme partner_offers et public_search (migration 20261103000025).
@@ -85,16 +95,16 @@ await mock(page, errors);
 // 1. /offres/ : ajout au panier, compteur, bouton « Dans le panier ».
 await page.goto(BASE + '/offres/?lang=fr');
 await page.waitForSelector('#rows button.add');
-ok((await page.textContent('#cart-n')) === '', 'offres : panier vide au départ');
+ok((await cartN(page)) === '', 'offres : panier vide au départ');
 ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => !!b.querySelector('svg') && b.textContent.trim() === '' && b.getAttribute('aria-label') === 'Ajouter au panier' && b.title === 'Ajouter au panier'),
   'offres : icône de panier, libellé accessible et infobulle');
 await page.click('#rows tr:nth-child(1) button.add');
-ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await page.textContent('#cart-n')) === '(1)', 'offres : ajout, message et compteur');
+ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await cartN(page)) === '1', 'offres : ajout, message et compteur');
 ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr'
   && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'aria-label')) === 'Dans le panier ✓', 'offres : icône « dans le panier » qui mène au panier');
 await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
-ok((await page.textContent('#cart-n')) === '(3)', 'offres : trois références');
+ok((await cartN(page)) === '3', 'offres : trois références');
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
 ok(stored[0].qty === 2500 && stored[0].moq === 100 && stored[0].spq === 2500 && stored[1].qty === 1, 'offres : quantité de départ = plus petit multiple du SPQ qui atteint le MOQ');
 ok(norm(await page.textContent('#rows tr:nth-child(1)')).includes('SPQ 2 500'), 'offres : SPQ affiché sous le MOQ');
@@ -107,7 +117,7 @@ ok((await page.getAttribute('#to-terms', 'href')) === '/conditions/?lang=fr' && 
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
 await page.waitForSelector('#list button.add');
 await page.click('#list button.add');
-ok((await page.textContent('#cart-n')) === '(4)' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
+ok((await cartN(page)) === '4' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
 ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttribute('aria-label') === 'Dans le panier ✓'), 'recherche : icône « dans le panier »');
 
 // 3. /panier/ : devis par ligne, offre disparue bloquante, retrait, quantité.
@@ -187,7 +197,7 @@ ok(await page.isHidden('#steps') && !/V-\d|ORG-/.test(txt), 'suivi : pas d\'éta
 await page.goto(BASE + '/panier/?lang=zh');
 await page.waitForSelector('#empty:not([hidden])');
 ok((await page.textContent('h1')) === '购物车' && (await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh', '中文 : panier vide, lien vers les offres');
-await page.click('[data-lang=en]');
+await setLang(page, 'en');
 ok((await page.textContent('#empty')).includes('Your cart is empty'), 'EN : panier vide');
 ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'panier non indexé');
 
@@ -231,9 +241,9 @@ await page.close();
   const c = norm(await p.textContent('main'));
   ok(c.includes('DAP, Incoterms® 2020') && c.includes('2 000 €') && c.includes('FCA au lieu d’expédition') && c.includes('30 jours') && c.includes('90 jours') && c.includes('48 heures'),
     'conditions : livraison DAP, offerte dès 2 000 €, compte de l\'acheteur en FCA, délais, retours, garantie');
-  await p.click('[data-lang=zh]');
+  await setLang(p, 'zh');
   ok((await p.textContent('h1')) === '交易条件' && norm(await p.textContent('main')).includes('2 000 欧元免运费'), '中文 : conditions');
-  await p.click('[data-lang=en]');
+  await setLang(p, 'en');
   ok((await p.textContent('h1')) === 'Terms of sale' && (await p.getAttribute('#to-cart', 'href')) === '/panier/?lang=en', 'EN : conditions et liens');
   ok(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth) && errs.length === 0, 'conditions : 390 px sans défilement ni erreur');
   ok(await p.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'conditions : non indexées');

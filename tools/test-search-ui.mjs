@@ -9,6 +9,14 @@ const BASE = process.env.BASE || 'http://localhost:8765';
 const FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/search';
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
+// En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
+async function setLang(page, l) {
+  const bar = page.locator('.sh-tools > .sh-lang a[hreflang=' + l + ']');
+  if (await bar.isVisible()) return bar.click();
+  await page.click('.sh-menu summary');
+  await page.click('.sh-lang-m a[hreflang=' + l + ']');
+}
+const toggleLang = async (page) => setLang(page, (await page.evaluate(() => document.documentElement.lang)).startsWith('zh') ? 'en' : 'zh');
 const calls = [];
 let quoteCur = null;
 
@@ -65,11 +73,11 @@ ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
 ok(new URL(page.url()).search === '?q=NE5', 'adresse partageable');
 
-await page.click('#lang');
+await setLang(page, 'en');
 ok((await page.textContent('h1')) === 'Search for a component' && (await page.textContent('#list')).includes('Ships from China'), 'anglais');
-await page.click('#lang');
+await setLang(page, 'zh');
 ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价') && (await page.textContent('#list')).includes('千颗单价'), 'chinois');
-await page.click('#lang');
+await setLang(page, 'fr');
 
 await page.fill('#q', 'xx');
 await page.click('#f button');
