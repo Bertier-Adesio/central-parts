@@ -24,12 +24,16 @@
 //   GET  /admin/supplier-addresses?org=ORG-0107 → adresses d'expédition du vendeur (ADR 0030)
 //   GET  /admin/supplier-profile?org=ORG-0107   → fiche société : présentation, chiffres, paiement, contacts, fabricants rattachés (ADR 0032)
 //   POST /admin/supplier-profile {org, profile} → enregistre la fiche (clé absente : inchangée)
+//   POST /admin/supplier-editor {org, openid}   → désigne le seul compte WeChat qui modifie la fiche dans /depot/
 //   GET  /admin/manufacturers                   → fabricants, leurs marques, leurs comptes rattachés et leur page publique
 //   GET  /admin/manufacturer?id=MFR-0001        → fiche d'un fabricant
 //   POST /admin/manufacturer {id?, manufacturer} → crée (sans id) ou modifie un fabricant
 //   POST /admin/manufacturer/link {id, org, role} → rattache un compte : role self (le fabricant lui-même) ou authorized
 //   POST /admin/manufacturer/unlink {id, org}   → détache un compte
-//   POST /admin/manufacturer/publish {id, on}   → publie ou retire la page publique du fabricant (/fabricants/)
+//   POST /admin/manufacturer/publish {id, on}   → publie ou retire la page publique du fabricant (/fabricants/) ;
+//                                               publication : accord d'un compte rattaché requis (migration 20261106000035)
+//   POST /admin/manufacturer/consent {id, org, on} → enregistre l'accord reçu hors plateforme, ou le retire
+//   POST /admin/manufacturer/proposal {proposal, apply} → applique ou écarte une correction proposée par un fournisseur
 //   POST /admin/supplier-contact {org, contact} → ajoute (sans id) ou modifie un contact
 //   POST /admin/supplier-contact/delete {org, id} → retire un contact
 //   POST /admin/logo-upload-url {id, type}      → lien signé pour déposer le logo d'un fabricant (PNG, JPEG, WebP, 1 Mo)
@@ -203,10 +207,15 @@ Deno.serve(async (req) => {
       const b = await body();
       const id = typeof b.id === 'string' && /^MFR-[0-9]{1,10}$/.test(b.id) ? b.id : null;
       if (path === '/manufacturer') return send('admin_manufacturer_save', { p_id: id, p: b.manufacturer || {} });
+      if (path === '/manufacturer/proposal') {
+        if (!Number.isInteger(b.proposal)) return json({ error: 'id' }, 422);
+        return send('admin_manufacturer_proposal_decide', { p_id: b.proposal, p_apply: b.apply === true });
+      }
       if (!id) return json({ error: 'id' }, 422);
       if (path === '/manufacturer/link') return send('admin_manufacturer_link', { p_id: id, p_org: String(b.org || ''), p_role: String(b.role || '') });
       if (path === '/manufacturer/unlink') return send('admin_manufacturer_unlink', { p_id: id, p_org: String(b.org || '') });
       if (path === '/manufacturer/publish') return send('admin_manufacturer_publish', { p_id: id, p_on: b.on === true });
+      if (path === '/manufacturer/consent') return send('admin_manufacturer_consent', { p_id: id, p_org: String(b.org || ''), p_on: b.on === true });
       if (path === '/logo-upload-url') {
         const ext = ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' } as Record<string, string>)[String(b.type)];
         if (!ext) return json({ error: 'format' }, 422);
@@ -227,6 +236,7 @@ Deno.serve(async (req) => {
       if (typeof org !== 'string' || !/^[A-Z0-9-]{1,32}$/.test(org)) return json({ error: 'org' }, 422);
       // Fiche société et contacts (ADR 0032).
       if (path === '/supplier-profile') return send('admin_supplier_profile_save', { p_org: org, p: b.profile || {} });
+      if (path === '/supplier-editor') return send('admin_set_profile_editor', { p_org: org, p_openid: String(b.openid || '') });
       if (path === '/supplier-contact') return send('admin_seller_contact_save', { p_org: org, p: b.contact || {} });
       if (path === '/supplier-contact/delete') return send('admin_seller_contact_delete', { p_org: org, p_id: String(b.id || '') });
       if (path === '/approve') {

@@ -52,14 +52,45 @@ async function api(route) {
     return reply({ ...d, all_done: true });
   }
   if (path === '/invite') { state.contacts.invites.push({ label: body.label }); return reply({ link: 'https://central.parts/depot/?invite=' + 'c'.repeat(36) }); }
+  // Fiche société et fabricants (migration 20261106000035), comme supplier_company et suivantes.
+  const co = state.company ||= { org_id: 'ORG-0107', name: ORG.name, can_edit: true, founded_year: null, website: null, about: {}, hq_city: null, staff: null,
+    certifications: [], languages: [], payment_methods: [], payment_terms: null, min_order_usd: null, contacts: [], manufacturers: [] };
+  if (path === '/company' && req.method() === 'GET') return reply(co);
+  if (!co.can_edit && /^\/(company|manufacturer)/.test(path)) return reply({ error: 'forbidden' }, 403);
+  if (path === '/company') {
+    const f = body.profile || {};
+    if (f.website && !/^https?:\/\//.test(f.website)) return reply({ error: 'invalid', detail: 'Site web : adresse http(s) attendue' }, 422);
+    for (const k of ['founded_year', 'staff', 'min_order_usd']) if (k in f) co[k] = f[k] === '' ? null : Number(f[k]);
+    for (const k of ['website', 'hq_city', 'payment_terms']) if (k in f) co[k] = f[k] || null;
+    for (const k of ['certifications', 'languages', 'payment_methods']) if (k in f) co[k] = f[k];
+    if (f.about) co.about = Object.fromEntries(Object.entries(f.about).filter(([, v]) => v));
+    state.companySaved = f;
+    return reply(co);
+  }
+  if (path === '/company/contact') {
+    const c = { ...body.contact, id: body.contact.id || 'CTC-000' + (co.contacts.length + 1), email: (body.contact.email || '').toLowerCase() || null };
+    co.contacts = co.contacts.filter((x) => x.id !== c.id).concat(c);
+    return reply(co);
+  }
+  if (path === '/company/contact/delete') { co.contacts = co.contacts.filter((x) => x.id !== body.id); return reply(co); }
+  if (path === '/manufacturer/consent') {
+    const m = co.manufacturers.find((x) => x.id === body.id);
+    m.consent_at = body.on ? new Date().toISOString() : null;
+    return reply(co);
+  }
+  if (path === '/manufacturer/propose') {
+    state.proposal = body;
+    co.manufacturers.find((x) => x.id === body.id).pending = true;
+    return reply(co);
+  }
   return reply({ error: 'not_found' }, 404);
 }
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, locale: 'zh-CN' });
 const errors = [];
-// Le 409 (réponse RFQ après l'échéance) est provoqué par le test : le navigateur le journalise.
-page.on('console', (m) => { if (m.type() === 'error' && !/status of 409/.test(m.text())) errors.push(m.text()); });
+// Le 409 (réponse RFQ après l'échéance) et le 422 (site web invalide) sont provoqués par le test : le navigateur les journalise.
+page.on('console', (m) => { if (m.type() === 'error' && !/status of (409|422)/.test(m.text())) errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.route(FN + '/**', api);
 await page.route('https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/**', (r) => { if (r.request().url().endsWith('/y')) state.uploaded = true; return r.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' }); });
@@ -166,6 +197,70 @@ ok((await page.textContent('#req-list')).includes('PR-0001') && !(await page.tex
 await page.click('#req-list [data-ok="1"]');
 await page.waitForFunction(() => !document.querySelector('#req-list [data-ans]'));
 ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.textContent('#req-list')).includes('已确认'), 'demande confirmée depuis la page');
+
+// 7 bis bis. Fiche société, contacts, page du fabricant rattaché : corrections proposées et accord (migration 20261106000035).
+{
+  state.company = null;
+  await page.reload();
+  await page.waitForSelector('#co-card:not([hidden])');
+  ok(await page.isHidden('#mf-card'), 'sans fabricant rattaché : pas de section fabricant');
+  await page.click('#co-card button[data-co=edit]');
+  await page.fill('#co-web', 'ftp://exemple');
+  await page.click('#co-form button[type=submit]');
+  await page.waitForSelector('#msg.err');
+  ok((await page.textContent('#msg')).includes('Site web'), 'fiche société : site web invalide refusé');
+  await page.fill('#co-web', 'https://societe.example');
+  await page.fill('#co-staff', '170');
+  await page.fill('#co-langs', 'zh，EN');
+  await page.fill('#co-about-zh', '虚构的分销公司。');
+  await page.click('#co-form button[type=submit]');
+  await page.waitForSelector('#co-body button[data-co=edit]');
+  ok(state.companySaved.staff === '170' && state.companySaved.languages.join(',') === 'zh,en' && (await page.textContent('#co-body')).includes('虚构的分销公司。'),
+    'fiche société enregistrée : effectif, langues (virgule chinoise acceptée), présentation');
+  await page.click('#co-card button[data-co=cadd]');
+  await page.fill('#ct-name', 'Contact fictif');
+  await page.fill('#ct-email', 'Ventes@Societe.Example');
+  await page.check('#ct-rfq');
+  await page.check('#ct-po');
+  await page.click('#ct-f button[type=submit]');
+  await page.waitForFunction(() => /ventes@societe\.example/.test(document.getElementById('ct-list').textContent));
+  ok((await page.textContent('#ct-list')).includes('询价') && (await page.textContent('#ct-list')).includes('订单'), 'contact ajouté, adresses préférées RFQ et commandes');
+
+  state.company.manufacturers = [{ id: 'MFR-0001', name: '虚构制造商', brands: ['Marque Démo'], role: 'self', consent_at: null, public_page: false, pending: false,
+    about: { en: 'Fictitious manufacturer.' }, positioning: {}, founded_year: 2013, hq_city: 'Shenzhen', production_site: null, area_m2: null, staff: 120,
+    annual_units: null, certifications: [], languages: ['zh'] }];
+  await page.reload();
+  await page.waitForSelector('#mf-card:not([hidden])');
+  const mf = await page.textContent('#mf-list');
+  ok(mf.includes('虚构制造商') && mf.includes('原厂直供') && mf.includes('未发布') && mf.includes('由 Central.Parts 在欧洲分销') && mf.includes('贸易商'),
+    'page du fabricant : rôle, état, texte de l\'accord (canal officiel seulement)');
+  await page.click('#mf-list button[data-mf=propose]');
+  await page.click('form.mf-prop button[type=submit]');
+  ok((await page.textContent('#msg')).includes('没有修改') && !state.proposal, 'aucune modification : rien n\'est envoyé');
+  await page.fill('#mp-staff', '130');
+  await page.fill('#mp-about-zh', '虚构的制造商。');
+  await page.click('form.mf-prop button[type=submit]');
+  await page.waitForFunction(() => /等待 Central\.Parts 审核/.test(document.getElementById('mf-list').textContent));
+  ok(state.proposal.id === 'MFR-0001' && state.proposal.proposed.staff === '130' && state.proposal.proposed.about.zh === '虚构的制造商。'
+    && !('en' in state.proposal.proposed.about) && !('hq_city' in state.proposal.proposed), 'correction proposée : seuls les champs modifiés partent');
+  await page.click('#mf-list button[data-mf=consent]');
+  await page.waitForFunction(() => /已于/.test(document.getElementById('mf-list').textContent));
+  ok(!!state.company.manufacturers[0].consent_at && await page.isVisible('#mf-list button[data-mf=unconsent]'), 'accord donné, retrait possible');
+  page.once('dialog', (d) => d.accept());
+  await page.click('#mf-list button[data-mf=unconsent]');
+  await page.waitForSelector('#mf-list button[data-mf=consent]');
+  ok(!state.company.manufacturers[0].consent_at, 'accord retiré');
+  await page.click('#lang');
+  ok((await page.textContent('#mf-list')).includes('Distributed in Europe by Central.Parts') && (await page.textContent('#co-card h2')) === 'Company profile', 'textes en anglais');
+  await page.click('#lang');
+  // Collègue (pas responsable de la fiche) : lecture seule.
+  state.company.can_edit = false;
+  await page.reload();
+  await page.waitForSelector('#mf-card:not([hidden])');
+  ok(!(await page.$('#co-body button[data-co=edit]')) && !(await page.$('#mf-list button[data-mf]')) && !(await page.$('#ct-form button')), 'collègue : lecture seule');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'fiche société : pas de défilement horizontal à 390 px');
+  state.company = null;
+}
 
 // 7 ter. RFQ des plateformes : liste, taux propre, réponse avant l'échéance, refus après.
 {

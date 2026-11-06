@@ -69,3 +69,18 @@ Décision de Bertier : « il faut que je puisse moduler direct fabricant et dire
 
 - Le rôle de chaque compte rattaché se choisit et se change dans la fiche du fabricant, sans le détacher.
 - Un fabricant peut avoir plusieurs comptes « direct fabricant » : lui-même et sa société de distribution.
+
+## Complément du 6 novembre 2026 : espace fournisseur et accord
+
+Décisions de Bertier :
+- « le fournisseur devrait avoir accès à un back office fournisseur » ;
+- « s'il y a plusieurs utilisateurs connectés, il y a seulement un admin autorisé à modifier la description, et Central.Parts ».
+
+Mise en œuvre : migration `20261106000035_espace_societe.sql`.
+
+- **Dans `/depot/`, sections « Fiche société » et « Pages fabricant »** :
+  - le fournisseur complète la fiche de sa société et ses contacts (adresses préférées RFQ et commandes), à usage interne ;
+  - il relit la page de chaque fabricant rattaché et propose des corrections. Elles ne sont appliquées qu'après validation dans le back office : Central.Parts garde la main sur la page publique ;
+  - il donne ou retire son accord sur la mention « distribué en Europe par Central.Parts » et sur le badge de ses offres.
+- **Un seul responsable de la fiche par société** : par défaut, le premier administrateur WeChat rattaché ; un administrateur Central.Parts peut en désigner un autre depuis la fiche du fournisseur. Les autres comptes de la société ont la fiche en lecture seule. Le chiffre d'affaires et les champs saisis par Central.Parts ne sont pas modifiables par le fournisseur.
+- **Publication** : la page d'un fabricant exige au moins un accord, donné dans `/depot/` ou enregistré par un administrateur qui l'a reçu hors plateforme (WeChat, e-mail). Le retrait du dernier accord retire la page.

@@ -160,6 +160,11 @@ ok(norm(await page.textContent('#d-depot-link')).includes('valable jusqu\'à') &
 // 8 quater. Fiche société et contacts (ADR 0032) ; fabricants, distributeurs et page publique (migration 20261105000033).
 await page.waitForSelector('#pf-view');
 ok(norm(await page.textContent('#pf-mfrs')).includes('Aucun fabricant rattaché'), 'fiche société : aucun fabricant rattaché');
+// Un seul responsable de la fiche dans /depot/ (migration 20261106000035), désigné ici.
+ok(await page.inputValue('#pf-editor-i') === 'oFICTIF0110', 'responsable de la fiche : premier administrateur WeChat par défaut');
+await page.click('#pf-editor button[type=submit]');
+await page.waitForFunction(() => /Responsable de la fiche désigné/.test(document.getElementById('msg').textContent));
+ok(calls('POST /supplier-editor') === 1, 'responsable de la fiche : désignation envoyée');
 await page.click('button[data-pf=edit]');
 await page.fill('#pf-web', 'ftp://exemple');
 await page.click('#pf-save');
@@ -229,6 +234,25 @@ await page.fill('#mf-about-zh', '虚构的制造商。');
 await page.click('#mf-save');
 await page.waitForSelector('#mf-view');
 ok(norm(await page.textContent('#mf-view')).includes('虚构的制造商') && norm(await page.textContent('#mf-view')).includes('2013'), 'modification : présentation ajoutée, chiffres conservés');
+// Publication : accord d'un compte rattaché requis (migration 20261106000035) ; correction proposée dans /depot/.
+ok(await page.isDisabled('button[data-mf=publish]') && norm(await page.textContent('#mf-dists')).includes('Accord non donné'), 'sans accord : publication impossible');
+mock.state.mfrs[0].proposals = [{ id: 7, org_id: 'ORG-0111', at: new Date().toISOString(), status: 'pending', note: 'Merci de corriger.',
+  proposed: { staff: '130', about: { fr: 'Présentation corrigée (fictive).' } } }];
+await page.click('#tab-sup');
+await page.click('#tab-mfr');
+await page.waitForSelector('#mfr-list button[data-mfr]');
+await page.click('#mfr-list button[data-mfr]');
+await page.waitForSelector('#mf-props li');
+ok(norm(await page.textContent('#mf-props')).includes('Présentation corrigée (fictive).') && norm(await page.textContent('#mf-props')).includes('Merci de corriger.'),
+  'correction proposée par le fournisseur affichée');
+await page.click('button[data-mf=papply]');
+await page.waitForFunction(() => !document.getElementById('mf-props') && /Corrections appliquées/.test(document.getElementById('msg').textContent));
+const applied = norm(await page.textContent('#mf-view'));
+ok(applied.includes('130') && applied.includes('Présentation corrigée (fictive).') && applied.includes('虚构的制造商'), 'correction appliquée, autres langues conservées');
+page.once('dialog', (d) => d.accept());
+await page.click('#mf-dists button[data-mf=consent][data-org="ORG-0111"]');
+await page.waitForFunction(() => /Accord donné/.test(document.getElementById('mf-dists').textContent));
+ok(norm(await page.textContent('#mf-dists')).includes('(hors plateforme)') && !(await page.isDisabled('button[data-mf=publish]')), 'accord hors plateforme enregistré : publication possible');
 let confirmText = '';
 page.once('dialog', (d) => { confirmText = d.message(); d.accept(); });
 await page.click('button[data-mf=publish]');
@@ -248,7 +272,7 @@ await page.click('button[data-mf=unpublish]');
 await page.waitForSelector('button[data-mf=publish]');
 ok(norm(await page.textContent('#mf-pub')).includes('non publiée'), 'page publique retirée');
 page.once('dialog', (d) => d.accept());
-await page.click('#mf-dists button[data-org="ORG-0110"]');
+await page.click('#mf-dists button[data-mf=unlink][data-org="ORG-0110"]');
 await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 1);
 ok((await page.$$('#ml-org option')).length === 1, 'distributeur détaché, de nouveau proposé');
 await page.click('#tab-sup');

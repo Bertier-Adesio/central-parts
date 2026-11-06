@@ -23,6 +23,13 @@
 //                           l'échéance de 48 h (même fonction que 报价 / 无货 DEM-… dans WeChat)
 //   GET  /depot/contacts    → contacts et invitations en cours (administrateur)
 //   POST /depot/invite      {label}      → lien d'invitation d'un collègue (administrateur)
+//   GET  /depot/company     → fiche de la société, contacts et fabricants rattachés (page, accord, correction en attente)
+//   POST /depot/company     {profile}    → enregistre la fiche de la société (administrateur ; champs internes exclus)
+//   POST /depot/company/contact {contact} → ajoute (sans id) ou modifie un contact ; /contact/delete {id} → le retire
+//   POST /depot/manufacturer/propose {id, proposed, note} → corrections de la page d'un fabricant rattaché, appliquées
+//                           après validation par Central.Parts (les opérateurs sont prévenus dans WeChat)
+//   POST /depot/manufacturer/consent {id, on} → accord (ou retrait) sur la mention « distribué en Europe par
+//                           Central.Parts » et le badge des offres (migration 20261106000035)
 //
 // Le scan est reçu par la fonction wechat-events (消息推送). Secrets de la fonction (jamais dans le dépôt) :
 //   WECHAT_APPID, WECHAT_SECRET (compte de service), DEPOT_SECRET (64 caractères aléatoires).
@@ -229,6 +236,31 @@ Deno.serve(async (req) => {
       const { data, error } = await db.rpc('create_member_invite', { p_openid: session.openid, p_label: String(label || '').slice(0, 40) });
       if (error) return json({ error: 'forbidden' }, 403);
       return json({ link: SITE + '?invite=' + data });
+    }
+
+    // ---------------------------------------------------------------- fiche société et fabricants (migration 20261106000035)
+    if (path.endsWith('/company') || path.includes('/company/') || path.includes('/manufacturer/')) {
+      // Erreurs SQL → codes lus par la page.
+      const fail = (e: { code?: string; message?: string }) =>
+        e.code === '42501' ? json({ error: 'forbidden' }, 403) : e.code === '22023' ? json({ error: 'invalid', detail: e.message }, 422)
+          : e.code === 'P0002' ? json({ error: 'not_found' }, 404) : json({ error: 'server' }, 500);
+      const run = async (fn: string, args: Record<string, unknown>) => {
+        const { data, error } = await db.rpc(fn, { p_openid: session.openid, ...args });
+        return error ? fail(error) : json(data);
+      };
+      if (req.method === 'GET' && path.endsWith('/company')) return run('supplier_company', {});
+      const b = await body();
+      if (req.method === 'POST' && path.endsWith('/company')) return run('supplier_company_save', { p: b.profile || {} });
+      if (req.method === 'POST' && path.endsWith('/company/contact')) return run('supplier_contact_save', { p: b.contact || {} });
+      if (req.method === 'POST' && path.endsWith('/company/contact/delete')) return run('supplier_contact_delete', { p_id: String(b.id || '') });
+      if (req.method === 'POST' && path.endsWith('/manufacturer/consent')) {
+        return run('supplier_manufacturer_consent', { p_mfr: String(b.id || ''), p_on: b.on === true });
+      }
+      if (req.method === 'POST' && path.endsWith('/manufacturer/propose')) {
+        const res = await run('supplier_manufacturer_propose', { p_mfr: String(b.id || ''), p: b.proposed || {}, p_note: String(b.note || '').slice(0, 2000) });
+        if (res.ok) await notifyOperators(db, `Corrections proposées pour ${String(b.id)} par ${who?.name || who?.org_id} : à valider dans le back office, onglet Fabricants.`).catch(() => {});
+        return res;
+      }
     }
 
     return json({ error: 'not_found' }, 404);
