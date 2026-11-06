@@ -68,8 +68,12 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok(rows[3].includes('Distributeur agréé') && !rows[3].includes('Direct fabricant'), 'offre du distributeur agréé : « Distributeur agréé »');
   const links = await page.$$eval('#rows a.mfr', (a) => a.map((x) => x.getAttribute('href')));
   ok((await page.getAttribute('#to-mfrs', 'href')) === '/fabricants/?lang=fr', 'offres : lien vers l\'annuaire des fabricants');
+  // Menu de navigation commun : page en cours marquée, liens dans la langue de la page.
+  const nav = await page.$$eval('.topnav a', (a) => a.map((x) => [x.textContent, x.getAttribute('href'), x.getAttribute('aria-current')]));
+  ok(nav.length === 5 && nav[0][0] === 'Offres' && nav[0][2] === 'page' && nav[1][1] === '/fabricants/?lang=fr' && nav[4][1] === '/depot/', 'menu : 5 liens, page en cours, langue');
   ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
   await page.click('[data-lang=zh]');
+  ok((await page.textContent('.topnav a[aria-current=page]')) === '报价' && (await page.getAttribute('.topnav a[data-href="/conditions/"]', 'href')) === '/conditions/?lang=zh', 'menu en chinois');
   ok((await page.textContent('#rows tr:first-child')).includes('原厂直供') && (await page.getAttribute('#rows a.mfr', 'href')).endsWith('lang=zh'), '中文 : 原厂直供, lien dans la langue');
   ok(errors.length === 0, 'offres : aucune erreur console ' + errors.join(' | '));
   await page.close();
