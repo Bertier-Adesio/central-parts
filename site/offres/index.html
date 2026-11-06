@@ -66,6 +66,7 @@ table.offers td.act{white-space:nowrap;text-align:right}
   table.offers td::before{content:attr(data-label);color:var(--fg-3)}
   table.offers td.first{display:block}
   table.offers td.first::before{content:none}
+  table.offers td .v{text-align:right}
   table.offers td.act{display:block;padding:8px 16px 4px}
   table.offers td.act::before{content:none}
   table.offers td.act .btn-add,table.offers td.act .btn-done{width:100%}
@@ -73,6 +74,10 @@ table.offers td.act{white-space:nowrap;text-align:right}
 @media (max-width:640px){
   form.search .filter{flex-direction:column;align-items:stretch;gap:4px}
   form.search .select{flex:none;width:100%}
+}
+/* Petit téléphone : champ et bouton pleine largeur, l'un sous l'autre, pour que l'exemple de référence tienne. */
+@media (max-width:480px){
+  form.search .q-row{flex-direction:column}
 }
 [hidden]{display:none!important}
 </style>
@@ -265,7 +270,7 @@ table.offers td.act{white-space:nowrap;text-align:right}
   function fillSelect(fac, cur) {
     var opt = function (f) { return '<option value="' + esc(f.name) + '"' + (f.key === cur ? ' selected' : '') + '>' + esc(f.name) + ' (' + esc(num(f.offers)) + ')</option>'; };
     var part = fac.filter(function (f) { return f.partner; }), other = fac.filter(function (f) { return !f.partner; });
-    var total = fac.reduce(function (n, f) { return n + (Number(f.offers) || 0); }, 0);
+    var total = fac.length; // nombre de fabricants proposés (copy.md : « Tous les fabricants ({n}) »)
     $('mfr').innerHTML = '<option value=""' + (cur ? '' : ' selected') + '>' + esc(fill(t().filterAll, { n: num(total) })) + '</option>' +
       (part.length ? '<optgroup label="' + esc(t().filterPartners) + '">' + part.map(opt).join('') + '</optgroup>' : '') +
       (other.length ? '<optgroup label="' + esc(t().filterDist) + '">' + other.map(opt).join('') + '</optgroup>' : '');
@@ -311,8 +316,8 @@ table.offers td.act{white-space:nowrap;text-align:right}
         '<td data-label="' + esc(t().thSupplier) + '">' + (o.factory_direct ? '<span class="tag direct" title="' + esc(t().official) + '">' + esc(t().direct) + '</span>' : o.authorized_distributor ? '<span class="tag auth" title="' + esc(t().official) + '">' + esc(t().auth) + '</span>'
           : '<span class="tag">' + esc(t().partner) + '</span>') + '</td>' +
         '<td data-label="' + esc(t().thAvail) + '" class="num">' + esc(o.availability) + '</td>' +
-        '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(num(o.spq)) + '</div>' : '') + '</td>' +
-        '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
+        '<td data-label="' + esc(t().thMoq) + '" class="num"><div class="v">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(num(o.spq)) + '</div>' : '') + '</div></td>' +
+        '<td data-label="' + esc(t().thPrice) + '"><div class="v">' + price + '</div></td>' +
         '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
         // « Ajouter à la demande », puis « Ajouté · Voir ma demande » (handoff 02 et 03).
         '<td class="act">' + (cartHas(o) ? '<a class="btn-done in" href="' + esc(t().cartHref) + '">' + ICON_OK + '<span>' + esc(t().done) + ' · ' + esc(t().doneView) + '</span></a>'
@@ -341,6 +346,8 @@ table.offers td.act{white-space:nowrap;text-align:right}
     var i = +b.getAttribute('data-i'), o = data.offers[i], r = cartAdd(o);
     render(); cartCount();
     say(r === 'ok' ? 'ok' : 'err', r === 'ok' ? fill(t().added, { mpn: o.mpn }) : r === 'full' ? t().cartFull : t().cartOff);
+    // Ajout réussi : la ligne le montre déjà ; le message reste annoncé aux lecteurs d'écran sans décaler la page.
+    if (r === 'ok') $('msg').classList.add('sr-only');
     // Le focus passe au lien « Voir ma demande » qui remplace le bouton.
     var done = $('rows').children[i] && $('rows').children[i].querySelector('.in'); if (done) done.focus();
   });

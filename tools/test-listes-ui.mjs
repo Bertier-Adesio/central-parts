@@ -230,7 +230,7 @@ for (const width of [1280, 390]) {
   ok((await page.textContent('#count')).includes('10 dernières offres sur 1'), width + ' px : dernières offres sur le total');
   // Recherche et filtre : 44 px, exemple de référence non coupé (review n° 3 et 15).
   ok(await page.$$eval('#form input, #form button, #form select', (e) => e.every((x) => x.getBoundingClientRect().height >= 44)), width + ' px : champ, bouton et filtre de 44 px');
-  ok(await page.$eval('#q', (i) => { const c = document.createElement('canvas').getContext('2d'); const st = getComputedStyle(i); c.font = st.fontSize + ' ' + st.fontFamily;
+  ok(await page.$eval('#q', (i) => { const c = document.createElement('canvas').getContext('2d'); const st = getComputedStyle(i); c.font = st.font;
     return c.measureText(i.placeholder).width <= i.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight); }), width + ' px : exemple de référence lisible en entier');
   // Ajout à la demande : bouton texte, puis « Ajouté · Voir ma demande ».
   await page.click('#rows tr:first-child button.add');
@@ -252,7 +252,7 @@ for (const width of [1280, 390]) {
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
     const opts = await page.$$eval('#mfr option', (o) => o.map((x) => [x.value, x.textContent, x.parentElement.tagName === 'OPTGROUP' ? x.parentElement.label : '']));
-    ok(opts[0][0] === '' && opts[0][1] === 'Tous les fabricants (10)' && opts.length > 2 && !(await page.$('#mfrs')), 'fabricants : select, « Tous les fabricants (10) » et un fabricant par option');
+    ok(opts[0][0] === '' && opts[0][1] === 'Tous les fabricants (' + (opts.length - 1) + ')' && opts.length > 2 && !(await page.$('#mfrs')), 'fabricants : select, « Tous les fabricants (n) » = nombre de fabricants et un fabricant par option');
     ok(opts[1][2] === 'Fabricants partenaires' && opts.slice(2).every((o) => o[2] === 'Fabricants distribués') && await page.$$eval('#mfr optgroup', (g) => g.length) === 2,
       'fabricants partenaires puis fabricants distribués (optgroup)');
     ok(await page.$eval('#mfr', (s) => s.closest('form').id === 'form' && s.name === 'mfr' && s.getBoundingClientRect().height >= 44), 'filtre dans le formulaire (?mfr= sans script), 44 px');

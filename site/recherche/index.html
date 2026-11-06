@@ -305,7 +305,8 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('list').querySelectorAll('button.add').forEach(function (b) { b.addEventListener('click', function () {
       var i = +b.getAttribute('data-i'), x = r[i], res = cartAdd(x);
       render(d); cartCount();
-      $('msg').hidden = false; $('msg').className = 'msg ' + (res === 'ok' ? 'ok' : 'err');
+      // Ajout réussi : la ligne et la barre le montrent ; le message reste annoncé aux lecteurs d'écran sans décaler la page.
+      $('msg').hidden = false; $('msg').className = 'msg ' + (res === 'ok' ? 'ok sr-only' : 'err');
       $('msg').textContent = res === 'ok' ? t().added.replace('{mpn}', x.mpn) : res === 'full' ? t().cartFull : t().cartOff;
       // Le focus reste sur la ligne : il passe au lien « Voir ma demande » qui remplace le bouton.
       var done = $('list').querySelectorAll('.res')[i]; done = done && done.querySelector('.in'); if (done) done.focus();
