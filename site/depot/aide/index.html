@@ -12,6 +12,7 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
 .hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
@@ -43,6 +44,8 @@ code{font-family:var(--font-mono);font-size:.92em;background:var(--bg-sunken);pa
 .muted{color:var(--fg-3);font-size:var(--text-sm)}
 /* Avec JavaScript, une seule langue à la fois ; sans JavaScript, les deux. */
 html.js [data-l]:not(.on){display:none}
+/* Revue UI/UX n° 20 : sur mobile, le tableau des modèles n'affiche que la langue de la page (bilingue au-delà). */
+@media (max-width:640px){html[lang=zh-Hans] #modeles .l-en,html[lang=en] #modeles .l-zh,html[lang=zh-Hans] #modeles .l-br,html[lang=en] #modeles .l-br{display:none}}
 </style>
 </head>
 <body>
@@ -253,18 +256,18 @@ html.js [data-l]:not(.on){display:none}
   <table>
     <thead><tr><th>文件 · File</th><th>用途 · Use</th><th>下载 · Download</th></tr></thead>
     <tbody>
-      <tr><td>原厂库存表（中文表头）<br>Stock, manufacturers (Chinese headers)</td>
-          <td>型号、品牌、库存、价格阶梯（一格）、封装、批次、货期、规格书链接<br>Part number, brand, quantity, price breaks in one cell, package, date code, lead time, datasheet</td>
+      <tr><td><span class="l-zh">原厂库存表（中文表头）</span><br class="l-br"><span class="l-en">Stock, manufacturers (Chinese headers)</span></td>
+          <td><span class="l-zh">型号、品牌、库存、价格阶梯（一格）、封装、批次、货期、规格书链接</span><br class="l-br"><span class="l-en">Part number, brand, quantity, price breaks in one cell, package, date code, lead time, datasheet</span></td>
           <td><a href="/depot/modeles/modele-fabricant.xlsx" download>Excel</a> · <a href="/depot/modele-fabricant.csv" download>CSV</a></td></tr>
-      <tr><td>国际库存表（英文表头）<br>Stock, international (English headers)</td>
-          <td>Octopart 格式，最多五个价格阶梯<br>Octopart format, up to five price breaks</td>
+      <tr><td><span class="l-zh">国际库存表（英文表头）</span><br class="l-br"><span class="l-en">Stock, international (English headers)</span></td>
+          <td><span class="l-zh">Octopart 格式，最多五个价格阶梯</span><br class="l-br"><span class="l-en">Octopart format, up to five price breaks</span></td>
           <td><a href="/depot/modeles/stock-template.xlsx" download>Excel</a> · <a href="/depot/stock-template.csv" download>CSV</a></td></tr>
-      <tr><td>产品目录<br>Product catalogue</td>
-          <td>描述、规格书、RoHS / REACH、生命周期、替代型号；一次发送，产品变化时更新<br>Description, datasheet, RoHS / REACH, lifecycle, cross references; send once, update when products change</td>
+      <tr><td><span class="l-zh">产品目录</span><br class="l-br"><span class="l-en">Product catalogue</span></td>
+          <td><span class="l-zh">描述、规格书、RoHS / REACH、生命周期、替代型号；一次发送，产品变化时更新</span><br class="l-br"><span class="l-en">Description, datasheet, RoHS / REACH, lifecycle, cross references; send once, update when products change</span></td>
           <td><a href="/depot/modeles/catalogue-produits.xlsx" download>Excel</a></td></tr>
     </tbody>
   </table>
-  <p class="muted">库存表在供应商中心上传；产品目录请通过邮件或微信发送给 Central.Parts。<br>Upload stock files in the supplier centre; send the product catalogue to Central.Parts by e-mail or WeChat.</p>
+  <p class="muted"><span class="l-zh">库存表在供应商中心上传；产品目录请通过邮件或微信发送给 Central.Parts。</span><br class="l-br"><span class="l-en">Upload stock files in the supplier centre; send the product catalogue to Central.Parts by e-mail or WeChat.</span></p>
 </section>
 
 <p><a class="btn" href="/depot/" id="open">打开供应商中心 · Open the supplier centre</a></p>
