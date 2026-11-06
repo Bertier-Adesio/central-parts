@@ -1,0 +1,6 @@
+/* Polices de la marque, auto-hébergées (aucun CDN), pour les pages écrites à la main.
+   La landing (générée par tools/build-site.mjs) et la maquette site/app/ déclarent les mêmes faces de leur côté. */
+@font-face { font-family: 'Space Grotesk'; src: url("/assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-500.woff2") format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-600.woff2") format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
