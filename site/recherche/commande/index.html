@@ -61,6 +61,20 @@ form.order .check{display:flex;gap:8px;align-items:flex-start;font-weight:normal
 form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 .quote{font-family:var(--font-mono);background:var(--bg-sunken);border-radius:var(--radius-sm);padding:10px 12px;margin:0 0 12px;font-size:var(--text-sm)}
 .quote:empty{display:none}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-6);align-items:start}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+form.track label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 var(--space-4)}
+form.track input{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:var(--space-1) 0 0;padding:0 var(--space-3);border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-raised);color:var(--fg-1);font-family:var(--font-mono);font-size:var(--text-base)}
+form.track .hint{display:block;font-weight:var(--weight-regular);color:var(--fg-3);font-size:var(--text-xs);margin:var(--space-1) 0 0}
+form.track .btn{width:100%}
+.btn-accent{background:var(--accent);color:var(--accent-fg)}
+.btn-accent:hover{background:var(--accent-hover)}
+details.help summary{cursor:pointer;font-weight:var(--weight-semibold);margin:0 0 var(--space-2)}
+details.help p{margin:0 0 var(--space-3);color:var(--fg-2);font-size:var(--text-sm)}
+.preview{margin:var(--space-5) 0 0;padding:var(--space-4) 0 0;border-top:1px solid var(--border-1)}
+.preview h3{font-size:var(--text-sm);color:var(--fg-3);font-weight:var(--weight-medium);margin:0}
+.steps li[aria-current=step]{font-weight:var(--weight-semibold)}
+.loading{color:var(--fg-3);font-size:var(--text-sm);margin:0 0 16px}
 </style>
 </head>
 <body>
@@ -113,7 +127,9 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 
 <main class="wrap">
   <h1 data-t="title">Suivi de la demande</h1>
+  <p class="lead" data-t="lead">Saisissez la référence et le code de suivi reçus par e-mail pour voir où en est votre demande.</p>
   <noscript><p class="msg err">Le suivi nécessite JavaScript. · Tracking requires JavaScript. · 跟踪需要启用 JavaScript。</p></noscript>
+  <p class="loading" id="loading" role="status" hidden data-t="loading">Recherche…</p>
   <div id="msg" class="msg" hidden role="status"></div>
   <section class="card" id="out" hidden>
     <p class="muted" id="ref"></p>
@@ -122,7 +138,34 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     <p id="price"></p>
     <ol class="steps" id="steps"></ol>
   </section>
-  <p><a href="/recherche/" data-t="back">Nouvelle recherche</a></p>
+  <!-- Sans référence ni code dans l'adresse : formulaire, aucun appel à l'API (revue UI/UX n° 4). -->
+  <section class="card two" id="ask">
+    <form class="track" id="track" action="/recherche/commande/" method="get">
+      <label><span data-t="fRef">Référence de la demande</span>
+        <input type="text" name="ref" id="f-ref" required maxlength="40" autocomplete="off" spellcheck="false" autocapitalize="characters" placeholder="p. ex. RFQ-2026-0412" data-tp="phRef"></label>
+      <label><span data-t="fCode">Code de suivi</span>
+        <input type="text" name="k" id="f-k" required maxlength="80" autocomplete="off" spellcheck="false" aria-describedby="f-k-hint">
+        <span class="hint" id="f-k-hint" data-t="codeHint">Il se trouve dans le lien de l'e-mail « Demande reçue ».</span></label>
+      <input type="hidden" name="lang" id="f-lang" value="fr">
+      <button class="btn btn-accent" type="submit" data-t="go">Suivre ma demande</button>
+    </form>
+    <details class="help" open>
+      <summary data-t="helpTitle">Où trouver ces informations ?</summary>
+      <p data-t="helpBody">Nous vous envoyons un e-mail dès que votre demande est enregistrée. Le lien qu'il contient ouvre directement le suivi.</p>
+      <p data-t="noMail">Pas d'e-mail ? Vérifiez vos courriers indésirables, puis écrivez-nous à contact@central.parts.</p>
+      <div class="preview">
+        <h3 data-t="preview">Ce que vous verrez</h3>
+        <ol class="steps" id="preview-steps">
+          <li data-s="submitted">Demande reçue</li>
+          <li data-s="confirmed">Disponibilité confirmée par le fournisseur</li>
+          <li data-s="proforma_sent">Facture proforma envoyée par e-mail</li>
+          <li data-s="paid">Virement reçu</li>
+          <li data-s="shipped">Expédiée</li>
+        </ol>
+      </div>
+    </details>
+  </section>
+  <p><a href="/recherche/" id="back" data-t="back">Nouvelle recherche</a></p>
 </main>
 
 <script>
@@ -131,18 +174,30 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/order/status';
   var STEPS = ['pending_validation', 'submitted', 'confirmed', 'proforma_sent', 'paid', 'shipped'];
   var T = {
-    fr: { title: 'Suivi de la demande', back: 'Nouvelle recherche', ref: 'Demande {ref} du {date}', total: 'Total', unit: 'prix unitaire', toConfirm: 'Prix confirmé avec la proforma', excl: "hors transport, droits et TVA à l'import",
+    fr: { title: 'Suivi de la demande', back: 'Faire une nouvelle recherche', lead: 'Saisissez la référence et le code de suivi reçus par e-mail pour voir où en est votre demande.',
+      loading: 'Recherche…', fRef: 'Référence de la demande', phRef: 'p. ex. RFQ-2026-0412', fCode: 'Code de suivi', codeHint: 'Il se trouve dans le lien de l’e-mail « Demande reçue ».',
+      go: 'Suivre ma demande', helpTitle: 'Où trouver ces informations ?', helpBody: 'Nous vous envoyons un e-mail dès que votre demande est enregistrée. Le lien qu’il contient ouvre directement le suivi.',
+      noMail: 'Pas d’e-mail ? Vérifiez vos courriers indésirables, puis écrivez-nous à contact@central.parts.', preview: 'Ce que vous verrez',
+      p: { submitted: 'Demande reçue', confirmed: 'Disponibilité confirmée par le fournisseur', proforma_sent: 'Facture proforma envoyée par e-mail', paid: 'Virement reçu', shipped: 'Expédiée' }, ref: 'Demande {ref} du {date}', total: 'Total', unit: 'prix unitaire', toConfirm: 'Prix confirmé avec la proforma', excl: "hors transport, droits et TVA à l'import",
       s: { pending_validation: 'Demande reçue, en cours de vérification', submitted: 'Demande transmise au fournisseur', confirmed: 'Disponibilité confirmée par le fournisseur', proforma_sent: 'Facture proforma envoyée par e-mail', paid: 'Virement reçu', shipped: 'Expédiée' },
       end: { unavailable: "Le fournisseur n'a plus cette quantité : Central.Parts vous propose une alternative par e-mail.", cancelled: 'Demande annulée.', rejected: 'Nous ne pouvons pas donner suite à cette demande. Écrivez à contact@central.parts pour en savoir plus.' },
-      e: { not_found: 'Demande introuvable : vérifiez le lien reçu.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
-    en: { title: 'Request tracking', back: 'New search', ref: 'Request {ref} of {date}', total: 'Total', unit: 'unit price', toConfirm: 'Price confirmed with the proforma', excl: 'excluding shipping, import duties and VAT',
+      e: { not_found: 'Aucune demande trouvée. Vérifiez la référence et le code de suivi.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
+    en: { title: 'Request tracking', back: 'Start a new search', lead: 'Enter the reference and tracking code from your e-mail to see where your request stands.',
+      loading: 'Searching…', fRef: 'Request reference', phRef: 'e.g. RFQ-2026-0412', fCode: 'Tracking code', codeHint: 'You will find it in the link of the “Request received” e-mail.',
+      go: 'Track my request', helpTitle: 'Where to find these details', helpBody: 'We e-mail you as soon as your request is recorded. The link in that e-mail opens the tracking page directly.',
+      noMail: 'No e-mail? Check your spam folder, then write to contact@central.parts.', preview: 'What you will see',
+      p: { submitted: 'Request received', confirmed: 'Availability confirmed by the supplier', proforma_sent: 'Proforma invoice sent by e-mail', paid: 'Bank transfer received', shipped: 'Shipped' }, ref: 'Request {ref} of {date}', total: 'Total', unit: 'unit price', toConfirm: 'Price confirmed with the proforma', excl: 'excluding shipping, import duties and VAT',
       s: { pending_validation: 'Request received, being checked', submitted: 'Request sent to the supplier', confirmed: 'Availability confirmed by the supplier', proforma_sent: 'Proforma invoice sent by e-mail', paid: 'Bank transfer received', shipped: 'Shipped' },
       end: { unavailable: 'The supplier no longer has this quantity: Central.Parts will offer an alternative by e-mail.', cancelled: 'Request cancelled.', rejected: 'We cannot follow up on this request. Write to contact@central.parts to find out more.' },
-      e: { not_found: 'Request not found: please check the link you received.', network: 'Network error, please try again.', other: 'Tracking is unavailable, please try again later.' } },
-    zh: { title: '采购申请跟踪', back: '重新搜索', ref: '申请 {ref}（{date}）', total: '合计', unit: '单价', toConfirm: '价格以形式发票为准', excl: '不含运费、进口关税和增值税',
+      e: { not_found: 'No request found. Check the reference and the tracking code.', network: 'Network error, please try again.', other: 'Tracking is unavailable, please try again later.' } },
+    zh: { title: '采购申请跟踪', back: '重新搜索', lead: '请输入邮件中的申请编号和跟踪码，查看申请进度。',
+      loading: '查询中…', fRef: '申请编号', phRef: '例如 RFQ-2026-0412', fCode: '跟踪码', codeHint: '见「已收到申请」邮件中的链接。',
+      go: '查询进度', helpTitle: '在哪里找到这些信息？', helpBody: '申请提交后我们会立即发送邮件，点击邮件中的链接即可直接打开进度页面。',
+      noMail: '没收到邮件？请查看垃圾邮件箱，或联系 contact@central.parts。', preview: '您将看到的进度',
+      p: { submitted: '已收到申请', confirmed: '供应商已确认库存', proforma_sent: '形式发票已通过邮件发送', paid: '已收到转账', shipped: '已发货' }, ref: '申请 {ref}（{date}）', total: '合计', unit: '单价', toConfirm: '价格以形式发票为准', excl: '不含运费、进口关税和增值税',
       s: { pending_validation: '已收到申请，正在审核', submitted: '申请已转交供应商', confirmed: '供应商已确认库存', proforma_sent: '形式发票已通过邮件发送', paid: '已收到转账', shipped: '已发货' },
       end: { unavailable: '供应商已无此数量：Central.Parts 将通过邮件为您推荐替代货源。', cancelled: '申请已取消。', rejected: '我们无法处理此申请。如需了解详情，请发送邮件至 contact@central.parts。' },
-      e: { not_found: '未找到申请，请核对链接。', network: '网络错误，请重试。', other: '暂时无法查询，请稍后再试。' } }
+      e: { not_found: '未找到申请，请核对申请编号和跟踪码。', network: '网络错误，请重试。', other: '暂时无法查询，请稍后再试。' } }
   };
   var $ = function (id) { return document.getElementById(id); };
   var q = new URLSearchParams(location.search);
@@ -176,20 +231,31 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('price').textContent = d.unit_price == null ? t().toConfirm : t().total + ' ' + money(d.total, d.currency) + ' (' + t().unit + ' ' + money(d.unit_price, d.currency) + ', ' + t().excl + ')';
     var at = STEPS.indexOf(d.status), html = '';
     if (at < 0) html = '<li class="done">' + t().s.pending_validation + '</li><li class="done">' + (t().end[d.status] || d.status) + '</li>';
-    else html = STEPS.map(function (s, i) { return '<li class="' + (i <= at ? 'done' : '') + '">' + t().s[s] + '</li>'; }).join('');
+    else html = STEPS.map(function (s, i) { return '<li class="' + (i <= at ? 'done' : '') + '"' + (i === at ? ' aria-current="step"' : '') + '>' + t().s[s] + '</li>'; }).join('');
     $('steps').innerHTML = html;
   }
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
-    $('home').href = lang === 'fr' ? '/' : '/' + lang + '/';
+    document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
+    document.querySelectorAll('#preview-steps li').forEach(function (el) { el.textContent = t().p[el.getAttribute('data-s')]; });
+    $('f-lang').value = lang; $('back').href = '/recherche/?lang=' + lang;
     if (last) render(last);
   }
   document.querySelectorAll('[data-lang]').forEach(function (b) { b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); applyLang(); }); });
   applyLang();
-  fetch(FN + '?ref=' + encodeURIComponent(q.get('ref') || '') + '&k=' + encodeURIComponent(q.get('k') || ''))
-    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
-    .then(function (d) { last = d; render(d); }, function (c) { say(t().e[c] || t().e.other); });
+  // Référence et code : ceux de l'adresse (lien de l'e-mail) ou du formulaire. Sans les deux, aucun appel à l'API :
+  // le formulaire et l'aide restent affichés (revue UI/UX n° 4).
+  var ref = (q.get('ref') || '').trim(), key = (q.get('k') || '').trim();
+  $('f-ref').value = ref; $('f-k').value = key;
+  $('track').addEventListener('submit', function () { $('f-ref').value = $('f-ref').value.trim().toUpperCase(); $('f-k').value = $('f-k').value.trim(); });
+  if (ref && key) {
+    $('ask').hidden = true; $('loading').hidden = false;
+    fetch(FN + '?ref=' + encodeURIComponent(ref) + '&k=' + encodeURIComponent(key))
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
+      .then(function (d) { last = d; render(d); }, function (c) { say(t().e[c] || t().e.other); $('ask').hidden = false; })
+      .then(function () { $('loading').hidden = true; });
+  }
 })();
 // HEADER:BEGIN — en-tête commun, généré par node tools/build-header.mjs : modifier l'outil, pas cette page.
 // Suit l'attribut lang de <html> (mis à jour par la page) : libellés, liens de langue, titre, compteur de « Ma demande ».

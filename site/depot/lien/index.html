@@ -181,6 +181,9 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   var $ = function (id) { return document.getElementById(id); };
   var lang = 'zh', me = null, imports = [];
   try { var saved = localStorage.getItem('cp-lang-depot'); if (T[saved]) lang = saved; } catch (e) {}
+  // ?lang= de l'adresse prioritaire (revue UI/UX n° 12) ; « fr » est proposé sur cette page, sinon repli sur l'anglais.
+  var askLang = new URLSearchParams(location.search).get('lang');
+  if (askLang) lang = T[askLang] ? askLang : askLang === 'zh-Hans' ? 'zh' : 'en';
   var token = (/[#&]k=([0-9a-f]{20,})/.exec(location.hash) || [])[1] || '';
   var t = function () { return T[lang]; };
   var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
