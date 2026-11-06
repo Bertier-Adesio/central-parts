@@ -287,6 +287,7 @@ html.js [data-l]:not(.on){display:none}
   if (q) lang = q[1];
   if (lang !== 'zh' && lang !== 'en') lang = /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
   function apply() {
+    document.title = (lang === 'zh' ? '供应商使用指南' : 'Supplier guide') + ' — Central.Parts'; // titre dans la langue de la page (revue n° 11)
     root.lang = lang === 'zh' ? 'zh-Hans' : 'en';
     document.querySelectorAll('[data-l]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-l') === lang); });
     btn.querySelectorAll('a').forEach(function (a) { if (a.getAttribute('data-lang') === lang) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });

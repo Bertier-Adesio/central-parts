@@ -201,6 +201,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   }
 
   function applyLang() {
+    document.title = ({ zh: '上传库存表', en: 'Upload your stock list', fr: 'Charger votre liste de stock' }[lang] || 'Upload your stock list') + ' — Central.Parts'; // revue n° 11
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     renderStatus(); renderImports();

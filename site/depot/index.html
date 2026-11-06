@@ -358,6 +358,7 @@ ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--spac
   try { token = sessionStorage.getItem('cp-depot-token'); } catch (e) {}
 
   function applyLang() {
+    document.title = (lang === 'zh' ? '供应商中心' : 'Supplier centre') + ' — Central.Parts'; // titre dans la langue de la page (revue n° 11)
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
     document.querySelectorAll('#lang a').forEach(function (a) { if (a.getAttribute('data-lang') === lang) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
