@@ -345,6 +345,29 @@ const reqText = norm(await page.textContent('#req-list'));
 ok(reqText.includes('Atelier Exemple (fictif)') && reqText.includes('NE555DR') && reqText.includes('ORG-0110 V-5') && reqText.includes('VIES vérifié'),
   'demande du site : acheteur, référence, fournisseur et prix des deux côtés');
 ok(!reqText.includes('PR-0010'), 'filtre « À valider » : la demande déjà transmise n\'apparaît pas');
+// Recherches payées de composants rares (migration 20261106000040) : listées avec l'acheteur, traitées ici.
+await page.waitForSelector('#src-list li[data-src="SRC-0001"]');
+const srcText = norm(await page.textContent('#src-list'));
+ok(srcText.includes('CM8071505024905') && srcText.includes('achat@exemple.test') && srcText.includes('VIES vérifié') && srcText.includes('58,8 EUR'),
+  'recherche payée : référence, acheteur, TVA vérifiée, montant payé');
+await page.$eval('#src-list details', (d) => { d.open = true; });
+await page.selectOption('#src-list select[name=status]', 'offers_sent');
+await page.fill('#src-list textarea[name=buyer_note]', 'Deux offres envoyées par e-mail.');
+await page.fill('#src-list input[name=credit_used_by]', 'pr-0042');
+await page.click('#src-list form button[type=submit]');
+await page.waitForFunction(() => /SRC-0001 enregistrée/.test(document.getElementById('msg').textContent));
+ok(mock.state.sourcing[0].status === 'offers_sent' && mock.state.sourcing[0].credit_used_by === 'PR-0042' && mock.state.sourcing[0].buyer_note.includes('Deux offres'),
+  'recherche traitée : état, message à l\'acheteur, déduction');
+// Proforma (pays sans virement instantané) : à traiter tant que le virement n'est pas reçu, puis marquée payée à la main.
+await page.waitForSelector('#src-list li[data-src="SRC-0002"]');
+const pfText = norm(await page.textContent('#src-list li[data-src="SRC-0002"]'));
+ok(pfText.includes('En attente de virement (proforma)') && pfText.includes('proforma de 49 EUR') && pfText.includes('proforma et virement'),
+  'proforma : listée « À valider », montant à facturer, mode de paiement');
+await page.$eval('#src-list li[data-src="SRC-0002"] details', (d) => { d.open = true; });
+await page.selectOption('#src-list li[data-src="SRC-0002"] select[name=status]', 'paid');
+await page.click('#src-list li[data-src="SRC-0002"] form button[type=submit]');
+await page.waitForFunction(() => /SRC-0002 enregistrée/.test(document.getElementById('msg').textContent));
+ok(mock.state.sourcing[1].status === 'paid' && mock.state.sourcing[1].paid_at, 'proforma : virement reçu, demande marquée payée');
 ok(reqText.includes('Facturation') && reqText.includes('75000 Paris') && reqText.includes('Par Central.Parts (DAP), DHL préféré') && reqText.includes('Entrepôt Shenzhen (fictif) · Shenzhen CN'),
   'demande : facturation, transport choisi et adresse d\'expédition du lot (ADR 0030)');
 ok(norm(await page.textContent('#rfq-list')).includes('DEM-1004') && !norm(await page.textContent('#rfq-list')).includes('DEM-1003'), 'RFQ de l\'API à valider');

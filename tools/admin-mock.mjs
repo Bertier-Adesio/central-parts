@@ -112,7 +112,16 @@ export function createMock() {
       ship_to: 'DE', currency: 'EUR', created_at: day(32, 11), validated_by: 'admin:' + ADMIN_EMAIL,
       sellers: [{ org: 'ORG-0110', notify: 'sent', response: 'pending' }], bids: 0 },
   ];
-  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [] };
+  // Recherches payées de composants rares (migration 20261106000040).
+  const sourcing = [{ id: 'SRC-0001', status: 'paid', mpn: 'CM8071505024905', manufacturer: 'Intel', qty: 10, target_price: 120, target_currency: 'EUR',
+    needed_by: '2026-12-01', condition: 'new', notes: 'Date code 2023 ou plus récent.', company: 'Acheteur de démonstration (fictif)', contact: 'Contact fictif',
+    email: 'achat@exemple.test', country: 'FR', vat_number: 'FR12345678901', vat_checked: true, amount_ht: 4900, vat_rate: 0.2, amount_ttc: 5880,
+    paid_at: day(33, 9), buyer_note: null, admin_note: null, credit_used_by: null, payment_mode: 'bank' },
+  { id: 'SRC-0002', status: 'awaiting_payment', mpn: 'XC2S50-5PQ208C', manufacturer: null, qty: 4, target_price: null, target_currency: 'EUR',
+    needed_by: null, condition: 'any', notes: null, company: 'Bureau d\'études fictif', contact: 'Contact fictif 2',
+    email: 'be@exemple.test', country: 'IT', vat_number: 'IT12345678901', vat_checked: true, amount_ht: 4900, vat_rate: 0, amount_ttc: 4900,
+    paid_at: null, buyer_note: null, admin_note: null, credit_used_by: null, payment_mode: 'proforma' }];
+  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [], sourcing };
   // Fiche société (ADR 0032), comme admin_supplier_profile : vide au départ, contacts à part, fabricants rattachés.
   const profile = (o) => {
     const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, certifications: [], languages: [],
@@ -192,6 +201,11 @@ export function createMock() {
         return o ? [200, profile(o)] : [409, { error: 'not_allowed' }];
       }
       if (path === '/manufacturers') return [200, state.mfrs.map(mjson)];
+      if (path === '/sourcing') {
+        const s = query.get('status');
+        return [200, { counts: {}, rows: sourcing.filter((r) => !s || r.status === s ||
+          (s === 'open' && (r.status === 'paid' || (r.status === 'awaiting_payment' && r.payment_mode === 'proforma')))) }];
+      }
       if (path === '/manufacturer') { const m = mfind(query.get('id')); return m ? [200, mjson(m)] : [409, { error: 'not_allowed' }]; }
       if (path === '/supplier-addresses') {
         return [200, query.get('org') === 'ORG-0110' ? [
@@ -239,6 +253,16 @@ export function createMock() {
       delete d.candidates;
       state.notified.push({ org: (d.sellers[0] || {}).org, kind: 'rfq', ref: d.id });
       return [200, { ...d, dispatch: { sent: d.sellers.length } }];
+    }
+    if (method === 'POST' && path === '/sourcing/update') {
+      const r = sourcing.find((x) => x.id === body.id);
+      if (!r) return [409, { error: 'not_allowed' }];
+      const u = body.update || {};
+      if (r.status === 'awaiting_payment' && u.status && !['paid', 'cancelled', 'awaiting_payment'].includes(u.status)) return [422, { error: 'invalid', detail: 'Demande non payée' }];
+      if (r.status === 'awaiting_payment' && u.status === 'paid') r.paid_at = new Date().toISOString();
+      Object.assign(r, { status: u.status || r.status, buyer_note: u.buyer_note || null, admin_note: u.admin_note || null,
+        credit_used_by: (u.credit_used_by || '').toUpperCase() || null });
+      return [200, r];
     }
     if (method === 'POST' && (path.startsWith('/manufacturer') || path === '/logo-upload-url')) {
       if (path === '/manufacturer') {

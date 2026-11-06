@@ -7,11 +7,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 REF="${SUPABASE_PROJECT_REF:-tuhbzziqyisdnqzfvtkh}"
-ALL="admin depot import-stock listes offers order rappels rfq search wechat-events"
+ALL="admin depot import-stock listes offers order rappels rfq search sourcing wechat-events"
 # Fonctions appelées sans jeton Supabase (page publique, WeChat) : elles vérifient elles-mêmes leurs appels.
-PUBLIC="admin depot listes offers order rappels rfq search wechat-events"
+PUBLIC="admin depot listes offers order rappels rfq search sourcing wechat-events"
 # Fonctions qui importent supabase/functions/_shared/.
-SHARED="admin depot listes order rappels rfq wechat-events"
+SHARED="admin depot listes order rappels rfq sourcing wechat-events"
 
 if [ "${1:-}" = "--changed" ]; then
   BASE="$2"
