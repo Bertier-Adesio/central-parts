@@ -90,18 +90,27 @@ async function storage(route) {
 async function offers(route) {
   const u = new URL(route.request().url());
   const q = (u.searchParams.get('q') || '').toUpperCase().replace(/\s+/g, '');
+  const mfr = (u.searchParams.get('mfr') || '').toUpperCase();
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
   if (q.length && q.length < 3) return reply({ error: 'too_short' }, 422);
   const band = (x) => (x >= 100000 ? '100000+' : x >= 10000 ? '10000+' : x >= 1000 ? '1000+' : x >= 100 ? '100+' : '1+');
   // Réponse anonyme, comme public.partner_offers : ni nom, ni SKU, ni lien du vendeur.
-  const list = [...state.lots.values()].filter((l) => l.qty > 0 && l.mpn.replace(/\s+/g, '').startsWith(q)).map((l) => ({
+  const base = [...state.lots.values()].filter((l) => l.qty > 0 && l.mpn.replace(/\s+/g, '').startsWith(q));
+  // Boutons des fabricants : comptés sur la recherche, sans le filtre fabricant (comme partner_offers).
+  const counts = {};
+  for (const l of base) counts[l.mfr] = (counts[l.mfr] || 0) + 1;
+  const manufacturers = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name, offers]) => ({ name, offers }));
+  const list = base.filter((l) => !mfr || l.mfr.toUpperCase() === mfr).map((l) => ({
     mpn: l.mpn, manufacturer: l.mfr, supplier: 'partner', seller_category: null, source: 'broker', ship_from: 'HK', currency: 'EUR',
     availability: band(l.qty), moq: l.moq, price_from: Math.min(l.price, ...Object.values(l.tiers)) * 1.1,
     // Prix 1KU : palier qui couvre 1 000 pièces (comme app.lot_price_for), marge comprise.
     price_1k: (Object.entries(l.tiers).filter(([q]) => +q <= 1000).sort((a, b) => b[0] - a[0])[0]?.[1] ?? l.price) * 1.1, updated_at: l.confirmed_at,
   }));
   // Prix convertis en euros au taux de la BCE (migration 20261103000025), date du taux.
-  return reply({ query: q, currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', ttl_days: 7, ttl_days_manufacturer: 14, offers: list.slice(0, 50) });
+  // Totaux (migration 20261106000036) : références distinctes et pièces, sur toutes les offres trouvées.
+  return reply({ query: q, currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', ttl_days: 7, ttl_days_manufacturer: 14, offers: list.slice(0, 50),
+    manufacturer: mfr || null, manufacturers,
+    total_refs: new Set(list.map((o) => o.mpn)).size, total_offers: q ? list.length : 1863, total_units: list.reduce((s, o) => s + (state.lots.get(o.sku)?.qty || 0), 0) || 245300000 });
 }
 
 const browser = await chromium.launch();
@@ -213,11 +222,29 @@ for (const width of [1280, 390]) {
   ok(/€/.test(text) && !/\$US/.test(text) && !(await page.$('#cur')), width + ' px : prix en euros, sans choix de devise');
   ok(text.includes('Taux de référence de la BCE du 03/11/2026') && text.includes('convertis au taux de référence de la BCE'), width + ' px : taux de la BCE et sa date');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
+  const totals = (await page.textContent('#totals')).replace(/[\u202f\u00a0]/g, ' ');
+  ok(totals.includes('10') && totals.includes('références en ligne') && totals.includes('pièces en stock'), width + ' px : nombre de références et taille de l\'inventaire');
+  ok((await page.textContent('#count')).includes('10 offres affichées sur 1') , width + ' px : offres affichées sur le total');
   if (width === 1280) {
     await page.fill('#q', 'ad8');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 1);
     ok((await page.textContent('#count')).includes('AD8') && new URL(page.url()).searchParams.get('q') === 'ad8', 'recherche : une offre, adresse partageable');
+    ok((await page.textContent('#totals')).includes('référence(s) pour « AD8 »') && (await page.textContent('#n-refs')) === '1', 'recherche : totaux de la recherche');
+    // Recherche rapide par fabricant (migration 20261106000038).
+    await page.fill('#q', '');
+    await page.click('#form button');
+    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
+    const chips = await page.$$eval('#mfrs button[data-m]', (b) => b.map((x) => x.getAttribute('data-m')));
+    ok(chips[0] === '' && chips.length > 2, 'fabricants : boutons « Tous » et un par fabricant présent');
+    const pick = chips[1];
+    await page.click('#mfrs button[data-m="' + pick + '"]');
+    await page.waitForFunction((m) => document.querySelector('#mfrs button[aria-pressed=true]').getAttribute('data-m') === m, pick);
+    const mfrs = await page.$$eval('#rows .mfr', (d) => d.map((x) => x.textContent));
+    ok(mfrs.length > 0 && mfrs.every((m) => m === pick) && new URL(page.url()).searchParams.get('mfr') === pick, 'fabricant choisi : offres filtrées, adresse partageable');
+    await page.click('#mfrs button[data-m=""]');
+    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
+    ok(!new URL(page.url()).searchParams.get('mfr'), '« Tous » : filtre retiré');
     await page.fill('#q', 'AD');
     await page.click('#form button');
     await page.waitForSelector('#msg.err');

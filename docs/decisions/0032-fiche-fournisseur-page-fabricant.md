@@ -84,3 +84,10 @@ Mise en œuvre : migration `20261106000035_espace_societe.sql`.
   - il donne ou retire son accord sur la mention « distribué en Europe par Central.Parts » et sur le badge de ses offres.
 - **Un seul responsable de la fiche par société** : par défaut, le premier administrateur WeChat rattaché ; un administrateur Central.Parts peut en désigner un autre depuis la fiche du fournisseur. Les autres comptes de la société ont la fiche en lecture seule. Le chiffre d'affaires et les champs saisis par Central.Parts ne sont pas modifiables par le fournisseur.
 - **Publication** : la page d'un fabricant exige au moins un accord, donné dans `/depot/` ou enregistré par un administrateur qui l'a reçu hors plateforme (WeChat, e-mail). Le retrait du dernier accord retire la page.
+
+## Complément du 6 novembre 2026 : totaux des offres et annuaire des fabricants
+
+- `/offres/` affiche le nombre de références en ligne et la taille de l'inventaire (pièces en stock), sur la recherche en cours ou sur tout le catalogue, au-delà des 50 offres affichées (migration `20261106000036_offres_totaux.sql`).
+- `/fabricants/`, sans marque dans l'adresse, liste les fabricants en direct dont la page est publiée : logo, nom, positionnement, marques, siège et offres en ligne de leur canal officiel. Chaque carte mène à la page du fabricant (migration `20261106000037_annuaire_fabricants.sql`). `/offres/` renvoie vers cet annuaire.
+- Back office : la section « Canal de vente » d'un fabricant présente une ligne par compte ; le rôle, l'accord et le détachement sont repliés sous « Modifier », et le rattachement d'un autre compte sous « Rattacher un autre compte ».
+- `/offres/` propose une recherche rapide par fabricant : une rangée de boutons (« Tous » et les fabricants les plus présents dans les offres de la recherche, avec leur nombre d'offres), combinée avec la recherche par référence, et partageable par l'adresse (`?mfr=`) (migration `20261106000038_offres_par_fabricant.sql`, nouveau paramètre `p_mfr` de `partner_offers`).

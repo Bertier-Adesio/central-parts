@@ -213,6 +213,8 @@ ok(uploads.some((u) => u.includes('/seller-logos/MFR-0001/')) && await page.getA
 ok(await page.isDisabled('button[data-mf=publish]') && norm(await page.textContent('#mf-pub')).includes('il faut'), 'sans présentation : publication impossible');
 const options = await page.$$eval('#ml-org option', (o) => o.map((x) => x.value));
 ok(options.includes('ORG-0110') && options.includes('ORG-0111') && options.length === 2, 'rattachement : seulement les fabricants et distributeurs approuvés');
+const openDet = (k) => page.$eval('#mfr-detail details[data-k="' + k + '"]', (d) => { d.open = true; });
+await openDet('add');
 await page.selectOption('#ml-org', 'ORG-0110');
 await page.selectOption('#ml-role', 'authorized');
 await page.click('#mf-link button[type=submit]');
@@ -223,6 +225,7 @@ await page.click('#mf-link button[type=submit]');
 await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 2);
 ok((await page.$$('#mf-dists li')).length === 2 && (await page.$$('#ml-org option')).length === 0, 'deux comptes rattachés : distributeur agréé et direct fabricant');
 // Rôle modifiable sans détacher (migration 20261105000034) : le distributeur passe en direct fabricant, puis revient.
+await openDet('d-ORG-0110');
 await page.selectOption('#mf-dists select[data-org="ORG-0110"]', 'self');
 await page.waitForFunction(() => /Rôle modifié : Direct fabricant/.test(document.getElementById('msg').textContent));
 ok(mock.state.mfrs[0].links.every((d) => d.role === 'self') && norm(await page.textContent('#msg')).includes('Rôle modifié'), 'rôle changé : deux comptes direct fabricant');
@@ -235,7 +238,7 @@ await page.click('#mf-save');
 await page.waitForSelector('#mf-view');
 ok(norm(await page.textContent('#mf-view')).includes('虚构的制造商') && norm(await page.textContent('#mf-view')).includes('2013'), 'modification : présentation ajoutée, chiffres conservés');
 // Publication : accord d'un compte rattaché requis (migration 20261106000035) ; correction proposée dans /depot/.
-ok(await page.isDisabled('button[data-mf=publish]') && norm(await page.textContent('#mf-dists')).includes('Accord non donné'), 'sans accord : publication impossible');
+ok(await page.isDisabled('button[data-mf=publish]') && norm(await page.textContent('#mf-dists')).includes('accord en attente'), 'sans accord : publication impossible');
 mock.state.mfrs[0].proposals = [{ id: 7, org_id: 'ORG-0111', at: new Date().toISOString(), status: 'pending', note: 'Merci de corriger.',
   proposed: { staff: '130', about: { fr: 'Présentation corrigée (fictive).' } } }];
 await page.click('#tab-sup');
@@ -250,8 +253,9 @@ await page.waitForFunction(() => !document.getElementById('mf-props') && /Correc
 const applied = norm(await page.textContent('#mf-view'));
 ok(applied.includes('130') && applied.includes('Présentation corrigée (fictive).') && applied.includes('虚构的制造商'), 'correction appliquée, autres langues conservées');
 page.once('dialog', (d) => d.accept());
+await openDet('d-ORG-0111');
 await page.click('#mf-dists button[data-mf=consent][data-org="ORG-0111"]');
-await page.waitForFunction(() => /Accord donné/.test(document.getElementById('mf-dists').textContent));
+await page.waitForFunction(() => /accord donné/.test(document.getElementById('mf-dists').textContent));
 ok(norm(await page.textContent('#mf-dists')).includes('(hors plateforme)') && !(await page.isDisabled('button[data-mf=publish]')), 'accord hors plateforme enregistré : publication possible');
 let confirmText = '';
 page.once('dialog', (d) => { confirmText = d.message(); d.accept(); });
@@ -272,6 +276,7 @@ await page.click('button[data-mf=unpublish]');
 await page.waitForSelector('button[data-mf=publish]');
 ok(norm(await page.textContent('#mf-pub')).includes('non publiée'), 'page publique retirée');
 page.once('dialog', (d) => d.accept());
+await openDet('d-ORG-0110');
 await page.click('#mf-dists button[data-mf=unlink][data-org="ORG-0110"]');
 await page.waitForFunction(() => document.querySelectorAll('#mf-dists li').length === 1);
 ok((await page.$$('#ml-org option')).length === 1, 'distributeur détaché, de nouveau proposé');
