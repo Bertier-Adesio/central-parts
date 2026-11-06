@@ -25,7 +25,7 @@
 //   GET  /admin/supplier-profile?org=ORG-0107   → fiche société : présentation, chiffres, paiement, contacts, fabricants rattachés (ADR 0032)
 //   POST /admin/supplier-profile {org, profile} → enregistre la fiche (clé absente : inchangée)
 //   POST /admin/supplier-editor {org, openid}   → désigne le seul compte WeChat qui modifie la fiche dans /depot/
-//   GET  /admin/sourcing?status=                → recherches payées de composants rares (ADR 0033) ; status vide : toutes payées
+//   GET  /admin/sourcing?status=                → recherches de composants rares (ADR 0033) ; « open » : à traiter ; vide : toutes
 //   POST /admin/sourcing/update {id, update}    → état, notes interne et acheteur, demande d'achat sur laquelle les frais sont déduits
 //   GET  /admin/manufacturers                   → fabricants, leurs marques, leurs comptes rattachés et leur page publique
 //   GET  /admin/manufacturer?id=MFR-0001        → fiche d'un fabricant

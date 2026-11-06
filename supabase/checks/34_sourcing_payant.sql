@@ -40,14 +40,18 @@ begin
   perform tests.fails('quantité invalide : refusée', $s$select public.create_sourcing_request('10.9.7.1', '{"mpn": "X", "qty": 0, "company": "A", "contact": "B", "email": "a@b.test", "country": "US"}')$s$, '22023');
   perform tests.fails('e-mail invalide : refusé', $s$select public.create_sourcing_request('10.9.7.1', '{"mpn": "X", "qty": 1, "company": "A", "contact": "B", "email": "pas-un-email", "country": "US"}')$s$, '22023');
 
-  -- Paiement : session Stripe, puis confirmation par le webhook (une seule fois, montant contrôlé).
-  perform public.sourcing_set_session(fr->>'id', 'cs_test_fictif_1');
-  perform tests.eq('montant différent : paiement refusé', public.sourcing_mark_paid('cs_test_fictif_1', 4900), null::jsonb);
-  s := public.sourcing_mark_paid('cs_test_fictif_1', 5880);
+  -- Paiement : demande de paiement GoCardless, puis confirmation par le webhook (une seule fois, montant contrôlé s'il est donné).
+  perform public.sourcing_set_payment_ref(fr->>'id', 'BRQ_FICTIF_1');
+  perform tests.eq('montant différent : paiement refusé', public.sourcing_mark_paid('BRQ_FICTIF_1', 4900), null::jsonb);
+  s := public.sourcing_mark_paid('BRQ_FICTIF_1');
   perform tests.eq('paiement confirmé : demande payée, avis aux opérateurs', (s->>'id') || ' ' || (s->>'mpn'), (fr->>'id') || ' CM8071505024905');
-  perform tests.eq('paiement rejoué : sans effet', public.sourcing_mark_paid('cs_test_fictif_1', 5880), null::jsonb);
+  perform tests.eq('paiement rejoué : sans effet', public.sourcing_mark_paid('BRQ_FICTIF_1'), null::jsonb);
+  -- Pays hors Pay By Bank : proforma, payée à la main dans le back office.
+  s := public.create_sourcing_request('10.9.7.1', '{"mpn": "PROFTEST", "qty": 3, "company": "Acheteur IT (fictif)", "contact": "K", "email": "k@exemple.test", "country": "IT", "vat": "IT12345678901", "payment_mode": "proforma"}');
+  insert into tests.vars values ('it', s->>'id');
+  perform tests.eq('proforma : demande enregistrée, à payer par virement', s->>'payment_mode', 'proforma');
   s := public.sourcing_status(fr->>'token');
-  perform tests.eq('suivi : état payé, sans note interne ni e-mail', (s->>'status') || ' ' || (s ?| array['admin_note', 'email', 'token_hash', 'stripe_session'])::text, 'paid false');
+  perform tests.eq('suivi : état payé, sans note interne ni e-mail', (s->>'status') || ' ' || (s ?| array['admin_note', 'email', 'token_hash', 'payment_ref'])::text, 'paid false');
   perform tests.eq('suivi : jeton inconnu', public.sourcing_status('inconnu'), null::jsonb);
 end $$;
 reset role;
@@ -58,10 +62,15 @@ do $$ begin perform tests.fails('non-administrateur : refusé', $s$select public
 reset role;
 set role authenticated; set request.jwt.claim.sub = '00000000-0000-0000-0000-0000000000e1';
 do $$
-declare l jsonb := public.admin_sourcing_list(); id text := (select v from tests.vars where k = 'fr'); r jsonb;
+declare l jsonb := public.admin_sourcing_list('open'); id text := (select v from tests.vars where k = 'fr'); it text := (select v from tests.vars where k = 'it'); r jsonb;
 begin
-  perform tests.eq('liste : demandes payées seulement, sans jeton ni session', (select count(*) from jsonb_array_elements(l->'rows') x
-    where x->>'status' = 'awaiting_payment' or x ? 'token_hash' or x ? 'stripe_session')::int || ' ' || ((l->'counts'->>'awaiting_payment')::int >= 2)::text, '0 true');
+  perform tests.eq('à traiter : payées et proformas, pas les paiements en ligne abandonnés, sans jeton',
+    (select string_agg(x->>'status' || '/' || (x->>'payment_mode'), ' ' order by x->>'id') from jsonb_array_elements(l->'rows') x
+      where x->>'id' in (id, it)) || ' ' || (select count(*) from jsonb_array_elements(l->'rows') x where (x->>'status' = 'awaiting_payment' and x->>'payment_mode' = 'bank') or x ? 'token_hash')::text,
+    'paid/bank awaiting_payment/proforma 0');
+  perform tests.fails('proforma non payée : pas d''avancement', format($s$select public.admin_sourcing_update('%s', '{"status": "in_progress"}')$s$, it), '22023');
+  r := public.admin_sourcing_update(it, '{"status": "paid", "admin_note": "Virement reçu."}');
+  perform tests.eq('proforma : virement reçu, payée par l''administrateur', (r->>'status') || ' ' || ((r->>'paid_at') is not null)::text, 'paid true');
   r := public.admin_sourcing_update(id, '{"status": "offers_sent", "admin_note": "Trois brokers consultés.", "buyer_note": "Deux offres envoyées par e-mail.", "credit_used_by": "pr-0042"}');
   perform tests.eq('avancement, notes et déduction enregistrés', (r->>'status') || ' ' || (r->>'credit_used_by') || ' ' || (r->>'updated_by'), 'offers_sent PR-0042 admin:ops1@example.test');
   perform tests.fails('état inconnu refusé', format($s$select public.admin_sourcing_update('%s', '{"status": "perdu"}')$s$, id), '22023');

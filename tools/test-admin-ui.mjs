@@ -358,6 +358,16 @@ await page.click('#src-list form button[type=submit]');
 await page.waitForFunction(() => /SRC-0001 enregistrée/.test(document.getElementById('msg').textContent));
 ok(mock.state.sourcing[0].status === 'offers_sent' && mock.state.sourcing[0].credit_used_by === 'PR-0042' && mock.state.sourcing[0].buyer_note.includes('Deux offres'),
   'recherche traitée : état, message à l\'acheteur, déduction');
+// Proforma (pays sans virement instantané) : à traiter tant que le virement n'est pas reçu, puis marquée payée à la main.
+await page.waitForSelector('#src-list li[data-src="SRC-0002"]');
+const pfText = norm(await page.textContent('#src-list li[data-src="SRC-0002"]'));
+ok(pfText.includes('En attente de virement (proforma)') && pfText.includes('proforma de 49 EUR') && pfText.includes('proforma et virement'),
+  'proforma : listée « À valider », montant à facturer, mode de paiement');
+await page.$eval('#src-list li[data-src="SRC-0002"] details', (d) => { d.open = true; });
+await page.selectOption('#src-list li[data-src="SRC-0002"] select[name=status]', 'paid');
+await page.click('#src-list li[data-src="SRC-0002"] form button[type=submit]');
+await page.waitForFunction(() => /SRC-0002 enregistrée/.test(document.getElementById('msg').textContent));
+ok(mock.state.sourcing[1].status === 'paid' && mock.state.sourcing[1].paid_at, 'proforma : virement reçu, demande marquée payée');
 ok(reqText.includes('Facturation') && reqText.includes('75000 Paris') && reqText.includes('Par Central.Parts (DAP), DHL préféré') && reqText.includes('Entrepôt Shenzhen (fictif) · Shenzhen CN'),
   'demande : facturation, transport choisi et adresse d\'expédition du lot (ADR 0030)');
 ok(norm(await page.textContent('#rfq-list')).includes('DEM-1004') && !norm(await page.textContent('#rfq-list')).includes('DEM-1003'), 'RFQ de l\'API à valider');

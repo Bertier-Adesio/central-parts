@@ -1,16 +1,17 @@
 // Recherche payante de composants rares (site/sourcing/, ADR 0033) dans Chromium, avec la fonction « sourcing » simulée
-// et la page de paiement Stripe remplacée par une page locale. Demandes et sociétés fictives.
+// et la page de paiement GoCardless remplacée par une page locale. Demandes et sociétés fictives.
 //   1. /offres/ sans résultat : lien vers la recherche, référence pré-remplie.
-//   2. /sourcing/ : contrôles du formulaire, TVA selon le pays, montant, envoi, redirection vers le paiement, annulation.
-//   3. /sourcing/suivi/ : paiement en cours de confirmation puis payée, note de Central.Parts, lien invalide, 3 langues.
+//   2. /sourcing/ : contrôles du formulaire, TVA selon le pays, montant, envoi, redirection vers le paiement, annulation ;
+//      pays sans paiement en ligne : proforma et lien de suivi.
+//   3. /sourcing/suivi/ : paiement en cours de confirmation puis payée, note de Central.Parts, proforma, lien invalide, 3 langues.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-sourcing-ui.mjs
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
 const { chromium } = pw.default || pw;
 
 const BASE = process.env.BASE || 'http://localhost:8765';
 const SUPA = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
-const CHECKOUT = 'https://checkout.stripe.com/c/pay/cs_test_fictif';
-const TOKEN = 'c'.repeat(48);
+const CHECKOUT = 'https://pay.gocardless.com/billing/static/flow?id=BRF_FICTIF';
+const TOKEN = 'c'.repeat(48), PF_TOKEN = 'e'.repeat(48);
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
 const state = { sent: [], statusCalls: 0, external: [] };
@@ -20,10 +21,15 @@ async function sourcing(route) {
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' }, body: JSON.stringify(data) });
   if (req.method() === 'OPTIONS') return reply({});
   if (u.pathname.endsWith('/status')) {
+    if (req.headers().authorization === 'Bearer ' + PF_TOKEN) {
+      state.pfCalls = (state.pfCalls || 0) + 1;
+      return reply({ id: 'SRC-0002', status: 'awaiting_payment', payment_mode: 'proforma', mpn: 'XC2S50-5PQ208C', qty: 4, condition: 'any',
+        company: 'Bureau d\'études fictif', amount_ht: 4900, amount_ttc: 4900, vat_rate: 0, paid_at: null, buyer_note: null, credit_used: false });
+    }
     if (req.headers().authorization !== 'Bearer ' + TOKEN) return reply({ error: 'link_invalid' }, 401);
     state.statusCalls++;
-    // Premier appel : le webhook de Stripe n'est pas encore arrivé.
-    return reply({ id: 'SRC-0001', status: state.statusCalls === 1 ? 'awaiting_payment' : 'offers_sent', mpn: 'CM8071505024905', manufacturer: 'Intel', qty: 10,
+    // Premier appel : l'avis de GoCardless (webhook) n'est pas encore arrivé.
+    return reply({ id: 'SRC-0001', payment_mode: 'bank', status: state.statusCalls === 1 ? 'awaiting_payment' : 'offers_sent', mpn: 'CM8071505024905', manufacturer: 'Intel', qty: 10,
       target_price: 120, target_currency: 'EUR', needed_by: '2026-12-01', condition: 'new', company: 'Acheteur de démonstration (fictif)',
       amount_ht: 4900, amount_ttc: 5880, vat_rate: 0.2, paid_at: state.statusCalls === 1 ? null : '2026-11-06T12:00:00Z',
       buyer_note: state.statusCalls === 1 ? null : 'Deux offres envoyées par e-mail.', credit_used: false });
@@ -31,7 +37,8 @@ async function sourcing(route) {
   const b = JSON.parse(req.postData() || '{}');
   state.sent.push(b);
   if (b.vat === 'FR00000000000') return reply({ error: 'vat_invalid' }, 422);
-  return reply({ id: 'SRC-0001', url: CHECKOUT });
+  if (b.country === 'IT') return reply({ id: 'SRC-0002', mode: 'proforma', tracking_url: BASE + '/sourcing/suivi/?lang=fr#' + PF_TOKEN });
+  return reply({ id: 'SRC-0001', mode: 'bank', url: CHECKOUT });
 }
 async function offers(route) {
   return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' },
@@ -46,8 +53,8 @@ async function newPage(width) {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.route(SUPA + '/functions/v1/sourcing**', sourcing);
   await page.route(SUPA + '/functions/v1/offers**', offers);
-  await page.route('https://checkout.stripe.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>Paiement simulé</title><h1>Stripe simulé</h1>' }));
-  await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh\.supabase\.co|https:\/\/checkout\.stripe\.com)/, (r) => { state.external.push(r.request().url()); r.abort(); });
+  await page.route('https://pay.gocardless.com/**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>Paiement simulé</title><h1>GoCardless simulé</h1>' }));
+  await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh\.supabase\.co|https:\/\/pay\.gocardless\.com)/, (r) => { state.external.push(r.request().url()); r.abort(); });
   return { page, errors };
 }
 const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
@@ -82,8 +89,9 @@ for (const width of [1280, 390]) {
     ok(await page.isVisible('#vat-l') && (await page.textContent('#ttc')).includes('58,80') && (await page.textContent('#send')).includes('58,80'), 'France : TVA 20 %, 58,80 € TTC');
     await page.selectOption('#f-country', 'US');
     ok(await page.isHidden('#vat-l') && (await page.textContent('#ttc')).includes('sans TVA') && (await page.textContent('#send')).includes('49,00'), 'hors Union : sans TVA ni numéro');
+    ok((await page.textContent('#send')).includes('proforma') && (await page.textContent('#pay-note')).includes('virement'), 'pays sans paiement en ligne : proforma annoncée');
     await page.selectOption('#f-country', 'DE');
-    ok((await page.textContent('#ttc')).includes('Autoliquidation'), 'Allemagne : autoliquidation');
+    ok((await page.textContent('#ttc')).includes('Autoliquidation') && (await page.textContent('#send')).includes('virement bancaire'), 'Allemagne : autoliquidation, virement bancaire');
     await page.click('#send');
     ok((await page.textContent('#msg')).includes('TVA est obligatoire') && !state.sent.length, 'Union sans numéro de TVA : refusé dans la page');
     await page.fill('#f-vat', 'DE123456789');
@@ -103,6 +111,22 @@ for (const width of [1280, 390]) {
       'demande envoyée complète, redirection vers la page de paiement');
     await page.goto(BASE + '/sourcing/?lang=fr&cancel=1');
     ok((await page.textContent('#msg')).includes('Paiement annulé'), 'retour sans paiement : message');
+    // Italie (hors liste du paiement en ligne) : proforma, l'acheteur arrive sur son suivi.
+    await page.fill('#f-mpn', 'XC2S50-5PQ208C');
+    await page.fill('#f-qty', '4');
+    await page.fill('#f-company', 'Bureau d\'études fictif');
+    await page.fill('#f-contact', 'Contact fictif 2');
+    await page.fill('#f-email', 'be@exemple.test');
+    await page.selectOption('#f-country', 'IT');
+    await page.fill('#f-vat', 'IT12345678901');
+    await page.check('#f-ok');
+    await Promise.all([page.waitForURL(/\/sourcing\/suivi\//), page.click('#send')]);
+    await page.waitForSelector('#card:not([hidden])');
+    const pf = (await page.textContent('#card')).replace(/[\u202f\u00a0]/g, ' ');
+    ok(state.sent[2].country === 'IT' && (await page.textContent('#st')) === 'En attente de votre virement' && pf.includes('proforma de 49,00 €'),
+      'proforma : demande enregistrée, suivi « en attente de votre virement »');
+    await page.waitForTimeout(4500);
+    ok(state.pfCalls === 1, 'proforma : pas d\'interrogation en boucle');
     await page.click('[data-lang=zh]');
     ok((await page.textContent('h1')).includes('寻源') && (await page.textContent('.topnav a[aria-current=page]')) === '稀缺元器件', '中文 : titre et menu');
   }

@@ -89,9 +89,10 @@ dd{margin:0;overflow-wrap:anywhere}
   var T = {
     fr: { title: 'Votre recherche de composant', noteTitle: 'Message de Central.Parts', home: '/',
       keep: 'Gardez ce lien : il donne accès au suivi de votre demande. Une question ? contact@central.parts',
-      s: { awaiting_payment: 'Paiement en cours de confirmation', paid: 'Payée : recherche en préparation', in_progress: 'Recherche en cours',
+      s: { awaiting_payment: 'Paiement en cours de confirmation', proforma: 'En attente de votre virement', paid: 'Payée : recherche en préparation', in_progress: 'Recherche en cours',
         offers_sent: 'Offres envoyées', not_found: 'Aucune offre trouvée', cancelled: 'Annulée' },
       d: { awaiting_payment: 'Nous attendons la confirmation de votre paiement : cette page se met à jour toute seule.',
+        proforma: 'Nous vous envoyons une proforma de {a} par e-mail. La recherche commence à réception de votre virement.',
         paid: 'Votre paiement est confirmé. Nous lançons la recherche et revenons vers vous par e-mail.',
         in_progress: 'Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.',
         offers_sent: 'Nous vous avons envoyé les offres trouvées par e-mail.', not_found: 'Nous n’avons pas trouvé d’offre fiable pour cette référence.',
@@ -102,9 +103,10 @@ dd{margin:0;overflow-wrap:anywhere}
       e: { link_invalid: 'Ce lien de suivi n’est pas valide. Vérifiez qu’il est complet, ou écrivez à contact@central.parts.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
     en: { title: 'Your component search', noteTitle: 'Message from Central.Parts', home: '/en/',
       keep: 'Keep this link: it gives access to your request status. Any question? contact@central.parts',
-      s: { awaiting_payment: 'Payment being confirmed', paid: 'Paid: search being prepared', in_progress: 'Search in progress',
+      s: { awaiting_payment: 'Payment being confirmed', proforma: 'Awaiting your transfer', paid: 'Paid: search being prepared', in_progress: 'Search in progress',
         offers_sent: 'Offers sent', not_found: 'No offer found', cancelled: 'Cancelled' },
       d: { awaiting_payment: 'We are waiting for your payment confirmation: this page updates itself.',
+        proforma: 'We are emailing you a pro forma invoice of {a}. The search starts when your transfer is received.',
         paid: 'Your payment is confirmed. We are starting the search and will get back to you by email.',
         in_progress: 'We are querying surplus stock, brokers and our network, and checking every source.',
         offers_sent: 'We have sent you the offers found by email.', not_found: 'We did not find a reliable offer for this part.',
@@ -115,8 +117,8 @@ dd{margin:0;overflow-wrap:anywhere}
       e: { link_invalid: 'This status link is not valid. Check that it is complete, or write to contact@central.parts.', network: 'Network error, please try again.', other: 'Status unavailable, please try again later.' } },
     zh: { title: '您的元器件寻源', noteTitle: 'Central.Parts 留言', home: '/zh/',
       keep: '请保存此链接，用于查看需求进度。如有疑问：contact@central.parts',
-      s: { awaiting_payment: '支付确认中', paid: '已支付：准备寻源', in_progress: '寻源中', offers_sent: '已发送报价', not_found: '未找到报价', cancelled: '已取消' },
-      d: { awaiting_payment: '正在等待支付确认，本页面会自动更新。', paid: '您的支付已确认。我们正在开始寻源，并将通过邮件联系您。',
+      s: { awaiting_payment: '支付确认中', proforma: '等待您的转账', paid: '已支付：准备寻源', in_progress: '寻源中', offers_sent: '已发送报价', not_found: '未找到报价', cancelled: '已取消' },
+      d: { awaiting_payment: '正在等待支付确认，本页面会自动更新。', proforma: '我们将通过邮件向您发送金额为 {a} 的形式发票。收到您的转账后开始寻源。', paid: '您的支付已确认。我们正在开始寻源，并将通过邮件联系您。',
         in_progress: '我们正在向库存积压、经纪商和我们的网络询价，并核实每个来源。', offers_sent: '我们已通过邮件向您发送找到的报价。',
         not_found: '我们未能为该型号找到可靠的报价。', cancelled: '该需求已取消。' },
       ref: '需求编号', mpn: '型号', mfr: '制造商', qty: '数量', by: '需求日期', target: '目标价格', cond: '可接受状态',
@@ -143,10 +145,11 @@ dd{margin:0;overflow-wrap:anywhere}
     if (!data) return;
     say('', '');
     $('card').hidden = false;
-    var s = data.status;
+    // Proforma (pays sans paiement en ligne) : en attente du virement, marqué payé à la main par Central.Parts.
+    var s = data.status === 'awaiting_payment' && data.payment_mode === 'proforma' ? 'proforma' : data.status;
     $('st').textContent = t().s[s] || s;
     $('st').className = 'badge' + (s === 'offers_sent' || s === 'paid' || s === 'in_progress' ? ' ok' : s === 'not_found' || s === 'cancelled' ? ' ko' : '');
-    $('st-text').textContent = t().d[s] || '';
+    $('st-text').textContent = fill(t().d[s] || '', { a: money(data.amount_ttc / 100) });
     var f = [[t().ref, data.id], [t().mpn, data.mpn], [t().mfr, data.manufacturer], [t().qty, Number(data.qty).toLocaleString(LOCALE[lang])],
       [t().by, data.needed_by ? new Date(data.needed_by).toLocaleDateString(LOCALE[lang]) : null],
       [t().target, data.target_price ? money(data.target_price, data.target_currency) : null],
@@ -168,12 +171,13 @@ dd{margin:0;overflow-wrap:anywhere}
     b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} applyLang(); });
   });
 
-  // Retour de la page de paiement : le webhook de Stripe peut arriver quelques secondes après ; nouvel essai toutes les 4 s, 1 min au plus.
+  // Retour de la page de paiement : l'avis de GoCardless (webhook) peut arriver quelques secondes après ; nouvel essai
+  // toutes les 4 s, 1 min au plus. Proforma : pas de nouvel essai, le virement prend plusieurs jours.
   function load() {
     if (!/^[0-9a-f]{48}$/.test(token)) { err = 'link_invalid'; render(); return; }
     fetch(FN, { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
-      .then(function (d) { data = d; err = null; render(); if (d.status === 'awaiting_payment' && ++tries < 15) setTimeout(load, 4000); },
+      .then(function (d) { data = d; err = null; render(); if (d.status === 'awaiting_payment' && d.payment_mode !== 'proforma' && ++tries < 15) setTimeout(load, 4000); },
         function (c) { err = c; render(); });
   }
   applyLang();

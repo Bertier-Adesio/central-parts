@@ -1,11 +1,15 @@
 -- Recherche payante de composants rares ou introuvables (décision de Bertier, 6 novembre 2026 : « une page de recherches
 -- de composants rares ou introuvables sur central.parts, avec un tarif par recherche, une recherche payante pour filtrer
--- les gogos » ; 49 € HT par référence, déduits de la commande ; paiement par carte ; mise en ligne avant les CGV). ADR 0033.
+-- les gogos » ; 49 € HT par référence, déduits de la commande ; paiement par GoCardless, pas Stripe ; mise en ligne avant
+-- les CGV). ADR 0033.
 --
--- Parcours : l'acheteur professionnel décrit sa référence (/sourcing/), paie les frais par carte (Stripe Checkout) ; le
--- paiement confirmé par Stripe (webhook signé) fait passer la demande « payée », les opérateurs sont prévenus dans WeChat
--- et la traitent dans le back office (sources Opportunity : surplus, brokers, réseau) ; l'acheteur suit sa demande par un
--- lien personnel (/sourcing/suivi/). Les frais sont déduits de la commande qui suit ; ils ne sont pas remboursés sinon.
+-- Parcours : l'acheteur professionnel décrit sa référence (/sourcing/) et paie les frais :
+--   payment_mode « bank »     : virement en ligne depuis sa banque (GoCardless Pay By Bank, pays couverts) ; le webhook
+--                               signé de GoCardless (billing_requests fulfilled) fait passer la demande « payée » ;
+--   payment_mode « proforma » : autres pays, proforma par e-mail ; l'administrateur marque la demande payée à réception.
+-- Les opérateurs sont prévenus dans WeChat ; la demande se traite dans le back office (sources Opportunity : surplus,
+-- brokers, réseau) ; l'acheteur la suit par un lien personnel (/sourcing/suivi/). Les frais sont déduits de la commande
+-- qui suit ; ils ne sont pas remboursés sinon.
 --
 -- TVA (à faire valider par le comptable) : acheteur en France, 20 % ; autre pays de l'Union avec numéro de TVA,
 -- autoliquidation (0 %) ; hors Union, 0 %. Montants en centimes d'euro. Rejouable.
@@ -34,7 +38,8 @@ create table if not exists public.sourcing_requests (
   amount_ht       int not null,                         -- centimes
   vat_rate        numeric not null,                     -- 0,20 ou 0
   amount_ttc      int not null,                         -- centimes, payé par carte
-  stripe_session  text unique,
+  payment_mode    text not null default 'bank' check (payment_mode in ('bank', 'proforma')),
+  payment_ref     text unique,                          -- demande de paiement GoCardless (BRQ…)
   paid_at         timestamptz,
   credit_used_by  text,                                 -- demande d'achat (PR-…) sur laquelle les frais ont été déduits
   admin_note      text,                                 -- interne
@@ -43,6 +48,14 @@ create table if not exists public.sourcing_requests (
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+-- Version précédente de cette migration (paiement Stripe) déjà appliquée : colonnes renommées et ajoutées.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'sourcing_requests' and column_name = 'stripe_session') then
+    alter table public.sourcing_requests rename column stripe_session to payment_ref;
+  end if;
+end $$;
+alter table public.sourcing_requests add column if not exists payment_mode text not null default 'bank' check (payment_mode in ('bank', 'proforma'));
+drop function if exists public.sourcing_set_session(text, text);
 create index if not exists sourcing_requests_status_idx on public.sourcing_requests (status, created_at desc);
 alter table public.sourcing_requests enable row level security;
 revoke all on public.sourcing_requests from anon, authenticated;
@@ -74,33 +87,38 @@ begin
   v_rate := case when v_country = 'FR' then 0.20 else 0 end;
   begin
     insert into public.sourcing_requests (token_hash, mpn, manufacturer, qty, target_price, target_currency, needed_by, condition, notes,
-      company, contact, email, country, vat_number, vat_checked, lang, amount_ht, vat_rate, amount_ttc)
+      company, contact, email, country, vat_number, vat_checked, lang, payment_mode, amount_ht, vat_rate, amount_ttc)
     values (encode(extensions.digest(v_token, 'sha256'), 'hex'), upper(btrim(coalesce(p->>'mpn', ''))), nullif(btrim(p->>'manufacturer'), ''),
       (p->>'qty')::bigint, nullif(p->>'target_price', '')::numeric, coalesce(nullif(upper(p->>'target_currency'), ''), 'EUR'),
       nullif(p->>'needed_by', '')::date, coalesce(nullif(p->>'condition', ''), 'new'), nullif(left(btrim(coalesce(p->>'notes', '')), 2000), ''),
       left(btrim(coalesce(p->>'company', '')), 200), left(btrim(coalesce(p->>'contact', '')), 200), lower(btrim(coalesce(p->>'email', ''))),
       v_country, v_vat, coalesce((p->>'vat_checked')::boolean, false), coalesce(nullif(p->>'lang', ''), 'fr'),
-      v_ht, v_rate, round(v_ht * (1 + v_rate))::int)
+      coalesce(nullif(p->>'payment_mode', ''), 'bank'), v_ht, v_rate, round(v_ht * (1 + v_rate))::int)
     returning * into r;
   exception when check_violation or invalid_text_representation or not_null_violation or invalid_datetime_format or datetime_field_overflow then
     raise exception 'Demande incomplète ou invalide : %', sqlerrm using errcode = '22023';
   end;
-  return jsonb_build_object('id', r.id, 'token', v_token, 'mpn', r.mpn, 'amount_ht', r.amount_ht, 'vat_rate', r.vat_rate, 'amount_ttc', r.amount_ttc);
+  if r.payment_mode = 'proforma' then
+    insert into public.events (actor, text, ref) values ('buyer', 'Recherche de sourcing demandée, proforma à envoyer : ' || r.mpn || ' × ' || r.qty, r.id);
+  end if;
+  return jsonb_build_object('id', r.id, 'token', v_token, 'mpn', r.mpn, 'amount_ht', r.amount_ht, 'vat_rate', r.vat_rate, 'amount_ttc', r.amount_ttc,
+    'payment_mode', r.payment_mode, 'company', r.company, 'country', r.country, 'qty', r.qty, 'manufacturer', r.manufacturer);
 end $$;
 
-create or replace function public.sourcing_set_session(p_id text, p_session text) returns void
+create or replace function public.sourcing_set_payment_ref(p_id text, p_ref text) returns void
 language sql security definer set search_path = '' as $$
-  update public.sourcing_requests set stripe_session = p_session, updated_at = now() where id = p_id and status = 'awaiting_payment'
+  update public.sourcing_requests set payment_ref = p_ref, updated_at = now() where id = p_id and status = 'awaiting_payment'
 $$;
 
--- Paiement confirmé par Stripe (webhook signé, vérifié par la fonction Edge) : une seule fois, montant contrôlé.
--- Renvoie la demande pour l'avis aux opérateurs, ou null si déjà payée ou inconnue.
-create or replace function public.sourcing_mark_paid(p_session text, p_amount int)
+-- Paiement confirmé par GoCardless (webhook signé, vérifié par la fonction Edge) : une seule fois ; montant contrôlé
+-- quand l'événement le donne. Renvoie la demande pour l'avis aux opérateurs, ou null si déjà payée ou inconnue.
+drop function if exists public.sourcing_mark_paid(text, int);
+create or replace function public.sourcing_mark_paid(p_ref text, p_amount int default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare r public.sourcing_requests;
 begin
   update public.sourcing_requests set status = 'paid', paid_at = now(), updated_at = now()
-   where stripe_session = p_session and status = 'awaiting_payment' and amount_ttc = p_amount
+   where payment_ref = p_ref and status = 'awaiting_payment' and (p_amount is null or amount_ttc = p_amount)
   returning * into r;
   if r.id is null then return null; end if;
   insert into public.events (actor, text, ref) values ('buyer', 'Recherche de sourcing payée : ' || r.mpn || ' × ' || r.qty, r.id);
@@ -114,6 +132,7 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('id', r.id, 'status', r.status, 'mpn', r.mpn, 'manufacturer', r.manufacturer, 'qty', r.qty,
     'target_price', r.target_price, 'target_currency', r.target_currency, 'needed_by', r.needed_by, 'condition', r.condition,
     'company', r.company, 'amount_ht', r.amount_ht, 'amount_ttc', r.amount_ttc, 'vat_rate', r.vat_rate, 'paid_at', r.paid_at,
+    'payment_mode', r.payment_mode,
     'buyer_note', r.buyer_note, 'credit_used', r.credit_used_by is not null, 'created_at', r.created_at, 'updated_at', r.updated_at)
     from public.sourcing_requests r where r.token_hash = encode(extensions.digest(coalesce(p_token, ''), 'sha256'), 'hex')
 $$;
@@ -125,8 +144,13 @@ begin
   perform app.require_admin();
   return jsonb_build_object(
     'counts', (select coalesce(jsonb_object_agg(status, n), '{}') from (select status, count(*) n from public.sourcing_requests group by 1) c),
-    'rows', coalesce((select jsonb_agg(to_jsonb(r) - 'token_hash' - 'stripe_session' order by r.created_at desc)
-      from (select * from public.sourcing_requests r where (coalesce(p_status, '') = '' and r.status <> 'awaiting_payment') or r.status = p_status
+    -- « open » : à traiter (payées, et proformas en attente de virement) ; vide : toutes sauf paiements en ligne abandonnés.
+    'rows', coalesce((select jsonb_agg(to_jsonb(r) - 'token_hash' order by r.created_at desc)
+      from (select * from public.sourcing_requests r
+             where case coalesce(p_status, '')
+                     when '' then r.status <> 'awaiting_payment' or r.payment_mode = 'proforma'
+                     when 'open' then r.status = 'paid' or (r.status = 'awaiting_payment' and r.payment_mode = 'proforma')
+                     else r.status = p_status end
             order by r.created_at desc limit 100) r), '[]'));
 end $$;
 
@@ -138,26 +162,30 @@ declare v_by text := app.require_admin(); r public.sourcing_requests;
 begin
   select * into r from public.sourcing_requests where id = upper(btrim(coalesce(p_id, '')));
   if r.id is null then raise exception 'Demande inconnue : %', p_id using errcode = 'P0002'; end if;
-  if r.status = 'awaiting_payment' then raise exception 'Demande non payée' using errcode = '22023'; end if;
+  -- Non payée : seulement « payée » (virement reçu sur proforma) ou « annulée ».
+  if r.status = 'awaiting_payment' and coalesce(p->>'status', '') not in ('paid', 'cancelled') then
+    raise exception 'Demande non payée' using errcode = '22023';
+  end if;
   if p ? 'status' and coalesce(p->>'status', '') not in ('paid', 'in_progress', 'offers_sent', 'not_found', 'cancelled') then
     raise exception 'État inconnu' using errcode = '22023';
   end if;
   update public.sourcing_requests set
     status = coalesce(nullif(p->>'status', ''), status),
+    paid_at = case when status = 'awaiting_payment' and p->>'status' = 'paid' then now() else paid_at end,
     admin_note = case when p ? 'admin_note' then nullif(left(btrim(coalesce(p->>'admin_note', '')), 4000), '') else admin_note end,
     buyer_note = case when p ? 'buyer_note' then nullif(left(btrim(coalesce(p->>'buyer_note', '')), 2000), '') else buyer_note end,
     credit_used_by = case when p ? 'credit_used_by' then nullif(upper(btrim(coalesce(p->>'credit_used_by', ''))), '') else credit_used_by end,
     updated_by = v_by, updated_at = now()
    where id = r.id returning * into r;
   insert into public.events (actor, text, ref) values ('ops', 'Recherche de sourcing : ' || r.status || ', par ' || v_by, r.id);
-  return to_jsonb(r) - 'token_hash' - 'stripe_session';
+  return to_jsonb(r) - 'token_hash';
 end $$;
 
 -- ------------------------------------------------------------ droits
 revoke execute on function app.sourcing_fee_ht(), app.is_eu(text) from public, anon, authenticated;
-revoke execute on function public.create_sourcing_request(text, jsonb), public.sourcing_set_session(text, text),
+revoke execute on function public.create_sourcing_request(text, jsonb), public.sourcing_set_payment_ref(text, text),
   public.sourcing_mark_paid(text, int), public.sourcing_status(text) from public, anon, authenticated;
-grant execute on function public.create_sourcing_request(text, jsonb), public.sourcing_set_session(text, text),
+grant execute on function public.create_sourcing_request(text, jsonb), public.sourcing_set_payment_ref(text, text),
   public.sourcing_mark_paid(text, int), public.sourcing_status(text) to service_role;
 revoke execute on function public.admin_sourcing_list(text), public.admin_sourcing_update(text, jsonb) from public, anon;
 grant execute on function public.admin_sourcing_list(text), public.admin_sourcing_update(text, jsonb) to authenticated, service_role;

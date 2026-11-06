@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <!-- Recherche payante de composants rares ou introuvables (ADR 0033). Écrite à la main, pas générée. Non indexée.
-     L'acheteur professionnel décrit sa référence et paie les frais de recherche par carte : la fonction Edge « sourcing »
-     crée la demande et renvoie l'adresse de la page de paiement Stripe Checkout (seul service tiers du parcours, par
-     simple redirection : aucune ressource tierce n'est chargée par cette page). Textes chinois : à faire relire. -->
+     L'acheteur professionnel décrit sa référence et paie les frais de recherche. La fonction Edge « sourcing » crée la
+     demande, puis, selon le pays : virement depuis sa banque (GoCardless Pay By Bank, page de paiement
+     hébergée par GoCardless, seul service tiers du parcours, par simple redirection : aucune ressource tierce n'est
+     chargée par cette page) ; ailleurs, proforma envoyée par e-mail et lien de suivi. Textes chinois : à faire relire. -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -109,7 +110,7 @@ label.f textarea{min-height:80px;resize:vertical}
         <span class="hint" data-t="vatHint">Obligatoire dans l’Union européenne, vérifié auprès du service VIES.</span></label>
       <label class="check"><input type="checkbox" id="f-ok" required><span data-t="accept">J’ai compris : les frais de recherche sont déduits de ma commande et ne sont pas remboursés si je ne commande pas.</span></label>
       <button class="btn" type="submit" id="send">Payer et lancer la recherche</button>
-      <p class="muted" data-t="payNote">Paiement sécurisé par carte sur la page de notre prestataire de paiement, puis retour sur Central.Parts.</p>
+      <p class="muted" id="pay-note">Virement sécurisé depuis votre banque, sur la page de notre prestataire de paiement, puis retour sur Central.Parts.</p>
     </form>
 
     <div>
@@ -138,6 +139,8 @@ label.f textarea{min-height:80px;resize:vertical}
   'use strict';
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/sourcing';
   var EU = ['AT','BE','BG','CY','CZ','DE','DK','EE','ES','FI','FR','GR','HR','HU','IE','IT','LT','LU','LV','MT','NL','PL','PT','RO','SE','SI','SK'];
+  // Pays couverts par le paiement par virement en ligne (même liste que GOCARDLESS_COUNTRIES de la fonction, qui décide en dernier).
+  var BANK = ['FR', 'DE', 'IE'];
   var OTHER = ['GB','CH','NO','IS','TR','IL','US','CA','MA','TN','AE','SG','IN','JP','KR'];
   var T = {
     fr: { eyebrow: 'Sourcing · Opportunity', title: 'Composants rares ou introuvables',
@@ -148,7 +151,9 @@ label.f textarea{min-height:80px;resize:vertical}
       fCompany: 'Société', fContact: 'Nom et prénom', fEmail: 'E-mail professionnel', fCountry: 'Pays', fVat: 'Numéro de TVA intracommunautaire',
       vatHint: 'Obligatoire dans l’Union européenne, vérifié auprès du service VIES.', choose: 'Choisir',
       accept: 'J’ai compris : les frais de recherche sont déduits de ma commande et ne sont pas remboursés si je ne commande pas.',
-      pay: 'Payer {a} et lancer la recherche', payNote: 'Paiement sécurisé par carte sur la page de notre prestataire de paiement, puis retour sur Central.Parts.',
+      pay: 'Payer {a} par virement bancaire', payNote: 'Virement sécurisé depuis votre banque, en quelques clics, sur la page de notre prestataire de paiement (GoCardless), puis retour sur Central.Parts.',
+      proforma: 'Envoyer la demande (proforma de {a})', proformaNote: 'Nous vous envoyons une proforma par e-mail ; la recherche commence à réception de votre virement.',
+      proformaSent: 'Demande enregistrée : la proforma vous est envoyée par e-mail.',
       perRef: 'par référence recherchée, déduits de votre commande', ttcFR: 'Soit {a} TTC (TVA 20 %).', ttcEU: 'Autoliquidation de la TVA : {a} à payer.',
       ttcOut: 'Hors Union européenne : {a} à payer, sans TVA.', howTitle: 'Comment ça marche',
       s1: 'Vous décrivez la référence et payez les frais de recherche.', s2: 'Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.',
@@ -157,7 +162,7 @@ label.f textarea{min-height:80px;resize:vertical}
       terms: 'Conditions commerciales', home: '/', redirect: 'Redirection vers la page de paiement…', cancel: 'Paiement annulé : votre demande n’a pas été lancée. Vous pouvez la modifier et recommencer.',
       e: { fields: 'Renseignez la référence, la quantité, votre société, votre nom, un e-mail valide et le pays.', vat: 'Le numéro de TVA est obligatoire dans l’Union européenne.',
         accept: 'Cochez la case pour confirmer que vous avez compris les conditions des frais de recherche.', vat_invalid: 'Ce numéro de TVA n’est pas reconnu par le service VIES.',
-        payment_unavailable: 'Le paiement par carte n’est pas encore ouvert : écrivez-nous à contact@central.parts.', rate_limited: 'Trop de demandes : réessayez dans une minute.',
+        payment_unavailable: 'Le paiement en ligne est momentanément indisponible : écrivez-nous à contact@central.parts.', rate_limited: 'Trop de demandes : réessayez dans une minute.',
         invalid: 'Demande incomplète ou invalide : ', network: 'Erreur réseau, réessayez.', other: 'Envoi impossible pour l’instant : réessayez ou écrivez à contact@central.parts.' } },
     en: { eyebrow: 'Sourcing · Opportunity', title: 'Hard-to-find and obsolete parts',
       lead: 'A part you cannot find, obsolete or on allocation? We look for it among manufacturer and EMS surplus, brokers and our supplier network in Asia. Every offer found is traced to its source; testing by a partner laboratory on request.',
@@ -167,7 +172,9 @@ label.f textarea{min-height:80px;resize:vertical}
       fCompany: 'Company', fContact: 'Full name', fEmail: 'Business email', fCountry: 'Country', fVat: 'EU VAT number',
       vatHint: 'Required in the European Union, checked with the VIES service.', choose: 'Choose',
       accept: 'I understand: the search fee is deducted from my order and is not refunded if I do not order.',
-      pay: 'Pay {a} and start the search', payNote: 'Secure card payment on our payment provider’s page, then back to Central.Parts.',
+      pay: 'Pay {a} by bank transfer', payNote: 'Secure transfer from your bank in a few clicks, on our payment provider’s page (GoCardless), then back to Central.Parts.',
+      proforma: 'Send the request (pro forma of {a})', proformaNote: 'We email you a pro forma invoice; the search starts when your transfer is received.',
+      proformaSent: 'Request saved: the pro forma invoice is on its way by email.',
       perRef: 'per part number searched, deducted from your order', ttcFR: '{a} including 20 % French VAT.', ttcEU: 'EU reverse charge: {a} to pay.',
       ttcOut: 'Outside the European Union: {a} to pay, no VAT.', howTitle: 'How it works',
       s1: 'You describe the part and pay the search fee.', s2: 'We query surplus stock, brokers and our network, and check every source.',
@@ -176,7 +183,7 @@ label.f textarea{min-height:80px;resize:vertical}
       terms: 'Terms of sale', home: '/en/', redirect: 'Redirecting to the payment page…', cancel: 'Payment cancelled: your request was not started. You can edit it and try again.',
       e: { fields: 'Enter the part number, quantity, company, your name, a valid email and the country.', vat: 'A VAT number is required in the European Union.',
         accept: 'Tick the box to confirm you understand the search fee terms.', vat_invalid: 'This VAT number is not recognised by the VIES service.',
-        payment_unavailable: 'Card payment is not open yet: write to contact@central.parts.', rate_limited: 'Too many requests: try again in a minute.',
+        payment_unavailable: 'Online payment is temporarily unavailable: write to contact@central.parts.', rate_limited: 'Too many requests: try again in a minute.',
         invalid: 'Incomplete or invalid request: ', network: 'Network error, please try again.', other: 'Cannot send right now: try again or write to contact@central.parts.' } },
     zh: { eyebrow: 'Sourcing · Opportunity', title: '稀缺及停产元器件寻源',
       lead: '找不到的型号、停产或缺货？我们在制造商和 EMS 的库存积压、经纪商以及我们在亚洲的供应商网络中为您寻找。每条找到的报价均可追溯至来源；可应要求由合作实验室检测。',
@@ -186,7 +193,9 @@ label.f textarea{min-height:80px;resize:vertical}
       fCompany: '公司', fContact: '姓名', fEmail: '工作邮箱', fCountry: '国家', fVat: '欧盟增值税号',
       vatHint: '欧盟境内必填，通过 VIES 系统核验。', choose: '请选择',
       accept: '我已了解：寻源费用将从我的订单中抵扣；如不下单，费用不予退还。',
-      pay: '支付 {a} 并开始寻源', payNote: '在我们的支付服务商页面安全刷卡支付，完成后返回 Central.Parts。',
+      pay: '通过银行转账支付 {a}', payNote: '在我们的支付服务商（GoCardless）页面从您的银行安全转账，完成后返回 Central.Parts。',
+      proforma: '提交需求（形式发票 {a}）', proformaNote: '我们将通过邮件发送形式发票；收到您的转账后开始寻源。',
+      proformaSent: '需求已登记：形式发票将通过邮件发送给您。',
       perRef: '每个寻源型号，可从订单中抵扣', ttcFR: '含 20% 法国增值税：{a}。', ttcEU: '欧盟反向征税：应付 {a}。',
       ttcOut: '欧盟以外：应付 {a}，不含增值税。', howTitle: '流程',
       s1: '您填写型号并支付寻源费用。', s2: '我们向库存积压、经纪商和我们的网络询价，并核实每个来源。',
@@ -195,7 +204,7 @@ label.f textarea{min-height:80px;resize:vertical}
       terms: '交易条件', home: '/zh/', redirect: '正在跳转至支付页面……', cancel: '支付已取消：需求尚未提交。您可以修改后重试。',
       e: { fields: '请填写型号、数量、公司、姓名、有效邮箱和国家。', vat: '欧盟境内必须填写增值税号。',
         accept: '请勾选以确认您已了解寻源费用条款。', vat_invalid: 'VIES 系统无法识别该增值税号。',
-        payment_unavailable: '刷卡支付暂未开放：请发送邮件至 contact@central.parts。', rate_limited: '请求过于频繁，请一分钟后再试。',
+        payment_unavailable: '在线支付暂时不可用：请发送邮件至 contact@central.parts。', rate_limited: '请求过于频繁，请一分钟后再试。',
         invalid: '需求不完整或无效：', network: '网络错误，请重试。', other: '暂时无法提交：请重试或发送邮件至 contact@central.parts。' } }
   };
   var LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
@@ -216,7 +225,9 @@ label.f textarea{min-height:80px;resize:vertical}
     var c = $('f-country').value, eu = EU.indexOf(c) >= 0;
     $('vat-l').hidden = c && !eu;
     $('ttc').textContent = !c ? '' : fill(c === 'FR' ? t().ttcFR : eu ? t().ttcEU : t().ttcOut, { a: money(amount()) });
-    $('send').textContent = fill(t().pay, { a: money(c ? amount() : HT) });
+    var bank = !c || BANK.indexOf(c) >= 0;
+    $('send').textContent = fill(bank ? t().pay : t().proforma, { a: money(c ? amount() : HT) });
+    $('pay-note').textContent = bank ? t().payNote : t().proformaNote;
   }
   function countries() {
     var dn = null;
@@ -253,7 +264,9 @@ label.f textarea{min-height:80px;resize:vertical}
       condition: $('f-cond').value, notes: v('f-notes'), company: v('f-company'), contact: v('f-contact'), email: v('f-email'),
       country: c, vat: eu ? v('f-vat') : '', lang: lang }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); }, function () { throw { error: 'network' }; })
-      .then(function (d) { say('', t().redirect); location.assign(d.url); },
+      .then(function (d) {
+        if (d.mode === 'proforma') { say('', t().proformaSent); location.assign(d.tracking_url); return; }
+        say('', t().redirect); location.assign(d.url); },
         function (d) { $('send').disabled = false; say('err', (t().e[d && d.error] || t().e.other) + (d && d.error === 'invalid' && d.detail ? d.detail : '')); });
   });
 
