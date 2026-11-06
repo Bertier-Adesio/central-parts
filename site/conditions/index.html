@@ -31,6 +31,11 @@ ul{margin:0;padding-left:20px}
 li{margin:0 0 6px}
 .card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:4px 20px 16px;margin:16px 0 0}
 a{color:var(--fg-1)}
+/* Menu de navigation commun des pages acheteur (dans l'en-tête, sous la marque). */
+.hdr .topnav .wrap{display:flex;justify-content:flex-start;align-items:center;gap:20px;height:40px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:var(--text-sm)}
+.topnav a{color:var(--fg-inverse-2);text-decoration:none}
+.topnav a:hover{color:var(--fg-inverse)}
+.topnav a[aria-current=page]{color:var(--fg-inverse);font-weight:var(--weight-medium)}
 </style>
 </head>
 <body>
@@ -47,6 +52,15 @@ a{color:var(--fg-1)}
       <button type="button" data-lang="zh" aria-pressed="false">中文</button>
     </div>
   </div>
+  <nav class="topnav" aria-label="Navigation">
+    <div class="wrap">
+      <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
+      <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
+      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件" aria-current="page">Conditions commerciales</a>
+      <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API">API</a>
+      <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
+    </div>
+  </nav>
 </header>
 
 <main class="wrap">
@@ -159,6 +173,18 @@ a{color:var(--fg-1)}
     b.addEventListener('click', function () { lang = b.getAttribute('data-lang'); try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} apply(); });
   });
   apply();
+})();
+// Menu de navigation : libellés et liens dans la langue de la page (suit l'attribut lang de la page).
+(function () {
+  function nav() {
+    var l = (document.documentElement.lang || 'fr').slice(0, 2);
+    document.querySelectorAll('.topnav a[data-fr]').forEach(function (a) {
+      a.textContent = a.getAttribute('data-' + l) || a.getAttribute('data-fr');
+      a.href = a.getAttribute('data-href') + (a.getAttribute('data-href') === '/depot/' ? '' : '?lang=' + l);
+    });
+  }
+  new MutationObserver(nav).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  nav();
 })();
 </script>
 </body>
