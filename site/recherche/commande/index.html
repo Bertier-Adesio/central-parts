@@ -101,14 +101,17 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     fr: { title: 'Suivi de la demande', back: 'Nouvelle recherche', ref: 'Demande {ref} du {date}', total: 'Total', unit: 'prix unitaire', toConfirm: 'Prix confirmé avec la proforma', excl: "hors transport, droits et TVA à l'import",
       s: { pending_validation: 'Demande reçue, en cours de vérification', submitted: 'Demande transmise au fournisseur', confirmed: 'Disponibilité confirmée par le fournisseur', proforma_sent: 'Facture proforma envoyée par e-mail', paid: 'Virement reçu', shipped: 'Expédiée' },
       end: { unavailable: "Le fournisseur n'a plus cette quantité : Central.Parts vous propose une alternative par e-mail.", cancelled: 'Demande annulée.', rejected: 'Nous ne pouvons pas donner suite à cette demande. Écrivez à contact@central.parts pour en savoir plus.' },
+      noRef: "Pour suivre une demande, ouvrez le lien de suivi reçu par e-mail après l'envoi. Lien perdu ? Écrivez à contact@central.parts en indiquant votre société et la référence demandée.",
       e: { not_found: 'Demande introuvable : vérifiez le lien reçu.', network: 'Erreur réseau, réessayez.', other: 'Suivi indisponible, réessayez plus tard.' } },
     en: { title: 'Request tracking', back: 'New search', ref: 'Request {ref} of {date}', total: 'Total', unit: 'unit price', toConfirm: 'Price confirmed with the proforma', excl: 'excluding shipping, import duties and VAT',
       s: { pending_validation: 'Request received, being checked', submitted: 'Request sent to the supplier', confirmed: 'Availability confirmed by the supplier', proforma_sent: 'Proforma invoice sent by e-mail', paid: 'Bank transfer received', shipped: 'Shipped' },
       end: { unavailable: 'The supplier no longer has this quantity: Central.Parts will offer an alternative by e-mail.', cancelled: 'Request cancelled.', rejected: 'We cannot follow up on this request. Write to contact@central.parts to find out more.' },
+      noRef: 'To track a request, open the tracking link sent to you by e-mail after you sent it. Lost the link? Write to contact@central.parts with your company name and the part number you asked for.',
       e: { not_found: 'Request not found: please check the link you received.', network: 'Network error, please try again.', other: 'Tracking is unavailable, please try again later.' } },
     zh: { title: '采购申请跟踪', back: '重新搜索', ref: '申请 {ref}（{date}）', total: '合计', unit: '单价', toConfirm: '价格以形式发票为准', excl: '不含运费、进口关税和增值税',
       s: { pending_validation: '已收到申请，正在审核', submitted: '申请已转交供应商', confirmed: '供应商已确认库存', proforma_sent: '形式发票已通过邮件发送', paid: '已收到转账', shipped: '已发货' },
       end: { unavailable: '供应商已无此数量：Central.Parts 将通过邮件为您推荐替代货源。', cancelled: '申请已取消。', rejected: '我们无法处理此申请。如需了解详情，请发送邮件至 contact@central.parts。' },
+      noRef: '请打开提交申请后通过邮件收到的跟踪链接。链接丢失？请发送邮件至 contact@central.parts，注明贵公司名称和所询型号。',
       e: { not_found: '未找到申请，请核对链接。', network: '网络错误，请重试。', other: '暂时无法查询，请稍后再试。' } }
   };
   var $ = function (id) { return document.getElementById(id); };
@@ -121,7 +124,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     catch (e) { return v + ' ' + cur; }
   }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function say(text) { $('msg').hidden = !text; $('msg').className = 'msg err'; $('msg').textContent = text || ''; }
+  function say(text, kind) { $('msg').hidden = !text; $('msg').className = 'msg ' + (kind || 'err'); $('msg').textContent = text || ''; }
   // Libellé du statut d'une ligne de panier : étape atteinte, ou fin (indisponible, annulée, non retenue).
   function stLabel(st) { return STEPS.indexOf(st) >= 0 ? t().s[st] : (t().end[st] || st); }
   function render(d) {
@@ -148,14 +151,17 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   }
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    document.title = t().title + ' — Central.Parts';
     $('lang').textContent = LABEL[ORDER[(ORDER.indexOf(lang) + 1) % 3]];
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     $('home').href = lang === 'fr' ? '/' : '/' + lang + '/';
     if (last) render(last);
+    else if (!q.get('ref')) say(t().noRef, 'info');
   }
   $('lang').addEventListener('click', function () { lang = ORDER[(ORDER.indexOf(lang) + 1) % 3]; applyLang(); });
   applyLang();
-  fetch(FN + '?ref=' + encodeURIComponent(q.get('ref') || '') + '&k=' + encodeURIComponent(q.get('k') || ''))
+  // Sans référence dans l'adresse, aucun appel : on explique où trouver le lien de suivi.
+  if (q.get('ref')) fetch(FN + '?ref=' + encodeURIComponent(q.get('ref') || '') + '&k=' + encodeURIComponent(q.get('k') || ''))
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
     .then(function (d) { last = d; render(d); }, function (c) { say(t().e[c] || t().e.other); });
 })();

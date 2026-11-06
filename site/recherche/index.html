@@ -147,7 +147,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       moreTitle: 'Quantités exactes, paliers et commande', moreText: "Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.",
       ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
-      from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} »',
+      from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} ».', doc: 'Recherche de composants — Central.Parts',
       termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
       cart: 'Panier', add: 'Ajouter au panier', inCart: 'Dans le panier ✓', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       buy: 'Acheter', buyTitle: "Demande d'achat", fQty: 'Quantité', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom', fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
@@ -161,7 +161,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, every price break, lead times, quote requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
       ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
-      from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}"',
+      from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}".', doc: 'Component search — Central.Parts',
       termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
       cart: 'Cart', add: 'Add to cart', inCart: 'In the cart ✓', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       buy: 'Buy', buyTitle: 'Purchase request', fQty: 'Quantity', fCompany: 'Company', fVat: 'VAT number', fName: 'Full name', fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
@@ -175,7 +175,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       moreTitle: '准确数量、价格阶梯与下单', moreText: '采购商账户或 API（Adesio、Luminovo、CalcuQuote、ERP）可查看准确数量、全部价格阶梯、交期并询价。贸易商与呆滞库存的报价通过 Opportunity 流程：状态问卷、可选实验室检测、验收后付款。',
       ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
-      from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价',
+      from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价。', doc: '元器件搜索 — Central.Parts',
       termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
       cart: '购物车', add: '加入购物车', inCart: '已加入购物车 ✓', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       buy: '购买', buyTitle: '采购申请', fQty: '数量', fCompany: '公司', fVat: '增值税号（欧盟）', fName: '姓名', fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '交货国家', fAddress: '交货地址', fMessage: '留言（选填）',
@@ -199,6 +199,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    document.title = t().doc;
     $('lang').textContent = LABEL[ORDER[(ORDER.indexOf(lang) + 1) % 3]];
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     $('home').href = t().home; $('cta-buyer').href = t().home + '#contact';

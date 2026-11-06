@@ -67,7 +67,13 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   table.offers td::before{content:attr(data-label);color:var(--fg-3)}
   table.offers td.first{display:block}
   table.offers td.first::before{content:none}
+  /* Fabricants : zones tactiles de 44 px, liste des distribués repliée au-delà de 8 (bouton pour tout voir). */
+  .mfrs button{min-height:var(--control-h-lg)}
+  .mfrs .row.folded button.extra{display:none}
+  .mfrs button.fold{display:inline-flex}
+  .icon-btn{width:var(--control-h-lg);height:var(--control-h-lg)}
 }
+.mfrs .fold{display:none;background:none;border-style:dashed;color:var(--fg-2)}
 .hdr-r{display:flex;align-items:center;gap:12px}
 .cartlink{color:var(--fg-inverse);text-decoration:none;font-size:var(--text-sm);border:1px solid var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 10px;white-space:nowrap}
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:var(--radius-sm)}
@@ -117,7 +123,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   <!-- Nombre de références et taille de l'inventaire, en tête de page (au-dessus de la recherche). -->
   <div class="totals" id="totals" hidden></div>
   <form class="search" id="form" action="" method="get">
-    <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence fabricant, par exemple TPS25990">
+    <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence, ex. TPS25990">
     <button class="btn" type="submit" data-t="go">Rechercher</button>
   </form>
   <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.</p>
@@ -147,42 +153,42 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   var T = {
     fr: { eyebrow: 'Supply Network Operator · Chaque offre, tracée jusqu’à sa source.', title: 'Nos offres',
       lead: 'Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.',
-      placeholder: 'Référence fabricant, par exemple TPS25990', go: 'Rechercher',
+      placeholder: 'Référence, ex. TPS25990', go: 'Rechercher',
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
       partner: 'Fournisseur partenaire', direct: 'Direct fabricant', auth: 'Distributeur agréé', official: 'Distribué en Europe par Central.Parts', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
       mfrs: 'Fabricants en direct, distribués en Europe par Central.Parts', termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
       cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment',
-      byMfr: 'Fabricant :', partners: 'Fabricants partenaires :', others: 'Fabricants distribués :', allMfr: 'Tous', countM: ' · {m}', refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', sourcingCta: 'Lancer une recherche de sourcing pour {q} (49 € HT, déduits de la commande)', noneAll: 'Aucune offre à jour pour l’instant.',
+      byMfr: 'Fabricant :', partners: 'Fabricants partenaires :', others: 'Fabricants distribués :', allMfr: 'Tous', moreMfr: 'Voir les {n} autres fabricants', lessMfr: 'Moins de fabricants', countM: ' · {m}', refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', sourcingCta: 'Lancer une recherche de sourcing pour {q} (49 € HT, déduits de la commande)', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
       rates: 'Taux de référence de la BCE du {d}.',
       mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
       e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'Les offres sont indisponibles, réessayez plus tard.' } },
     en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
       lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
-      placeholder: 'Manufacturer part number, e.g. TPS25990', go: 'Search',
+      placeholder: 'Part number, e.g. TPS25990', go: 'Search',
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
       partner: 'Partner Supplier', direct: 'Manufacturer direct', auth: 'Authorized distributor', official: 'Distributed in Europe by Central.Parts', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
       mfrs: 'Direct manufacturers, distributed in Europe by Central.Parts', termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
       cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)',
-      byMfr: 'Manufacturer:', partners: 'Partner manufacturers:', others: 'Distributed manufacturers:', allMfr: 'All', countM: ' · {m}', refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: 'Latest {n} of {t} offers: refine the part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', sourcingCta: 'Start a sourcing search for {q} (€49 excl. VAT, deducted from the order)', noneAll: 'No up-to-date offer yet.',
+      byMfr: 'Manufacturer:', partners: 'Partner manufacturers:', others: 'Distributed manufacturers:', allMfr: 'All', moreMfr: 'Show {n} more manufacturers', lessMfr: 'Fewer manufacturers', countM: ' · {m}', refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: 'Latest {n} of {t} offers: refine the part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', sourcingCta: 'Start a sourcing search for {q} (€49 excl. VAT, deducted from the order)', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
       rates: 'ECB reference rate of {d}.',
       mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
       e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Offers are unavailable, please try again later.' } },
     zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
       lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
-      placeholder: '制造商型号，例如 TPS25990', go: '搜索',
+      placeholder: '型号，例如 TPS25990', go: '搜索',
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
       partner: '合作供应商', direct: '原厂直供', auth: '授权代理商', official: '由 Central.Parts 在欧洲分销', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
       mfrs: '原厂直供制造商（由 Central.Parts 在欧洲分销）', termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
       cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价',
-      byMfr: '制造商：', partners: '合作制造商：', others: '分销制造商：', allMfr: '全部', countM: ' · {m}', refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示最新 {n} 条：请输入更完整的型号或选择制造商查看全部。', none: '没有「{q}」的最新报价。', sourcingCta: '为 {q} 发起寻源（49 欧元不含税，可从订单抵扣）', noneAll: '暂无最新报价。',
+      byMfr: '制造商：', partners: '合作制造商：', others: '分销制造商：', allMfr: '全部', moreMfr: '查看其余 {n} 家制造商', lessMfr: '收起制造商', countM: ' · {m}', refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示最新 {n} 条：请输入更完整的型号或选择制造商查看全部。', none: '没有「{q}」的最新报价。', sourcingCta: '为 {q} 发起寻源（49 欧元不含税，可从订单抵扣）', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
       rates: '欧洲央行参考汇率日期：{d}。',
       mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
@@ -227,14 +233,16 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     // fabricants distribués ; variantes de nom regroupées par clé (f.key), filtre appliqué : data.manufacturer.
     var fac = data.manufacturers || [], cur = data.manufacturer || '';
     var curName = (fac.filter(function (f) { return f.key === cur; })[0] || {}).name || (list[0] ? list[0].manufacturer : cur);
-    var chip = function (f) { return '<button type="button" class="' + (f.partner ? 'partner' : '') + '" data-m="' + esc(f.name) + '" aria-pressed="' + (f.key === cur) + '">' +
+    var FOLD_AT = 8;
+    var chip = function (f, i) { return '<button type="button" class="' + (f.partner ? 'partner' : '') + (!f.partner && i >= FOLD_AT && f.key !== cur ? ' extra' : '') + '" data-m="' + esc(f.name) + '" aria-pressed="' + (f.key === cur) + '">' +
       esc(f.name) + '<span>' + esc(Number(f.offers).toLocaleString(LOCALE[lang])) + '</span></button>'; };
     var part = fac.filter(function (f) { return f.partner; }), other = fac.filter(function (f) { return !f.partner; });
     var all = '<button type="button" data-m="" aria-pressed="' + !cur + '">' + esc(t().allMfr) + '</button>';
     $('mfrs').hidden = fac.length < 2 && !cur;
     $('mfrs').setAttribute('aria-label', t().byMfr);
     $('mfrs').innerHTML = (part.length ? '<div class="row" id="mfrs-partners"><span class="lbl">' + esc(t().partners) + '</span>' + all + part.map(chip).join('') + '</div>' : '') +
-      (other.length ? '<div class="row" id="mfrs-others"><span class="lbl">' + esc(part.length ? t().others : t().byMfr) + '</span>' + (part.length ? '' : all) + other.map(chip).join('') + '</div>' : '');
+      (other.length ? '<div class="row' + (mfrsOpen ? '' : ' folded') + '" id="mfrs-others"><span class="lbl">' + esc(part.length ? t().others : t().byMfr) + '</span>' + (part.length ? '' : all) + other.map(chip).join('') +
+        (other.length > FOLD_AT ? '<button type="button" class="fold" aria-expanded="' + mfrsOpen + '" aria-controls="mfrs-others">' + esc(mfrsOpen ? t().lessMfr : fill(t().moreMfr, { n: other.length - FOLD_AT })) + '</button>' : '') + '</div>' : '');
     $('count').textContent = data.total_offers > list.length ? fill(t().more, { n: list.length, t: Number(data.total_offers).toLocaleString(LOCALE[lang]) }) + (cur ? fill(t().countM, { m: curName }) : '')
       : (q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length })) + (cur ? fill(t().countM, { m: curName }) : '');
     // Nombre de références et taille de l'inventaire (migration 20261106000036) : sur la recherche, sinon tout le catalogue.
@@ -315,7 +323,12 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
 
   $('form').addEventListener('submit', function (e) { e.preventDefault(); load(); });
   var mfr = (params.get('mfr') || '').slice(0, 80);
+  // Téléphone : la liste des fabricants distribués reste repliée tant qu'on ne la déplie pas (choix gardé pendant la visite).
+  var mfrsOpen = false;
   $('mfrs').addEventListener('click', function (ev) {
+    var f = ev.target.closest('button.fold');
+    if (f) { mfrsOpen = !mfrsOpen; $('mfrs-others').classList.toggle('folded', !mfrsOpen); f.setAttribute('aria-expanded', String(mfrsOpen));
+      f.textContent = mfrsOpen ? t().lessMfr : fill(t().moreMfr, { n: $('mfrs-others').querySelectorAll('button.extra').length }); return; }
     var b = ev.target.closest('button[data-m]'); if (!b) return;
     mfr = b.getAttribute('data-m'); load();
   });
