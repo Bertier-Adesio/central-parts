@@ -151,13 +151,15 @@ await page.waitForSelector('#out:not([hidden])');
 ok((await page.textContent('#steps')).includes('cannot follow up') && !(await page.textContent('main')).includes('rejected'), 'suivi : demande refusée, sans motif ni code');
 await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=faux&lang=en');
 await page.waitForSelector('#msg:not([hidden])');
-ok((await page.textContent('#msg')).includes('not found'), 'suivi : lien faux');
-// Suivi sans référence : aucun appel, explication au lieu d'une erreur ; titre de l'onglet dans la langue de la page.
+ok((await page.textContent('#msg')).includes('No request found') && await page.isVisible('#track') && (await page.inputValue('#f-ref')) === 'PR-0001',
+  'suivi : lien faux, formulaire affiché avec la référence saisie');
+// Suivi sans référence : aucun appel, formulaire, aide et aperçu des étapes ; titre de l'onglet dans la langue de la page.
 let statusCalls = 0;
 page.on('request', (r) => { if (r.url().includes('/order/status')) statusCalls++; });
 await page.goto(BASE + '/recherche/commande/?lang=en');
-await page.waitForSelector('#msg:not([hidden])');
-ok(statusCalls === 0 && (await page.getAttribute('#msg', 'class')).includes('info') && (await page.textContent('#msg')).includes('tracking link'), 'suivi sans référence : aucun appel, explication');
+await page.waitForSelector('#track');
+ok(statusCalls === 0 && await page.isVisible('#track') && await page.isHidden('#msg') && (await page.textContent('#ask')).includes('Where to find these details') && (await page.$$('#preview-steps li')).length === 5,
+  'suivi sans référence : aucun appel, formulaire, aide et aperçu des 5 étapes');
 ok(await page.title() === 'Request tracking — Central.Parts', 'suivi : titre de l\'onglet en anglais');
 await page.goto(BASE + '/recherche/?q=NE555&lang=zh');
 await page.waitForSelector('#list .item, #list article, #list > *');

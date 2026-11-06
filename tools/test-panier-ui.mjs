@@ -129,16 +129,22 @@ ok(txt.includes('hors transport, droits et TVA') && txt.includes('Incoterms® 20
 ok(norm(await page.textContent('#lines li:first-child')).includes('FCA Shenzhen') && norm(await page.textContent('#lines li:nth-child(4)')).includes('FCA Hong Kong'), 'panier : lieu FCA de chaque ligne (devis)');
 await page.waitForSelector('#ship:not([hidden]) .grp');
 const shipTxt = norm(await page.textContent('#ship'));
-ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('offerte dès 1 840,00 € (encore 1 839,94 €)') && shipTxt.includes('(DAP adresse de livraison)'),
-  'panier : livraison par fournisseur, montant manquant pour la livraison offerte');
-ok(shipTxt.includes('DHL · FedEx · UPS · SF') && shipTxt.includes('5 à 7 jours ouvrés') && shipTxt.includes('retours sous 30 jours pour défaut qualité') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('paiement d’avance'),
-  'panier : conditions du fournisseur (transporteurs, délais, retours, garantie, paiement)');
-ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Transport chiffré sur la facture proforma') && shipTxt.includes('Droits, taxes et frais de dédouanement à la charge de l’acheteur'),
+ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('Franco de port') && shipTxt.includes('dès 1 840,00 € · encore 1 839,94 € à ajouter') && shipTxt.includes('(DAP adresse de livraison)'),
+  'panier : livraison par fournisseur, montant manquant pour le franco de port');
+const meter = await page.$eval('#ship .meter', (m) => [m.getAttribute('role'), m.getAttribute('aria-valuemax'), m.getAttribute('aria-valuenow')]);
+ok(meter[0] === 'progressbar' && meter[1] === '1840' && meter[2] === '0.06', 'panier : barre de progression du franco (progressbar, valeurs) ' + meter.join(' '));
+const dts = await page.$$eval('#ship .ship-h + .grp dl.sum dt', (d) => d.map((x) => x.textContent));
+ok(dts.join('|') === 'Transport|Transporteurs|Délai|Paiement|Retours', 'panier : liste étiquetée (transport, transporteurs, délai, paiement, retours) ' + dts.join('|'));
+ok((await page.$$('#ship .ship-h + .grp .carr')).length === 4 && shipTxt.includes('Expédition sous 24 h · 5 à 7 jours ouvrés') && shipTxt.includes('30 jours en cas de défaut qualité') && shipTxt.includes('15 % de frais de remise en stock') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('Paiement d’avance, sur facture proforma'),
+  'panier : conditions du fournisseur (transporteurs en puces, délais, retours, garantie, paiement)');
+ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Chiffré sur la facture proforma') && shipTxt.includes('Douane et taxes') && shipTxt.includes('À la charge de l’acheteur (droits, taxes, dédouanement)'),
   'panier : autre fournisseur, transport sur la proforma ; droits à la charge de l\'acheteur');
+ok((await page.getAttribute('#ship #to-terms', 'href')) === '/conditions/?lang=fr', 'panier : lien vers les conditions en bas du panneau Livraison');
+ok(norm(await page.textContent('#lines li:first-child .hint')) === 'MOQ 100 · SPQ 2 500', 'panier : aide MOQ · SPQ sous la quantité');
 ok(!/ORG-\d|seller_id|tmp-/i.test(await page.content()), 'panier : jamais l\'identifiant du fournisseur');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
-ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
+ok((await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
 ok(norm(await page.textContent('#lines li:nth-child(4)')).includes('Quantité ajustée à 10 (minimum 10).') &&
   (await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[3].qty === 10, 'panier : quantité d\'une ligne de la recherche ajustée au MOQ donné par le devis');
 await page.fill('#o-company', 'Atelier Panier (fictif)');
