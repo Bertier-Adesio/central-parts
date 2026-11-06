@@ -62,3 +62,10 @@ Mise en œuvre : migration `20261105000033_fabricants_distributeurs.sql`.
   - Ce sont les offres d'un compte rattaché, pour les marques du fabricant, qui portent « Direct fabricant » ou « Distributeur agréé », avec la mention « Distribué en Europe par Central.Parts ».
   - Les offres de la même marque venant d'autres sources restent « Fournisseur partenaire », et la page fabricant le précise.
   - La page compte les offres par canal. Elle n'affiche jamais le nom ni le pseudonyme des distributeurs.
+
+## Complément du 5 novembre 2026 : direct fabricant ou distributeur agréé, au choix
+
+Décision de Bertier : « il faut que je puisse moduler direct fabricant et direct distributeur agréé ». La société de distribution propre à un fabricant, en contact direct avec lui, est « direct fabricant » (migration `20261105000034_role_direct_fabricant.sql`).
+
+- Le rôle de chaque compte rattaché se choisit et se change dans la fiche du fabricant, sans le détacher.
+- Un fabricant peut avoir plusieurs comptes « direct fabricant » : lui-même et sa société de distribution.

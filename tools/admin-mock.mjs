@@ -262,8 +262,9 @@ export function createMock() {
         const o = find(body.org);
         if (!o) return [409, { error: 'not_allowed' }];
         if (!['Manufacturer', 'Distributor'].includes(o.profile)) return bad('Seul un fabricant ou un distributeur peut être rattaché (pas un revendeur, broker ou excédent)');
-        if (body.role === 'self' && m.links.some((d) => d.role === 'self' && d.org_id !== o.org_id)) return bad('Ce fabricant a déjà un compte « fabricant lui-même »');
-        m.links = m.links.filter((d) => d.org_id !== o.org_id).concat({ org_id: o.org_id, role: body.role });
+        if (!['self', 'authorized'].includes(body.role)) return bad('Rôle : self ou authorized');
+        const i = m.links.findIndex((d) => d.org_id === o.org_id);
+        if (i >= 0) m.links[i].role = body.role; else m.links.push({ org_id: o.org_id, role: body.role });
         return [200, mjson(m)];
       }
       if (path === '/manufacturer/unlink') { m.links = m.links.filter((d) => d.org_id !== body.org); return [200, mjson(m)]; }

@@ -71,7 +71,12 @@ begin
   perform tests.eq('fabricant A : deux comptes, fabricant lui-même d''abord', (select string_agg((x->>'org_id') || ':' || (x->>'role') || ':' || (x->>'offers'), ' ')
     from jsonb_array_elements(a->'distributors') x), 'FM1:self:1 FD1:authorized:1');
   perform tests.eq('distributeur : deux fabricants dans sa fiche', jsonb_array_length(public.admin_supplier_profile('FD1')->'manufacturers'), 2);
-  perform tests.fails('un seul compte « fabricant lui-même »', format($s$select public.admin_manufacturer_link('%s', 'FD2', 'self')$s$, a->>'id'), '22023');
+  -- Migration 20261105000034 : plusieurs comptes « direct fabricant » (le fabricant et sa société de distribution), rôle modifiable.
+  perform tests.eq('deux comptes direct fabricant possibles', (select count(*) from jsonb_array_elements(
+    public.admin_manufacturer_link(a->>'id', 'FD2', 'self')->'distributors') x where x->>'role' = 'self')::int, 2);
+  perform tests.eq('rôle changé sans détacher', (select x->>'role' from jsonb_array_elements(
+    public.admin_manufacturer_link(a->>'id', 'FD2', 'authorized')->'distributors') x where x->>'org_id' = 'FD2'), 'authorized');
+  perform public.admin_manufacturer_unlink(a->>'id', 'FD2');
   perform tests.fails('broker : rattachement refusé', format($s$select public.admin_manufacturer_link('%s', 'FK1', 'authorized')$s$, a->>'id'), '22023');
   perform tests.fails('rôle inconnu refusé', format($s$select public.admin_manufacturer_link('%s', 'FD2', 'broker')$s$, a->>'id'), '22023');
 
