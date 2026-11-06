@@ -44,6 +44,8 @@ jobs:
           deno-version: v2.x
       - name: Lecture des fichiers de stock et outils du dépôt
         run: node tools/test-import.mjs
+      - name: En-tête commun des pages à jour (tools/build-header.mjs)
+        run: node tools/build-header.mjs --check
       - name: En-tête CSP à jour (empreintes des scripts en ligne)
         run: node tools/build-csp.mjs --check
       - name: Règles métier de la maquette

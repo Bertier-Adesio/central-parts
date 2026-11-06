@@ -127,7 +127,7 @@ for (const width of [1280, 390]) {
       'proforma : demande enregistrée, suivi « en attente de votre virement »');
     await page.waitForTimeout(4500);
     ok(state.pfCalls === 1, 'proforma : pas d\'interrogation en boucle');
-    await page.click('[data-lang=zh]');
+    await page.$eval('.site-hdr [data-lang=zh]', (a) => a.click());
     ok((await page.textContent('h1')).includes('寻源') && (await page.textContent('.topnav a[aria-current=page]')) === '稀缺元器件', '中文 : titre et menu');
   }
   ok(errors.length === 0, width + ' px : aucune erreur console ' + errors.join(' | '));
@@ -144,7 +144,7 @@ for (const width of [1280, 390]) {
   const txt = (await page.textContent('#card')).replace(/[  ]/g, ' ');
   ok(state.statusCalls >= 2 && txt.includes('CM8071505024905') && txt.includes('Deux offres envoyées') && txt.includes('(49,00 € HT) seront déduits'), 'mise à jour automatique : offres envoyées, note, déduction');
   ok(await noScroll(page), 'suivi, 390 px : pas de défilement horizontal');
-  await page.click('[data-lang=en]');
+  await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
   ok((await page.textContent('#st')) === 'Offers sent', 'suivi EN');
   // Autre adresse (pas seulement un autre fragment) : la page se recharge.
   await page.goto(BASE + '/sourcing/suivi/?lang=fr&v=2#' + 'd'.repeat(48));

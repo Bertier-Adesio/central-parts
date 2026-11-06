@@ -81,7 +81,7 @@ for (const width of [1280, 390]) {
   ok(decodeURIComponent(await page.getAttribute('#ask', 'href')) === 'mailto:contact@central.parts?subject=Demande d’accès à l’API d’offres Central.Parts', width + ' px : mailto FR prérempli');
   ok(await noScroll(page), width + ' px : FR sans défilement horizontal');
 
-  await page.click('[data-lang=en]');
+  await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
   ok((await visibleText(page, 'h1')).trim() === 'Central.Parts Offers API' && await page.evaluate(() => document.documentElement.lang) === 'en', width + ' px : EN');
   const en = await visibleText(page, 'main');
   ok(en.includes('Every offer, traced to its source.') && !en.includes('Chaque offre') && en.includes('Fictitious example'), width + ' px : EN seul visible');
@@ -89,7 +89,7 @@ for (const width of [1280, 390]) {
   ok(await page.getAttribute('#home', 'href') === '/en/', width + ' px : accueil EN');
   ok(await noScroll(page), width + ' px : EN sans défilement horizontal');
 
-  await page.click('[data-lang=zh]');
+  await page.$eval('.site-hdr [data-lang=zh]', (a) => a.click());
   ok((await visibleText(page, 'h1')).trim() === 'Central.Parts 报价 API' && await page.evaluate(() => document.documentElement.lang) === 'zh-Hans', width + ' px : 中文');
   const zh = await visibleText(page, 'main');
   ok(zh.includes('每条报价，均可追溯至来源。') && !zh.includes('Every offer') && zh.includes('虚构示例'), width + ' px : 中文 seul visible');
@@ -99,7 +99,7 @@ for (const width of [1280, 390]) {
   // La langue choisie est retenue.
   await page.reload();
   ok((await visibleText(page, 'h1')).trim() === 'Central.Parts 报价 API', width + ' px : langue retenue au rechargement');
-  await page.click('[data-lang=fr]');
+  await page.$eval('.site-hdr [data-lang=fr]', (a) => a.click());
   ok(errors.length === 0, width + ' px : aucune erreur console ' + errors.join(' | '));
   await page.close();
 }

@@ -1,0 +1,6 @@
+/* Central.Parts — polices auto-hébergées (aucun CDN, accès depuis la Chine : ADR 0006).
+   Chargé par toutes les pages avant tokens.css ; la landing (site/index.html) déclare les mêmes règles en ligne. */
+@font-face { font-family: 'Space Grotesk'; src: url("/assets/fonts/space-grotesk-var.woff2") format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-400.woff2") format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-500.woff2") format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'IBM Plex Mono'; src: url("/assets/fonts/ibm-plex-mono-600.woff2") format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }

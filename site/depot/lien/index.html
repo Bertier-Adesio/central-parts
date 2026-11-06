@@ -11,6 +11,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/tokens.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
@@ -197,7 +198,6 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     renderStatus(); renderImports();
   }

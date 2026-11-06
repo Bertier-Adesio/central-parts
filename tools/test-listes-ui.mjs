@@ -259,9 +259,9 @@ for (const width of [1280, 390]) {
     await page.fill('#q', '');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
-    await page.click('[data-lang=zh]');
+    await page.$eval('.site-hdr [data-lang=zh]', (a) => a.click());
     ok((await page.textContent('#rows')).includes('合作供应商') && (await page.textContent('h1')) === '我们的报价', '中文 : 合作供应商');
-    await page.click('[data-lang=en]');
+    await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
     ok((await page.textContent('#rows')).includes('Partner Supplier'), 'EN : Partner Supplier');
     ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page acheteur non indexée');
     // « Demander » est devenu « Ajouter au panier » (ADR 0028) : plus de lien mailto.

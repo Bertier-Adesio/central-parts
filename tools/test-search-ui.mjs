@@ -65,11 +65,11 @@ ok(txt.includes('Fabricant') && txt.includes('Broker vérifié') && txt.includes
 ok(!/[0-9] (pcs|pièces)/.test(txt), 'pas de quantité exacte');
 ok(new URL(page.url()).search === '?q=NE5', 'adresse partageable');
 
-await page.click('#lang');
+await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
 ok((await page.textContent('h1')) === 'Search for a component' && (await page.textContent('#list')).includes('Ships from China'), 'anglais');
-await page.click('#lang');
+await page.$eval('.site-hdr [data-lang=zh]', (a) => a.click());
 ok((await page.textContent('h1')) === '搜索元器件' && (await page.textContent('#list')).includes('价格请询价') && (await page.textContent('#list')).includes('千颗单价'), 'chinois');
-await page.click('#lang');
+await page.$eval('.site-hdr [data-lang=fr]', (a) => a.click());
 
 await page.fill('#q', 'xx');
 await page.click('#f button');

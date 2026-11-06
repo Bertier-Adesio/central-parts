@@ -13,17 +13,12 @@
 <meta name="description" content="API d’offres Central.Parts : un fournisseur unique pour les outils de chiffrage. Spécification v1 en cours, accès sur demande.">
 <meta name="robots" content="noindex">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/tokens.css">
+<link rel="stylesheet" href="/assets/site.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
-.hdr{background:var(--bg-inverse);color:var(--fg-inverse)}
 .wrap{max-width:880px;margin:0 auto;padding:0 16px}
-.hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
-.brand .accent,.dot{color:var(--accent);fill:var(--accent)}
-.langs{display:flex;gap:4px}
-.langs button{background:none;border:1px solid transparent;color:var(--fg-inverse-2);border-radius:var(--radius-sm);padding:4px 8px;font:inherit;font-size:var(--text-sm);cursor:pointer}
-.langs button[aria-pressed=true]{border-color:var(--fg-inverse-2);color:var(--fg-inverse)}
 html:not(.js) .langs{display:none}
 /* Sans JavaScript : seule la version française est visible. Avec JavaScript, le script pose l'attribut hidden. */
 html:not(.js) [data-l]:not([data-l=fr]){display:none}
@@ -82,38 +77,55 @@ pre{margin:0;background:var(--bg-inverse);color:var(--fg-inverse);border-radius:
 .ftr .name .accent{color:var(--accent)}
 .ftr .sno{display:inline-flex;align-items:center;gap:12px}
 .ftr .sno span:last-child{border-left:1px solid var(--fg-2);padding-left:12px;font-size:var(--text-2xs);letter-spacing:.22em;text-transform:uppercase;line-height:1.4}
-/* Menu de navigation commun des pages acheteur (dans l'en-tête, sous la marque). */
-.hdr .topnav .wrap{display:flex;justify-content:flex-start;align-items:center;gap:20px;height:40px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;font-size:var(--text-sm)}
-.topnav a{color:var(--fg-inverse-2);text-decoration:none}
-.topnav a:hover{color:var(--fg-inverse)}
-.topnav a[aria-current=page]{color:var(--fg-inverse);font-weight:var(--weight-medium)}
 </style>
 </head>
 <body>
 
-<header class="hdr">
-  <div class="wrap">
-    <a class="brand" href="/" id="home">
-      <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
-      <span>Central<span class="accent">.</span>Parts</span>
+<!-- HEADER:BEGIN — généré par node tools/build-header.mjs : modifier l'outil, pas cette page -->
+<header class="site-hdr">
+  <div class="bar">
+    <a class="brand" href="/" id="home" aria-label="Central.Parts, accueil" data-ha="brand">
+      <svg class="mark" width="24" height="24" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
+      <span class="wm" aria-hidden="true">Central<span class="pt">.</span>Parts</span>
     </a>
-    <div class="langs" role="group" aria-label="Langue / Language / 语言">
-      <button type="button" data-lang="fr" aria-pressed="true">FR</button>
-      <button type="button" data-lang="en" aria-pressed="false">EN</button>
-      <button type="button" data-lang="zh" aria-pressed="false">中文</button>
-    </div>
-  </div>
-  <nav class="topnav" aria-label="Navigation">
-    <div class="wrap">
+    <nav class="topnav d-only" aria-label="Navigation principale" data-ha="nav">
       <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
       <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
       <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件">Composants rares</a>
-      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件">Conditions commerciales</a>
+      <a href="/conditions/" data-href="/conditions/" data-fr="Conditions" data-en="Terms" data-zh="交易条件">Conditions</a>
       <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API" aria-current="page">API</a>
       <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
+    </nav>
+    <div class="tools">
+      <a class="req" href="/panier/" id="cart-link" aria-label="Ma demande"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6M9 14h6M9 18h3"/></svg><span class="req-l" data-h="req">Ma demande</span><span class="count" id="cart-n" hidden></span></a>
+      <div class="langs d-only" role="group" aria-label="Langue" data-ha="lang">
+        <a href="/api/?lang=fr" data-lang="fr" lang="fr" hreflang="fr" aria-current="true">FR</a>
+        <a href="/api/?lang=en" data-lang="en" lang="en" hreflang="en">EN</a>
+        <a href="/api/?lang=zh" data-lang="zh" lang="zh-Hans" hreflang="zh-Hans">中文</a>
+      </div>
+      <details class="menu">
+        <summary aria-label="Menu" data-ha="menu"><svg class="i-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="i-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></summary>
+        <div class="menu-body">
+          <nav class="topnav" aria-label="Navigation" data-ha="menuNav">
+            <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价">Offres</a>
+            <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
+            <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件">Composants rares</a>
+            <a href="/conditions/" data-href="/conditions/" data-fr="Conditions" data-en="Terms" data-zh="交易条件">Conditions</a>
+            <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API" aria-current="page">API</a>
+            <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
+          </nav>
+          <p class="menu-h" data-h="lang">Langue</p>
+          <div class="langs" role="group" aria-label="Langue" data-ha="lang">
+            <a href="/api/?lang=fr" data-lang="fr" lang="fr" hreflang="fr" aria-current="true">FR</a>
+            <a href="/api/?lang=en" data-lang="en" lang="en" hreflang="en">EN</a>
+            <a href="/api/?lang=zh" data-lang="zh" lang="zh-Hans" hreflang="zh-Hans">中文</a>
+          </div>
+        </div>
+      </details>
     </div>
-  </nav>
+  </div>
 </header>
+<!-- HEADER:END -->
 
 <main class="wrap">
   <noscript><p class="muted">Version française. English and 中文 versions need JavaScript. 英文和中文版本需要启用 JavaScript。</p></noscript>
@@ -691,7 +703,6 @@ Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
     $('home').setAttribute('href', t().home);
     $('ask').setAttribute('href', 'mailto:contact@central.parts?subject=' + encodeURIComponent(t().subject));
     document.querySelector('.toc').setAttribute('aria-label', t().toc);
-    document.querySelectorAll('[data-lang]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-lang') === lang)); });
     blocks.forEach(function (el) { el.hidden = el.getAttribute('data-l') !== lang; });
     document.querySelectorAll('.copy').forEach(function (b) { b.textContent = t().copy; });
   }
@@ -701,18 +712,49 @@ Authorization: Bearer cp_live_XXXXXXXX</code></pre></div>
   document.documentElement.classList.add('js');
   applyLang();
 })();
-// Menu de navigation : libellés et liens dans la langue de la page (suit l'attribut lang de la page).
+// HEADER:BEGIN — en-tête commun, généré par node tools/build-header.mjs : modifier l'outil, pas cette page.
+// Suit l'attribut lang de <html> (mis à jour par la page) : libellés, liens de langue, titre, compteur de « Ma demande ».
 (function () {
-  function nav() {
-    var l = (document.documentElement.lang || 'fr').slice(0, 2);
-    document.querySelectorAll('.topnav a[data-fr]').forEach(function (a) {
-      a.textContent = a.getAttribute('data-' + l) || a.getAttribute('data-fr');
-      a.href = a.getAttribute('data-href') + (a.getAttribute('data-href') === '/depot/' ? '' : '?lang=' + l);
+  var H = {"fr":{"brand":"Central.Parts, accueil","nav":"Navigation principale","req":"Ma demande","reqN":"Ma demande ({n})","lang":"Langue","menu":"Menu","close":"Fermer","menuNav":"Navigation","bo":"Back-office","out":"Déconnexion"},"en":{"brand":"Central.Parts, home","nav":"Main navigation","req":"My request","reqN":"My request ({n})","lang":"Language","menu":"Menu","close":"Close","menuNav":"Navigation","bo":"Back office","out":"Sign out"},"zh":{"brand":"Central.Parts 首页","nav":"主导航","req":"询价单","reqN":"询价单（{n}）","lang":"语言","menu":"菜单","close":"关闭","menuNav":"导航","bo":"管理后台","out":"退出登录"}};
+  var TITLE = {"fr":"API d’offres","en":"Offers API","zh":"报价 API"};
+  function cur() { var l = (document.documentElement.lang || 'fr').slice(0, 2); return H[l] ? l : 'fr'; }
+  function count() { try { var a = JSON.parse(localStorage.getItem('cp-cart') || '[]'); return Array.isArray(a) ? a.length : 0; } catch (e) { return 0; } }
+  function sync() {
+    var l = cur(), h = H[l], n = count(), all = function (s, f) { Array.prototype.forEach.call(document.querySelectorAll(s), f); };
+    if (TITLE) document.title = TITLE[l] + ' — Central.Parts';
+    all('.site-hdr [data-h]', function (el) { el.textContent = h[el.getAttribute('data-h')]; });
+    all('.site-hdr [data-ha]', function (el) { el.setAttribute('aria-label', h[el.getAttribute('data-ha')]); });
+    all('.site-hdr .topnav a[data-href]', function (a) {
+      var href = a.getAttribute('data-href');
+      a.textContent = a.getAttribute('data-' + l);
+      a.href = href + (href === '/depot/' ? '' : '?lang=' + l);
     });
+    all('.site-hdr a[data-lang]', function (a) {
+      var k = a.getAttribute('data-lang'), p = new URLSearchParams(location.search);
+      p.set('lang', k); a.href = location.pathname + '?' + p.toString();
+      if (k === l) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+    });
+    var c = document.getElementById('cart-n'), r = document.getElementById('cart-link'), home = document.getElementById('home');
+    if (c) { c.textContent = n ? String(n) : ''; c.hidden = !n; }
+    if (r) { r.href = '/panier/?lang=' + l; r.setAttribute('aria-label', n ? h.reqN.replace('{n}', n) : h.req); }
+    if (home) home.setAttribute('href', l === 'fr' ? '/' : '/' + l + '/');
   }
-  new MutationObserver(nav).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  nav();
+  // Changement de langue : la page s'en charge sur place (écouteurs [data-lang]) ; l'adresse garde ?lang=. Si la page
+  // ne l'a pas fait, le lien recharge la page avec ?lang=.
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('.site-hdr a[data-lang]');
+    if (!a || cur() !== a.getAttribute('data-lang')) return;
+    ev.preventDefault();
+    try { var u = new URL(location.href); u.searchParams.set('lang', cur()); history.replaceState(history.state, '', u); } catch (e) {}
+    var d = a.closest('details'); if (d) d.open = false;
+    sync();
+  });
+  window.addEventListener('storage', function (ev) { if (ev.key === 'cp-cart') sync(); });
+  new MutationObserver(sync).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  window.cpHeader = sync;
+  sync();
 })();
+// HEADER:END
 </script>
 </body>
 </html>
