@@ -72,6 +72,9 @@ for (const path of list) {
   await page.waitForTimeout(300);
   const v = await page.evaluate(() => window.__csp);
   ok(v.length === 0 && errors.length === 0, `${path} : aucune violation ${v.concat(errors).join(' | ')}`);
+  // Polices de la marque chargées depuis /assets/ (fonts.css, ou la landing et site/app/ de leur côté).
+  const fonts = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/["']/g, '')); });
+  ok(fonts.includes('Space Grotesk'), `${path} : police Space Grotesk chargée`);
   await page.close();
 }
 
