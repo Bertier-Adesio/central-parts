@@ -494,7 +494,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   var LANGS = { zh: '中文', en: 'English', fr: 'Français', de: 'Deutsch', ja: '日本語', ko: '한국어', es: 'Español', it: 'Italiano', ru: 'Русский' };
   // Direct fabricant : le fabricant ou sa propre société de distribution, en contact direct (migration 20261105000034).
   var ROLE = { self: 'Direct fabricant', authorized: 'Distributeur agréé' };
-  var prof = null;
+  var prof = null, edDone = false;
   var list = function (a) { return (a || []).length ? a.map(esc).join(', ') : '—'; };
   var opt = function (v) { return v == null || v === '' ? '—' : esc(v); };
   var langs = function (a) { return list((a || []).map(function (c) { return LANGS[c] || c; })); };
@@ -533,7 +533,11 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         '<label class="f" style="margin:0">Seul ce compte WeChat modifie la fiche, les contacts, les corrections et l\'accord<select id="pf-editor-i">' +
         p.identities.map(function (w) { return '<option value="' + esc(w.openid) + '"' + (w.openid === p.profile_editor ? ' selected' : '') + '>' +
           esc((w.label || 'Sans nom') + ' · ' + (w.role === 'admin' ? 'administrateur' : 'membre') + ' · ' + w.openid) + '</option>'; }).join('') +
-        '</select></label><button class="btn btn-line" type="submit">Désigner</button></form>'
+        '</select></label><button class="btn btn-line" type="submit">Désigner</button></form>' +
+        // État visible à côté du bouton (le message général est en haut de la page, souvent hors de l'écran).
+        '<p class="muted" id="pf-editor-st">' + (edDone ? '<span class="ok-t">✓ Responsable de la fiche enregistré.</span> ' : '') +
+          (p.profile_editor ? 'Responsable désigné : ' + esc(p.profile_editor) + '.'
+            : 'Aucun responsable désigné : par défaut, le premier compte administrateur (' + esc((p.identities.filter(function (w) { return w.role === 'admin'; })[0] || p.identities[0]).openid) + ') modifie la fiche.') + '</p>'
         : '<p class="muted" id="pf-editor">Aucun compte WeChat rattaché.</p>') +
       '<h3>Fabricants rattachés</h3>' +
       (p.manufacturers.length ? '<ul class="addr" id="pf-mfrs">' + p.manufacturers.map(function (m) {
@@ -599,7 +603,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     }
     if (ev.target.id === 'pf-editor') {
       ev.preventDefault();
-      api('POST', '/supplier-editor', { org: org, openid: $('pf-editor-i').value }).then(function (p) { prof = p; renderProfile(); show('Responsable de la fiche désigné.', 'ok'); }).catch(profErr);
+      api('POST', '/supplier-editor', { org: org, openid: $('pf-editor-i').value }).then(function (p) { prof = p; edDone = true; renderProfile(); edDone = false; show('Responsable de la fiche désigné.', 'ok'); }).catch(profErr);
     }
     if (ev.target.id === 'pf-cf') {
       ev.preventDefault();
