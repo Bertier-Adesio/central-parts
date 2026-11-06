@@ -2,7 +2,8 @@
 // Déployée sans vérification de jeton Supabase (--no-verify-jwt) : la liste est publique, limitée à 30 requêtes
 // par minute et par adresse IP (compteur en base, adresse jamais gardée en clair).
 //
-//   GET /offers?q=TPS&cur=EUR → { query, currency, ttl_days, total_refs, total_offers, total_units, offers: [{ mpn, manufacturer, supplier: "partner",
+//   GET /offers?q=TPS&mfr=UMW&cur=EUR → { query, currency, manufacturer, manufacturers: [{ name, offers }], ttl_days,
+//        total_refs, total_offers, total_units, offers: [{ mpn, manufacturer, supplier: "partner",
 //        seller_category, source, ship_from, availability, moq, price_from, updated_at }] }
 //   Sans q : les 50 offres confirmées le plus récemment. Seules les offres à jour (seuil d'expiration) sont rendues.
 //   brand_page : marque dont le fabricant a une page publique ; factory_direct : offre du fabricant lui-même (ADR 0032).
@@ -48,7 +49,8 @@ Deno.serve(async (req) => {
     const { logo_path: _, ...page } = data;
     return json({ ...page, logo_url: logo });
   }
-  const { data, error } = await db.rpc('partner_offers', { p_ip: ip, q: u.searchParams.get('q') || '', p_currency: u.searchParams.get('cur') || 'EUR' });
+  const { data, error } = await db.rpc('partner_offers', { p_ip: ip, q: u.searchParams.get('q') || '', p_currency: u.searchParams.get('cur') || 'EUR',
+    p_mfr: (u.searchParams.get('mfr') || '').slice(0, 80) });
   if (error) {
     if (error.code === '22023') return json({ error: 'too_short' }, 422);
     if (error.code === 'CP429') return json({ error: 'rate_limited' }, 429);
