@@ -101,6 +101,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     <div class="wrap">
       <a href="/offres/" data-href="/offres/" data-fr="Offres" data-en="Offers" data-zh="报价" aria-current="page">Offres</a>
       <a href="/fabricants/" data-href="/fabricants/" data-fr="Fabricants" data-en="Manufacturers" data-zh="制造商">Fabricants</a>
+      <a href="/sourcing/" data-href="/sourcing/" data-fr="Composants rares" data-en="Hard-to-find parts" data-zh="稀缺元器件">Composants rares</a>
       <a href="/conditions/" data-href="/conditions/" data-fr="Conditions commerciales" data-en="Terms of sale" data-zh="交易条件">Conditions commerciales</a>
       <a href="/api/" data-href="/api/" data-fr="API" data-en="API" data-zh="API">API</a>
       <a href="/depot/" data-href="/depot/" data-fr="Espace fournisseur" data-en="Supplier centre" data-zh="供应商中心">Espace fournisseur</a>
@@ -123,6 +124,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
 
   <p class="msg" id="msg" role="status" hidden></p>
+  <p id="to-sourcing" hidden><a class="btn" id="to-sourcing-a" href="/sourcing/"></a></p>
   <div class="mfrs" id="mfrs" role="group" hidden></div>
   <p class="count" id="count" hidden></p>
   <table class="offers" id="table" hidden>
@@ -152,7 +154,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       mfrs: 'Fabricants en direct, distribués en Europe par Central.Parts', termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
       cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
       count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment',
-      byMfr: 'Fabricant :', partners: 'Fabricants partenaires :', others: 'Fabricants distribués :', allMfr: 'Tous', countM: ' · {m}', refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
+      byMfr: 'Fabricant :', partners: 'Fabricants partenaires :', others: 'Fabricants distribués :', allMfr: 'Tous', countM: ' · {m}', refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', sourcingCta: 'Lancer une recherche de sourcing pour {q} (49 € HT, déduits de la commande)', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
       rates: 'Taux de référence de la BCE du {d}.',
       mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
@@ -166,7 +168,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       mfrs: 'Direct manufacturers, distributed in Europe by Central.Parts', termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
       cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
       count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)',
-      byMfr: 'Manufacturer:', partners: 'Partner manufacturers:', others: 'Distributed manufacturers:', allMfr: 'All', countM: ' · {m}', refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: 'Latest {n} of {t} offers: refine the part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
+      byMfr: 'Manufacturer:', partners: 'Partner manufacturers:', others: 'Distributed manufacturers:', allMfr: 'All', countM: ' · {m}', refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: 'Latest {n} of {t} offers: refine the part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', sourcingCta: 'Start a sourcing search for {q} (€49 excl. VAT, deducted from the order)', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
       rates: 'ECB reference rate of {d}.',
       mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
@@ -180,7 +182,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       mfrs: '原厂直供制造商（由 Central.Parts 在欧洲分销）', termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
       cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
       count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价',
-      byMfr: '制造商：', partners: '合作制造商：', others: '分销制造商：', allMfr: '全部', countM: ' · {m}', refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示最新 {n} 条：请输入更完整的型号或选择制造商查看全部。', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
+      byMfr: '制造商：', partners: '合作制造商：', others: '分销制造商：', allMfr: '全部', countM: ' · {m}', refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示最新 {n} 条：请输入更完整的型号或选择制造商查看全部。', none: '没有「{q}」的最新报价。', sourcingCta: '为 {q} 发起寻源（49 欧元不含税，可从订单抵扣）', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
       rates: '欧洲央行参考汇率日期：{d}。',
       mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
@@ -244,6 +246,10 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days }) +
       (data.rates_at ? ' ' + fill(t().rates, { d: new Date(data.rates_at).toLocaleDateString(LOCALE[lang]) }) : '');
     if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
+    // Référence introuvable : recherche payante de composants rares (ADR 0033), référence pré-remplie.
+    $('to-sourcing').hidden = !(q && !list.length);
+    $('to-sourcing-a').textContent = q ? fill(t().sourcingCta, { q: q }) : '';
+    $('to-sourcing-a').href = '/sourcing/?lang=' + lang + '&q=' + encodeURIComponent(q || '');
     $('rows').innerHTML = list.map(function (o, i) {
       var price = o.price_from != null ? '<span class="muted">' + esc(t().from) + '</span> <span class="price">' + esc(money(o.price_from, o.currency || data.currency)) + '</span>' : esc(t().onRequest);
       // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
