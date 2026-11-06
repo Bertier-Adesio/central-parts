@@ -55,10 +55,13 @@ ul.rows button:hover,ul.rows button[aria-current=true]{background:var(--bg-sunke
 .r1 strong{overflow-wrap:anywhere}
 .r2{font-size:var(--text-sm);color:var(--fg-2);margin:2px 0 0;overflow-wrap:anywhere}
 .badge{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
-.badge.pending{background:var(--status-warning-bg);color:var(--status-warning)}
+/* Ambre réservé au point et à la bordure : le texte ambre sur son fond n'atteint pas 4,5:1 (handoff, règles communes). */
+.badge.pending{background:var(--status-warning-bg);color:var(--fg-1);box-shadow:inset 0 0 0 1px var(--status-warning)}
+.badge.pending::before,.badge.validated::before,.badge.rejected::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;margin:0 6px 1px 0;vertical-align:middle}
+.badge.pending::before{background:var(--status-warning)}
 .badge.validated{background:var(--status-success-bg);color:var(--status-success)}
 .badge.rejected{background:var(--status-danger-bg);color:var(--status-danger)}
-.tabs .count{display:inline-block;min-width:1.4em;margin-left:6px;padding:0 6px;border-radius:var(--radius-pill);background:var(--status-warning-bg);color:var(--status-warning);font-size:var(--text-xs)}
+.tabs .count{display:inline-block;min-width:1.4em;margin-left:6px;padding:0 6px;border-radius:var(--radius-pill);background:var(--status-warning-bg);color:var(--fg-1);box-shadow:inset 0 0 0 1px var(--status-warning);font-size:var(--text-xs);text-align:center}
 ul.reqs{list-style:none;margin:0 0 20px;padding:0}
 ul.addr{list-style:none;margin:0;padding:0;font-size:var(--text-sm)}
 ul.addr li{padding:6px 0;border-top:1px solid var(--border-1)}
@@ -99,21 +102,48 @@ tbody tr.click{cursor:pointer}
 tbody tr.click:hover{background:var(--bg-sunken)}
 table.breaks{width:auto;font-size:var(--text-xs)}
 table.breaks td{border:0;padding:0 8px 0 0;white-space:nowrap}
-.tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:8px;margin:20px 0 12px;align-items:end}
+/* « main » : la classe .tools existe aussi dans l'en-tête commun (site.css) */
+main .tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:8px;margin:20px 0 12px;align-items:end}
 .pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:12px 0 0;flex-wrap:wrap}
 dialog{border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;max-width:480px;width:calc(100% - 32px);box-sizing:border-box;background:var(--bg-surface);color:var(--fg-1)}
 dialog::backdrop{background:var(--bg-inverse);opacity:.5}
 .empty{padding:16px;color:var(--fg-3);font-size:var(--text-sm)}
+.empty strong{display:block;color:var(--fg-2);font-weight:var(--weight-medium)}
+/* États de liste : chargement, vide, erreur avec « Réessayer » (handoff, états communs). */
+.empty.err{background:var(--status-danger-bg);color:var(--status-danger);border-color:transparent}
+.empty.err .btn{margin:8px 0 0}
+ul.reqs > li.empty.err{color:var(--status-danger)}
+/* Panneau de droite sans sélection : une ligne discrète à hauteur fixe, pas une carte vide qui flotte. */
+.card:has(> p.ph:only-child){background:none;border-style:dashed;min-height:160px;display:flex;align-items:center;justify-content:center;text-align:center}
+p.ph{margin:0}
+/* Connexion (handoff 06) : carte centrée. */
+.loginwrap{display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:calc(100vh - 60px);margin:-24px 0 -64px;padding:var(--space-6) 0}
+.login{box-sizing:border-box;width:100%;max-width:440px;margin:0;padding:var(--space-8)}
+.login input[type=email]{min-height:var(--control-h-lg)}
+.login .btn{min-height:var(--control-h-lg);width:100%}
+.login .msg{margin:16px 0 0}
+.login .msg p{margin:0}
+.login .msg p + p{margin-top:6px;color:var(--fg-2)}
+.btn-accent{background:var(--accent);color:var(--fg-inverse)}
+.btn-accent:hover{background:var(--accent-hover)}
+.btn-text{background:none;border:0;padding:0;min-height:0;color:var(--fg-1);text-decoration:underline;font-weight:var(--weight-medium)}
 .desc{display:inline-block;max-width:36ch;overflow-wrap:anywhere}
 td.p1k{white-space:nowrap}
 a.ext{font-size:var(--text-xs);color:var(--fg-2)}
 [hidden]{display:none!important}
+@media (max-width:640px){
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:visible}
+  .tabs button{min-height:var(--control-h-lg);white-space:normal;text-align:center;border:1px solid var(--border-1);border-bottom-width:3px;margin:0 -1px -1px 0}
+  .seg button{min-height:var(--control-h-lg);padding:0 16px}
+  .login{padding:var(--space-5)}
+  .pager .btn{min-height:var(--control-h-lg)}
+}
 @media (max-width:820px){
   .split{grid-template-columns:minmax(0,1fr)}
   .split.detail-open .list-col{display:none}
   .split:not(.detail-open) .detail-col{display:none}
   .back{display:inline-flex}
-  .tools{grid-template-columns:minmax(0,1fr)}
+  main .tools{grid-template-columns:minmax(0,1fr)}
   dl.kv{grid-template-columns:minmax(0,1fr)}
   dl.kv dd{margin:0 0 6px}
   table.lots thead{display:none}
@@ -157,101 +187,105 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
 <!-- HEADER:END -->
 
 <main class="wrap">
-  <noscript><p class="msg err">Le back office a besoin de JavaScript.</p></noscript>
+  <noscript><p class="msg err" lang="fr">Le back office a besoin de JavaScript. <span lang="en">The back office needs JavaScript.</span> <span lang="zh-Hans">管理后台需要启用 JavaScript。</span></p></noscript>
   <div id="msg" class="msg" role="status" hidden></div>
 
-  <!-- Connexion : lien envoyé par e-mail (Supabase Auth). -->
-  <section id="v-login" hidden>
-    <div class="card narrow">
-      <h1>Connexion</h1>
-      <p class="lead">Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.</p>
+  <!-- Connexion : lien envoyé par e-mail (Supabase Auth), carte centrée (handoff 06). Textes : objet T du script (data-t). -->
+  <section id="v-login" class="loginwrap" hidden>
+    <div class="card login">
+      <h1 data-t="login.title">Connexion</h1>
+      <p class="lead" data-t="login.lead">Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.</p>
       <form id="login-form">
-        <label class="f">Adresse e-mail<input type="email" id="login-email" autocomplete="email" required></label>
-        <button class="btn btn-main" type="submit" id="login-send">Recevoir le lien</button>
+        <label class="f"><span data-t="login.email">Adresse e-mail</span><input type="email" id="login-email" autocomplete="email" required></label>
+        <button class="btn btn-accent" type="submit" id="login-send" data-t="login.send">Recevoir le lien</button>
       </form>
+      <div id="login-msg" class="msg" role="status" aria-live="polite" hidden></div>
     </div>
   </section>
 
   <!-- Compte connecté mais pas administrateur. -->
-  <section id="v-denied" hidden>
-    <div class="card narrow">
-      <h1>Accès refusé</h1>
-      <p class="lead">Ce compte n'est pas administrateur Central.Parts. Aucune donnée n'est accessible.</p>
-      <button class="btn btn-line" type="button" id="denied-logout">Se déconnecter</button>
+  <section id="v-denied" class="loginwrap" hidden>
+    <div class="card login">
+      <h1 data-t="denied.title">Accès refusé</h1>
+      <p class="lead" data-t="denied.lead">Ce compte n'est pas administrateur Central.Parts. Aucune donnée n'est accessible.</p>
+      <button class="btn btn-line" type="button" id="denied-logout" data-t="denied.out">Se déconnecter</button>
     </div>
   </section>
 
   <section id="v-app" hidden>
     <nav class="tabs" role="tablist">
-      <button type="button" role="tab" id="tab-sup" aria-selected="true" aria-controls="p-sup">Fournisseurs</button>
-      <button type="button" role="tab" id="tab-req" aria-selected="false" aria-controls="p-req">Demandes<span class="count" id="req-count" hidden></span></button>
-      <button type="button" role="tab" id="tab-mfr" aria-selected="false" aria-controls="p-mfr">Fabricants</button>
-      <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="p-stock">Stocks et offres</button>
+      <button type="button" role="tab" id="tab-sup" aria-selected="true" aria-controls="p-sup"><span data-t="tab.sup">Fournisseurs</span><span class="count" id="sup-count" hidden></span></button>
+      <button type="button" role="tab" id="tab-req" aria-selected="false" aria-controls="p-req"><span data-t="tab.req">Demandes</span><span class="count" id="req-count" hidden></span></button>
+      <button type="button" role="tab" id="tab-mfr" aria-selected="false" aria-controls="p-mfr"><span data-t="tab.mfr">Fabricants</span></button>
+      <button type="button" role="tab" id="tab-stock" aria-selected="false" aria-controls="p-stock"><span data-t="tab.stock">Stocks et offres</span></button>
     </nav>
 
     <!-- Demandes de prix : site web (demandes d'achat) et API (RFQ des plateformes). Rien ne part chez un fournisseur
          avant la validation (ADR 0023, 0026). -->
     <div id="p-req" role="tabpanel" hidden>
       <div class="seg" id="req-filters">
-        <button type="button" data-r="pending_validation" aria-pressed="true">À valider</button>
-        <button type="button" data-r="" aria-pressed="false">Toutes</button>
+        <button type="button" data-r="pending_validation" aria-pressed="true" data-t="req.f.pending">À valider</button>
+        <button type="button" data-r="" aria-pressed="false" data-t="req.f.all">Toutes</button>
       </div>
-      <h2>Site web · demandes d'achat</h2>
+      <h2 data-t="req.h.web">Site web · demandes d'achat</h2>
       <ul class="reqs" id="req-list"></ul>
-      <h2>API · RFQ des plateformes</h2>
+      <h2 data-t="req.h.api">API · RFQ des plateformes</h2>
       <ul class="reqs" id="rfq-list"></ul>
-      <h2>Composants rares · recherches de sourcing</h2>
+      <h2 data-t="req.h.src">Composants rares · recherches de sourcing</h2>
       <ul class="reqs" id="src-list"></ul>
     </div>
 
     <!-- Approbation des fournisseurs. -->
     <div id="p-sup" role="tabpanel">
       <div class="seg" id="filters">
-        <button type="button" data-s="pending" aria-pressed="true">En attente <span data-c="pending"></span></button>
-        <button type="button" data-s="validated" aria-pressed="false">Approuvés <span data-c="validated"></span></button>
-        <button type="button" data-s="rejected" aria-pressed="false">Refusés <span data-c="rejected"></span></button>
-        <button type="button" data-s="" aria-pressed="false">Tous</button>
+        <button type="button" data-s="pending" aria-pressed="true"><span data-t="sup.f.pending">En attente</span> <span data-c="pending"></span></button>
+        <button type="button" data-s="validated" aria-pressed="false"><span data-t="sup.f.validated">Approuvés</span> <span data-c="validated"></span></button>
+        <button type="button" data-s="rejected" aria-pressed="false"><span data-t="sup.f.rejected">Refusés</span> <span data-c="rejected"></span></button>
+        <button type="button" data-s="" aria-pressed="false" data-t="sup.f.all">Tous</button>
       </div>
       <div class="split" id="split">
         <div class="list-col"><ul class="rows" id="sup-list"></ul></div>
         <div class="detail-col">
-          <button type="button" class="btn btn-line back" id="back">← Liste</button>
-          <div class="card" id="sup-detail"><p class="muted">Choisissez une société dans la liste.</p></div>
+          <button type="button" class="btn btn-line back" id="back" data-t="back">← Liste</button>
+          <div class="card" id="sup-detail"><p class="muted ph" data-t="sup.select">Choisissez une société dans la liste.</p></div>
         </div>
       </div>
     </div>
 
     <!-- Fabricants (ADR 0032) : marques, présentation, page publique, comptes rattachés (fabricant lui-même, distributeur agréé). -->
     <div id="p-mfr" role="tabpanel" hidden>
-      <div class="actions" style="margin:0 0 12px"><button class="btn btn-main" type="button" id="mfr-new">Nouveau fabricant</button></div>
-      <div class="split">
+      <div class="actions" style="margin:0 0 12px"><button class="btn btn-main" type="button" id="mfr-new" data-t="mfr.new">Nouveau fabricant</button></div>
+      <div class="split" id="mfr-split">
         <div class="list-col"><ul class="rows" id="mfr-list"></ul></div>
-        <div class="detail-col"><div class="card" id="mfr-detail"><p class="muted">Choisissez un fabricant dans la liste.</p></div></div>
+        <div class="detail-col">
+          <button type="button" class="btn btn-line back" id="mfr-back" data-t="back">← Liste</button>
+          <div class="card" id="mfr-detail"><p class="muted ph" data-t="mfr.select">Choisissez un fabricant dans la liste.</p></div>
+        </div>
       </div>
     </div>
 
     <!-- Stocks et offres, lecture seule. -->
     <div id="p-stock" role="tabpanel" hidden>
-      <h2>Par fournisseur</h2>
+      <h2 data-t="stock.h">Par fournisseur</h2>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Fournisseur</th><th class="n">Références en stock</th><th>Dernier import</th><th>Source</th><th>Devise</th></tr></thead>
+          <thead><tr><th data-t="stock.c.sup">Fournisseur</th><th class="n" data-t="stock.c.lines">Références en stock</th><th data-t="stock.c.last">Dernier import</th><th data-t="stock.c.src">Source</th><th data-t="stock.c.cur">Devise</th></tr></thead>
           <tbody id="stock-sum"></tbody>
         </table>
       </div>
       <form class="tools" id="lot-form">
-        <label class="f" style="margin:0">Fournisseur<select id="lot-org"><option value="">Tous les fournisseurs</option></select></label>
-        <label class="f" style="margin:0">Recherche (référence, marque, boîtier)<input type="search" id="lot-q" autocomplete="off"></label>
-        <button class="btn btn-main" type="submit">Chercher</button>
+        <label class="f" style="margin:0"><span data-t="lot.org">Fournisseur</span><select id="lot-org"><option value="" data-t="lot.org.all">Tous les fournisseurs</option></select></label>
+        <label class="f" style="margin:0"><span data-t="lot.q">Recherche (référence, marque, boîtier)</span><input type="search" id="lot-q" autocomplete="off"></label>
+        <button class="btn btn-main" type="submit" data-t="lot.go">Chercher</button>
       </form>
       <p class="muted" id="lot-count"></p>
       <div class="tbl-wrap">
         <table class="lots">
-          <thead><tr><th>Référence</th><th>Marque</th><th>Boîtier / emballage</th><th class="n">Stock</th><th class="n">Prix 1 k</th><th>Paliers de prix</th><th class="n">Délai</th><th>Fournisseur</th></tr></thead>
+          <thead><tr><th data-t="lot.c.mpn">Référence</th><th data-t="lot.c.brand">Marque</th><th data-t="lot.c.pack">Boîtier / emballage</th><th class="n" data-t="lot.c.qty">Stock</th><th class="n" data-t="lot.c.p1k">Prix 1 k</th><th data-t="lot.c.breaks">Paliers de prix</th><th class="n" data-t="lot.c.lead">Délai</th><th data-t="lot.c.sup">Fournisseur</th></tr></thead>
           <tbody id="lot-list"></tbody>
         </table>
       </div>
-      <div class="pager"><button class="btn btn-line" type="button" id="lot-prev">← Précédents</button><button class="btn btn-line" type="button" id="lot-next">Suivants →</button></div>
+      <div class="pager" id="lot-pager" hidden><button class="btn btn-line" type="button" id="lot-prev" data-t="lot.prev">← Précédents</button><button class="btn btn-line" type="button" id="lot-next" data-t="lot.next">Suivants →</button></div>
     </div>
   </section>
 </main>
@@ -261,10 +295,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   <form method="dialog" id="c-form" novalidate>
     <h2 id="c-title"></h2>
     <p id="c-text"></p>
-    <label class="f" id="c-reason-l">Motif<textarea id="c-reason" maxlength="500"></textarea></label>
+    <label class="f" id="c-reason-l"><span>Motif</span><textarea id="c-reason" maxlength="500"></textarea></label>
     <p class="msg err" id="c-err" hidden></p>
     <div class="actions">
-      <button class="btn btn-line" type="button" id="c-cancel">Annuler</button>
+      <button class="btn btn-line" type="button" id="c-cancel" data-t="cancel">Annuler</button>
       <button class="btn" type="submit" id="c-ok"></button>
     </div>
   </form>
@@ -279,24 +313,250 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   var KEY = 'cp-admin-session';
   var $ = function (id) { return document.getElementById(id); };
 
-  var STATUS = { pending: 'En attente', validated: 'Approuvée', rejected: 'Refusée', none: 'Non soumise' };
-  var REGION = { CN: 'Chine continentale', HK: 'Hong Kong', OTHER: 'Autre' };
+  // ------------------------------------------------------------ langues (FR, EN, 中文 ; review n° 9 et 12)
+  // ?lang= d'abord, puis le dernier choix (localStorage), puis la langue du navigateur, puis le français. Le changement
+  // se fait sur place : l'en-tête commun suit <html lang> et garde ?lang= dans l'adresse. Restent en français : la fiche
+  // détaillée d'une société, la fiche et le formulaire d'un fabricant, les fenêtres de décision sur les sociétés.
+  var T = {
+    fr: {
+      'login.title': 'Connexion', 'login.lead': 'Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.',
+      'login.email': 'Adresse e-mail', 'login.send': 'Recevoir le lien', 'login.sending': 'Envoi…',
+      'login.sent': 'Lien envoyé. Ouvrez-le depuis cet appareil.', 'login.sent.d': 'Adresse : {email}. Seules les adresses d\'administrateur reçoivent un lien.',
+      'login.nolink': 'Rien reçu ? Vérifiez vos courriers indésirables.', 'login.resend': 'Renvoyer',
+      'login.err.email': 'Adresse e-mail invalide.', 'login.err': 'Envoi impossible pour le moment. Réessayez dans quelques instants.',
+      'login.refused': 'Lien de connexion refusé : {e}. Demandez-en un nouveau.',
+      'denied.title': 'Accès refusé', 'denied.lead': 'Ce compte n\'est pas administrateur Central.Parts. Aucune donnée n\'est accessible.', 'denied.out': 'Se déconnecter',
+      'session.expired': 'Session expirée : reconnectez-vous.', 'session.out': 'Vous êtes déconnecté.', 'session.other': 'Déconnecté dans un autre onglet.',
+      'tab.sup': 'Fournisseurs', 'tab.req': 'Demandes', 'tab.mfr': 'Fabricants', 'tab.stock': 'Stocks et offres', 'tab.count': '{n} à valider',
+      back: '← Liste', cancel: 'Annuler', loading: 'Chargement…', retry: 'Réessayer', 'err.server': 'Erreur du serveur', 'err.load': 'Chargement impossible.',
+      'req.f.pending': 'À valider', 'req.f.all': 'Toutes', 'req.h.web': 'Site web · demandes d\'achat', 'req.h.api': 'API · RFQ des plateformes',
+      'req.h.src': 'Composants rares · recherches de sourcing',
+      'req.empty.pending': 'Aucune demande à valider.', 'req.empty.all': 'Aucune demande pour le moment.', 'req.empty.d': 'Les nouvelles demandes d\'achat du site apparaissent ici.',
+      'rfq.empty.pending': 'Aucune RFQ à valider.', 'rfq.empty.all': 'Aucune RFQ pour le moment.', 'rfq.empty.d': 'Les RFQ envoyées par les plateformes via l\'API apparaissent ici.',
+      'src.empty.pending': 'Aucune recherche de sourcing à traiter.', 'src.empty.all': 'Aucune recherche de sourcing pour le moment.', 'src.empty.d': 'Les recherches payées et les proformas en attente de virement apparaissent ici.',
+      'r.web': 'Site web', 'r.api': 'API', 'r.mpn': 'Référence', 'r.price': 'Prix acheteur', 'r.buyer': 'Acheteur', 'r.delivery': 'Livraison', 'r.billing': 'Facturation',
+      'r.transport': 'Transport', 'r.ship': 'Expédition', 'r.supplier': 'Fournisseur', 'r.message': 'Message', 'r.decision': 'Décision', 'r.reason': 'Motif : {r}',
+      'r.total': 'total {v}', 'r.vies.ok': '(VIES vérifié)', 'r.vies.no': '(TVA non vérifiée)', 'r.net': 'prix net {v}', 'r.stock': 'stock {n}',
+      'r.line': '{n} ligne', 'r.lines': '{n} lignes', 'r.tbc': 'à confirmer',
+      'tr.own': 'Compte de l\'acheteur : {c} n° {a} (FCA)', 'tr.cp': 'Par Central.Parts (DAP)', 'tr.pref': ', {c} préféré',
+      'r.approve': 'Valider et transmettre au fournisseur', 'r.reject': 'Refuser', 'r.cart': 'Valider tout le panier ({n})',
+      'q.platform': 'Plateforme', 'q.ref': 'réf. {r}', 'q.ship': 'Livraison, devise', 'q.target': 'prix cible {p}', 'q.cands': 'Fournisseurs possibles',
+      'q.nocand': 'aucun stock correspondant', 'q.sellers': 'Fournisseurs prévenus', 'q.bids': '{n} offre(s)', 'q.reason': 'Motif du refus', 'q.sandbox': 'bac à sable',
+      'q.approve': 'Valider et diffuser',
+      'rs.pending_validation': 'À valider', 'rs.rejected': 'Refusée', 'rs.submitted': 'Transmise au fournisseur', 'rs.confirmed': 'Confirmée par le fournisseur',
+      'rs.unavailable': 'Indisponible', 'rs.proforma_sent': 'Proforma envoyée', 'rs.paid': 'Payée', 'rs.shipped': 'Expédiée', 'rs.cancelled': 'Annulée',
+      'qs.pending_validation': 'À valider', 'qs.rejected': 'Refusée', 'qs.auction': 'Diffusée aux fournisseurs', 'qs.offers': 'Offres prêtes', 'qs.no_offer': 'Sans offre',
+      'qs.ordered': 'Commandée', 'qs.cancelled': 'Annulée',
+      'ss.awaiting_payment': 'En attente de virement (proforma)', 'ss.paid': 'Payée, à traiter', 'ss.in_progress': 'Recherche en cours', 'ss.offers_sent': 'Offres envoyées',
+      'ss.not_found': 'Introuvable', 'ss.cancelled': 'Annulée',
+      'd.req_approve.t': 'Valider la demande', 'd.req_approve.ok': 'Valider et transmettre',
+      'd.req_approve.x': 'La demande est transmise au fournisseur : il la voit dans son espace et reçoit une alerte WeChat (référence, quantité, son prix, pays de livraison ; jamais l\'acheteur).',
+      'd.req_reject.t': 'Refuser la demande', 'd.req_reject.ok': 'Refuser',
+      'd.req_reject.x': 'Rien n\'est envoyé au fournisseur. L\'acheteur voit « demande non retenue » sur sa page de suivi ; le motif reste interne.',
+      'd.cart_approve.t': 'Valider tout le panier', 'd.cart_approve.ok': 'Valider les lignes',
+      'd.cart_approve.x': 'Toutes les lignes à valider de ce panier sont transmises à leurs fournisseurs, chacun ne voyant que sa ligne (jamais l\'acheteur ni les autres lignes).',
+      'd.rfq_approve.t': 'Valider la RFQ', 'd.rfq_approve.ok': 'Valider et diffuser',
+      'd.rfq_approve.x': 'La RFQ est diffusée aux fournisseurs dont le stock correspond, dans WeChat et dans leur espace (jamais la plateforme ni l\'acheteur).',
+      'd.rfq_reject.t': 'Refuser la RFQ', 'd.rfq_reject.ok': 'Refuser',
+      'd.rfq_reject.x': 'Rien n\'est envoyé aux fournisseurs ; la plateforme reçoit le refus (webhook). Motif obligatoire.',
+      'd.reason': 'Motif du refus (obligatoire, interne)',
+      'res.rejected': '{id} refusée : rien n\'a été envoyé au fournisseur.', 'res.sent': '{id} validée et transmise au fournisseur ({n} contact(s) WeChat prévenu(s)).',
+      'res.sent0': '{id} validée et transmise au fournisseur : aucun contact WeChat joignable (règle des 48 heures), la demande est visible dans son espace ; relancez-le à la main.',
+      'res.rfq': '{id} validée et diffusée aux fournisseurs.', 'res.cart': '{c} : {n} ligne(s) validée(s) et transmise(s)', 'res.cartfail': ' ; non traitée(s) : {l} (déjà décidée(s) ailleurs ?)',
+      'e.reason_required': 'Le motif du refus est obligatoire.', 'e.already_decided': 'Cette demande a déjà été traitée (par le robot WeChat ou un autre onglet) : la liste est mise à jour.',
+      's.for': 'Pour le {d}', 's.target': 'Prix cible {p}', 's.any': 'neuf ou reconditionné', 's.new': 'neuf d\'origine', 's.paid': 'payé {p} le {d}',
+      's.pf': 'proforma de {p} à envoyer, puis à marquer payée à réception du virement', 's.mode.pf': 'proforma et virement', 's.mode.gc': 'virement en ligne (GoCardless)',
+      's.vat': 'TVA {v}', 's.vat.ok': '(VIES vérifié)', 's.vat.no': '(non vérifié)', 's.handle': 'Traiter', 's.state': 'État',
+      's.bnote': 'Message pour l\'acheteur (visible sur sa page de suivi)', 's.anote': 'Note interne', 's.credit': 'Frais déduits sur la demande d\'achat (PR-…)',
+      's.save': 'Enregistrer', 's.saved': 'Recherche {id} enregistrée.',
+      'sup.f.pending': 'En attente', 'sup.f.validated': 'Approuvés', 'sup.f.rejected': 'Refusés', 'sup.f.all': 'Tous', 'sup.select': 'Choisissez une société dans la liste.',
+      'sup.empty.pending': 'Aucune société en attente.', 'sup.empty.validated': 'Aucune société approuvée.', 'sup.empty.rejected': 'Aucune société refusée.',
+      'sup.empty.': 'Aucune société inscrite pour le moment.', 'sup.empty.d': 'Les sociétés inscrites dans l\'espace fournisseur apparaissent ici.', 'sup.asked': 'demande du {d}',
+      'st.pending': 'En attente', 'st.validated': 'Approuvée', 'st.rejected': 'Refusée', 'st.none': 'Non soumise',
+      'rg.CN': 'Chine continentale', 'rg.HK': 'Hong Kong', 'rg.OTHER': 'Autre',
+      'so.file': 'Fichier', 'so.api': 'API', 'so.manual': 'Saisie', 'so.sftp': 'SFTP', 'so.pull': 'Connecteur',
+      'mfr.new': 'Nouveau fabricant', 'mfr.select': 'Choisissez un fabricant dans la liste.', 'mfr.empty': 'Aucun fabricant.', 'mfr.empty.d': 'Créez le premier avec « Nouveau fabricant ».',
+      'mfr.pub': 'Page publiée', 'mfr.unpub': 'Non publiée', 'mfr.accounts': '{n} compte(s)',
+      'stock.h': 'Par fournisseur', 'stock.c.sup': 'Fournisseur', 'stock.c.lines': 'Références en stock', 'stock.c.last': 'Dernier import', 'stock.c.src': 'Source', 'stock.c.cur': 'Devise',
+      'stock.empty': 'Aucun stock déposé.', 'stock.empty.d': 'Les fichiers de stock déposés par les fournisseurs apparaissent ici.',
+      'lot.org': 'Fournisseur', 'lot.org.all': 'Tous les fournisseurs', 'lot.q': 'Recherche (référence, marque, boîtier)', 'lot.go': 'Chercher',
+      'lot.c.mpn': 'Référence', 'lot.c.brand': 'Marque', 'lot.c.pack': 'Boîtier / emballage', 'lot.c.qty': 'Stock', 'lot.c.p1k': 'Prix 1 k', 'lot.c.breaks': 'Paliers de prix',
+      'lot.c.lead': 'Délai', 'lot.c.sup': 'Fournisseur', 'lot.l.pack': 'Boîtier', 'lot.l.breaks': 'Paliers',
+      'lot.count': 'Références {a} à {b} sur {t}.', 'lot.none': 'Aucune référence.', 'lot.none.q': 'Aucune référence ne correspond à cette recherche.',
+      'lot.prev': '← Précédents', 'lot.next': 'Suivants →', 'lot.ondemand': 'sur demande', 'lot.from': 'dès {n}', 'lot.plus': '{n} et plus', 'lot.range': '{a} à {b}',
+      'lot.days': '{n} j', 'lot.ds': 'Fiche technique', 'lot.pp': 'Page chez le vendeur'
+    },
+    en: {
+      'login.title': 'Sign in', 'login.lead': 'For Central.Parts administrators only. Enter your address and we will e-mail you a sign-in link.',
+      'login.email': 'E-mail address', 'login.send': 'Get the link', 'login.sending': 'Sending…',
+      'login.sent': 'Link sent. Open it on this device.', 'login.sent.d': 'Address: {email}. Only administrator addresses receive a link.',
+      'login.nolink': 'Nothing received? Check your spam folder.', 'login.resend': 'Send again',
+      'login.err.email': 'Invalid e-mail address.', 'login.err': 'The link could not be sent right now. Please try again in a moment.',
+      'login.refused': 'Sign-in link refused: {e}. Please request a new one.',
+      'denied.title': 'Access denied', 'denied.lead': 'This account is not a Central.Parts administrator. No data is available.', 'denied.out': 'Sign out',
+      'session.expired': 'Session expired: please sign in again.', 'session.out': 'You are signed out.', 'session.other': 'Signed out in another tab.',
+      'tab.sup': 'Suppliers', 'tab.req': 'Requests', 'tab.mfr': 'Manufacturers', 'tab.stock': 'Stock and offers', 'tab.count': '{n} to validate',
+      back: '← List', cancel: 'Cancel', loading: 'Loading…', retry: 'Try again', 'err.server': 'Server error', 'err.load': 'Could not load this list.',
+      'req.f.pending': 'To validate', 'req.f.all': 'All', 'req.h.web': 'Website · purchase requests', 'req.h.api': 'API · platform RFQs',
+      'req.h.src': 'Rare parts · sourcing searches',
+      'req.empty.pending': 'No requests to validate.', 'req.empty.all': 'No requests yet.', 'req.empty.d': 'New purchase requests from the website appear here.',
+      'rfq.empty.pending': 'No RFQs to validate.', 'rfq.empty.all': 'No RFQs yet.', 'rfq.empty.d': 'RFQs sent by platforms through the API appear here.',
+      'src.empty.pending': 'No sourcing searches to handle.', 'src.empty.all': 'No sourcing searches yet.', 'src.empty.d': 'Paid searches and proformas awaiting a transfer appear here.',
+      'r.web': 'Website', 'r.api': 'API', 'r.mpn': 'Part number', 'r.price': 'Buyer price', 'r.buyer': 'Buyer', 'r.delivery': 'Delivery', 'r.billing': 'Billing',
+      'r.transport': 'Transport', 'r.ship': 'Ships from', 'r.supplier': 'Supplier', 'r.message': 'Message', 'r.decision': 'Decision', 'r.reason': 'Reason: {r}',
+      'r.total': 'total {v}', 'r.vies.ok': '(VIES checked)', 'r.vies.no': '(VAT not checked)', 'r.net': 'net price {v}', 'r.stock': 'stock {n}',
+      'r.line': '{n} line', 'r.lines': '{n} lines', 'r.tbc': 'to be confirmed',
+      'tr.own': 'Buyer\'s account: {c} no. {a} (FCA)', 'tr.cp': 'By Central.Parts (DAP)', 'tr.pref': ', {c} preferred',
+      'r.approve': 'Validate and send to the supplier', 'r.reject': 'Reject', 'r.cart': 'Validate the whole cart ({n})',
+      'q.platform': 'Platform', 'q.ref': 'ref. {r}', 'q.ship': 'Delivery, currency', 'q.target': 'target price {p}', 'q.cands': 'Possible suppliers',
+      'q.nocand': 'no matching stock', 'q.sellers': 'Suppliers notified', 'q.bids': '{n} offer(s)', 'q.reason': 'Reason for rejection', 'q.sandbox': 'sandbox',
+      'q.approve': 'Validate and broadcast',
+      'rs.pending_validation': 'To validate', 'rs.rejected': 'Rejected', 'rs.submitted': 'Sent to the supplier', 'rs.confirmed': 'Confirmed by the supplier',
+      'rs.unavailable': 'Unavailable', 'rs.proforma_sent': 'Proforma sent', 'rs.paid': 'Paid', 'rs.shipped': 'Shipped', 'rs.cancelled': 'Cancelled',
+      'qs.pending_validation': 'To validate', 'qs.rejected': 'Rejected', 'qs.auction': 'Sent to suppliers', 'qs.offers': 'Offers ready', 'qs.no_offer': 'No offer',
+      'qs.ordered': 'Ordered', 'qs.cancelled': 'Cancelled',
+      'ss.awaiting_payment': 'Awaiting transfer (proforma)', 'ss.paid': 'Paid, to handle', 'ss.in_progress': 'Search in progress', 'ss.offers_sent': 'Offers sent',
+      'ss.not_found': 'Not found', 'ss.cancelled': 'Cancelled',
+      'd.req_approve.t': 'Validate the request', 'd.req_approve.ok': 'Validate and send',
+      'd.req_approve.x': 'The request goes to the supplier: they see it in their space and get a WeChat alert (part number, quantity, their price, delivery country; never the buyer).',
+      'd.req_reject.t': 'Reject the request', 'd.req_reject.ok': 'Reject',
+      'd.req_reject.x': 'Nothing is sent to the supplier. The buyer sees "request not accepted" on their tracking page; the reason stays internal.',
+      'd.cart_approve.t': 'Validate the whole cart', 'd.cart_approve.ok': 'Validate the lines',
+      'd.cart_approve.x': 'Every line to validate in this cart goes to its supplier, each seeing only its own line (never the buyer or the other lines).',
+      'd.rfq_approve.t': 'Validate the RFQ', 'd.rfq_approve.ok': 'Validate and broadcast',
+      'd.rfq_approve.x': 'The RFQ goes to the suppliers whose stock matches, in WeChat and in their space (never the platform or the buyer).',
+      'd.rfq_reject.t': 'Reject the RFQ', 'd.rfq_reject.ok': 'Reject',
+      'd.rfq_reject.x': 'Nothing is sent to suppliers; the platform receives the rejection (webhook). A reason is required.',
+      'd.reason': 'Reason for rejection (required, internal)',
+      'res.rejected': '{id} rejected: nothing was sent to the supplier.', 'res.sent': '{id} validated and sent to the supplier ({n} WeChat contact(s) notified).',
+      'res.sent0': '{id} validated and sent to the supplier: no WeChat contact reachable (48-hour rule); the request is visible in their space, follow up by hand.',
+      'res.rfq': '{id} validated and sent to suppliers.', 'res.cart': '{c}: {n} line(s) validated and sent', 'res.cartfail': '; not processed: {l} (already decided elsewhere?)',
+      'e.reason_required': 'A reason for the rejection is required.', 'e.already_decided': 'This request has already been handled (by the WeChat bot or another tab): the list is updated.',
+      's.for': 'Needed by {d}', 's.target': 'Target price {p}', 's.any': 'new or refurbished', 's.new': 'new, original', 's.paid': 'paid {p} on {d}',
+      's.pf': 'proforma of {p} to send, then mark as paid when the transfer arrives', 's.mode.pf': 'proforma and transfer', 's.mode.gc': 'online transfer (GoCardless)',
+      's.vat': 'VAT {v}', 's.vat.ok': '(VIES checked)', 's.vat.no': '(not checked)', 's.handle': 'Handle', 's.state': 'Status',
+      's.bnote': 'Message for the buyer (shown on their tracking page)', 's.anote': 'Internal note', 's.credit': 'Fee deducted from purchase request (PR-…)',
+      's.save': 'Save', 's.saved': 'Search {id} saved.',
+      'sup.f.pending': 'Pending', 'sup.f.validated': 'Approved', 'sup.f.rejected': 'Rejected', 'sup.f.all': 'All', 'sup.select': 'Select a company from the list.',
+      'sup.empty.pending': 'No companies pending.', 'sup.empty.validated': 'No approved companies.', 'sup.empty.rejected': 'No rejected companies.',
+      'sup.empty.': 'No companies registered yet.', 'sup.empty.d': 'Companies that register in the supplier centre appear here.', 'sup.asked': 'requested {d}',
+      'st.pending': 'Pending', 'st.validated': 'Approved', 'st.rejected': 'Rejected', 'st.none': 'Not submitted',
+      'rg.CN': 'Mainland China', 'rg.HK': 'Hong Kong', 'rg.OTHER': 'Other',
+      'so.file': 'File', 'so.api': 'API', 'so.manual': 'Manual entry', 'so.sftp': 'SFTP', 'so.pull': 'Connector',
+      'mfr.new': 'New manufacturer', 'mfr.select': 'Select a manufacturer from the list.', 'mfr.empty': 'No manufacturers.', 'mfr.empty.d': 'Create the first one with "New manufacturer".',
+      'mfr.pub': 'Page published', 'mfr.unpub': 'Not published', 'mfr.accounts': '{n} account(s)',
+      'stock.h': 'By supplier', 'stock.c.sup': 'Supplier', 'stock.c.lines': 'Part numbers in stock', 'stock.c.last': 'Last import', 'stock.c.src': 'Source', 'stock.c.cur': 'Currency',
+      'stock.empty': 'No stock uploaded.', 'stock.empty.d': 'Stock files uploaded by suppliers appear here.',
+      'lot.org': 'Supplier', 'lot.org.all': 'All suppliers', 'lot.q': 'Search (part number, brand, package)', 'lot.go': 'Search',
+      'lot.c.mpn': 'Part number', 'lot.c.brand': 'Brand', 'lot.c.pack': 'Package / packaging', 'lot.c.qty': 'Stock', 'lot.c.p1k': 'Price @1k', 'lot.c.breaks': 'Price breaks',
+      'lot.c.lead': 'Lead time', 'lot.c.sup': 'Supplier', 'lot.l.pack': 'Package', 'lot.l.breaks': 'Breaks',
+      'lot.count': 'Part numbers {a} to {b} of {t}.', 'lot.none': 'No part numbers.', 'lot.none.q': 'No part number matches this search.',
+      'lot.prev': '← Previous', 'lot.next': 'Next →', 'lot.ondemand': 'on request', 'lot.from': 'from {n}', 'lot.plus': '{n} and up', 'lot.range': '{a} to {b}',
+      'lot.days': '{n} d', 'lot.ds': 'Datasheet', 'lot.pp': 'Seller\'s page'
+    },
+    zh: {
+      'login.title': '登录', 'login.lead': '仅限 Central.Parts 管理员。请输入邮箱，我们将发送登录链接。',
+      'login.email': '邮箱地址', 'login.send': '获取登录链接', 'login.sending': '发送中…',
+      'login.sent': '登录链接已发送，请在此设备上打开。', 'login.sent.d': '邮箱：{email}。只有管理员邮箱会收到链接。',
+      'login.nolink': '没收到？请查看垃圾邮件箱。', 'login.resend': '重新发送',
+      'login.err.email': '邮箱地址无效。', 'login.err': '暂时无法发送，请稍后重试。',
+      'login.refused': '登录链接无效：{e}。请重新获取。',
+      'denied.title': '无权访问', 'denied.lead': '此账号不是 Central.Parts 管理员，无法查看任何数据。', 'denied.out': '退出登录',
+      'session.expired': '登录已过期，请重新登录。', 'session.out': '您已退出登录。', 'session.other': '已在其他标签页退出登录。',
+      'tab.sup': '供应商', 'tab.req': '申请', 'tab.mfr': '制造商', 'tab.stock': '库存与报价', 'tab.count': '{n} 条待审核',
+      back: '← 列表', cancel: '取消', loading: '加载中…', retry: '重试', 'err.server': '服务器错误', 'err.load': '列表加载失败。',
+      'req.f.pending': '待审核', 'req.f.all': '全部', 'req.h.web': '网站 · 采购申请', 'req.h.api': 'API · 平台询价',
+      'req.h.src': '稀缺元器件 · 代寻服务',
+      'req.empty.pending': '暂无待审核申请。', 'req.empty.all': '暂无申请。', 'req.empty.d': '来自网站的新采购申请会显示在这里。',
+      'rfq.empty.pending': '暂无待审核询价。', 'rfq.empty.all': '暂无询价。', 'rfq.empty.d': '平台通过 API 发送的询价会显示在这里。',
+      'src.empty.pending': '暂无待处理的代寻申请。', 'src.empty.all': '暂无代寻申请。', 'src.empty.d': '已付款的代寻申请和待转账的形式发票会显示在这里。',
+      'r.web': '网站', 'r.api': 'API', 'r.mpn': '型号', 'r.price': '采购方价格', 'r.buyer': '采购方', 'r.delivery': '交付', 'r.billing': '开票',
+      'r.transport': '运输', 'r.ship': '发货地', 'r.supplier': '供应商', 'r.message': '留言', 'r.decision': '审核结果', 'r.reason': '原因：{r}',
+      'r.total': '合计 {v}', 'r.vies.ok': '（已通过 VIES 核验）', 'r.vies.no': '（增值税号未核验）', 'r.net': '净价 {v}', 'r.stock': '库存 {n}',
+      'r.line': '{n} 行', 'r.lines': '{n} 行', 'r.tbc': '待确认',
+      'tr.own': '采购方账号：{c} {a}（FCA）', 'tr.cp': '由 Central.Parts 运输（DAP）', 'tr.pref': '，首选 {c}',
+      'r.approve': '审核通过并转给供应商', 'r.reject': '拒绝', 'r.cart': '整单审核通过（{n}）',
+      'q.platform': '平台', 'q.ref': '编号 {r}', 'q.ship': '交付、币种', 'q.target': '目标价 {p}', 'q.cands': '可能的供应商',
+      'q.nocand': '无匹配库存', 'q.sellers': '已通知的供应商', 'q.bids': '{n} 条报价', 'q.reason': '拒绝原因', 'q.sandbox': '沙盒',
+      'q.approve': '审核通过并发布',
+      'rs.pending_validation': '待审核', 'rs.rejected': '已拒绝', 'rs.submitted': '已转给供应商', 'rs.confirmed': '供应商已确认',
+      'rs.unavailable': '无货', 'rs.proforma_sent': '已发送形式发票', 'rs.paid': '已付款', 'rs.shipped': '已发货', 'rs.cancelled': '已取消',
+      'qs.pending_validation': '待审核', 'qs.rejected': '已拒绝', 'qs.auction': '已发布给供应商', 'qs.offers': '报价已就绪', 'qs.no_offer': '无报价',
+      'qs.ordered': '已下单', 'qs.cancelled': '已取消',
+      'ss.awaiting_payment': '待转账（形式发票）', 'ss.paid': '已付款，待处理', 'ss.in_progress': '寻货中', 'ss.offers_sent': '已发送报价',
+      'ss.not_found': '未找到', 'ss.cancelled': '已取消',
+      'd.req_approve.t': '审核通过', 'd.req_approve.ok': '通过并转发',
+      'd.req_approve.x': '申请将转给供应商：供应商在其空间中可见，并收到微信提醒（型号、数量、其报价、交付国家；绝不显示采购方）。',
+      'd.req_reject.t': '拒绝申请', 'd.req_reject.ok': '拒绝',
+      'd.req_reject.x': '不会向供应商发送任何内容。采购方在跟踪页面看到“申请未被受理”；原因仅内部可见。',
+      'd.cart_approve.t': '整单审核通过', 'd.cart_approve.ok': '通过各行',
+      'd.cart_approve.x': '此订单中所有待审核的行都将转给各自的供应商，每位供应商只能看到自己的那一行（绝不显示采购方或其他行）。',
+      'd.rfq_approve.t': '审核询价', 'd.rfq_approve.ok': '通过并发布',
+      'd.rfq_approve.x': '询价将通过微信和供应商空间发布给库存匹配的供应商（绝不显示平台或采购方）。',
+      'd.rfq_reject.t': '拒绝询价', 'd.rfq_reject.ok': '拒绝',
+      'd.rfq_reject.x': '不会向供应商发送任何内容；平台会收到拒绝通知（webhook）。必须填写原因。',
+      'd.reason': '拒绝原因（必填，仅内部可见）',
+      'res.rejected': '{id} 已拒绝：未向供应商发送任何内容。', 'res.sent': '{id} 已通过并转给供应商（已通知 {n} 个微信联系人）。',
+      'res.sent0': '{id} 已通过并转给供应商：没有可联系的微信联系人（48 小时规则），申请在其空间中可见，请手动跟进。',
+      'res.rfq': '{id} 已通过并发布给供应商。', 'res.cart': '{c}：已通过并转发 {n} 行', 'res.cartfail': '；未处理：{l}（可能已在别处处理？）',
+      'e.reason_required': '必须填写拒绝原因。', 'e.already_decided': '此申请已被处理（微信机器人或其他标签页），列表已更新。',
+      's.for': '需求日期 {d}', 's.target': '目标价 {p}', 's.any': '全新或翻新', 's.new': '原装全新', 's.paid': '{d} 已付 {p}',
+      's.pf': '待发送 {p} 的形式发票，收到转账后标记为已付款', 's.mode.pf': '形式发票与转账', 's.mode.gc': '在线转账（GoCardless）',
+      's.vat': '增值税号 {v}', 's.vat.ok': '（已通过 VIES 核验）', 's.vat.no': '（未核验）', 's.handle': '处理', 's.state': '状态',
+      's.bnote': '给采购方的留言（显示在其跟踪页面）', 's.anote': '内部备注', 's.credit': '费用抵扣的采购申请（PR-…）',
+      's.save': '保存', 's.saved': '代寻申请 {id} 已保存。',
+      'sup.f.pending': '待审核', 'sup.f.validated': '已通过', 'sup.f.rejected': '已拒绝', 'sup.f.all': '全部', 'sup.select': '请从列表中选择一家公司。',
+      'sup.empty.pending': '暂无待审核公司。', 'sup.empty.validated': '暂无已通过的公司。', 'sup.empty.rejected': '暂无已拒绝的公司。',
+      'sup.empty.': '暂无注册公司。', 'sup.empty.d': '在供应商中心注册的公司会显示在这里。', 'sup.asked': '{d} 申请',
+      'st.pending': '待审核', 'st.validated': '已通过', 'st.rejected': '已拒绝', 'st.none': '未提交',
+      'rg.CN': '中国大陆', 'rg.HK': '香港', 'rg.OTHER': '其他',
+      'so.file': '文件', 'so.api': 'API', 'so.manual': '手动录入', 'so.sftp': 'SFTP', 'so.pull': '连接器',
+      'mfr.new': '新建制造商', 'mfr.select': '请从列表中选择一家制造商。', 'mfr.empty': '暂无制造商。', 'mfr.empty.d': '点击“新建制造商”创建第一家。',
+      'mfr.pub': '页面已发布', 'mfr.unpub': '未发布', 'mfr.accounts': '{n} 个账号',
+      'stock.h': '按供应商', 'stock.c.sup': '供应商', 'stock.c.lines': '在库型号数', 'stock.c.last': '最近导入', 'stock.c.src': '来源', 'stock.c.cur': '币种',
+      'stock.empty': '暂无上传的库存。', 'stock.empty.d': '供应商上传的库存文件会显示在这里。',
+      'lot.org': '供应商', 'lot.org.all': '全部供应商', 'lot.q': '搜索（型号、品牌、封装）', 'lot.go': '搜索',
+      'lot.c.mpn': '型号', 'lot.c.brand': '品牌', 'lot.c.pack': '封装 / 包装', 'lot.c.qty': '库存', 'lot.c.p1k': '1k 单价', 'lot.c.breaks': '阶梯价',
+      'lot.c.lead': '交期', 'lot.c.sup': '供应商', 'lot.l.pack': '封装', 'lot.l.breaks': '阶梯价',
+      'lot.count': '第 {a}–{b} 个型号，共 {t} 个。', 'lot.none': '暂无型号。', 'lot.none.q': '没有符合搜索条件的型号。',
+      'lot.prev': '← 上一页', 'lot.next': '下一页 →', 'lot.ondemand': '询价', 'lot.from': '{n} 起', 'lot.plus': '{n} 及以上', 'lot.range': '{a}–{b}',
+      'lot.days': '{n} 天', 'lot.ds': '规格书', 'lot.pp': '卖家页面'
+    }
+  };
+  var UI_LANGS = ['fr', 'en', 'zh'], LANG_KEY = 'cp-lang-admin';
+  var HTML_LANG = { fr: 'fr', en: 'en', zh: 'zh-Hans' }, LOCALE = { fr: 'fr-FR', en: 'en-GB', zh: 'zh-CN' };
+  var LANG = (function () {
+    var q = new URLSearchParams(location.search).get('lang');
+    if (UI_LANGS.indexOf(q) >= 0) { try { localStorage.setItem(LANG_KEY, q); } catch (e) { /* rien */ } return q; }
+    try { var s = localStorage.getItem(LANG_KEY); if (UI_LANGS.indexOf(s) >= 0) return s; } catch (e) { /* stockage indisponible */ }
+    var n = String(navigator.language || '').slice(0, 2).toLowerCase();
+    return UI_LANGS.indexOf(n) >= 0 ? n : 'fr';
+  })();
+  // Texte traduit ; {x} remplacé par v.x. Clé absente : texte français, sinon la clé elle-même.
+  function t(k, v) {
+    var s = T[LANG][k] != null ? T[LANG][k] : T.fr[k] != null ? T.fr[k] : k;
+    return v ? s.replace(/\{(\w+)\}/g, function (m, x) { return v[x] == null ? '' : v[x]; }) : s;
+  }
+  // Libellé d'un code (statut, région, source) : le code lui-même s'il est inconnu.
+  function lab(prefix, code) { return T.fr[prefix + code] != null ? t(prefix + code) : (code == null ? '' : code); }
+  function applyStatic() {
+    document.documentElement.lang = HTML_LANG[LANG];
+    Array.prototype.forEach.call(document.querySelectorAll('main [data-t], dialog [data-t]'), function (el) { el.textContent = t(el.getAttribute('data-t')); });
+  }
+  applyStatic();
+
+  // Statuts, régions, sources : clés st.*, rg.*, so.* de T.
   var CODE_LABEL = { CN: 'Credit code (Mainland China)', HK: 'Registration no. (Hong Kong)', OTHER: 'Registration no.' };
   var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker' };
-  var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
   var ACTION = { approved: 'Approuvée', rejected: 'Refusée', pending: 'Remise en attente' };
   var ERR = {
     reason_required: 'Le motif du refus est obligatoire.',
     already_pending: 'Cette société est déjà en attente.',
     not_allowed: 'Action impossible dans l\'état actuel de la société (une société approuvée doit d\'abord être remise en attente).',
-    email: 'Adresse e-mail invalide.',
-    already_decided: 'Cette demande a déjà été traitée (par le robot WeChat ou un autre onglet) : la liste est mise à jour.'
+    email: 'Adresse e-mail invalide.'
   };
-  var REQ_STATUS = { pending_validation: 'À valider', rejected: 'Refusée', submitted: 'Transmise au fournisseur',
-    confirmed: 'Confirmée par le fournisseur', unavailable: 'Indisponible', proforma_sent: 'Proforma envoyée', paid: 'Payée',
-    shipped: 'Expédiée', cancelled: 'Annulée' };
-  var RFQ_STATUS = { pending_validation: 'À valider', rejected: 'Refusée', auction: 'Diffusée aux fournisseurs',
-    offers: 'Offres prêtes', no_offer: 'Sans offre', ordered: 'Commandée', cancelled: 'Annulée' };
+  // Messages d'erreur : traduits pour le motif obligatoire et la demande déjà traitée, en français pour le reste.
+  function errText(code) { return T.fr['e.' + code] != null ? t('e.' + code) : ERR[code]; }
   function badgeClass(st) { return st === 'pending_validation' ? 'pending' : (st === 'rejected' || st === 'unavailable' || st === 'cancelled' || st === 'no_offer') ? 'rejected' : 'validated'; }
 
   var state = { filter: 'pending', reqFilter: 'pending_validation', org: null, lots: { org: '', q: '', offset: 0, total: 0 } };
@@ -306,7 +566,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   }
   function dt(s) {
     if (!s) return '—';
-    return new Date(s).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
+    return new Date(s).toLocaleString(LOCALE[LANG], { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Paris' });
   }
   // Devise des lignes du dernier import et sa provenance (stock_imports.currency_used, migration 20261102000017).
   var CUR_SRC = { file: 'lue dans le fichier', upload: 'choisie au dépôt', company: 'réglage de la société' };
@@ -317,8 +577,28 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       return p[0] + ' (' + (CUR_SRC[p[1]] || p[1]) + (keys.length > 1 ? ', ' + num(u[k]) + ' lignes' : '') + ')';
     }).join(' · ');
   }
-  function num(n) { return n == null ? '—' : Number(n).toLocaleString('fr-FR'); }
-  function price(p, cur) { return p == null ? 'sur demande' : Number(p).toLocaleString('fr-FR', { maximumFractionDigits: 6 }) + ' ' + esc(cur || ''); }
+  function num(n) { return n == null ? '—' : Number(n).toLocaleString(LOCALE[LANG]); }
+  function price(p, cur) { return p == null ? t('lot.ondemand') : Number(p).toLocaleString(LOCALE[LANG], { maximumFractionDigits: 6 }) + ' ' + esc(cur || ''); }
+  // États d'une liste (handoff, états communs) : chargement, vide (titre et explication), erreur avec « Réessayer ».
+  // tag : 'li' pour les listes, ou nombre de colonnes pour un tableau.
+  function stateRow(tag, cls, inner) {
+    return typeof tag === 'number' ? '<tr><td colspan="' + tag + '" class="empty ' + cls + '">' + inner + '</td></tr>' : '<li class="empty ' + cls + '">' + inner + '</li>';
+  }
+  function loadingRow(tag) { return stateRow(tag, 'loading', esc(t('loading'))); }
+  function emptyRow(tag, title, text) { return stateRow(tag, '', '<strong>' + esc(title) + '</strong>' + (text ? esc(text) : '')); }
+  var retries = {};
+  function errorRow(tag, key, e) {
+    return stateRow(tag, 'err', esc(t('err.load')) + (e && e.detail ? ' ' + esc(e.detail) : '') +
+      '<br><button class="btn btn-line" type="button" data-retry="' + key + '">' + esc(t('retry')) + '</button>');
+  }
+  // Erreur de chargement d'une liste : message dans la liste elle-même, pas seulement en haut de la page.
+  function listFail(el, tag, key) {
+    return function (e) { if (e && e.handled) return; el.innerHTML = errorRow(tag, key, e); };
+  }
+  document.addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('button[data-retry]');
+    if (b && retries[b.getAttribute('data-retry')]) retries[b.getAttribute('data-retry')]();
+  });
   function show(text, kind) {
     var m = $('msg');
     if (!text) { m.hidden = true; return; }
@@ -327,6 +607,22 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function view(id) {
     ['v-login', 'v-denied', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; });
     $('who').hidden = id !== 'v-app';
+    if (id !== 'v-app') show('');
+  }
+  // Message de la carte de connexion : gardé sous forme de clé pour être retraduit au changement de langue.
+  var loginState = null;
+  function loginMsg(st) {
+    loginState = st || null;
+    var m = $('login-msg');
+    if (!st) { m.hidden = true; m.textContent = ''; return; }
+    m.className = 'msg ' + st.kind;
+    if (st.key === 'login.sent') {
+      m.innerHTML = '<p><strong>' + esc(t('login.sent')) + '</strong></p><p>' + esc(t('login.sent.d', { email: st.email })) + '</p>' +
+        '<p>' + esc(t('login.nolink')) + ' <button class="btn-text" type="button" id="login-resend">' + esc(t('login.resend')) + '</button></p>';
+    } else {
+      m.textContent = t(st.key, st.vars);
+    }
+    m.hidden = false;
   }
 
   // ------------------------------------------------------------ session (jeton Supabase Auth, partagé par les onglets)
@@ -345,9 +641,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     return null;
   }
   function saveSession(token, exp) { try { localStorage.setItem(KEY, JSON.stringify({ token: token, exp: exp })); } catch (e) { /* rien */ } }
-  function logout(text) {
+  function logout(key) {
     try { localStorage.removeItem(KEY); } catch (e) { /* rien */ }
-    view('v-login'); show(text || '', 'info');
+    view('v-login'); loginMsg(key ? { key: key, kind: 'info' } : null);
   }
   // Retour du lien e-mail : #access_token=…&expires_at=… (ou #error_description=…). Retiré aussitôt de l'adresse.
   (function readHash() {
@@ -358,20 +654,20 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       var exp = Number(h.get('expires_at')) || Math.floor(Date.now() / 1000) + (Number(h.get('expires_in')) || 3600);
       saveSession(h.get('access_token'), exp);
     } else if (h.get('error_description') || h.get('error')) {
-      show('Lien de connexion refusé : ' + (h.get('error_description') || h.get('error')) + '. Demandez-en un nouveau.', 'err');
+      loginMsg({ key: 'login.refused', vars: { e: h.get('error_description') || h.get('error') }, kind: 'err' });
     }
   })();
 
   function api(method, path, body) {
     var s = session();
-    if (!s) { logout('Session expirée : reconnectez-vous.'); return Promise.reject({ handled: true }); }
+    if (!s) { logout('session.expired'); return Promise.reject({ handled: true }); }
     return fetch(FN + path, {
       method: method,
       headers: { Authorization: 'Bearer ' + s.token, 'Content-Type': 'application/json' },
       body: body ? JSON.stringify(body) : undefined
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
-        if (r.status === 401) { logout('Session expirée : reconnectez-vous.'); throw { handled: true }; }
+        if (r.status === 401) { logout('session.expired'); throw { handled: true }; }
         if (r.status === 403) { view('v-denied'); show(''); throw { handled: true }; }
         if (!r.ok) throw { code: d.error, detail: d.detail };
         return d;
@@ -380,25 +676,33 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   }
   function fail(e) {
     if (e && e.handled) return;
-    show(ERR[e && e.code] || 'Erreur du serveur' + (e && e.detail ? ' : ' + e.detail : (e && e.message ? ' : ' + e.message : '')) + '.', 'err');
+    show(errText(e && e.code) || t('err.server') + (e && e.detail ? ' : ' + e.detail : (e && e.message ? ' : ' + e.message : '')) + '.', 'err');
   }
 
   // ------------------------------------------------------------ connexion
-  $('login-form').addEventListener('submit', function (ev) {
-    ev.preventDefault();
-    var email = $('login-email').value.trim();
-    $('login-send').disabled = true;
+  // États : envoi (bouton désactivé « Envoi… »), envoyé (avec « Renvoyer »), erreur. La réponse est la même que l'adresse
+  // soit celle d'un administrateur ou non (la fonction ne le dit pas) : le message ne le révèle pas non plus. La durée de
+  // validité du lien dépend du réglage Supabase Auth : elle n'est pas annoncée.
+  function sendLink() {
+    var email = $('login-email').value.trim(), btn = $('login-send');
+    if (!$('login-email').checkValidity()) { $('login-email').reportValidity(); return; }
+    btn.disabled = true; btn.textContent = t('login.sending');
+    loginMsg(null);
     fetch(FN + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) })
-      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw { code: d.error }; }); })
-      .then(function () { show('Si cette adresse est celle d\'un administrateur, un lien de connexion vient de lui être envoyé. Ouvrez-le dans ce navigateur.', 'ok'); })
-      .catch(fail)
-      .then(function () { $('login-send').disabled = false; });
-  });
-  $('logout').addEventListener('click', function () { logout('Vous êtes déconnecté.'); });
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw { code: d.error }; }); })
+      .then(function () { loginMsg({ key: 'login.sent', email: email, kind: 'ok' }); })
+      .catch(function (e) { loginMsg({ key: e && e.code === 'email' ? 'login.err.email' : 'login.err', kind: 'err' }); })
+      .then(function () { btn.disabled = false; btn.textContent = t('login.send'); });
+  }
+  $('login-form').addEventListener('submit', function (ev) { ev.preventDefault(); sendLink(); });
+  $('login-msg').addEventListener('click', function (ev) { if (ev.target.id === 'login-resend') sendLink(); });
+  $('logout').addEventListener('click', function () { logout('session.out'); });
   $('denied-logout').addEventListener('click', function () { logout(''); });
 
   // ------------------------------------------------------------ onglets
+  var activeTab = 'sup';
   function tab(which) {
+    activeTab = which;
     ['sup', 'req', 'mfr', 'stock'].forEach(function (k) {
       $('tab-' + k).setAttribute('aria-selected', String(which === k));
       $('p-' + k).hidden = which !== k;
@@ -422,19 +726,37 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     loadSuppliers();
   });
 
-  function loadSuppliers() {
-    return api('GET', '/suppliers' + (state.filter ? '?status=' + state.filter : '')).then(function (d) {
-      var c = d.counts || {};
-      ['pending', 'validated', 'rejected'].forEach(function (k) { document.querySelector('[data-c=' + k + ']').textContent = '(' + (c[k] || 0) + ')'; });
-      var rows = d.rows || [];
-      $('sup-list').innerHTML = rows.length ? rows.map(function (o) {
-        return '<li><button type="button" data-org="' + esc(o.org_id) + '"' + (o.org_id === state.org ? ' aria-current="true"' : '') + '>' +
-          '<span class="r1"><strong>' + esc(o.name) + '</strong><span class="badge ' + esc(o.status) + '">' + esc(STATUS[o.status] || o.status) + '</span></span>' +
-          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) + '</span>' +
-          '</button></li>';
-      }).join('') : '<li class="empty">Aucune société dans cette liste.</li>';
-    }).catch(fail);
+  // Compteur d'un onglet (texte + couleur, jamais la couleur seule ; libellé complet pour les lecteurs d'écran).
+  function tabCount(id, n) {
+    $(id).hidden = !n; $(id).textContent = n || '';
+    if (n) $(id).setAttribute('aria-label', t('tab.count', { n: n })); else $(id).removeAttribute('aria-label');
   }
+  var supData = null;
+  function renderSuppliers() {
+    var d = supData;
+    if (!d) return;
+    var c = d.counts || {};
+    ['pending', 'validated', 'rejected'].forEach(function (k) { document.querySelector('[data-c=' + k + ']').textContent = '(' + (c[k] || 0) + ')'; });
+    tabCount('sup-count', c.pending || 0);
+    var rows = d.rows || [];
+    $('sup-list').innerHTML = rows.length ? rows.map(function (o) {
+      return '<li><button type="button" data-org="' + esc(o.org_id) + '"' + (o.org_id === state.org ? ' aria-current="true"' : '') + '>' +
+        '<span class="r1"><strong>' + esc(o.name) + '</strong><span class="badge ' + esc(o.status) + '">' + esc(lab('st.', o.status)) + '</span></span>' +
+        '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(lab('rg.', o.region)) + ' · ' + esc(o.city || '—') + ' · ' + esc(t('sup.asked', { d: dt(o.requested_at) })) + '</span>' +
+        '</button></li>';
+    }).join('') : emptyRow('li', t('sup.empty.' + d.filter), t('sup.empty.d'));
+  }
+  function loadSuppliers() {
+    var f = state.filter;
+    // Ligne « Chargement… » seulement au premier affichage d'un filtre (pas après une décision : la liste reste en place).
+    if (!supData || supData.filter !== f) $('sup-list').innerHTML = loadingRow('li');
+    return api('GET', '/suppliers' + (f ? '?status=' + f : '')).then(function (d) {
+      if (state.filter !== f) return;
+      supData = { counts: d.counts, rows: d.rows, filter: f };
+      renderSuppliers();
+    }).catch(listFail($('sup-list'), 'li', 'sup'));
+  }
+  retries.sup = function () { loadSuppliers(); };
   $('sup-list').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-org]');
     if (b) openSupplier(b.getAttribute('data-org'));
@@ -448,6 +770,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     });
     return api('GET', '/supplier?org=' + encodeURIComponent(org)).then(function (o) {
       $('split').classList.add('detail-open');
+      $('sup-detail').dataset.open = '1';
       var contacts = (o.contacts || []).map(function (c) {
         return esc(c.label || 'Sans nom') + ' (' + (c.role === 'admin' ? 'administrateur' : 'membre') + ')';
       }).join(', ') || '—';
@@ -458,10 +781,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       if (o.status === 'pending' || o.status === 'none') acts += '<button class="btn btn-danger" type="button" data-act="reject">Refuser</button>';
       if (o.status === 'validated' || o.status === 'rejected') acts += '<button class="btn btn-line" type="button" data-act="pending">Remettre en attente</button>';
       $('sup-detail').innerHTML =
-        '<div class="r1"><h2 id="d-name">' + esc(o.name) + '</h2><span class="badge ' + esc(o.status) + '" id="d-status">' + esc(STATUS[o.status] || o.status) + '</span></div>' +
+        '<div class="r1"><h2 id="d-name">' + esc(o.name) + '</h2><span class="badge ' + esc(o.status) + '" id="d-status">' + esc(lab('st.', o.status)) + '</span></div>' +
         '<dl class="kv">' +
         '<dt>Identifiant</dt><dd class="mono" id="d-org">' + esc(o.org_id) + (o.alias ? ' · ' + esc(o.alias) : '') + '</dd>' +
-        '<dt>Pays / région d\'immatriculation</dt><dd id="d-region">' + esc(REGION[o.region] || o.region) + '</dd>' +
+        '<dt>Pays / région d\'immatriculation</dt><dd id="d-region">' + esc(lab('rg.', o.region)) + '</dd>' +
         '<dt id="d-code-l">' + esc(CODE_LABEL[o.region] || 'Registration no.') + '</dt><dd class="mono" id="d-code">' + esc(o.code || '—') + '</dd>' +
         '<dt>Ville</dt><dd>' + esc(o.city || '—') + '</dd>' +
         '<dt>Type de société</dt><dd>' + esc(PROFILE[o.profile] || o.profile || '—') + '</dd>' +
@@ -471,7 +794,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         '<dt>Demande</dt><dd>' + esc(dt(o.requested_at)) + ' (heure de Paris)</dd>' +
         '<dt>Licence (营业执照)</dt><dd>' + (o.has_license ? 'Déposée' : 'Non déposée') + '</dd>' +
         (o.status === 'rejected' ? '<dt>Motif du refus</dt><dd id="d-reason">' + esc(o.rejected_reason || '—') + '</dd>' : '') +
-        '<dt>Stock</dt><dd>' + num(st.lines) + ' référence(s) en stock' + (st.sources && st.sources.length ? ' · ' + st.sources.map(function (s) { return esc(SOURCE[s] || s); }).join(', ') : '') + '</dd>' +
+        '<dt>Stock</dt><dd>' + num(st.lines) + ' référence(s) en stock' + (st.sources && st.sources.length ? ' · ' + st.sources.map(function (s) { return esc(lab('so.', s)); }).join(', ') : '') + '</dd>' +
         '<dt>Dernier import</dt><dd>' + (imp ? esc(imp.file_name) + ' · ' + esc(dt(imp.received_at)) : '—') + '</dd>' +
         (imp && curText(imp) ? '<dt>Devise du dernier import</dt><dd id="d-cur">' + esc(curText(imp)) + '</dd>' : '') +
         '</dl>' +
@@ -649,26 +972,33 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   // Un fabricant a ses marques, sa présentation et sa page publique /fabricants/ ; il est rattaché aux comptes qui
   // vendent ses marques : lui-même (« Direct fabricant ») ou un distributeur agréé. Ces fabricants sont distribués en
   // Europe par Central.Parts ; jamais un revendeur, un broker ni un excédent de stock (refusé par la base).
-  var mfrs = [], mfr = null, sellers = [], mfrOpen = {};
+  var mfrs = null, mfr = null, sellers = [], mfrOpen = {};
   function loadManufacturers() {
+    if (!mfrs) $('mfr-list').innerHTML = loadingRow('li');
     return Promise.all([api('GET', '/manufacturers'), api('GET', '/suppliers?status=validated')]).then(function (r) {
       mfrs = r[0]; sellers = (r[1].rows || []).filter(function (o) { return o.profile === 'Manufacturer' || o.profile === 'Distributor'; });
       renderMfrList();
       if (mfr) openManufacturer(mfr.id);
-    }).catch(fail);
+    }).catch(listFail($('mfr-list'), 'li', 'mfr'));
   }
+  retries.mfr = function () { loadManufacturers(); };
   function renderMfrList() {
+    if (!mfrs) return;
     $('mfr-list').innerHTML = mfrs.length ? mfrs.map(function (m) {
       return '<li><button type="button" data-mfr="' + esc(m.id) + '"' + (mfr && mfr.id === m.id ? ' aria-current="true"' : '') + '>' +
-        '<div class="r1"><strong>' + esc(m.name) + '</strong><span class="badge' + (m.public_page ? ' validated' : '') + '">' + (m.public_page ? 'Page publiée' : 'Non publiée') + '</span></div>' +
-        '<div class="r2">' + esc(m.id) + ' · ' + list(m.brands) + ' · ' + m.distributors.length + ' compte(s)</div></button></li>';
-    }).join('') : '<li class="empty">Aucun fabricant.</li>';
+        '<div class="r1"><strong>' + esc(m.name) + '</strong><span class="badge' + (m.public_page ? ' validated' : '') + '">' + esc(t(m.public_page ? 'mfr.pub' : 'mfr.unpub')) + '</span></div>' +
+        '<div class="r2">' + esc(m.id) + ' · ' + list(m.brands) + ' · ' + esc(t('mfr.accounts', { n: m.distributors.length })) + '</div></button></li>';
+    }).join('') : emptyRow('li', t('mfr.empty'), t('mfr.empty.d'));
   }
   function openManufacturer(id) {
     return api('GET', '/manufacturer?id=' + encodeURIComponent(id)).then(function (m) { mfr = m; renderMfrList(); renderMfr(); }).catch(profErr);
   }
+  // Téléphone : la fiche du fabricant remplace la liste, « ← Liste » y revient (comme pour les sociétés).
+  $('mfr-back').addEventListener('click', function () { $('mfr-split').classList.remove('detail-open'); });
+  function mfrPlaceholder() { $('mfr-detail').innerHTML = '<p class="muted ph">' + esc(t('mfr.select')) + '</p>'; }
   function renderMfr(edit) {
     var box = $('mfr-detail'), m = mfr;
+    $('mfr-split').classList.add('detail-open');
     if (edit || !m) { box.innerHTML = mfrForm(m || { brands: [], about: {}, positioning: {}, certifications: [], languages: [] }); return; }
     var pub = m.public_page
       ? '<p class="msg ok" id="mf-pub">Page publique en ligne, publiée par ' + esc(m.public_page_by) + ' le ' + esc(dt(m.public_page_at)) +
@@ -808,7 +1138,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (!b) return;
     var a = b.getAttribute('data-mf');
     if (a === 'edit') renderMfr(true);
-    if (a === 'cancel') { if (mfr) renderMfr(); else $('mfr-detail').innerHTML = '<p class="muted">Choisissez un fabricant dans la liste.</p>'; }
+    if (a === 'cancel') { if (mfr) renderMfr(); else { mfrPlaceholder(); $('mfr-split').classList.remove('detail-open'); } }
     if (a === 'papply' || a === 'pdismiss') {
       api('POST', '/manufacturer/proposal', { proposal: +b.getAttribute('data-p'), apply: a === 'papply' })
         .then(function (m) { mfr = m; show(a === 'papply' ? 'Corrections appliquées.' : 'Corrections écartées.', 'ok'); return loadManufacturers(); }).catch(profErr);
@@ -882,7 +1212,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (!pending) return;
     var org = $('sup-detail').dataset.org, reason = $('c-reason').value.trim();
     if (pending === 'reject' && !reason) {
-      $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
+      $('c-err').textContent = errText('reason_required'); $('c-err').hidden = false; $('c-reason').focus();
       return;
     }
     var path = { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
@@ -895,7 +1225,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     }).catch(function (e) {
       $('c-ok').disabled = false;
       if (e && e.handled) { $('confirm').close(); return; }
-      $('c-err').textContent = ERR[e && e.code] || 'Erreur du serveur.'; $('c-err').hidden = false;
+      $('c-err').textContent = errText(e && e.code) || t('err.server') + '.'; $('c-err').hidden = false;
     });
   });
 
@@ -903,47 +1233,41 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   // Site : demandes d'achat (PR-…), validées ici ou par « approve PR-… » dans WeChat ; le fournisseur n'est prévenu
   // qu'à la validation. API : RFQ des plateformes (DEM-…), même règle (ADR 0023).
   var reqPending = null;
+  // Fenêtres de décision : titre, bouton et texte dans T (d.<action>.t, .ok, .x).
   var REQ_DECISION = {
-    req_approve: { title: 'Valider la demande', ok: 'Valider et transmettre', cls: 'btn-ok', reason: false,
-      text: 'La demande est transmise au fournisseur : il la voit dans son espace et reçoit une alerte WeChat (référence, quantité, son prix, pays de livraison ; jamais l\'acheteur).' },
-    req_reject: { title: 'Refuser la demande', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
-      text: 'Rien n\'est envoyé au fournisseur. L\'acheteur voit « demande non retenue » sur sa page de suivi ; le motif reste interne.' },
-    cart_approve: { title: 'Valider tout le panier', ok: 'Valider les lignes', cls: 'btn-ok', reason: false,
-      text: 'Toutes les lignes à valider de ce panier sont transmises à leurs fournisseurs, chacun ne voyant que sa ligne (jamais l\'acheteur ni les autres lignes).' },
-    rfq_approve: { title: 'Valider la RFQ', ok: 'Valider et diffuser', cls: 'btn-ok', reason: false,
-      text: 'La RFQ est diffusée aux fournisseurs dont le stock correspond, dans WeChat et dans leur espace (jamais la plateforme ni l\'acheteur).' },
-    rfq_reject: { title: 'Refuser la RFQ', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
-      text: 'Rien n\'est envoyé aux fournisseurs ; la plateforme reçoit le refus (webhook). Motif obligatoire.' }
+    req_approve: { cls: 'btn-ok', reason: false }, req_reject: { cls: 'btn-danger', reason: 'required' },
+    cart_approve: { cls: 'btn-ok', reason: false }, rfq_approve: { cls: 'btn-ok', reason: false }, rfq_reject: { cls: 'btn-danger', reason: 'required' }
   };
-  function money(v, cur) { return v == null ? 'à confirmer' : Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 4 }) + ' ' + esc(cur || ''); }
+  function money(v, cur) { return v == null ? t('r.tbc') : Number(v).toLocaleString(LOCALE[LANG], { maximumFractionDigits: 4 }) + ' ' + esc(cur || ''); }
   // Transport choisi par l'acheteur (ADR 0030) : par Central.Parts (DAP) ou sur son compte (FCA).
   function transportText(tr) {
     tr = tr || {};
-    return tr.mode === 'own' ? 'Compte de l\'acheteur : ' + (tr.carrier || '?') + ' n° ' + (tr.account || '?') + ' (FCA)'
-      : 'Par Central.Parts (DAP)' + (tr.carrier ? ', ' + tr.carrier + ' préféré' : '');
+    return tr.mode === 'own' ? t('tr.own', { c: tr.carrier || '?', a: tr.account || '?' })
+      : t('tr.cp') + (tr.carrier ? t('tr.pref', { c: tr.carrier }) : '');
   }
+  function kv(k, v) { return '<dt>' + esc(t(k)) + '</dt><dd>' + v + '</dd>'; }
   function reqHtml(r) {
     var pend = r.status === 'pending_validation';
     return '<li data-ref="' + esc(r.ref) + '">' +
-      '<div class="r1"><span><span class="origin">Site web</span> <strong class="mono">' + esc(r.ref) + '</strong> · ' + esc(dt(r.created_at)) +
-        (r.cart_id ? ' · <span class="mono">' + esc(r.cart_id) + '</span> (' + esc(r.cart_lines) + ' ligne' + (r.cart_lines > 1 ? 's' : '') + ')' : '') + '</span>' +
-      '<span class="badge ' + badgeClass(r.status) + '">' + esc(REQ_STATUS[r.status] || r.status) + '</span></div>' +
+      '<div class="r1"><span><span class="origin">' + esc(t('r.web')) + '</span> <strong class="mono">' + esc(r.ref) + '</strong> · ' + esc(dt(r.created_at)) +
+        (r.cart_id ? ' · <span class="mono">' + esc(r.cart_id) + '</span> (' + esc(t(r.cart_lines > 1 ? 'r.lines' : 'r.line', { n: r.cart_lines })) + ')' : '') + '</span>' +
+      '<span class="badge ' + badgeClass(r.status) + '">' + esc(lab('rs.', r.status)) + '</span></div>' +
       '<dl class="kv">' +
-      '<dt>Référence</dt><dd><strong class="mono">' + esc(r.mpn) + '</strong> × ' + num(r.qty) + '</dd>' +
-      '<dt>Prix acheteur</dt><dd>' + money(r.unit_price, r.currency) + (r.total != null ? ' · total ' + money(r.total, r.currency) : '') + '</dd>' +
-      '<dt>Acheteur</dt><dd>' + esc(r.buyer_company) + ' · <span class="mono">' + esc(r.buyer_vat) + '</span> ' + (r.vat_checked ? '(VIES vérifié)' : '(TVA non vérifiée)') +
-        '<br>' + esc(r.buyer_name) + ' · ' + esc(r.buyer_email) + (r.buyer_phone ? ' · ' + esc(r.buyer_phone) : '') + '</dd>' +
-      '<dt>Livraison</dt><dd>' + esc(r.delivery) + '</dd>' +
-      (r.billing && r.billing !== r.delivery ? '<dt>Facturation</dt><dd>' + esc(r.billing) + '</dd>' : '') +
-      '<dt>Transport</dt><dd>' + esc(transportText(r.transport)) + '</dd>' +
-      (r.ship_address ? '<dt>Expédition</dt><dd>' + esc(r.ship_address.label + ' · ' + r.ship_address.city + ' ' + r.ship_address.country) + '</dd>' : '') +
-      '<dt>Fournisseur</dt><dd>' + esc(r.supplier || '—') + ' · prix net ' + money(r.supplier_unit_price, r.supplier_currency) + ' · stock ' + num(r.lot_qty) + '</dd>' +
-      (r.message ? '<dt>Message</dt><dd>' + esc(r.message) + '</dd>' : '') +
-      (r.decided_at ? '<dt>Décision</dt><dd>' + esc(dt(r.decided_at)) + ' · ' + esc(r.decided_by || '') + (r.reject_reason ? '<br><span class="muted">Motif : ' + esc(r.reject_reason) + '</span>' : '') + '</dd>' : '') +
+      kv('r.mpn', '<strong class="mono">' + esc(r.mpn) + '</strong> × ' + num(r.qty)) +
+      kv('r.price', money(r.unit_price, r.currency) + (r.total != null ? ' · ' + t('r.total', { v: money(r.total, r.currency) }) : '')) +
+      kv('r.buyer', esc(r.buyer_company) + ' · <span class="mono">' + esc(r.buyer_vat) + '</span> ' + esc(t(r.vat_checked ? 'r.vies.ok' : 'r.vies.no')) +
+        '<br>' + esc(r.buyer_name) + ' · ' + esc(r.buyer_email) + (r.buyer_phone ? ' · ' + esc(r.buyer_phone) : '')) +
+      kv('r.delivery', esc(r.delivery)) +
+      (r.billing && r.billing !== r.delivery ? kv('r.billing', esc(r.billing)) : '') +
+      kv('r.transport', esc(transportText(r.transport))) +
+      (r.ship_address ? kv('r.ship', esc(r.ship_address.label + ' · ' + r.ship_address.city + ' ' + r.ship_address.country)) : '') +
+      kv('r.supplier', esc(r.supplier || '—') + ' · ' + t('r.net', { v: money(r.supplier_unit_price, r.supplier_currency) }) + ' · ' + esc(t('r.stock', { n: num(r.lot_qty) }))) +
+      (r.message ? kv('r.message', esc(r.message)) : '') +
+      (r.decided_at ? kv('r.decision', esc(dt(r.decided_at)) + ' · ' + esc(r.decided_by || '') + (r.reject_reason ? '<br><span class="muted">' + esc(t('r.reason', { r: r.reject_reason })) + '</span>' : '')) : '') +
       '</dl>' +
-      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="req_approve">Valider et transmettre au fournisseur</button>' +
-        '<button class="btn btn-danger" type="button" data-ract="req_reject">Refuser</button>' +
-        (r.cart_id && pendingOfCart(r.cart_id).length > 1 ? '<button class="btn btn-line" type="button" data-ract="cart_approve">Valider tout le panier (' + pendingOfCart(r.cart_id).length + ')</button>' : '') +
+      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="req_approve">' + esc(t('r.approve')) + '</button>' +
+        '<button class="btn btn-danger" type="button" data-ract="req_reject">' + esc(t('r.reject')) + '</button>' +
+        (r.cart_id && pendingOfCart(r.cart_id).length > 1 ? '<button class="btn btn-line" type="button" data-ract="cart_approve">' + esc(t('r.cart', { n: pendingOfCart(r.cart_id).length })) + '</button>' : '') +
         '</div>' : '') +
       '</li>';
   }
@@ -955,71 +1279,95 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var pend = d.status === 'pending_validation';
     var sellers = (d.sellers || []).map(function (s) { return esc(s.org) + ' (' + esc(s.response) + ')'; }).join(', ');
     return '<li data-id="' + esc(d.id) + '">' +
-      '<div class="r1"><span><span class="origin">API</span> <strong class="mono">' + esc(d.id) + '</strong>' + (d.rfq_id ? ' · ' + esc(d.rfq_id) : '') + ' · ' + esc(dt(d.created_at)) + (d.sandbox ? ' · bac à sable' : '') + '</span>' +
-      '<span class="badge ' + badgeClass(d.status) + '">' + esc(RFQ_STATUS[d.status] || d.status) + '</span></div>' +
+      '<div class="r1"><span><span class="origin">' + esc(t('r.api')) + '</span> <strong class="mono">' + esc(d.id) + '</strong>' + (d.rfq_id ? ' · ' + esc(d.rfq_id) : '') + ' · ' + esc(dt(d.created_at)) + (d.sandbox ? ' · ' + esc(t('q.sandbox')) : '') + '</span>' +
+      '<span class="badge ' + badgeClass(d.status) + '">' + esc(lab('qs.', d.status)) + '</span></div>' +
       '<dl class="kv">' +
-      '<dt>Référence</dt><dd><strong class="mono">' + esc(d.mpn) + '</strong>' + (d.manufacturer ? ' (' + esc(d.manufacturer) + ')' : '') + ' × ' + num(d.qty) + (d.dc_min ? ' · DC ≥ ' + esc(d.dc_min) : '') + '</dd>' +
-      '<dt>Plateforme</dt><dd>' + esc(d.client || '—') + (d.customer_reference ? ' · réf. ' + esc(d.customer_reference) : '') + '</dd>' +
-      '<dt>Livraison, devise</dt><dd>' + esc(d.ship_to || '—') + ' · ' + esc(d.currency || '') + (d.target_price ? ' · prix cible ' + esc(d.target_price) : '') + '</dd>' +
-      (pend ? '<dt>Fournisseurs possibles</dt><dd>' + ((d.candidates || []).map(esc).join(', ') || 'aucun stock correspondant') + '</dd>'
-            : '<dt>Fournisseurs prévenus</dt><dd>' + (sellers || '—') + ' · ' + num(d.bids || 0) + ' offre(s)</dd>') +
-      (d.rejected_reason ? '<dt>Motif du refus</dt><dd>' + esc(d.rejected_reason) + '</dd>' : '') +
+      kv('r.mpn', '<strong class="mono">' + esc(d.mpn) + '</strong>' + (d.manufacturer ? ' (' + esc(d.manufacturer) + ')' : '') + ' × ' + num(d.qty) + (d.dc_min ? ' · DC ≥ ' + esc(d.dc_min) : '')) +
+      kv('q.platform', esc(d.client || '—') + (d.customer_reference ? ' · ' + esc(t('q.ref', { r: d.customer_reference })) : '')) +
+      kv('q.ship', esc(d.ship_to || '—') + ' · ' + esc(d.currency || '') + (d.target_price ? ' · ' + esc(t('q.target', { p: d.target_price })) : '')) +
+      (pend ? kv('q.cands', (d.candidates || []).map(esc).join(', ') || esc(t('q.nocand')))
+            : kv('q.sellers', (sellers || '—') + ' · ' + esc(t('q.bids', { n: num(d.bids || 0) })))) +
+      (d.rejected_reason ? kv('q.reason', esc(d.rejected_reason)) : '') +
       '</dl>' +
-      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="rfq_approve">Valider et diffuser</button>' +
-        '<button class="btn btn-danger" type="button" data-ract="rfq_reject">Refuser</button></div>' : '') +
+      (pend ? '<div class="actions"><button class="btn btn-ok" type="button" data-ract="rfq_approve">' + esc(t('q.approve')) + '</button>' +
+        '<button class="btn btn-danger" type="button" data-ract="rfq_reject">' + esc(t('r.reject')) + '</button></div>' : '') +
       '</li>';
   }
   // Compteur de l'onglet : demandes à valider, site et API.
-  function countRequests(nSite, nApi) {
-    var n = (nSite || 0) + (nApi || 0);
-    $('req-count').hidden = !n; $('req-count').textContent = n;
+  function countRequests(nSite, nApi) { tabCount('req-count', (nSite || 0) + (nApi || 0)); }
+  // Liste vide : le message dépend du filtre actif (« À valider » ou « Toutes »).
+  function reqEmpty(kind) { return emptyRow('li', t(kind + '.empty.' + (state.reqFilter ? 'pending' : 'all')), t(kind + '.empty.d')); }
+  var reqData = null;
+  function renderRequests() {
+    if (!reqData) return;
+    state.reqRows = reqData.site;
+    $('req-list').innerHTML = reqData.site.length ? reqData.site.map(reqHtml).join('') : reqEmpty('req');
+    $('rfq-list').innerHTML = reqData.rfq.length ? reqData.rfq.map(rfqHtml).join('') : reqEmpty('rfq');
   }
   function loadRequests() {
     var f = state.reqFilter;
+    // « Chargement… » sous chaque titre au changement de filtre ; après une décision, la liste reste affichée.
+    if (!reqData || reqData.filter !== f) { reqData = null; $('req-list').innerHTML = $('rfq-list').innerHTML = loadingRow('li'); }
     return Promise.all([
       api('GET', '/requests?status=' + encodeURIComponent(f)),
       api('GET', '/rfq?status=' + encodeURIComponent(f))
     ]).then(function (res) {
+      if (state.reqFilter !== f) return;
       var site = res[0].rows || [], rfq = res[1] || [];
-      state.reqRows = site;
-      $('req-list').innerHTML = site.length ? site.map(reqHtml).join('') : '<li class="empty">' + (f ? 'Aucune demande à valider.' : 'Aucune demande.') + '</li>';
-      $('rfq-list').innerHTML = rfq.length ? rfq.map(rfqHtml).join('') : '<li class="empty">' + (f ? 'Aucune RFQ à valider.' : 'Aucune RFQ.') + '</li>';
+      reqData = { site: site, rfq: rfq, filter: f };
+      renderRequests();
       var c = res[0].counts || {};
       countRequests(c.pending_validation, f ? rfq.length : rfq.filter(function (d) { return d.status === 'pending_validation'; }).length);
       loadSourcing();
-    }).catch(fail);
+    }).catch(function (e) {
+      if (e && e.handled) return;
+      reqData = null;
+      $('req-list').innerHTML = $('rfq-list').innerHTML = errorRow('li', 'req', e);
+      $('src-list').innerHTML = '';
+    });
   }
+  retries.req = function () { loadRequests(); };
   // ------------------------------------------------------------ recherches payées de composants rares (ADR 0033)
   // « À valider » : demandes payées pas encore traitées et proformas en attente de virement ; « Toutes » : tout sauf les
   // paiements en ligne abandonnés. Proforma : marquer « Payée » à réception du virement.
-  var SRC = { awaiting_payment: 'En attente de virement (proforma)', paid: 'Payée, à traiter', in_progress: 'Recherche en cours', offers_sent: 'Offres envoyées', not_found: 'Introuvable', cancelled: 'Annulée' };
-  function loadSourcing() {
-    return api('GET', '/sourcing?status=' + (state.reqFilter ? 'open' : '')).then(function (d) {
-      var rows = d.rows || [];
-      $('src-list').innerHTML = rows.length ? rows.map(function (r) {
-        return '<li data-src="' + esc(r.id) + '"><div class="r1"><strong>' + esc(r.id) + ' · ' + esc(r.mpn) + (r.manufacturer ? ' (' + esc(r.manufacturer) + ')' : '') + ' × ' + num(r.qty) + '</strong>' +
-          '<span class="badge ' + (r.status === 'paid' || r.status === 'awaiting_payment' ? 'pending' : r.status === 'not_found' || r.status === 'cancelled' ? 'rejected' : 'validated') + '">' + esc(SRC[r.status] || r.status) + '</span></div>' +
-          '<div class="r2">' + esc(r.company) + ' · ' + esc(r.contact) + ' · <span class="mono">' + esc(r.email) + '</span> · ' + esc(r.country) +
-          (r.vat_number ? ' · TVA ' + esc(r.vat_number) + (r.vat_checked ? ' (VIES vérifié)' : ' (non vérifié)') : '') + '</div>' +
-          '<div class="r2">' + (r.needed_by ? 'Pour le ' + esc(r.needed_by) + ' · ' : '') + (r.target_price ? 'Prix cible ' + esc(r.target_price) + ' ' + esc(r.target_currency) + ' · ' : '') +
-          (r.condition === 'any' ? 'neuf ou reconditionné' : 'neuf d\'origine') + ' · ' +
-          (r.paid_at ? 'payé ' + price(r.amount_ttc / 100, 'EUR') + ' le ' + esc(dt(r.paid_at)) : 'proforma de ' + price(r.amount_ttc / 100, 'EUR') + ' à envoyer, puis à marquer payée à réception du virement') +
-          ' · ' + (r.payment_mode === 'proforma' ? 'proforma et virement' : 'virement en ligne (GoCardless)') + '</div>' +
-          (r.notes ? '<p class="pre">' + esc(r.notes) + '</p>' : '') +
-          '<details class="more"><summary>Traiter</summary><form class="src-f" data-id="' + esc(r.id) + '">' +
-          '<label class="f">État<select name="status">' + Object.keys(SRC).filter(function (k) { return k !== 'awaiting_payment' || r.status === k; }).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + SRC[k] + '</option>'; }).join('') + '</select></label>' +
-          '<label class="f">Message pour l\'acheteur (visible sur sa page de suivi)<textarea name="buyer_note" maxlength="2000">' + esc(r.buyer_note || '') + '</textarea></label>' +
-          '<label class="f">Note interne<textarea name="admin_note" maxlength="4000">' + esc(r.admin_note || '') + '</textarea></label>' +
-          '<label class="f">Frais déduits sur la demande d\'achat (PR-…)<input type="text" name="credit_used_by" value="' + esc(r.credit_used_by || '') + '"></label>' +
-          '<div class="actions"><button class="btn btn-main" type="submit">Enregistrer</button></div></form></details></li>';
-      }).join('') : '<li class="empty">' + (state.reqFilter ? 'Aucune recherche de sourcing à traiter.' : 'Aucune recherche de sourcing.') + '</li>';
-    }).catch(fail);
+  var SRC_KEYS = ['awaiting_payment', 'paid', 'in_progress', 'offers_sent', 'not_found', 'cancelled'];
+  var srcData = null;
+  function srcHtml(r) {
+    return '<li data-src="' + esc(r.id) + '"><div class="r1"><strong>' + esc(r.id) + ' · ' + esc(r.mpn) + (r.manufacturer ? ' (' + esc(r.manufacturer) + ')' : '') + ' × ' + num(r.qty) + '</strong>' +
+      '<span class="badge ' + (r.status === 'paid' || r.status === 'awaiting_payment' ? 'pending' : r.status === 'not_found' || r.status === 'cancelled' ? 'rejected' : 'validated') + '">' + esc(lab('ss.', r.status)) + '</span></div>' +
+      '<div class="r2">' + esc(r.company) + ' · ' + esc(r.contact) + ' · <span class="mono">' + esc(r.email) + '</span> · ' + esc(r.country) +
+      (r.vat_number ? ' · ' + esc(t('s.vat', { v: r.vat_number })) + ' ' + esc(t(r.vat_checked ? 's.vat.ok' : 's.vat.no')) : '') + '</div>' +
+      '<div class="r2">' + (r.needed_by ? esc(t('s.for', { d: r.needed_by })) + ' · ' : '') + (r.target_price ? esc(t('s.target', { p: r.target_price + ' ' + r.target_currency })) + ' · ' : '') +
+      esc(t(r.condition === 'any' ? 's.any' : 's.new')) + ' · ' +
+      (r.paid_at ? t('s.paid', { p: price(r.amount_ttc / 100, 'EUR'), d: esc(dt(r.paid_at)) }) : t('s.pf', { p: price(r.amount_ttc / 100, 'EUR') })) +
+      ' · ' + esc(t(r.payment_mode === 'proforma' ? 's.mode.pf' : 's.mode.gc')) + '</div>' +
+      (r.notes ? '<p class="pre">' + esc(r.notes) + '</p>' : '') +
+      '<details class="more"><summary>' + esc(t('s.handle')) + '</summary><form class="src-f" data-id="' + esc(r.id) + '">' +
+      '<label class="f">' + esc(t('s.state')) + '<select name="status">' + SRC_KEYS.filter(function (k) { return k !== 'awaiting_payment' || r.status === k; }).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + esc(lab('ss.', k)) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">' + esc(t('s.bnote')) + '<textarea name="buyer_note" maxlength="2000">' + esc(r.buyer_note || '') + '</textarea></label>' +
+      '<label class="f">' + esc(t('s.anote')) + '<textarea name="admin_note" maxlength="4000">' + esc(r.admin_note || '') + '</textarea></label>' +
+      '<label class="f">' + esc(t('s.credit')) + '<input type="text" name="credit_used_by" value="' + esc(r.credit_used_by || '') + '"></label>' +
+      '<div class="actions"><button class="btn btn-main" type="submit">' + esc(t('s.save')) + '</button></div></form></details></li>';
   }
+  function renderSourcing() {
+    if (!srcData) return;
+    $('src-list').innerHTML = srcData.length ? srcData.map(srcHtml).join('') : reqEmpty('src');
+  }
+  function loadSourcing() {
+    var f = state.reqFilter;
+    if (!srcData) $('src-list').innerHTML = loadingRow('li');
+    return api('GET', '/sourcing?status=' + (f ? 'open' : '')).then(function (d) {
+      if (state.reqFilter !== f) return;
+      srcData = d.rows || [];
+      renderSourcing();
+    }).catch(function (e) { srcData = null; listFail($('src-list'), 'li', 'src')(e); });
+  }
+  retries.src = function () { loadSourcing(); };
   $('src-list').addEventListener('submit', function (ev) {
     var f = ev.target.closest('form.src-f'); if (!f) return;
     ev.preventDefault();
     var up = { status: f.status.value, buyer_note: f.buyer_note.value, admin_note: f.admin_note.value, credit_used_by: f.credit_used_by.value };
-    api('POST', '/sourcing/update', { id: f.getAttribute('data-id'), update: up }).then(function () { show('Recherche ' + f.getAttribute('data-id') + ' enregistrée.', 'ok'); loadSourcing(); }).catch(fail);
+    api('POST', '/sourcing/update', { id: f.getAttribute('data-id'), update: up }).then(function () { show(t('s.saved', { id: f.getAttribute('data-id') }), 'ok'); loadSourcing(); }).catch(fail);
   });
   function refreshCount() {
     return Promise.all([api('GET', '/requests?status=pending_validation'), api('GET', '/rfq?status=pending_validation')])
@@ -1031,6 +1379,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (!b) return;
     state.reqFilter = b.getAttribute('data-r');
     Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    srcData = null; $('src-list').innerHTML = loadingRow('li');
     loadRequests();
   });
   function openRequestDecision(ev) {
@@ -1043,15 +1392,15 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       var row = (state.reqRows || []).filter(function (x) { return x.ref === id; })[0];
       reqPending.refs = pendingOfCart(row.cart_id); reqPending.cart = row.cart_id;
     }
-    $('c-title').textContent = d.title + ' · ' + (reqPending.cart ? reqPending.cart + ' (' + reqPending.refs.length + ' lignes)' : id);
-    $('c-text').textContent = d.text;
+    $('c-title').textContent = t('d.' + act + '.t') + ' · ' + (reqPending.cart ? reqPending.cart + ' (' + t('r.lines', { n: reqPending.refs.length }) + ')' : id);
+    $('c-text').textContent = t('d.' + act + '.x');
     $('c-reason-l').hidden = !d.reason;
-    $('c-reason-l').firstChild.textContent = 'Motif du refus (obligatoire, interne)';
+    $('c-reason-l').firstChild.textContent = t('d.reason');
     $('c-reason').value = '';
     $('c-reason').required = d.reason === 'required';
     $('c-err').hidden = true;
     $('c-ok').className = 'btn ' + d.cls;
-    $('c-ok').textContent = d.ok;
+    $('c-ok').textContent = t('d.' + act + '.ok');
     $('c-ok').disabled = false;
     $('confirm').showModal();
     if (d.reason) $('c-reason').focus();
@@ -1061,7 +1410,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function submitRequestDecision() {
     var p = reqPending, reason = $('c-reason').value.trim(), reject = /_reject$/.test(p.act);
     if (reject && !reason) {
-      $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
+      $('c-err').textContent = errText('reason_required'); $('c-err').hidden = false; $('c-reason').focus();
       return;
     }
     if (p.act === 'cart_approve') {
@@ -1073,7 +1422,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         });
       }, Promise.resolve()).then(function () {
         $('confirm').close(); reqPending = null;
-        show(p.cart + ' : ' + sent + ' ligne(s) validée(s) et transmise(s)' + (failed.length ? ' ; non traitée(s) : ' + failed.join(', ') + ' (déjà décidée(s) ailleurs ?)' : '') + '.', failed.length ? 'info' : 'ok');
+        show(t('res.cart', { c: p.cart, n: sent }) + (failed.length ? t('res.cartfail', { l: failed.join(', ') }) : '') + '.', failed.length ? 'info' : 'ok');
         return loadRequests();
       }, function () { $('confirm').close(); reqPending = null; });
     }
@@ -1084,36 +1433,47 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     $('c-ok').disabled = true;
     api('POST', path, body).then(function (r) {
       $('confirm').close(); reqPending = null;
-      var text = reject ? p.id + ' refusée : rien n\'a été envoyé au fournisseur.'
-        : site ? p.id + ' validée et transmise au fournisseur' + (r.notified ? ' (' + r.notified + ' contact(s) WeChat prévenu(s)).' : ' : aucun contact WeChat joignable (règle des 48 heures), la demande est visible dans son espace ; relancez-le à la main.')
-        : p.id + ' validée et diffusée aux fournisseurs.';
+      var text = reject ? t('res.rejected', { id: p.id })
+        : site ? t(r.notified ? 'res.sent' : 'res.sent0', { id: p.id, n: r.notified })
+        : t('res.rfq', { id: p.id });
       show(text, reject ? 'info' : 'ok');
       return loadRequests();
     }).catch(function (e) {
       $('c-ok').disabled = false;
       if (e && e.handled) { $('confirm').close(); return; }
-      if (e && e.code === 'already_decided') { $('confirm').close(); reqPending = null; show(ERR.already_decided, 'info'); loadRequests(); return; }
-      $('c-err').textContent = ERR[e && e.code] || 'Erreur du serveur.'; $('c-err').hidden = false;
+      if (e && e.code === 'already_decided') { $('confirm').close(); reqPending = null; show(errText('already_decided'), 'info'); loadRequests(); return; }
+      $('c-err').textContent = errText(e && e.code) || t('err.server') + '.'; $('c-err').hidden = false;
     });
   }
 
   // ------------------------------------------------------------ stocks et offres (lecture seule)
-  var stockLoaded = false;
+  var stockLoaded = false, stockRows = null;
+  function renderStock() {
+    var rows = stockRows;
+    if (!rows) return;
+    $('stock-sum').innerHTML = rows.length ? rows.map(function (s) {
+      return '<tr class="click" data-org="' + esc(s.org_id) + '"><td><strong>' + esc(s.name) + '</strong><br><span class="muted">' + esc(s.org_id) + ' · ' + esc(lab('st.', s.status)) + '</span></td>' +
+        '<td class="n">' + num(s.lines) + '</td><td>' + esc(dt(s.last_import_at)) + (s.last_import_file ? '<br><span class="muted">' + esc(s.last_import_file) + '</span>' : '') + '</td>' +
+        '<td>' + (s.sources || []).map(function (x) { return esc(lab('so.', x)); }).join(', ') + '</td><td>' + esc(s.currency || '') + '</td></tr>';
+    }).join('') : emptyRow(5, t('stock.empty'), t('stock.empty.d'));
+    var cur = $('lot-org').value;
+    $('lot-org').innerHTML = '<option value="">' + esc(t('lot.org.all')) + '</option>' + rows.map(function (s) {
+      return '<option value="' + esc(s.org_id) + '">' + esc(s.name) + ' (' + num(s.lines) + ')</option>';
+    }).join('');
+    $('lot-org').value = cur;
+  }
   function loadStock() {
     if (stockLoaded) return;
     stockLoaded = true;
+    $('stock-sum').innerHTML = loadingRow(5);
+    $('lot-list').innerHTML = loadingRow(8);
     api('GET', '/stock').then(function (rows) {
-      $('stock-sum').innerHTML = rows.length ? rows.map(function (s) {
-        return '<tr class="click" data-org="' + esc(s.org_id) + '"><td><strong>' + esc(s.name) + '</strong><br><span class="muted">' + esc(s.org_id) + ' · ' + esc(STATUS[s.status] || s.status) + '</span></td>' +
-          '<td class="n">' + num(s.lines) + '</td><td>' + esc(dt(s.last_import_at)) + (s.last_import_file ? '<br><span class="muted">' + esc(s.last_import_file) + '</span>' : '') + '</td>' +
-          '<td>' + (s.sources || []).map(function (x) { return esc(SOURCE[x] || x); }).join(', ') + '</td><td>' + esc(s.currency || '') + '</td></tr>';
-      }).join('') : '<tr><td colspan="5" class="empty">Aucun stock déposé.</td></tr>';
-      $('lot-org').innerHTML = '<option value="">Tous les fournisseurs</option>' + rows.map(function (s) {
-        return '<option value="' + esc(s.org_id) + '">' + esc(s.name) + ' (' + num(s.lines) + ')</option>';
-      }).join('');
+      stockRows = rows;
+      renderStock();
       return loadLots();
-    }).catch(function (e) { stockLoaded = false; fail(e); });
+    }).catch(function (e) { stockLoaded = false; listFail($('stock-sum'), 5, 'stock')(e); if (!(e && e.handled)) $('lot-list').innerHTML = ''; });
   }
+  retries.stock = function () { loadStock(); };
   $('stock-sum').addEventListener('click', function (ev) {
     var tr = ev.target.closest('tr[data-org]');
     if (!tr) return;
@@ -1135,9 +1495,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   // http(s) deviennent cliquables ; ils s'ouvrent dans un nouvel onglet sans transmettre l'adresse du back office.
   function linksHtml(l) {
     var out = [];
-    [['datasheet_url', 'Fiche technique'], ['product_url', 'Page chez le vendeur']].forEach(function (k) {
+    [['datasheet_url', 'lot.ds'], ['product_url', 'lot.pp']].forEach(function (k) {
       var u = l[k[0]];
-      if (u && /^https?:\/\//i.test(u)) out.push('<a class="ext" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + k[1] + '</a>');
+      if (u && /^https?:\/\//i.test(u)) out.push('<a class="ext" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(t(k[1])) + '</a>');
     });
     return out.length ? '<br>' + out.join(' · ') : '';
   }
@@ -1146,11 +1506,11 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function price1k(l) {
     var b = (l.breaks || []).filter(function (x) { return x.from <= 1000; }).pop();
     if (b) return '<strong>' + price(b.price, l.currency) + '</strong>';
-    if (l.breaks && l.breaks.length) return '<strong>' + price(l.breaks[0].price, l.currency) + '</strong><br><span class="muted">dès ' + num(l.breaks[0].from) + '</span>';
-    return l.unit_price == null ? '<span class="muted">sur demande</span>' : '<strong>' + price(l.unit_price, l.currency) + '</strong>';
+    if (l.breaks && l.breaks.length) return '<strong>' + price(l.breaks[0].price, l.currency) + '</strong><br><span class="muted">' + esc(t('lot.from', { n: num(l.breaks[0].from) })) + '</span>';
+    return l.unit_price == null ? '<span class="muted">' + esc(t('lot.ondemand')) + '</span>' : '<strong>' + price(l.unit_price, l.currency) + '</strong>';
   }
   function breaksHtml(l) {
-    if (!l.breaks || !l.breaks.length) return l.unit_price == null ? '<span class="muted">sur demande</span>' : price(l.unit_price, l.currency);
+    if (!l.breaks || !l.breaks.length) return l.unit_price == null ? '<span class="muted">' + esc(t('lot.ondemand')) + '</span>' : price(l.unit_price, l.currency);
     // Prix unitaire en dessous du premier palier : un palier « 1 » du fichier devient le prix unitaire à l'import
     // (flux Octopart). On l'affiche comme première ligne, de 1 (ou du MOQ) au premier palier, quand il en diffère.
     var rows = l.breaks.slice(), first = rows[0], from = Math.max(1, l.moq || 1);
@@ -1158,28 +1518,39 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       rows.unshift({ from: from, to: first.from - 1, price: l.unit_price });
     }
     return '<table class="breaks">' + rows.map(function (b) {
-      return '<tr><td>' + (b.to == null ? num(b.from) + ' et plus' : num(b.from) + ' à ' + num(b.to)) + '</td><td>' + price(b.price, l.currency) + '</td></tr>';
+      return '<tr><td>' + esc(b.to == null ? t('lot.plus', { n: num(b.from) }) : t('lot.range', { a: num(b.from), b: num(b.to) })) + '</td><td>' + price(b.price, l.currency) + '</td></tr>';
     }).join('') + '</table>';
+  }
+  var lotData = null;
+  function renderLots() {
+    var L = state.lots, d = lotData;
+    if (!d) return;
+    var rows = d.rows || [];
+    $('lot-count').textContent = d.total ? t('lot.count', { a: num(L.offset + 1), b: num(L.offset + rows.length), t: num(d.total) }) : '';
+    $('lot-list').innerHTML = rows.length ? rows.map(function (l) {
+      return '<tr><td data-l="' + esc(t('lot.c.mpn')) + '"><strong class="mono">' + esc(l.mpn) + '</strong>' + (l.date_code ? '<br><span class="muted mono">DC ' + esc(l.date_code) + '</span>' : '') +
+        (l.description ? '<br><span class="muted desc">' + esc(l.description) + '</span>' : '') + linksHtml(l) + '</td>' +
+        '<td data-l="' + esc(t('lot.c.brand')) + '">' + esc(l.manufacturer || '—') + '</td><td data-l="' + esc(t('lot.l.pack')) + '">' + esc(l.pack || '—') + '</td>' +
+        '<td data-l="' + esc(t('lot.c.qty')) + '" class="n">' + num(l.qty) + '</td><td data-l="' + esc(t('lot.c.p1k')) + '" class="n p1k">' + price1k(l) + '</td><td data-l="' + esc(t('lot.l.breaks')) + '">' + breaksHtml(l) + '</td>' +
+        '<td data-l="' + esc(t('lot.c.lead')) + '" class="n">' + (l.lead_days == null ? '—' : esc(t('lot.days', { n: l.lead_days }))) + '</td>' +
+        '<td data-l="' + esc(t('lot.c.sup')) + '">' + esc(l.seller) + '<br><span class="muted">' + esc(lab('so.', l.source)) + '</span></td></tr>';
+    }).join('') : emptyRow(8, t(L.org || L.q ? 'lot.none.q' : 'lot.none'), L.org || L.q ? '' : t('stock.empty.d'));
+    // « Précédents / Suivants » seulement s'il y a une autre page.
+    $('lot-prev').disabled = L.offset === 0;
+    $('lot-next').disabled = L.offset + rows.length >= d.total;
+    $('lot-pager').hidden = $('lot-prev').disabled && $('lot-next').disabled;
   }
   function loadLots() {
     var L = state.lots;
     var qs = '?offset=' + L.offset + (L.org ? '&org=' + encodeURIComponent(L.org) : '') + (L.q ? '&q=' + encodeURIComponent(L.q) : '');
     return api('GET', '/lots' + qs).then(function (d) {
+      if (state.lots !== L) return;
       L.total = d.total;
-      var rows = d.rows || [];
-      $('lot-count').textContent = d.total ? 'Références ' + num(L.offset + 1) + ' à ' + num(L.offset + rows.length) + ' sur ' + num(d.total) + '.' : 'Aucune référence.';
-      $('lot-list').innerHTML = rows.map(function (l) {
-        return '<tr><td data-l="Référence"><strong class="mono">' + esc(l.mpn) + '</strong>' + (l.date_code ? '<br><span class="muted mono">DC ' + esc(l.date_code) + '</span>' : '') +
-          (l.description ? '<br><span class="muted desc">' + esc(l.description) + '</span>' : '') + linksHtml(l) + '</td>' +
-          '<td data-l="Marque">' + esc(l.manufacturer || '—') + '</td><td data-l="Boîtier">' + esc(l.pack || '—') + '</td>' +
-          '<td data-l="Stock" class="n">' + num(l.qty) + '</td><td data-l="Prix 1 k" class="n p1k">' + price1k(l) + '</td><td data-l="Paliers">' + breaksHtml(l) + '</td>' +
-          '<td data-l="Délai" class="n">' + (l.lead_days == null ? '—' : esc(l.lead_days) + ' j') + '</td>' +
-          '<td data-l="Fournisseur">' + esc(l.seller) + '<br><span class="muted">' + esc(SOURCE[l.source] || l.source) + '</span></td></tr>';
-      }).join('');
-      $('lot-prev').disabled = L.offset === 0;
-      $('lot-next').disabled = L.offset + rows.length >= d.total;
-    }).catch(fail);
+      lotData = d;
+      renderLots();
+    }).catch(function (e) { lotData = null; $('lot-pager').hidden = true; $('lot-count').textContent = ''; listFail($('lot-list'), 8, 'lots')(e); });
   }
+  retries.lots = function () { loadLots(); };
 
   // ------------------------------------------------------------ démarrage
   function start() {
@@ -1196,7 +1567,34 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   window.addEventListener('storage', function (ev) {
     if (ev.key !== KEY && ev.key !== null) return;
     if (session()) { if ($('v-app').hidden) start(); }
-    else if (!$('v-app').hidden) logout('Déconnecté dans un autre onglet.');
+    else if (!$('v-app').hidden) logout('session.other');
+  });
+
+  // Changement de langue sur place : textes fixes, puis listes déjà chargées redessinées depuis les données en mémoire
+  // (aucun nouvel appel, sauf la fiche ouverte d'une société, rechargée pour ses libellés).
+  function setLang(l) {
+    if (UI_LANGS.indexOf(l) < 0 || l === LANG) return;
+    LANG = l;
+    try { localStorage.setItem(LANG_KEY, l); } catch (e) { /* rien */ }
+    var btn = $('login-send');
+    applyStatic();
+    if (btn.disabled) btn.textContent = t('login.sending');
+    if (loginState) loginMsg(loginState);
+    tabCount('req-count', +$('req-count').textContent || 0);
+    if (supData) renderSuppliers();
+    if (reqData) renderRequests();
+    if (srcData) renderSourcing();
+    if (mfrs) renderMfrList();
+    if (!mfr && !$('mf-form')) mfrPlaceholder();
+    if (stockRows) renderStock();
+    if (lotData) renderLots();
+    if ($('sup-detail').dataset.open && state.org && !$('v-app').hidden && $('split').classList.contains('detail-open')) openSupplier(state.org);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.site-hdr a[data-lang]'), function (a) {
+    a.addEventListener('click', function (ev) {
+      if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) return;
+      setLang(a.getAttribute('data-lang'));
+    });
   });
   start();
 })();

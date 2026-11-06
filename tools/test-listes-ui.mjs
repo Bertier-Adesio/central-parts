@@ -228,30 +228,51 @@ for (const width of [1280, 390]) {
   const totals = (await page.textContent('#totals')).replace(/[\u202f\u00a0]/g, ' ');
   ok(totals.includes('10') && totals.includes('références en ligne') && totals.includes('pièces en stock'), width + ' px : nombre de références et taille de l\'inventaire');
   ok((await page.textContent('#count')).includes('10 dernières offres sur 1'), width + ' px : dernières offres sur le total');
+  // Recherche et filtre : 44 px, exemple de référence non coupé (review n° 3 et 15).
+  ok(await page.$$eval('#form input, #form button, #form select', (e) => e.every((x) => x.getBoundingClientRect().height >= 44)), width + ' px : champ, bouton et filtre de 44 px');
+  ok(await page.$eval('#q', (i) => { const c = document.createElement('canvas').getContext('2d'); const st = getComputedStyle(i); c.font = st.fontSize + ' ' + st.fontFamily;
+    return c.measureText(i.placeholder).width <= i.clientWidth - parseFloat(st.paddingLeft) - parseFloat(st.paddingRight); }), width + ' px : exemple de référence lisible en entier');
+  // Ajout à la demande : bouton texte, puis « Ajouté · Voir ma demande ».
+  await page.click('#rows tr:first-child button.add');
+  ok((await page.textContent('#rows tr:first-child a.in')).trim() === 'Ajouté · Voir ma demande' && (await page.getAttribute('#rows tr:first-child a.in', 'href')) === '/panier/?lang=fr'
+    && (await page.textContent('#msg')).includes('ajouté à votre demande'), width + ' px : « Ajouté · Voir ma demande »');
+  ok(await page.$eval('#rows tr:first-child a.in', (a) => a.getBoundingClientRect().height >= (innerWidth <= 640 ? 44 : 36)), width + ' px : hauteur de l\'action');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.waitForSelector('#table:not([hidden])');
   if (width === 1280) {
     await page.fill('#q', 'ad8');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 1);
     ok((await page.textContent('#count')).includes('AD8') && new URL(page.url()).searchParams.get('q') === 'ad8', 'recherche : une offre, adresse partageable');
-    ok((await page.textContent('#totals')).includes('référence(s) pour « AD8 »') && (await page.textContent('#n-refs')) === '1', 'recherche : totaux de la recherche');
-    // Recherche rapide par fabricant (migration 20261106000038).
+    ok((await page.textContent('#totals')).includes('référence pour « AD8 »') && (await page.textContent('#n-refs')) === '1', 'recherche : totaux de la recherche');
+    ok((await page.textContent('#count')).startsWith('1 offre pour « AD8 »'), 'recherche : une offre, singulier');
+    // Filtre « Fabricant » (handoff 03) : un select natif, « Tous » puis partenaires et fabricants distribués, plus de pastilles.
     await page.fill('#q', '');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
-    const chips = await page.$$eval('#mfrs button[data-m]', (b) => b.map((x) => x.getAttribute('data-m')));
-    ok(chips[0] === '' && chips.length > 2, 'fabricants : boutons « Tous » et un par fabricant présent');
-    ok(await page.$$eval('#mfrs-partners button.partner', (b) => b.length) === 1 && (await page.textContent('#mfrs-partners')).includes('Fabricants partenaires')
-      && (await page.textContent('#mfrs-others')).includes('Fabricants distribués'), 'fabricants partenaires et fabricants distribués sur deux rangées');
+    const opts = await page.$$eval('#mfr option', (o) => o.map((x) => [x.value, x.textContent, x.parentElement.tagName === 'OPTGROUP' ? x.parentElement.label : '']));
+    ok(opts[0][0] === '' && opts[0][1] === 'Tous les fabricants (10)' && opts.length > 2 && !(await page.$('#mfrs')), 'fabricants : select, « Tous les fabricants (10) » et un fabricant par option');
+    ok(opts[1][2] === 'Fabricants partenaires' && opts.slice(2).every((o) => o[2] === 'Fabricants distribués') && await page.$$eval('#mfr optgroup', (g) => g.length) === 2,
+      'fabricants partenaires puis fabricants distribués (optgroup)');
+    ok(await page.$eval('#mfr', (s) => s.closest('form').id === 'form' && s.name === 'mfr' && s.getBoundingClientRect().height >= 44), 'filtre dans le formulaire (?mfr= sans script), 44 px');
     ok(await page.evaluate(() => document.getElementById('totals').compareDocumentPosition(document.getElementById('form')) & Node.DOCUMENT_POSITION_FOLLOWING),
       'références et stock en tête de page, au-dessus de la recherche');
-    const pick = chips[1];
-    await page.click('#mfrs button[data-m="' + pick + '"]');
-    await page.waitForFunction((m) => document.querySelector('#mfrs button[aria-pressed=true]').getAttribute('data-m') === m, pick);
+    const pick = opts[2][0];
+    await page.selectOption('#mfr', pick);
+    await page.waitForFunction((m) => new URL(location.href).searchParams.get('mfr') === m && document.querySelectorAll('#rows tr').length < 10, pick);
     const mfrs = await page.$$eval('#rows .mfr', (d) => d.map((x) => x.textContent));
-    ok(mfrs.length > 0 && mfrs.every((m) => m === pick) && new URL(page.url()).searchParams.get('mfr') === pick, 'fabricant choisi : offres filtrées, adresse partageable');
-    await page.click('#mfrs button[data-m=""]');
+    ok(mfrs.length > 0 && mfrs.every((m) => m === pick) && (await page.$eval('#mfr', (s) => s.value)) === pick, 'fabricant choisi : offres filtrées sur place, adresse partageable');
+    await page.selectOption('#mfr', '');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
-    ok(!new URL(page.url()).searchParams.get('mfr'), '« Tous » : filtre retiré');
+    ok(!new URL(page.url()).searchParams.get('mfr'), '« Tous les fabricants » : filtre retiré');
+    // Filtre sans offre : message et « Retirer le filtre ».
+    await page.goto(BASE + '/offres/?mfr=Inconnu');
+    await page.waitForSelector('#unfilter:not([hidden])');
+    ok((await page.textContent('#msg')).includes('Aucune offre pour ce filtre.') && (await page.textContent('#unfilter-b')) === 'Retirer le filtre' && await page.isHidden('#to-sourcing'), 'filtre vide : message et « Retirer le filtre »');
+    await page.click('#unfilter-b');
+    await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
+    ok(!new URL(page.url()).searchParams.get('mfr') && await page.isHidden('#unfilter'), '« Retirer le filtre » : toutes les offres');
     await page.fill('#q', 'AD');
     await page.click('#form button');
     await page.waitForSelector('#msg.err');
@@ -264,8 +285,9 @@ for (const width of [1280, 390]) {
     await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
     ok((await page.textContent('#rows')).includes('Partner Supplier'), 'EN : Partner Supplier');
     ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page acheteur non indexée');
-    // « Demander » est devenu « Ajouter au panier » (ADR 0028) : plus de lien mailto.
-    ok((await page.$$('#rows button.add')).length === 10 && (await page.$$('#rows a[href^="mailto:"]')).length === 0, 'bouton « Add to cart » sur chaque offre, plus de mailto');
+    // « Ajouter à la demande » (ADR 0028, handoff 03) : bouton texte, plus de lien mailto.
+    ok(await page.$$eval('#rows button.add', (b) => b.length === 10 && b.every((x) => x.textContent === 'Add to request')) && (await page.$$('#rows a[href^="mailto:"]')).length === 0, 'bouton « Add to request » sur chaque offre, plus de mailto');
+    ok((await page.textContent('#count')).includes('Latest 10 offers out of 1') && (await page.textContent('#mfr option')).startsWith('All manufacturers'), 'EN : dernières offres, filtre');
   }
   ok(errors.length === 0, width + ' px : aucune erreur console ' + errors.join(' | '));
   await page.close();

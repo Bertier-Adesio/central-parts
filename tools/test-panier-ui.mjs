@@ -82,16 +82,15 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, l
 let page = await ctx.newPage(), errors = [];
 await mock(page, errors);
 
-// 1. /offres/ : ajout au panier, compteur, bouton « Dans le panier ».
+// 1. /offres/ : ajout à la demande, compteur, « Ajouté · Voir ma demande ».
 await page.goto(BASE + '/offres/?lang=fr');
 await page.waitForSelector('#rows button.add');
 ok((await page.textContent('#cart-n')) === '', 'offres : panier vide au départ');
-ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => !!b.querySelector('svg') && b.textContent.trim() === '' && b.getAttribute('aria-label') === 'Ajouter au panier' && b.title === 'Ajouter au panier'),
-  'offres : icône de panier, libellé accessible et infobulle');
+ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => b.textContent.trim() === 'Ajouter à la demande'), 'offres : bouton texte « Ajouter à la demande »');
 await page.click('#rows tr:nth-child(1) button.add');
-ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await page.textContent('#cart-n')) === '1', 'offres : ajout, message et compteur');
+ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté à votre demande') && (await page.textContent('#cart-n')) === '1', 'offres : ajout, message et compteur');
 ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr'
-  && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'aria-label')) === 'Dans le panier ✓', 'offres : icône « dans le panier » qui mène au panier');
+  && norm(await page.textContent('#rows tr:nth-child(1) a.in')).trim() === 'Ajouté · Voir ma demande', 'offres : « Ajouté · Voir ma demande » qui mène à la demande');
 await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
 ok((await page.textContent('#cart-n')) === '3', 'offres : trois références');
@@ -107,8 +106,8 @@ ok((await page.getAttribute('#to-terms', 'href')) === '/conditions/?lang=fr' && 
 await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
 await page.waitForSelector('#list button.add');
 await page.click('#list button.add');
-ok((await page.textContent('#cart-n')) === '4' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
-ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttribute('aria-label') === 'Dans le panier ✓'), 'recherche : icône « dans le panier »');
+ok((await page.textContent('#cart-n')) === '4' && await page.isVisible('#list a.in'), 'recherche : ajout à la demande, compteur partagé');
+ok(norm(await page.textContent('#list a.in')).trim() === 'Ajouté · Voir ma demande' && norm(await page.textContent('#reqbar-n')) === '4 références', 'recherche : « Ajouté · Voir ma demande » et barre « Ma demande »');
 
 // 3. /panier/ : devis par ligne, offre disparue bloquante, retrait, quantité.
 await page.goto(BASE + '/panier/');
@@ -119,16 +118,22 @@ ok(txt.includes('hors transport, droits et TVA') && txt.includes('Incoterms® 20
 ok(norm(await page.textContent('#lines li:first-child')).includes('FCA Shenzhen') && norm(await page.textContent('#lines li:nth-child(4)')).includes('FCA Hong Kong'), 'panier : lieu FCA de chaque ligne (devis)');
 await page.waitForSelector('#ship:not([hidden]) .grp');
 const shipTxt = norm(await page.textContent('#ship'));
-ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('offerte dès 1 840,00 € (encore 1 839,94 €)') && shipTxt.includes('(DAP adresse de livraison)'),
-  'panier : livraison par fournisseur, montant manquant pour la livraison offerte');
-ok(shipTxt.includes('DHL · FedEx · UPS · SF') && shipTxt.includes('5 à 7 jours ouvrés') && shipTxt.includes('retours sous 30 jours pour défaut qualité') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('paiement d’avance'),
-  'panier : conditions du fournisseur (transporteurs, délais, retours, garantie, paiement)');
-ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Transport chiffré sur la facture proforma') && shipTxt.includes('Droits, taxes et frais de dédouanement à la charge de l’acheteur'),
+ok(shipTxt.includes('Fournisseur partenaire 1') && shipTxt.includes('LM358DR') && shipTxt.includes('Franco de port') && shipTxt.includes('dès 1 840,00 € · encore 1 839,94 € à ajouter') && shipTxt.includes('(DAP adresse de livraison)'),
+  'panier : livraison par fournisseur, montant manquant pour le franco de port');
+const meter = await page.$eval('#ship .meter', (m) => [m.getAttribute('role'), m.getAttribute('aria-valuemax'), m.getAttribute('aria-valuenow')]);
+ok(meter[0] === 'progressbar' && meter[1] === '1840' && meter[2] === '0.06', 'panier : barre de progression du franco (progressbar, valeurs) ' + meter.join(' '));
+const dts = await page.$$eval('#ship .ship-h + .grp dl.sum dt', (d) => d.map((x) => x.textContent));
+ok(dts.join('|') === 'Transport|Transporteurs|Délai|Paiement|Retours', 'panier : liste étiquetée (transport, transporteurs, délai, paiement, retours) ' + dts.join('|'));
+ok((await page.$$('#ship .ship-h + .grp .carr')).length === 4 && shipTxt.includes('Expédition sous 24 h · 5 à 7 jours ouvrés') && shipTxt.includes('30 jours en cas de défaut qualité') && shipTxt.includes('15 % de frais de remise en stock') && shipTxt.includes('garantie 90 jours') && shipTxt.includes('Paiement d’avance, sur facture proforma'),
+  'panier : conditions du fournisseur (transporteurs en puces, délais, retours, garantie, paiement)');
+ok(shipTxt.includes('Fournisseur partenaire 2') && shipTxt.includes('Chiffré sur la facture proforma') && shipTxt.includes('Douane et taxes') && shipTxt.includes('À la charge de l’acheteur (droits, taxes, dédouanement)'),
   'panier : autre fournisseur, transport sur la proforma ; droits à la charge de l\'acheteur');
+ok((await page.getAttribute('#ship #to-terms', 'href')) === '/conditions/?lang=fr', 'panier : lien vers les conditions en bas du panneau Livraison');
+ok(norm(await page.textContent('#lines li:first-child .hint')) === 'MOQ 100 · SPQ 2 500', 'panier : aide MOQ · SPQ sous la quantité');
 ok(!/ORG-\d|seller_id|tmp-/i.test(await page.content()), 'panier : jamais l\'identifiant du fournisseur');
 ok(txt.includes('Prix à confirmer') && txt.includes('à confirmer'), 'panier : ligne sur demande et total à confirmer');
 ok(await page.isVisible('#lines li.gone') && txt.includes('Offre plus disponible'), 'panier : offre disparue signalée');
-ok(txt.includes('minimum 2 500 · par 2 500') && (await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
+ok((await page.getAttribute('#q-0', 'step')) === '2500' && (await page.getAttribute('#q-0', 'min')) === '2500', 'panier : minimum et SPQ rappelés, saisie par pas du SPQ');
 ok(norm(await page.textContent('#lines li:nth-child(4)')).includes('Quantité ajustée à 10 (minimum 10).') &&
   (await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart'))))[3].qty === 10, 'panier : quantité d\'une ligne de la recherche ajustée au MOQ donné par le devis');
 await page.fill('#o-company', 'Atelier Panier (fictif)');
@@ -186,9 +191,9 @@ ok(await page.isHidden('#steps') && !/V-\d|ORG-/.test(txt), 'suivi : pas d\'éta
 // 6. Panier vide, langues.
 await page.goto(BASE + '/panier/?lang=zh');
 await page.waitForSelector('#empty:not([hidden])');
-ok((await page.textContent('h1')) === '购物车' && (await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh', '中文 : panier vide, lien vers les offres');
+ok((await page.textContent('h1')) === '询价单' && (await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh' && (await page.getAttribute('#to-search', 'href')) === '/recherche/?lang=zh', '中文 : demande vide, liens vers la recherche et les offres');
 await page.$eval('.site-hdr [data-lang=en]', (a) => a.click());
-ok((await page.textContent('#empty')).includes('Your cart is empty'), 'EN : panier vide');
+ok((await page.textContent('#empty')).includes('Your request is empty') && (await page.textContent('h1')) === 'My request' && (await page.title()) === 'My request — Central.Parts', 'EN : demande vide, titre');
 ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'panier non indexé');
 
 // 7. Envoi refusé par le serveur : la ligne disparue est désignée.
@@ -248,7 +253,7 @@ await page.close();
 {
   const p = await browser.newPage({ javaScriptEnabled: false });
   await p.goto(BASE + '/panier/');
-  ok((await p.textContent('noscript')).includes('JavaScript') && (await p.textContent('h1')) === 'Panier', 'sans JavaScript : titre et message');
+  ok((await p.textContent('noscript')).includes('JavaScript') && (await p.textContent('h1')) === 'Ma demande', 'sans JavaScript : titre et message');
   await p.close();
 }
 

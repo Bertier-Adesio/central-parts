@@ -33,7 +33,7 @@ const browser = await chromium.launch();
 async function open(viewport) {
   const page = await browser.newPage({ viewport, locale: 'fr-FR' });
   const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|409|422)/.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|409|422|500)/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.route(BASE + '/functions/v1/admin/**', api);
   await page.route(BASE + '/storage/**', storage);
@@ -50,10 +50,35 @@ await page.goto(BASE + '/admin/');
 await page.waitForSelector('#v-login:not([hidden])');
 ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page non indexée (noindex)');
 ok(!(await page.isVisible('#v-app')), 'sans session : aucune donnée affichée');
+ok(await page.getAttribute('html', 'lang') === 'fr' && norm(await page.textContent('#v-login h1')) === 'Connexion', 'connexion en français par défaut (navigateur fr-FR)');
+ok(norm(await page.textContent('#login-send')) === 'Recevoir le lien', 'bouton « Recevoir le lien »');
+// Carte centrée (handoff 06) : largeur 440 px au plus, au milieu de la page.
+const card = await page.$eval('#v-login .login', (el) => { const r = el.getBoundingClientRect(); return { w: r.width, mid: r.left + r.width / 2 }; });
+ok(card.w <= 440 && Math.abs(card.mid - 640) < 2, 'connexion : carte centrée, 440 px au plus');
+// Envoi : bouton désactivé « Envoi… » pendant l'appel.
+let release;
+await page.route(BASE + '/functions/v1/admin/login', async (route) => { await new Promise((r) => { release = r; }); return api(route); });
 await page.fill('#login-email', ADMIN_EMAIL);
 await page.click('#login-send');
-await page.waitForSelector('#msg.ok');
+await page.waitForFunction(() => document.getElementById('login-send').disabled);
+ok(norm(await page.textContent('#login-send')) === 'Envoi…', 'envoi en cours : bouton désactivé « Envoi… »');
+release();
+await page.waitForSelector('#login-msg.ok');
+await page.unroute(BASE + '/functions/v1/admin/login');
 ok(mock.state.logins[0] === ADMIN_EMAIL, 'lien de connexion demandé pour l\'adresse saisie');
+const sentText = norm(await page.textContent('#login-msg'));
+ok(sentText.includes('Lien envoyé. Ouvrez-le depuis cet appareil.') && sentText.includes(ADMIN_EMAIL) && sentText.includes('courriers indésirables'),
+  'lien envoyé : confirmation, adresse saisie, conseil « courriers indésirables »');
+ok(!(await page.isDisabled('#login-send')) && norm(await page.textContent('#login-send')) === 'Recevoir le lien', 'après l\'envoi : bouton rétabli');
+await page.click('#login-resend');
+await page.waitForFunction(() => document.querySelectorAll('#login-msg.ok').length && !document.getElementById('login-send').disabled);
+ok(mock.state.logins.length === 2, '« Renvoyer » : nouveau lien demandé');
+// Erreur : message neutre, qui ne dit pas si l'adresse existe.
+await page.route(BASE + '/functions/v1/admin/login', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"server"}' }));
+await page.click('#login-send');
+await page.waitForSelector('#login-msg.err');
+ok(norm(await page.textContent('#login-msg')).includes('Envoi impossible pour le moment'), 'erreur d\'envoi : message neutre');
+await page.unroute(BASE + '/functions/v1/admin/login');
 
 // 2. Compte connecté mais pas administrateur : accès refusé, aucune donnée.
 await page.goto('about:blank');
@@ -464,7 +489,7 @@ await page.close();
 ({ page, errors } = await open({ width: 1280, height: 900 }));
 await page.goto(BASE + '/admin/#access_token=PERIME&expires_in=3600');
 await page.waitForSelector('#v-login:not([hidden])');
-ok(norm(await page.textContent('#msg')).includes('Session expirée'), 'jeton expiré : retour à la connexion');
+ok(norm(await page.textContent('#login-msg')).includes('Session expirée'), 'jeton expiré : retour à la connexion');
 await page.close();
 
 // 12. Plusieurs onglets du même navigateur : une connexion vaut pour tous, une déconnexion aussi.
@@ -493,7 +518,7 @@ mock = createMock();
   await a.click('#logout');
   await b.waitForSelector('#v-login:not([hidden])');
   await c.waitForSelector('#v-login:not([hidden])');
-  ok(norm(await b.textContent('#msg')).includes('autre onglet') && await c.isHidden('#v-app'), 'onglets : se déconnecter dans un onglet déconnecte les autres');
+  ok(norm(await b.textContent('#login-msg')).includes('autre onglet') && await c.isHidden('#v-app'), 'onglets : se déconnecter dans un onglet déconnecte les autres');
   const stored = await a.evaluate(() => [localStorage.getItem('cp-admin-session'), sessionStorage.getItem('cp-admin-session')]);
   ok(stored[0] === null && stored[1] === null, 'onglets : aucun jeton gardé après la déconnexion');
   // Jeton expiré dans le stockage partagé : effacé, écran de connexion.

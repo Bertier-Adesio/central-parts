@@ -33,17 +33,30 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 form.search{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
 form.search input,form.search select{min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;box-sizing:border-box}
 form.search input{flex:1 1 220px;min-width:0;font-family:var(--font-mono);text-transform:uppercase}
-.res{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px}
-@media (max-width:420px){.res{gap:4px 8px}.res .price{white-space:normal;font-size:var(--text-sm)}}
+/* Ligne de résultat (handoff 02) : informations | prix et action ; une colonne sous 640 px. */
+.res{border-top:1px solid var(--border-1);padding:16px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 24px;align-items:start}
 .res:first-child{border-top:0}
-.mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);overflow-wrap:anywhere}
-.price{text-align:right;font-weight:var(--weight-semibold);white-space:nowrap}
-.meta{grid-column:1 / -1;display:flex;gap:6px;flex-wrap:wrap;font-size:var(--text-sm);color:var(--fg-2)}
+.res-head + .res{border-top:0}
+.mpn{font-family:var(--font-mono);font-weight:var(--weight-medium);overflow-wrap:anywhere}
+.res .mfr{color:var(--fg-2);font-size:var(--text-sm)}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0;font-size:var(--text-sm);color:var(--fg-2)}
 .tag{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
-.tag.opp{background:var(--status-warning-bg);color:var(--status-warning)}
+/* Ambre en bordure seulement : le texte ambre sur fond ambre est sous le seuil AA. */
+.tag.opp{background:var(--status-warning-bg);color:var(--fg-1);box-shadow:inset 0 0 0 1px var(--status-warning)}
+.side{display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:200px}
+.pricebox{text-align:right}
+.pricebox .from{color:var(--fg-3);font-size:var(--text-sm)}
+.pricebox .pv{font-family:var(--font-mono);font-weight:var(--weight-medium);font-size:var(--text-md);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pricebox .p1k{font-variant-numeric:tabular-nums}
+.res .add,.res .in{width:100%}
+.res-head{margin:0 0 4px}
+@media (max-width:640px){
+  .res{grid-template-columns:minmax(0,1fr)}
+  .side{align-items:stretch;min-width:0}
+  .pricebox{text-align:left}
+}
 .cta{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0}
-.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
-.buy{grid-column:1 / -1;justify-self:start;min-height:var(--control-h-md);padding:0 14px}
+.buy{min-height:var(--control-h-md);padding:0 14px}
 form.order label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
 form.order input,form.order select,form.order textarea{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:8px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
 form.order .two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
@@ -52,9 +65,8 @@ form.order .check{display:flex;gap:8px;align-items:flex-start;font-weight:normal
 form.order .check input{width:auto;min-height:0;margin:3px 0 0}
 .quote{font-family:var(--font-mono);background:var(--bg-sunken);border-radius:var(--radius-sm);padding:10px 12px;margin:0 0 12px;font-size:var(--text-sm)}
 .quote:empty{display:none}
-.add{grid-column:3;grid-row:1;justify-self:end;align-self:start}
-.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:var(--radius-sm)}
-.add.in{border-color:var(--status-success);color:var(--status-success)}
+.msg .btn{margin:8px 0 0;min-height:var(--control-h-md)}
+.acct-note{margin:8px 0 0}
 </style>
 </head>
 <body>
@@ -116,7 +128,24 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
   <p class="muted"><a href="/conditions/" id="to-terms" data-t="termsLink">Conditions commerciales : livraison, paiement, retours</a></p>
   <noscript><p class="msg err">La recherche nécessite JavaScript. · Search requires JavaScript. · 搜索需要启用 JavaScript。</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
+  <!-- Comment demander un prix (handoff 02) : lisible sans JavaScript. -->
+  <section class="how" aria-labelledby="how-t">
+    <h2 id="how-t" data-t="howTitle">Comment demander un prix</h2>
+    <ol>
+      <li data-t="how1">Ajoutez les références à votre demande</li>
+      <li data-t="how2">Indiquez vos quantités et envoyez</li>
+      <li data-t="how3">Recevez une facture proforma</li>
+    </ol>
+    <p class="how-note" data-t="howNote">Rien n'est facturé à cette étape.</p>
+  </section>
+  <!-- Erreur de la recherche (réseau, serveur, trop de requêtes) : message et « Réessayer ». -->
+  <div id="err" class="msg err" hidden role="alert"><span id="err-t"></span><br><button class="btn btn-line" type="button" id="retry" data-t="retry">Réessayer</button></div>
   <section class="card" id="out" hidden aria-live="polite"><div id="list"></div></section>
+  <!-- Barre « Ma demande » : affichée par le script dès qu'une référence est ajoutée ; sans JavaScript, le lien de l'en-tête suffit. -->
+  <div class="reqbar" id="reqbar" hidden>
+    <span class="reqbar-t"><span data-t="barLabel">Ma demande</span><b id="reqbar-n"></b></span>
+    <a class="btn-accent" id="reqbar-go" href="/panier/" data-t="barCta">Voir ma demande</a>
+  </div>
   <section class="card" id="buy" hidden>
     <h2 data-t="buyTitle">Demande d'achat</h2>
     <p class="mpn" id="buy-mpn"></p>
@@ -143,10 +172,13 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       <p style="overflow-wrap:anywhere"><a id="done-link" href="#"></a></p>
     </div>
   </section>
-  <section class="card">
+  <section class="card acct">
     <h2 data-t="moreTitle">Quantités exactes, paliers et commande</h2>
     <p class="muted" data-t="moreText">Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.</p>
-    <div class="cta"><a class="btn btn-main" id="cta-buyer" href="/#contact" data-t="ctaBuyer">Ouvrir un compte acheteur</a><a class="btn btn-line" href="/depot/" data-t="ctaSupplier">Vous êtes fournisseur ? Inscrire votre stock</a></div>
+    <!-- Pas encore d'inscription acheteur (review n° 5) : le bouton dit ce qu'il fait, une demande par le formulaire de contact. -->
+    <div class="cta"><a class="btn btn-line" id="cta-buyer" href="/#contact" data-t="ctaBuyer">Demander un accès acheteur</a></div>
+    <p class="muted acct-note" data-t="acctNote">Les accès acheteur sont ouverts sur demande. Nous vous répondons par e-mail.</p>
+    <p class="muted"><a href="/depot/" data-t="ctaSupplier">Vous êtes fournisseur ? Inscrire votre stock</a></p>
   </section>
 </main>
 
@@ -158,11 +190,14 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     fr: { title: 'Rechercher un composant', lead: "L'offre agrégée de Central.Parts : fabricants, distributeurs, brokers et surplus vérifiés. Le fournisseur n'est jamais affiché.",
       go: 'Rechercher', hint: "Début de la référence fabricant, 3 caractères au moins. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l'import.",
       moreTitle: 'Quantités exactes, paliers et commande', moreText: "Avec un compte acheteur ou par l'API (Adesio, Luminovo, CalcuQuote, ERP) : quantités exactes, tous les paliers de prix, délais, demande de prix. Les offres de brokers et de surplus suivent les rails Opportunity : questionnaire d'état, tests en laboratoire sur demande, paiement à l'acceptation.",
-      ctaBuyer: 'Ouvrir un compte acheteur', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
+      ctaBuyer: 'Demander un accès acheteur', acctNote: 'Les accès acheteur sont ouverts sur demande. Nous vous répondons par e-mail.', ctaSupplier: 'Vous êtes fournisseur ? Inscrire votre stock', home: '/',
+      howTitle: 'Comment demander un prix', how1: 'Ajoutez les références à votre demande', how2: 'Indiquez vos quantités et envoyez', how3: 'Recevez une facture proforma', howNote: "Rien n'est facturé à cette étape.",
       src: { manufacturer: 'Fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
-      from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', count: '{n} offre(s) pour « {q} »',
+      from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Prix sur demande', shipFrom: 'Expédié de', avail: 'Disponible', none: 'Aucune offre pour « {q} ».', noneHint: 'Essayez un début de référence plus court.', tryShort: 'Rechercher « {s} »', countOne: '{n} offre pour « {q} ».', count: '{n} offres pour « {q} ».',
+      loading: 'Recherche en cours…', retry: 'Réessayer',
       termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
-      cart: 'Panier', add: 'Ajouter au panier', inCart: 'Dans le panier ✓', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
+      add: 'Ajouter à la demande', done: 'Ajouté', doneView: 'Voir ma demande', added: '{mpn} ajouté à votre demande.', cartFull: 'Demande pleine (30 références) : envoyez-la d’abord.', cartOff: 'La demande n’est pas disponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
+      refsOne: '{n} référence', refsOther: '{n} références', barLabel: 'Ma demande', barCta: 'Voir ma demande',
       buy: 'Acheter', buyTitle: "Demande d'achat", fQty: 'Quantité', fCompany: 'Société', fVat: 'N° de TVA intracommunautaire', fName: 'Nom et prénom', fEmail: 'E-mail professionnel', fPhone: 'Téléphone (facultatif)', fCountry: 'Pays de livraison', fAddress: 'Adresse de livraison', fMessage: 'Message (facultatif)',
       terms: "Je comprends que cette demande est sans engagement : Central.Parts confirme la disponibilité auprès du fournisseur, puis envoie une facture proforma ; la vente est conclue à réception du virement. L'acheteur importe et dédouane la marchandise (droits et TVA à l'import).",
       send: 'Envoyer la demande', cancel: 'Annuler', doneNext: 'Central.Parts vérifie votre demande et la transmet au fournisseur, qui confirme la disponibilité, en général sous 24 heures ; vous recevez ensuite la facture proforma par e-mail. Gardez ce lien pour suivre votre demande :',
@@ -171,26 +206,32 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
       e: { vat_invalid: 'Numéro de TVA refusé par le service VIES : vérifiez-le.', invalid: 'Vérifiez les champs du formulaire.', not_found: "Cette offre n'est plus disponible.", terms: 'Cochez la case pour envoyer la demande.', too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'La recherche est indisponible, réessayez plus tard.' } },
     en: { title: 'Search for a component', lead: 'The aggregated offer of Central.Parts: manufacturers, distributors, verified brokers and surplus. The supplier is never shown.',
       go: 'Search', hint: 'Start of the manufacturer part number, at least 3 characters. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
-      moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, every price break, lead times, quote requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
-      ctaBuyer: 'Open a buyer account', ctaSupplier: 'Supplier? List your stock', home: '/en/',
+      moreTitle: 'Exact quantities, price breaks and ordering', moreText: 'With a buyer account or through the API (Adesio, Luminovo, CalcuQuote, ERP): exact quantities, all price breaks, lead times, price requests. Broker and surplus offers follow the Opportunity rails: condition questionnaire, lab tests on request, payment on acceptance.',
+      ctaBuyer: 'Request buyer access', acctNote: 'Buyer access is opened on request. We reply by e-mail.', ctaSupplier: 'Are you a supplier? Register your stock', home: '/en/',
+      howTitle: 'How to request a price', how1: 'Add part numbers to your request', how2: 'Enter quantities and send', how3: 'Receive a proforma invoice', howNote: 'Nothing is charged at this stage.',
       src: { manufacturer: 'Manufacturer', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
-      from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', count: '{n} offer(s) for "{q}"',
+      from: 'from', k1: '1k price:', onRequest: 'Price on request', shipFrom: 'Ships from', avail: 'Available', none: 'No offer for "{q}".', noneHint: 'Try a shorter start of the part number.', tryShort: 'Search "{s}"', countOne: '{n} offer for "{q}".', count: '{n} offers for "{q}".',
+      loading: 'Searching…', retry: 'Try again',
       termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
-      cart: 'Cart', add: 'Add to cart', inCart: 'In the cart ✓', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
+      add: 'Add to request', done: 'Added', doneView: 'View my request', added: '{mpn} added to your request.', cartFull: 'Request full (30 part numbers): send it first.', cartOff: 'Requests are not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
+      refsOne: '{n} part number', refsOther: '{n} part numbers', barLabel: 'My request', barCta: 'View my request',
       buy: 'Buy', buyTitle: 'Purchase request', fQty: 'Quantity', fCompany: 'Company', fVat: 'VAT number', fName: 'Full name', fEmail: 'Business e-mail', fPhone: 'Phone (optional)', fCountry: 'Delivery country', fAddress: 'Delivery address', fMessage: 'Message (optional)',
       terms: 'I understand this request is not binding: Central.Parts confirms availability with the supplier, then sends a proforma invoice; the sale is concluded when the bank transfer is received. The buyer imports and clears the goods (import duties and VAT).',
       send: 'Send the request', cancel: 'Cancel', doneNext: 'Central.Parts checks your request and sends it to the supplier, who confirms availability, usually within 24 hours; you then receive the proforma invoice by e-mail. Keep this link to follow your request:',
       unit: 'Unit price', total: 'Total', excl: 'excluding shipping, import duties and VAT', toConfirm: 'Price confirmed with the proforma', partial: 'Quantity above the displayed stock: the supplier will confirm the available quantity.',
       sent: 'Request {ref} sent.', choose: 'Choose', rates: 'ECB reference rate of {d}.',
       e: { vat_invalid: 'VAT number rejected by the VIES service: please check it.', invalid: 'Please check the form fields.', not_found: 'This offer is no longer available.', terms: 'Tick the box to send the request.', too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Search is unavailable, please try again later.' } },
-    zh: { title: '搜索元器件', lead: 'Central.Parts 汇总的现货：原厂、分销商、经审核的贸易商与呆滞库存。不显示供应商名称。',
+    zh: { title: '搜索元器件', lead: 'Central.Parts 汇总的现货：原厂、分销商、经核准的贸易商与呆滞库存。不显示供应商名称。',
       go: '搜索', hint: '输入型号开头，至少 3 个字符。价格为含平台费用的总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
-      moreTitle: '准确数量、价格阶梯与下单', moreText: '采购商账户或 API（Adesio、Luminovo、CalcuQuote、ERP）可查看准确数量、全部价格阶梯、交期并询价。贸易商与呆滞库存的报价通过 Opportunity 流程：状态问卷、可选实验室检测、验收后付款。',
-      ctaBuyer: '开通采购商账户', ctaSupplier: '您是供应商？注册并上传库存', home: '/zh/',
+      moreTitle: '精确数量、阶梯价与下单', moreText: '通过采购方账号或 API（Adesio、Luminovo、CalcuQuote、ERP）：精确数量、全部阶梯价、交期与询价。贸易商与呆滞库存报价适用 Opportunity 流程：状态问卷、按需实验室检测、验收后付款。',
+      ctaBuyer: '申请采购方账号', acctNote: '采购方账号需申请开通，我们将通过邮件回复您。', ctaSupplier: '您是供应商？登记您的库存', home: '/zh/',
+      howTitle: '如何询价', how1: '将型号加入询价单', how2: '填写数量并提交', how3: '收到形式发票', howNote: '此阶段不产生任何费用。',
       src: { manufacturer: '原厂', distributor: '分销商', broker: '经审核贸易商', surplus: '经审核呆滞库存' },
-      from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', count: '「{q}」共 {n} 条报价',
+      from: '起', k1: '千颗单价：', onRequest: '价格请询价', shipFrom: '发货地', avail: '库存', none: '没有「{q}」的报价。', noneHint: '请尝试输入更短的型号开头。', tryShort: '搜索「{s}」', countOne: '「{q}」共 {n} 条报价。', count: '「{q}」共 {n} 条报价。',
+      loading: '正在搜索…', retry: '重试',
       termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
-      cart: '购物车', add: '加入购物车', inCart: '已加入购物车 ✓', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
+      add: '加入询价单', done: '已加入', doneView: '查看询价单', added: '已将 {mpn} 加入询价单。', cartFull: '询价单已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用询价单，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
+      refsOne: '{n} 个型号', refsOther: '{n} 个型号', barLabel: '询价单', barCta: '查看询价单',
       buy: '购买', buyTitle: '采购申请', fQty: '数量', fCompany: '公司', fVat: '增值税号（欧盟）', fName: '姓名', fEmail: '工作邮箱', fPhone: '电话（选填）', fCountry: '交货国家', fAddress: '交货地址', fMessage: '留言（选填）',
       terms: '我了解此申请不具约束力：Central.Parts 向供应商确认库存后发送形式发票，收到银行转账后交易成立。买方负责进口清关（进口关税和增值税）。',
       send: '提交申请', cancel: '取消', doneNext: 'Central.Parts 审核您的申请后转交供应商，供应商通常在 24 小时内确认库存，随后您将通过邮件收到形式发票。请保存此链接以跟踪申请：',
@@ -215,6 +256,7 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     $('home').href = t().home; $('cta-buyer').href = t().home + '#contact';
     cartCount();
     if (last) render(last);
+    if (lastCode && !$('err').hidden) $('err-t').textContent = t().e[lastCode] || t().e.other;
     if (offer) { describe(); fillCountries(); quote(); }
   }
   function say(text) { $('msg').hidden = !text; $('msg').className = 'msg err'; $('msg').textContent = text || ''; }
@@ -224,53 +266,84 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     catch (e) { return v + ' ' + cur; }
   }
 
+  function fill(s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); }
+  var ICON_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+  // Résultats (handoff 02) : décompte et date du taux en deux phrases ; chaque ligne : informations | prix et
+  // « Ajouter à la demande », puis « Ajouté · Voir ma demande » une fois la référence dans la demande.
   function render(d) {
     var r = d.results || [];
-    $('out').hidden = false;
-    var rates = r.length && d.rates_at ? ' ' + t().rates.replace('{d}', new Date(d.rates_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-GB')) : '';
-    var head = '<p class="muted" style="margin:0 0 4px">' + esc((r.length ? t().count : t().none).replace('{n}', r.length).replace('{q}', d.query) + rates) + '</p>';
+    $('out').hidden = false; $('out').removeAttribute('aria-busy');
+    var loc = lang === 'zh' ? 'zh-CN' : lang === 'fr' ? 'fr-FR' : 'en-GB';
+    var head;
+    if (r.length) {
+      head = '<p class="muted res-head"><span id="res-count">' + esc(fill(r.length === 1 ? t().countOne : t().count, { n: r.length, q: d.query })) + '</span>' +
+        (d.rates_at ? ' <span id="res-rate">' + esc(t().rates.replace('{d}', new Date(d.rates_at).toLocaleDateString(loc))) + '</span>' : '') + '</p>';
+    } else {
+      // Aucun résultat : proposer un début de référence plus court (3 caractères au moins).
+      var shorter = d.query && d.query.length > 3 ? d.query.slice(0, Math.max(3, Math.ceil(d.query.length * 0.6))) : '';
+      head = '<p class="res-head"><b>' + esc(fill(t().none, { q: d.query })) + '</b></p><p class="muted" id="none-hint">' + esc(t().noneHint) +
+        (shorter ? ' <a href="/recherche/?q=' + encodeURIComponent(shorter) + '" id="try-short" data-q="' + esc(shorter) + '">' + esc(fill(t().tryShort, { s: shorter })) + '</a>' : '') + '</p>';
+    }
     $('list').innerHTML = head + r.map(function (x, i) {
+      var cur = x.currency || d.currency;
       var price = x.price_from == null ? '<span class="muted">' + esc(t().onRequest) + '</span>'
-        : (lang === 'zh' ? esc(money(x.price_from, x.currency || d.currency)) + ' ' + esc(t().from) : esc(t().from) + ' ' + esc(money(x.price_from, x.currency || d.currency)));
+        : (lang === 'zh' ? '<span class="pv">' + esc(money(x.price_from, cur)) + '</span> <span class="from">' + esc(t().from) + '</span>'
+          : '<span class="from">' + esc(t().from) + '</span> <span class="pv">' + esc(money(x.price_from, cur)) + '</span>');
       // Prix 1KU (convention : prix unitaire pour 1 000 pièces), sous « à partir de ».
-      if (x.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(x.price_1k, x.currency || d.currency)) + '</div>';
+      if (x.price_1k != null) price += '<div class="muted p1k">' + esc(t().k1) + ' ' + esc(money(x.price_1k, cur)) + '</div>';
       var opp = x.source === 'broker' || x.source === 'surplus';
-      return '<div class="res"><div><div class="mpn">' + esc(x.mpn) + '</div><div class="muted">' + esc(x.manufacturer) + '</div></div>' +
-        '<div class="price">' + price + '</div><div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
+      return '<div class="res row-res"><div class="info"><div class="mpn">' + esc(x.mpn) + '</div><div class="mfr">' + esc(x.manufacturer) + '</div>' +
+        '<div class="meta"><span class="tag' + (opp ? ' opp' : '') + '">' + esc(t().src[x.source] || x.source) + '</span>' +
         '<span class="tag">' + esc(t().avail) + ' ' + esc(x.availability) + '</span>' +
-        '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div>' +
-        (cartHas(x) ? '<a class="btn btn-line add in icon-btn" href="' + esc(t().cartHref) + '" aria-label="' + esc(t().inCart) + '" title="' + esc(t().inCart) + '">' + ICON_IN + '</a>'
-          : '<button class="btn btn-line add icon-btn" type="button" data-i="' + i + '" aria-label="' + esc(t().add) + '" title="' + esc(t().add) + '">' + ICON_ADD + '</button>') +
-        (BUY_OPEN ? '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button>' : '') + '</div>';
+        '<span class="tag">' + esc(t().shipFrom) + ' ' + esc((COUNTRY[lang][x.ship_from]) || x.ship_from) + '</span></div></div>' +
+        '<div class="side"><div class="pricebox price">' + price + '</div>' +
+        (cartHas(x) ? '<a class="btn-done in" href="' + esc(t().cartHref) + '">' + ICON_OK + '<span>' + esc(t().done) + ' · ' + esc(t().doneView) + '</span></a>'
+          : '<button class="btn-add add" type="button" data-i="' + i + '">' + esc(t().add) + '</button>') +
+        (BUY_OPEN ? '<button class="btn btn-main buy" type="button" data-i="' + i + '">' + esc(t().buy) + '</button>' : '') + '</div></div>';
     }).join('');
     $('list').querySelectorAll('button.add').forEach(function (b) { b.addEventListener('click', function () {
-      var x = r[+b.getAttribute('data-i')], res = cartAdd(x);
+      var i = +b.getAttribute('data-i'), x = r[i], res = cartAdd(x);
       render(d); cartCount();
       $('msg').hidden = false; $('msg').className = 'msg ' + (res === 'ok' ? 'ok' : 'err');
       $('msg').textContent = res === 'ok' ? t().added.replace('{mpn}', x.mpn) : res === 'full' ? t().cartFull : t().cartOff;
+      // Le focus reste sur la ligne : il passe au lien « Voir ma demande » qui remplace le bouton.
+      var done = $('list').querySelectorAll('.res')[i]; done = done && done.querySelector('.in'); if (done) done.focus();
     }); });
+    var tryShort = $('try-short');
+    if (tryShort) tryShort.addEventListener('click', function (ev) { ev.preventDefault(); $('q').value = tryShort.getAttribute('data-q'); search(tryShort.getAttribute('data-q'), true); });
     $('list').querySelectorAll('.buy').forEach(function (b) { b.addEventListener('click', function () { var x = r[+b.getAttribute('data-i')]; openBuy(x, x.currency || d.currency); }); });
+  }
+
+  // Chargement : trois lignes grises de hauteur fixe (72 px) dans la zone des résultats, jamais une zone vide.
+  function loading() {
+    $('out').hidden = false; $('out').setAttribute('aria-busy', 'true');
+    $('list').innerHTML = '<p class="sr-only">' + esc(t().loading) + '</p><span class="skel"></span><span class="skel"></span><span class="skel"></span>';
+  }
+  function fail(code) {
+    $('out').hidden = true; $('out').removeAttribute('aria-busy');
+    $('err').hidden = false; $('err-t').textContent = t().e[code] || t().e.other;
   }
 
   // Prix en euros, convertis au taux de la BCE (migration 20261103000025, ADR 0027) : la devise de chaque offre est
   // dans la réponse (x.currency), la date du taux dans d.rates_at ; le devis et la demande d'achat suivent la même devise.
+  var lastTerm = null, lastCode = null;
   function search(term, push) {
-    say(''); $('f').querySelector('button').disabled = true;
+    say(''); $('err').hidden = true; lastTerm = term; lastCode = null; $('f').querySelector('button').disabled = true;
+    loading();
     fetch(FN + '?cur=EUR&q=' + encodeURIComponent(term))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
             function () { throw 'network'; })
       .then(function (d) {
         last = d; render(d);
         if (push) history.replaceState(null, '', '/recherche/?q=' + encodeURIComponent(d.query));
-      }, function (code) { $('out').hidden = true; say(t().e[code] || t().e.other); })
+      }, function (code) { last = null; lastCode = code; fail(code); })
       .then(function () { $('f').querySelector('button').disabled = false; });
   }
+  $('retry').addEventListener('click', function () { if (lastTerm) search(lastTerm, false); });
 
   // ---------------------------------------------------------------- panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
   var CART = 'cp-cart', CART_MAX = 30;
-  // Icônes du panier (ajouter, déjà dans le panier), dessinées ici : aucune ressource externe.
-  var ICON_ADD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M13.5 8.5v5M11 11h5"/></svg>';
-  var ICON_IN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M10.5 11l2 2 3.5-3.5"/></svg>';
   function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
   function cartAdd(o) {
@@ -282,7 +355,14 @@ form.order .check input{width:auto;min-height:0;margin:3px 0 0}
     try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
     return cartLoad().length === a.length ? 'ok' : 'off';
   }
-  function cartCount() { if (window.cpHeader) window.cpHeader(); $('to-terms').href = t().termsHref; }
+  // Compteur de l'en-tête et barre « Ma demande » (handoff 02) : la barre apparaît dès la première référence ajoutée.
+  function cartCount() {
+    if (window.cpHeader) window.cpHeader(); $('to-terms').href = t().termsHref;
+    var n = cartLoad().length;
+    $('reqbar').hidden = !n;
+    $('reqbar-n').textContent = fill(n === 1 ? t().refsOne : t().refsOther, { n: n });
+    $('reqbar-go').href = t().cartHref;
+  }
   window.addEventListener('storage', function (ev) { if (ev.key === CART) { cartCount(); if (last) render(last); } });
 
   // ---------------------------------------------------------------- demande d'achat (ADR 0014)
