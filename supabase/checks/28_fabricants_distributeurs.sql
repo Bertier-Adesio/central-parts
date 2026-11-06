@@ -53,7 +53,8 @@ begin
     'founded_year', 2013, 'website', 'https://fabricant-a.example', 'staff', 120, 'annual_units', 3000000000, 'revenue_usd', 70000000,
     'about', jsonb_build_object('en', 'Fictitious manufacturer A.'), 'languages', jsonb_build_array('zh', 'en')));
   insert into tests.vars values ('a', a->>'id');
-  perform tests.eq('fabricant : créé, publication possible', (a->>'id' like 'MFR-%') and (a->>'can_publish')::boolean, true);
+  -- Publication : il faut aussi un accord enregistré (migration 20261106000035).
+  perform tests.eq('fabricant : créé, pas encore publiable sans accord', (a->>'id' like 'MFR-%') and not (a->>'can_publish')::boolean, true);
   b := public.admin_manufacturer_save(null, jsonb_build_object('name', 'Fabricant B (fictif)', 'brands', jsonb_build_array('Marque B')));
   insert into tests.vars values ('b', b->>'id');
   perform tests.fails('marque déjà attribuée à un autre fabricant',
@@ -81,6 +82,8 @@ begin
   perform tests.fails('rôle inconnu refusé', format($s$select public.admin_manufacturer_link('%s', 'FD2', 'broker')$s$, a->>'id'), '22023');
 
   perform tests.fails('publication sans présentation refusée', format($s$select public.admin_manufacturer_publish('%s', true)$s$, b->>'id'), '22023');
+  perform tests.fails('publication sans accord refusée', format($s$select public.admin_manufacturer_publish('%s', true)$s$, a->>'id'), '22023');
+  a := public.admin_manufacturer_consent(a->>'id', 'FM1', true);
   a := public.admin_manufacturer_publish(a->>'id', true);
   perform tests.eq('publication : au nom de l''administrateur', (a->>'public_page') || ' ' || (a->>'public_page_by'), 'true admin:ops1@example.test');
 end $$;

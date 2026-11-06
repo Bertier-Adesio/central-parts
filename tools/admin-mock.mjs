@@ -117,13 +117,17 @@ export function createMock() {
   const profile = (o) => {
     const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, certifications: [], languages: [],
       payment_methods: [], contacts: [] };
+    p.identities = (o.contacts || []).map((c) => ({ openid: c.openid, label: c.label, role: c.role }));
+    p.profile_editor = p.profile_editor || (o.contacts || []).find((c) => c.role === 'admin')?.openid || null;
     p.manufacturers = state.mfrs.flatMap((m) => m.links.filter((d) => d.org_id === o.org_id)
       .map((d) => ({ id: m.id, name: m.name, brands: m.brands, role: d.role, public_page: m.public_page })));
     return p;
   };
   // Fabricants (migration 20261105000033), comme app.manufacturer_json.
-  const mjson = (m) => ({ ...m, can_publish: m.brands.length > 0 && Object.keys(m.about).length > 0,
+  const mjson = (m) => ({ ...m, can_publish: m.brands.length > 0 && Object.keys(m.about).length > 0 && m.links.some((d) => d.consent_at),
+    proposals: (m.proposals || []).filter((r) => r.status === 'pending'),
     distributors: m.links.map((d) => { const o = find(d.org_id); return { org_id: o.org_id, name: o.name, role: d.role, status: o.status,
+      consent_at: d.consent_at || null, consent_by: d.consent_by || null,
       offers: lots.filter((l) => l.org_id === o.org_id && l.qty > 0 && m.brands.some((b) => b.toUpperCase() === l.manufacturer.toUpperCase())).length }; }) });
   const mfind = (id) => state.mfrs.find((m) => m.id === id);
   const bad = (detail) => [422, { error: 'invalid', detail }];
@@ -256,8 +260,23 @@ export function createMock() {
         for (const k of ['about', 'positioning']) if (k in f) m[k] = tri(f[k]);
         return [200, mjson(m)];
       }
+      if (path === '/manufacturer/proposal') {
+        const pm = state.mfrs.find((x) => (x.proposals || []).some((r) => r.id === body.proposal && r.status === 'pending'));
+        if (!pm) return [409, { error: 'not_allowed' }];
+        const r = pm.proposals.find((x) => x.id === body.proposal);
+        if (body.apply) for (const [k, v] of Object.entries(r.proposed)) pm[k] = (k === 'about' || k === 'positioning') ? { ...pm[k], ...v } : v;
+        r.status = body.apply ? 'applied' : 'dismissed';
+        return [200, mjson(pm)];
+      }
       const m = mfind(body.id);
       if (!m) return [422, { error: 'id' }];
+      if (path === '/manufacturer/consent') {
+        const d = m.links.find((x) => x.org_id === body.org);
+        if (!d) return [409, { error: 'not_allowed' }];
+        Object.assign(d, body.on ? { consent_at: new Date().toISOString(), consent_by: 'admin:' + ADMIN_EMAIL + ' (hors plateforme)' } : { consent_at: null, consent_by: null });
+        if (!m.links.some((x) => x.consent_at)) m.public_page = false;
+        return [200, mjson(m)];
+      }
       if (path === '/manufacturer/link') {
         const o = find(body.org);
         if (!o) return [409, { error: 'not_allowed' }];
@@ -269,7 +288,7 @@ export function createMock() {
       }
       if (path === '/manufacturer/unlink') { m.links = m.links.filter((d) => d.org_id !== body.org); return [200, mjson(m)]; }
       if (path === '/manufacturer/publish') {
-        if (body.on && !mjson(m).can_publish) return bad('Page publique : marque et présentation requises');
+        if (body.on && !mjson(m).can_publish) return bad('Page publique : marque, présentation et accord requis');
         Object.assign(m, { public_page: !!body.on, public_page_by: 'admin:' + ADMIN_EMAIL, public_page_at: new Date().toISOString() });
         return [200, mjson(m)];
       }
@@ -297,6 +316,13 @@ export function createMock() {
         const row = { ...c, email: c.email ? c.email.toLowerCase() : null, id: c.id || 'CTC-' + String(++contactSeq).padStart(4, '0') };
         const i = p.contacts.findIndex((x) => x.id === row.id);
         if (i >= 0) p.contacts[i] = row; else p.contacts.push(row);
+        return [200, profile(o)];
+      }
+      if (path === '/supplier-editor') {
+        const c = (o.contacts || []).find((x) => x.openid === body.openid);
+        if (!c) return [409, { error: 'not_allowed' }];
+        c.role = 'admin';
+        profile(o).profile_editor = c.openid;
         return [200, profile(o)];
       }
       if (path === '/supplier-contact/delete') {

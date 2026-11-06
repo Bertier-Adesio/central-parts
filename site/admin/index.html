@@ -517,6 +517,14 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       '<dt>Commande minimum</dt><dd>' + (p.min_order_usd != null ? num(p.min_order_usd) + ' USD' : '—') + '</dd>' + aboutRows(p.about) +
       '</dl>' +
       '<div class="actions"><button class="btn btn-line" type="button" data-pf="edit">Modifier la fiche</button></div>' +
+      // Un seul compte WeChat modifie la fiche dans /depot/ ; les autres la lisent (migration 20261106000035).
+      '<h3>Responsable de la fiche dans /depot/</h3>' +
+      ((p.identities || []).length ? '<form id="pf-editor" class="tools" style="grid-template-columns:minmax(0,1fr) auto">' +
+        '<label class="f" style="margin:0">Seul ce compte WeChat modifie la fiche, les contacts, les corrections et l\'accord<select id="pf-editor-i">' +
+        p.identities.map(function (w) { return '<option value="' + esc(w.openid) + '"' + (w.openid === p.profile_editor ? ' selected' : '') + '>' +
+          esc((w.label || 'Sans nom') + ' · ' + (w.role === 'admin' ? 'administrateur' : 'membre') + ' · ' + w.openid) + '</option>'; }).join('') +
+        '</select></label><button class="btn btn-line" type="submit">Désigner</button></form>'
+        : '<p class="muted" id="pf-editor">Aucun compte WeChat rattaché.</p>') +
       '<h3>Fabricants rattachés</h3>' +
       (p.manufacturers.length ? '<ul class="addr" id="pf-mfrs">' + p.manufacturers.map(function (m) {
         return '<li><strong>' + esc(m.name) + '</strong> · ' + list(m.brands) + ' <span class="badge validated">' + esc(ROLE[m.role] || m.role) + '</span>' +
@@ -579,6 +587,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       api('POST', '/supplier-profile', { org: org, profile: profile }).then(function (p) { prof = p; renderProfile(); show('Fiche enregistrée.', 'ok'); })
         .catch(function (e) { if ($('pf-save')) $('pf-save').disabled = false; profErr(e); });
     }
+    if (ev.target.id === 'pf-editor') {
+      ev.preventDefault();
+      api('POST', '/supplier-editor', { org: org, openid: $('pf-editor-i').value }).then(function (p) { prof = p; renderProfile(); show('Responsable de la fiche désigné.', 'ok'); }).catch(profErr);
+    }
     if (ev.target.id === 'pf-cf') {
       ev.preventDefault();
       var c = { id: ev.target.getAttribute('data-id') || null, name: val('cf-name'), role: val('cf-role'), email: val('cf-email'),
@@ -631,7 +643,22 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var pub = m.public_page
       ? '<p class="msg ok" id="mf-pub">Page publique en ligne, publiée par ' + esc(m.public_page_by) + ' le ' + esc(dt(m.public_page_at)) +
         ' : <a href="/fabricants/?b=' + encodeURIComponent(m.brands[0]) + '" target="_blank" rel="noopener" id="mf-pub-link">voir la page ' + esc(m.brands[0]) + '</a></p>'
-      : '<p class="muted" id="mf-pub">Page publique non publiée' + (m.can_publish ? '.' : ' : il faut au moins une marque et une présentation.') + '</p>';
+      : '<p class="muted" id="mf-pub">Page publique non publiée' + (m.can_publish ? '.' : ' : il faut au moins une marque, une présentation et l\'accord d\'un compte rattaché.') + '</p>';
+    // Corrections proposées par les fournisseurs dans /depot/ (migration 20261106000035) : appliquées seulement ici.
+    var FIELD = { founded_year: 'Création', hq_city: 'Siège', production_site: 'Production', area_m2: 'Surface (m²)', staff: 'Personnes',
+      annual_units: 'Pièces par an', certifications: 'Certifications', languages: 'Langues' };
+    var props = (m.proposals || []).map(function (r) {
+      var rows = Object.keys(r.proposed).map(function (k) {
+        var v = r.proposed[k];
+        if (k === 'about' || k === 'positioning') return Object.keys(v).map(function (l) {
+          return '<dt>' + (k === 'about' ? 'Présentation ' : 'Positionnement ') + esc(l.toUpperCase()) + '</dt><dd class="pre">' + esc(v[l]) + '</dd>'; }).join('');
+        return '<dt>' + esc(FIELD[k] || k) + '</dt><dd>' + esc(Array.isArray(v) ? v.join(', ') : v) + '</dd>';
+      }).join('');
+      return '<li><strong>' + esc(r.org_id) + '</strong> <span class="muted">· ' + esc(dt(r.at)) + '</span>' +
+        (r.note ? '<p class="pre">' + esc(r.note) + '</p>' : '') + (rows ? '<dl class="kv">' + rows + '</dl>' : '') +
+        '<div class="actions"><button class="btn btn-ok" type="button" data-mf="papply" data-p="' + esc(r.id) + '">Appliquer</button>' +
+        '<button class="btn btn-line" type="button" data-mf="pdismiss" data-p="' + esc(r.id) + '">Écarter</button></div></li>';
+    }).join('');
     var linked = m.distributors.map(function (d) { return d.org_id; });
     box.innerHTML =
       '<div class="r1"><h2 id="mf-name">' + esc(m.name) + '</h2><span class="mono">' + esc(m.id) + '</span></div>' +
@@ -658,11 +685,15 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       (m.distributors.length ? '<ul class="addr" id="mf-dists">' + m.distributors.map(function (d) {
         return '<li><strong>' + esc(d.name) + '</strong> <span class="mono">' + esc(d.org_id) + '</span> <span class="badge validated">' + esc(ROLE[d.role] || d.role) + '</span>' +
           ' <span class="muted">· ' + num(d.offers) + ' offre(s) de ces marques</span>' +
+          '<br><span class="' + (d.consent_at ? 'badge validated' : 'badge pending') + '">' + (d.consent_at ? 'Accord donné le ' + esc(dt(d.consent_at)) : 'Accord non donné') + '</span>' +
+          (d.consent_at ? ' <span class="muted">' + esc(d.consent_by) + '</span> <button class="btn btn-line" type="button" data-mf="unconsent" data-org="' + esc(d.org_id) + '">Retirer l\'accord</button>'
+            : ' <button class="btn btn-line" type="button" data-mf="consent" data-org="' + esc(d.org_id) + '">Accord reçu hors plateforme</button>') + '<br>' +
           ' <select class="ml-role-c" data-org="' + esc(d.org_id) + '" aria-label="Rôle de ' + esc(d.name) + '" style="width:auto">' +
           '<option value="self"' + (d.role === 'self' ? ' selected' : '') + '>Direct fabricant</option>' +
           '<option value="authorized"' + (d.role === 'authorized' ? ' selected' : '') + '>Distributeur agréé</option></select>' +
           ' <button class="btn btn-line" type="button" data-mf="unlink" data-org="' + esc(d.org_id) + '">Détacher</button></li>';
       }).join('') + '</ul>' : '<p class="muted" id="mf-dists">Aucun compte rattaché.</p>') +
+      (props ? '<h3>Corrections proposées</h3><ul class="addr" id="mf-props">' + props + '</ul>' : '') +
       '<form id="mf-link" class="tools" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto">' +
       '<label class="f" style="margin:0">Compte fournisseur<select id="ml-org">' + sellers.filter(function (o) { return linked.indexOf(o.org_id) < 0; }).map(function (o) {
         return '<option value="' + esc(o.org_id) + '">' + esc(o.name) + ' (' + esc(o.org_id) + ')</option>'; }).join('') + '</select></label>' +
@@ -738,6 +769,18 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var a = b.getAttribute('data-mf');
     if (a === 'edit') renderMfr(true);
     if (a === 'cancel') { if (mfr) renderMfr(); else $('mfr-detail').innerHTML = '<p class="muted">Choisissez un fabricant dans la liste.</p>'; }
+    if (a === 'papply' || a === 'pdismiss') {
+      api('POST', '/manufacturer/proposal', { proposal: +b.getAttribute('data-p'), apply: a === 'papply' })
+        .then(function (m) { mfr = m; show(a === 'papply' ? 'Corrections appliquées.' : 'Corrections écartées.', 'ok'); return loadManufacturers(); }).catch(profErr);
+    }
+    if (a === 'consent' && window.confirm('Enregistrer l\'accord de ce compte, reçu hors plateforme (WeChat, e-mail) ? Gardez la trace de cet accord.')) {
+      api('POST', '/manufacturer/consent', { id: mfr.id, org: b.getAttribute('data-org'), on: true })
+        .then(function (m) { mfr = m; show('Accord enregistré.', 'ok'); return loadManufacturers(); }).catch(profErr);
+    }
+    if (a === 'unconsent' && window.confirm('Retirer l\'accord de ce compte ? Sans aucun accord, la page publique est retirée.')) {
+      api('POST', '/manufacturer/consent', { id: mfr.id, org: b.getAttribute('data-org'), on: false })
+        .then(function (m) { mfr = m; show('Accord retiré.', 'ok'); return loadManufacturers(); }).catch(profErr);
+    }
     if (a === 'unlink' && window.confirm('Détacher ce compte ? Ses offres de ces marques ne porteront plus de badge.')) {
       api('POST', '/manufacturer/unlink', { id: mfr.id, org: b.getAttribute('data-org') }).then(function (m) { mfr = m; return loadManufacturers(); }).catch(profErr);
     }

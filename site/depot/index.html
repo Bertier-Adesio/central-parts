@@ -60,6 +60,16 @@ form.fields .hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 
 .row input[type=text]{flex:1;min-width:0;margin:0}
 .link{font-family:var(--font-mono);font-size:var(--text-sm);overflow-wrap:anywhere;background:var(--bg-sunken);padding:8px;border-radius:var(--radius-sm);margin:8px 0}
 .btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2)}
+.fld{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
+.fld input,.fld textarea{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:6px 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit;font-weight:normal}
+.fld textarea{min-height:96px;resize:vertical}
+dl.kv{display:grid;grid-template-columns:minmax(90px,2fr) minmax(0,3fr);gap:4px 12px;margin:8px 0;font-size:var(--text-sm)}
+dl.kv dt{color:var(--fg-3)}
+dl.kv dd{margin:0;overflow-wrap:anywhere}
+.pre{white-space:pre-wrap}
+.consent{border-top:1px solid var(--border-1);padding:12px 0 0;margin:12px 0 0}
+.mf-item{border-top:1px solid var(--border-1);padding:12px 0}
+.mf-item:first-child{border-top:0}
 ul.plain{list-style:none;padding:0;margin:0}
 ul.plain li{border-top:1px solid var(--border-1);padding:8px 0;font-size:var(--text-sm);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 ul.plain li:first-child{border-top:0}
@@ -184,6 +194,21 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       <h2 data-t="history">上传记录</h2>
       <p class="muted" id="quality" hidden></p>
       <div id="imports"><p class="muted" data-t="none">暂无记录。</p></div>
+    </section>
+    <!-- Fiche société, contacts et fabricants rattachés (migration 20261106000035). Seul le responsable de la fiche modifie. -->
+    <section class="card" id="co-card" hidden>
+      <h2 data-ct="coTitle">公司资料</h2>
+      <p class="muted" data-ct="coLead">仅供 Central.Parts 内部使用，不会向采购方展示。</p>
+      <div id="co-body"></div>
+      <h3 data-ct="ctTitle">联系人</h3>
+      <p class="muted" data-ct="ctLead">「询价」和「订单」：Central.Parts 发送询价和采购订单时优先使用的邮箱。</p>
+      <ul class="plain" id="ct-list"></ul>
+      <div id="ct-form"></div>
+    </section>
+    <section class="card" id="mf-card" hidden>
+      <h2 data-ct="mfTitle">制造商页面</h2>
+      <p class="muted" data-ct="mfLead">Central.Parts 网站上的制造商页面。请核对内容；修改建议由 Central.Parts 审核后生效。</p>
+      <ul class="plain" id="mf-list"></ul>
     </section>
     <section class="card" id="team" hidden>
       <h2 data-t="teamTitle">同事</h2>
@@ -313,7 +338,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
-    renderRegion(); renderImports(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
+    renderRegion(); renderImports(); document.querySelectorAll('[data-ct]').forEach(function (el) { el.textContent = CT[lang][el.getAttribute('data-ct')]; }); if (typeof co !== 'undefined' && co) renderCompany(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
   }
   function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
@@ -434,7 +459,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     org = o; renderOrg(); show('v-app');
     if (o.status !== 'rejected') refresh();
     if (o.role === 'admin') loadTeam();
-    if (o.status === 'validated') { loadRequests(); loadRfqs(); }
+    if (o.status === 'validated') { loadRequests(); loadRfqs(); loadCompany(); }
   }
 
   // ---------------------------------------------------------------- demandes d'achat reçues (ADR 0014)
@@ -636,6 +661,178 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       say('ok', t().uploaded); var keep = $('cur').value; $('form').reset(); $('cur').value = keep; $('prog').hidden = true; refresh();
     }, function (code) { lost(code); $('prog').hidden = true; })
       .then(function () { $('send').disabled = false; });
+  });
+
+  // ---------------------------------------------------------------- fiche société et fabricants (migration 20261106000035)
+  // L'administrateur de la société complète sa fiche et ses contacts (usage interne, jamais montrés aux acheteurs),
+  // relit la page des fabricants rattachés, propose des corrections (validées par Central.Parts) et donne son accord
+  // sur la mention « distribué en Europe par Central.Parts ».
+  var co = null, coEdit = false, ctcEdit = null, mfrEdit = null;
+  var CT = {
+    zh: { coTitle: '公司资料', coLead: '仅供 Central.Parts 内部使用，不会向采购方展示。', coEdit: '编辑', coSave: '保存', cancel: '取消',
+      fYear: '成立年份', fWeb: '网站', fHq: '总部（城市、国家）', fStaff: '员工人数', fCert: '认证（用逗号分隔）', fLangs: '工作语言（zh, en…）',
+      fPay: '付款方式（用逗号分隔）', fTerms: '付款条件', fMin: '最低订单金额（USD）', fAboutEn: '公司简介（英文）', fAboutZh: '公司简介（中文）',
+      ctTitle: '联系人', ctLead: '「询价」和「订单」：Central.Parts 发送询价和采购订单时优先使用的邮箱。', ctAdd: '添加联系人', ctSave: '保存联系人', ctDel: '删除',
+      ctName: '姓名', ctRole: '职位', ctEmail: '邮箱', ctPhone: '电话', ctWechat: '微信号', ctLangs: '语言（zh, en…）',
+      ctRfq: '询价优先邮箱', ctPo: '订单优先邮箱', ctNone: '暂无联系人。', rfq: '询价', po: '订单', ctDelAsk: '删除该联系人？',
+      mfTitle: '制造商页面', mfLead: 'Central.Parts 网站上的制造商页面。请核对内容；修改建议由 Central.Parts 审核后生效。',
+      roleSelf: '原厂直供', roleAuth: '授权代理商', pub: '已发布', unpub: '未发布', founded: '成立', hq: '总部', prod: '生产基地', area: '面积（平方米）',
+      staff: '员工', units: '年出货量', cert: '认证', langs: '语言', pos: '定位', about: '简介',
+      consentTitle: '同意分销说明', consentText: '我同意 Central.Parts 在其网站上发布本制造商页面，注明「由 Central.Parts 在欧洲分销」，并在本公司该品牌的报价上显示「原厂直供」或「授权代理商」标识。此说明不适用于贸易商、经纪商或库存积压的报价。',
+      consentYes: '我同意', consentNo: '撤回同意', consentDone: '已于 {d} 同意。', consentAskNo: '撤回同意？没有任何同意时，制造商页面将下线。',
+      propose: '提出修改', proposeSend: '提交修改建议', note: '备注（可选）', pending: '修改建议已提交，等待 Central.Parts 审核。',
+      proposed: '修改建议已提交，Central.Parts 审核后生效。', saved: '已保存。', noChange: '没有修改。',
+      e: { forbidden: '仅公司管理员可修改。', invalid: '请检查填写内容：' } },
+    en: { coTitle: 'Company profile', coLead: 'For Central.Parts internal use only, never shown to buyers.', coEdit: 'Edit', coSave: 'Save', cancel: 'Cancel',
+      fYear: 'Year founded', fWeb: 'Website', fHq: 'Headquarters (city, country)', fStaff: 'Staff', fCert: 'Certifications (comma-separated)', fLangs: 'Languages (zh, en…)',
+      fPay: 'Payment methods (comma-separated)', fTerms: 'Payment terms', fMin: 'Minimum order (USD)', fAboutEn: 'Company overview (English)', fAboutZh: 'Company overview (Chinese)',
+      ctTitle: 'Contacts', ctLead: '"RFQ" and "Orders": preferred email addresses for Central.Parts requests for quotation and purchase orders.', ctAdd: 'Add a contact', ctSave: 'Save the contact', ctDel: 'Remove',
+      ctName: 'Name', ctRole: 'Job title', ctEmail: 'Email', ctPhone: 'Phone', ctWechat: 'WeChat ID', ctLangs: 'Languages (zh, en…)',
+      ctRfq: 'Preferred email for RFQs', ctPo: 'Preferred email for purchase orders', ctNone: 'No contacts yet.', rfq: 'RFQ', po: 'Orders', ctDelAsk: 'Remove this contact?',
+      mfTitle: 'Manufacturer pages', mfLead: 'Manufacturer pages on the Central.Parts website. Please check them; suggested changes take effect once reviewed by Central.Parts.',
+      roleSelf: 'Manufacturer direct', roleAuth: 'Authorized distributor', pub: 'Published', unpub: 'Not published', founded: 'Founded', hq: 'Headquarters', prod: 'Production', area: 'Area (m²)',
+      staff: 'Staff', units: 'Units shipped per year', cert: 'Certifications', langs: 'Languages', pos: 'Positioning', about: 'Overview',
+      consentTitle: 'Distribution statement', consentText: 'I agree that Central.Parts publishes this manufacturer page stating "Distributed in Europe by Central.Parts", and shows the "Manufacturer direct" or "Authorized distributor" badge on our offers of this brand. This does not apply to offers from resellers, brokers or excess inventory.',
+      consentYes: 'I agree', consentNo: 'Withdraw consent', consentDone: 'Agreed on {d}.', consentAskNo: 'Withdraw consent? Without any consent, the manufacturer page goes offline.',
+      propose: 'Suggest changes', proposeSend: 'Send the suggested changes', note: 'Note (optional)', pending: 'Suggested changes sent, awaiting review by Central.Parts.',
+      proposed: 'Suggested changes sent: they take effect once reviewed by Central.Parts.', saved: 'Saved.', noChange: 'Nothing has changed.',
+      e: { forbidden: 'Only the company administrator can make changes.', invalid: 'Please check the fields: ' } }
+  };
+  var ct = function () { return CT[lang]; };
+  var cdate = function (v) { return new Date(v).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-GB'); };
+  var clist = function (a) { return (a || []).join(', '); };
+  var cval = function (id) { var el = $(id); return el ? el.value.trim() : ''; };
+  var ccsv = function (id) { return cval(id).split(/[,，]/).map(function (x) { return x.trim(); }).filter(Boolean); };
+  function cfield(id, label, v, type, area) {
+    return '<label class="fld">' + esc(label) + (area ? '<textarea id="' + id + '" maxlength="4000">' + esc(v == null ? '' : v) + '</textarea>'
+      : '<input type="' + (type || 'text') + '" id="' + id + '" value="' + esc(v == null ? '' : v) + '">') + '</label>';
+  }
+  function cfail(e) {
+    if (e && e.error === 'forbidden') say('err', ct().e.forbidden);
+    else if (e && e.error === 'invalid') say('err', ct().e.invalid + (e.detail || ''));
+    else lost(e && e.error ? e.error : e);
+  }
+  // Appels de cette partie : le corps d'erreur (detail) est gardé pour le message.
+  function capi(method, path, b) {
+    return fetch(FN + path, { method: method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: b ? JSON.stringify(b) : undefined })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d; return d; }); },
+            function () { throw { error: 'network' }; });
+  }
+  function loadCompany() { capi('GET', '/company').then(function (d) { co = d; renderCompany(); }, function () {}); }
+  function renderCompany() {
+    if (!co) return;
+    var c = ct(), ed = co.can_edit;
+    $('co-card').hidden = false;
+    var view = '<dl class="kv">' +
+      '<dt>' + esc(c.fYear) + '</dt><dd>' + esc(co.founded_year || '—') + '</dd><dt>' + esc(c.fWeb) + '</dt><dd>' + esc(co.website || '—') + '</dd>' +
+      '<dt>' + esc(c.fHq) + '</dt><dd>' + esc(co.hq_city || '—') + '</dd><dt>' + esc(c.fStaff) + '</dt><dd>' + esc(co.staff || '—') + '</dd>' +
+      '<dt>' + esc(c.cert) + '</dt><dd>' + esc(clist(co.certifications) || '—') + '</dd><dt>' + esc(c.langs) + '</dt><dd>' + esc(clist(co.languages) || '—') + '</dd>' +
+      '<dt>' + esc(c.fPay) + '</dt><dd>' + esc(clist(co.payment_methods) || '—') + (co.payment_terms ? ' · ' + esc(co.payment_terms) : '') + '</dd>' +
+      '<dt>' + esc(c.fMin) + '</dt><dd>' + esc(co.min_order_usd == null ? '—' : co.min_order_usd) + '</dd>' +
+      (co.about.en ? '<dt>' + esc(c.fAboutEn) + '</dt><dd class="pre">' + esc(co.about.en) + '</dd>' : '') +
+      (co.about.zh ? '<dt>' + esc(c.fAboutZh) + '</dt><dd class="pre">' + esc(co.about.zh) + '</dd>' : '') + '</dl>';
+    var form = '<form id="co-form">' + cfield('co-year', c.fYear, co.founded_year, 'number') + cfield('co-web', c.fWeb, co.website, 'url') +
+      cfield('co-hq', c.fHq, co.hq_city) + cfield('co-staff', c.fStaff, co.staff, 'number') + cfield('co-cert', c.fCert, clist(co.certifications)) +
+      cfield('co-langs', c.fLangs, clist(co.languages)) + cfield('co-pay', c.fPay, clist(co.payment_methods)) + cfield('co-terms', c.fTerms, co.payment_terms) +
+      cfield('co-min', c.fMin, co.min_order_usd, 'number') + cfield('co-about-en', c.fAboutEn, co.about.en, null, true) + cfield('co-about-zh', c.fAboutZh, co.about.zh, null, true) +
+      '<div class="row"><button class="btn btn-main" type="submit">' + esc(c.coSave) + '</button><button class="btn btn-line" type="button" data-co="cancel">' + esc(c.cancel) + '</button></div></form>';
+    $('co-body').innerHTML = coEdit ? form : view + (ed ? '<button class="btn btn-line" type="button" data-co="edit">' + esc(c.coEdit) + '</button>' : '');
+    $('ct-list').innerHTML = co.contacts.length ? co.contacts.map(function (x) {
+      return '<li style="display:block"><div class="org"><strong>' + esc(x.name) + (x.role ? ' · ' + esc(x.role) : '') + '</strong><span>' +
+        (x.for_rfq ? '<span class="badge done">' + esc(c.rfq) + '</span> ' : '') + (x.for_po ? '<span class="badge done">' + esc(c.po) + '</span>' : '') + '</span></div>' +
+        '<p class="muted" style="margin:4px 0">' + esc([x.email, x.phone, x.wechat ? 'WeChat ' + x.wechat : ''].filter(Boolean).join(' · ') || '—') + '</p>' +
+        (ed ? '<div class="row"><button class="btn btn-line" type="button" data-co="cedit" data-id="' + esc(x.id) + '">' + esc(c.coEdit) + '</button>' +
+          '<button class="btn btn-line" type="button" data-co="cdel" data-id="' + esc(x.id) + '">' + esc(c.ctDel) + '</button></div>' : '') + '</li>';
+    }).join('') : '<li class="muted">' + esc(c.ctNone) + '</li>';
+    var x = ctcEdit && ctcEdit !== 'new' ? co.contacts.filter(function (k) { return k.id === ctcEdit; })[0] || {} : {};
+    $('ct-form').innerHTML = !ed ? '' : !ctcEdit ? '<button class="btn btn-line" type="button" data-co="cadd">' + esc(c.ctAdd) + '</button>' :
+      '<form id="ct-f">' + cfield('ct-name', c.ctName, x.name) + cfield('ct-role', c.ctRole, x.role) + cfield('ct-email', c.ctEmail, x.email, 'email') +
+      cfield('ct-phone', c.ctPhone, x.phone, 'tel') + cfield('ct-wechat', c.ctWechat, x.wechat) + cfield('ct-langs', c.ctLangs, clist(x.languages)) +
+      '<label class="check"><input type="checkbox" id="ct-rfq"' + (x.for_rfq ? ' checked' : '') + '><span>' + esc(c.ctRfq) + '</span></label>' +
+      '<label class="check"><input type="checkbox" id="ct-po"' + (x.for_po ? ' checked' : '') + '><span>' + esc(c.ctPo) + '</span></label>' +
+      '<div class="row"><button class="btn btn-main" type="submit">' + esc(c.ctSave) + '</button><button class="btn btn-line" type="button" data-co="ccancel">' + esc(c.cancel) + '</button></div></form>';
+    renderMfrs();
+  }
+  function renderMfrs() {
+    var c = ct(), list = co.manufacturers || [];
+    $('mf-card').hidden = !list.length;
+    $('mf-list').innerHTML = list.map(function (m) {
+      var facts = [[c.founded, m.founded_year], [c.hq, m.hq_city], [c.prod, m.production_site], [c.area, m.area_m2], [c.staff, m.staff], [c.units, m.annual_units],
+        [c.cert, clist(m.certifications)], [c.langs, clist(m.languages)], [c.pos + ' EN', m.positioning.en], [c.pos + ' 中文', m.positioning.zh]]
+        .filter(function (f) { return f[1] != null && f[1] !== ''; }).map(function (f) { return '<dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>'; }).join('') +
+        ['en', 'zh', 'fr'].filter(function (l) { return m.about[l]; }).map(function (l) { return '<dt>' + esc(c.about) + ' ' + l.toUpperCase() + '</dt><dd class="pre">' + esc(m.about[l]) + '</dd>'; }).join('');
+      var edit = mfrEdit === m.id ? '<form class="mf-prop" data-id="' + esc(m.id) + '">' +
+        cfield('mp-year', c.founded, m.founded_year, 'number') + cfield('mp-hq', c.hq, m.hq_city) + cfield('mp-prod', c.prod, m.production_site) +
+        cfield('mp-area', c.area, m.area_m2, 'number') + cfield('mp-staff', c.staff, m.staff, 'number') + cfield('mp-units', c.units, m.annual_units, 'number') +
+        cfield('mp-cert', c.cert, clist(m.certifications)) + cfield('mp-langs', c.langs, clist(m.languages)) +
+        cfield('mp-pos-en', c.pos + ' EN', m.positioning.en) + cfield('mp-pos-zh', c.pos + ' 中文', m.positioning.zh) +
+        cfield('mp-about-en', c.about + ' EN', m.about.en, null, true) + cfield('mp-about-zh', c.about + ' 中文', m.about.zh, null, true) +
+        cfield('mp-note', c.note, '', null, true) +
+        '<div class="row"><button class="btn btn-main" type="submit">' + esc(c.proposeSend) + '</button><button class="btn btn-line" type="button" data-mf="pcancel">' + esc(c.cancel) + '</button></div></form>' : '';
+      return '<li style="display:block" class="mf-item" data-id="' + esc(m.id) + '"><div class="org"><strong>' + esc(m.name) + '</strong><span>' +
+        '<span class="badge done">' + esc(m.role === 'self' ? c.roleSelf : c.roleAuth) + '</span> <span class="badge">' + esc(m.public_page ? c.pub : c.unpub) + '</span></span></div>' +
+        '<p class="muted" style="margin:4px 0">' + esc(clist(m.brands)) + '</p><dl class="kv">' + facts + '</dl>' +
+        (m.pending ? '<p class="msg info">' + esc(c.pending) + '</p>' : '') +
+        '<div class="consent"><strong>' + esc(c.consentTitle) + '</strong><p class="muted">' + esc(c.consentText) + '</p>' +
+        (m.consent_at ? '<p class="msg ok">' + esc(fill(c.consentDone, { d: cdate(m.consent_at) })) + '</p>' +
+          (co.can_edit ? '<button class="btn btn-line" type="button" data-mf="unconsent" data-id="' + esc(m.id) + '">' + esc(c.consentNo) + '</button>' : '')
+          : (co.can_edit ? '<button class="btn btn-main" type="button" data-mf="consent" data-id="' + esc(m.id) + '">' + esc(c.consentYes) + '</button>' : '')) + '</div>' +
+        (co.can_edit && mfrEdit !== m.id ? '<p><button class="btn btn-line" type="button" data-mf="propose" data-id="' + esc(m.id) + '">' + esc(c.propose) + '</button></p>' : '') + edit + '</li>';
+    }).join('');
+  }
+  $('co-card').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-co]'); if (!b) return;
+    var a = b.getAttribute('data-co');
+    if (a === 'edit') { coEdit = true; renderCompany(); }
+    if (a === 'cancel') { coEdit = false; renderCompany(); }
+    if (a === 'cadd') { ctcEdit = 'new'; renderCompany(); $('ct-name').focus(); }
+    if (a === 'cedit') { ctcEdit = b.getAttribute('data-id'); renderCompany(); }
+    if (a === 'ccancel') { ctcEdit = null; renderCompany(); }
+    if (a === 'cdel' && window.confirm(ct().ctDelAsk)) {
+      capi('POST', '/company/contact/delete', { id: b.getAttribute('data-id') }).then(function (d) { co = d; renderCompany(); }, cfail);
+    }
+  });
+  $('co-card').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (ev.target.id === 'co-form') {
+      var p = { founded_year: cval('co-year'), website: cval('co-web'), hq_city: cval('co-hq'), staff: cval('co-staff'), certifications: ccsv('co-cert'),
+        languages: ccsv('co-langs').map(function (x) { return x.toLowerCase(); }), payment_methods: ccsv('co-pay'), payment_terms: cval('co-terms'),
+        min_order_usd: cval('co-min'), about: { en: cval('co-about-en'), zh: cval('co-about-zh'), fr: co.about.fr || '' } };
+      capi('POST', '/company', { profile: p }).then(function (d) { co = d; coEdit = false; renderCompany(); say('ok', ct().saved); }, cfail);
+    }
+    if (ev.target.id === 'ct-f') {
+      var x = { id: ctcEdit === 'new' ? null : ctcEdit, name: cval('ct-name'), role: cval('ct-role'), email: cval('ct-email'), phone: cval('ct-phone'),
+        wechat: cval('ct-wechat'), languages: ccsv('ct-langs').map(function (y) { return y.toLowerCase(); }), for_rfq: $('ct-rfq').checked, for_po: $('ct-po').checked };
+      capi('POST', '/company/contact', { contact: x }).then(function (d) { co = d; ctcEdit = null; renderCompany(); say('ok', ct().saved); }, cfail);
+    }
+  });
+  $('mf-card').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-mf]'); if (!b) return;
+    var a = b.getAttribute('data-mf'), id = b.getAttribute('data-id');
+    if (a === 'propose') { mfrEdit = id; renderMfrs(); }
+    if (a === 'pcancel') { mfrEdit = null; renderMfrs(); }
+    if (a === 'consent' || (a === 'unconsent' && window.confirm(ct().consentAskNo))) {
+      capi('POST', '/manufacturer/consent', { id: id, on: a === 'consent' }).then(function (d) { co = d; renderCompany(); }, cfail);
+    }
+  });
+  $('mf-card').addEventListener('submit', function (ev) {
+    var f = ev.target.closest('form.mf-prop'); if (!f) return;
+    ev.preventDefault();
+    var id = f.getAttribute('data-id'), m = co.manufacturers.filter(function (k) { return k.id === id; })[0], p = {};
+    // Seuls les champs modifiés partent ; les textes ne gardent que la langue modifiée.
+    var same = function (a, b) { return String(a == null ? '' : a) === String(b == null ? '' : b); };
+    [['founded_year', 'mp-year'], ['hq_city', 'mp-hq'], ['production_site', 'mp-prod'], ['area_m2', 'mp-area'], ['staff', 'mp-staff'], ['annual_units', 'mp-units']]
+      .forEach(function (k) { if (!same(cval(k[1]), m[k[0]])) p[k[0]] = cval(k[1]); });
+    if (clist(ccsv('mp-cert')) !== clist(m.certifications)) p.certifications = ccsv('mp-cert');
+    if (clist(ccsv('mp-langs')) !== clist(m.languages)) p.languages = ccsv('mp-langs').map(function (x) { return x.toLowerCase(); });
+    ['about', 'positioning'].forEach(function (k) {
+      var pre = k === 'about' ? 'mp-about-' : 'mp-pos-', o = {};
+      ['en', 'zh'].forEach(function (l) { if (!same(cval(pre + l), m[k][l])) o[l] = cval(pre + l); });
+      if (Object.keys(o).length) p[k] = o;
+    });
+    var note = cval('mp-note');
+    if (!Object.keys(p).length && !note) { say('err', ct().noChange); return; }
+    capi('POST', '/manufacturer/propose', { id: id, proposed: p, note: note }).then(function (d) { co = d; mfrEdit = null; renderCompany(); say('ok', ct().proposed); }, cfail);
   });
 
   // ---------------------------------------------------------------- collègues (administrateur)
