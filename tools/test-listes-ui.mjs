@@ -97,9 +97,12 @@ async function offers(route) {
   // Réponse anonyme, comme public.partner_offers : ni nom, ni SKU, ni lien du vendeur.
   const base = [...state.lots.values()].filter((l) => l.qty > 0 && l.mpn.replace(/\s+/g, '').startsWith(q));
   // Boutons des fabricants : comptés sur la recherche, sans le filtre fabricant (comme partner_offers).
+  // Le premier fabricant de la liste de test fait office de partenaire (migration 20261106000039).
   const counts = {};
   for (const l of base) counts[l.mfr] = (counts[l.mfr] || 0) + 1;
-  const manufacturers = Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name, offers]) => ({ name, offers }));
+  const first = [...state.lots.values()][0]?.mfr;
+  const manufacturers = Object.entries(counts).map(([name, offers]) => ({ name, key: name.toUpperCase(), offers, partner: name === first }))
+    .sort((a, b) => b.partner - a.partner || b.offers - a.offers || a.name.localeCompare(b.name));
   const list = base.filter((l) => !mfr || l.mfr.toUpperCase() === mfr).map((l) => ({
     mpn: l.mpn, manufacturer: l.mfr, supplier: 'partner', seller_category: null, source: 'broker', ship_from: 'HK', currency: 'EUR',
     availability: band(l.qty), moq: l.moq, price_from: Math.min(l.price, ...Object.values(l.tiers)) * 1.1,
@@ -224,7 +227,7 @@ for (const width of [1280, 390]) {
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
   const totals = (await page.textContent('#totals')).replace(/[\u202f\u00a0]/g, ' ');
   ok(totals.includes('10') && totals.includes('références en ligne') && totals.includes('pièces en stock'), width + ' px : nombre de références et taille de l\'inventaire');
-  ok((await page.textContent('#count')).includes('10 offres affichées sur 1') , width + ' px : offres affichées sur le total');
+  ok((await page.textContent('#count')).includes('10 dernières offres sur 1'), width + ' px : dernières offres sur le total');
   if (width === 1280) {
     await page.fill('#q', 'ad8');
     await page.click('#form button');
@@ -237,6 +240,10 @@ for (const width of [1280, 390]) {
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 10);
     const chips = await page.$$eval('#mfrs button[data-m]', (b) => b.map((x) => x.getAttribute('data-m')));
     ok(chips[0] === '' && chips.length > 2, 'fabricants : boutons « Tous » et un par fabricant présent');
+    ok(await page.$$eval('#mfrs-partners button.partner', (b) => b.length) === 1 && (await page.textContent('#mfrs-partners')).includes('Fabricants partenaires')
+      && (await page.textContent('#mfrs-others')).includes('Fabricants distribués'), 'fabricants partenaires et fabricants distribués sur deux rangées');
+    ok(await page.evaluate(() => document.getElementById('totals').compareDocumentPosition(document.getElementById('form')) & Node.DOCUMENT_POSITION_FOLLOWING),
+      'références et stock en tête de page, au-dessus de la recherche');
     const pick = chips[1];
     await page.click('#mfrs button[data-m="' + pick + '"]');
     await page.waitForFunction((m) => document.querySelector('#mfrs button[aria-pressed=true]').getAttribute('data-m') === m, pick);
