@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="/assets/tokens.css">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/header.css">
+<link rel="stylesheet" href="/assets/site.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
 .wrap{max-width:720px;margin:0 auto;padding:0 16px}
@@ -47,7 +48,7 @@ progress{width:100%;height:8px;margin:12px 0 0}
 details{font-size:var(--text-sm);margin:6px 0 0}
 .qr-card{text-align:center}
 .qr-title{font-weight:var(--weight-semibold);font-size:var(--text-lg);margin:0 0 12px}
-.qr-box{width:220px;height:220px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:var(--bg-sunken);border-radius:var(--radius-sm)}
+.qr-box{width:220px;height:220px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:var(--bg-sunken);border-radius:var(--radius-sm);padding:var(--space-4);box-sizing:border-box;text-align:center}
 .qr-box img{width:220px;height:220px}
 #qr-refresh{margin:0 0 12px}
 form.fields label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
@@ -78,6 +79,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 .phone-only{display:none}
 @media (pointer:coarse){.phone-only{display:block}}
 [hidden]{display:none!important}
+.before h2{font-size:var(--text-md);margin:0 0 var(--space-3)}
+ul.tpls{list-style:none;margin:0 0 var(--space-3);padding:0;display:flex;flex-wrap:wrap;gap:var(--space-2)}
+ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--space-2) var(--space-4)}
+@media (max-width:640px){ul.tpls{flex-direction:column}ul.tpls .btn{width:100%;box-sizing:border-box}}
 </style>
 </head>
 <body>
@@ -117,7 +122,6 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 <main id="main" class="wrap">
   <h1 data-t="title">供应商中心</h1>
   <p class="lead" data-t="lead">注册公司，上传 CSV 或 Excel 库存表，我们将其转换为您在 Central.Parts 上的库存。</p>
-  <p class="muted"><span data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。</span> <a href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a> · <a href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a> · <a href="aide/#modeles" data-t="tplMore">Excel 模板与产品目录</a></p>
   <noscript><p class="msg err">请启用 JavaScript。 · Please enable JavaScript.</p></noscript>
   <div id="msg" class="msg" hidden role="status"></div>
 
@@ -130,6 +134,17 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     <p class="muted" data-t="loginNote">首次使用？扫码后即可注册公司。</p>
     <p class="muted"><a href="aide/" data-t="helpLink">使用帮助：如何登录、注册公司和上传库存</a></p>
     <p class="msg info phone-only" id="menu-hint" data-t="menuHint">在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。</p>
+  </section>
+
+  <!-- Avant de commencer : modèles de fichiers, sous la connexion (revue UI/UX n° 13). -->
+  <section class="card before" id="before">
+    <h2 data-t="before">开始之前</h2>
+    <ul class="tpls">
+      <li><a class="btn btn-line" href="modele-fabricant.csv" download data-t="tplMaker">原厂模板（中文表头，CSV）</a></li>
+      <li><a class="btn btn-line" href="stock-template.csv" download data-t="tplLink">国际模板（英文表头，CSV）</a></li>
+      <li><a class="btn btn-line" href="aide/#modeles" data-t="tplMore">Excel 模板与产品目录</a></li>
+    </ul>
+    <p class="muted" data-t="tpl">推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。</p>
   </section>
 
   <!-- Inscription de la société -->
@@ -254,7 +269,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       refresh: '刷新二维码', loginNote: '首次使用？扫码后即可注册公司。',
       menuHint: '在手机上：打开微信公众号「Adesio Central.Parts」，点击菜单「供应商」→「上传库存」，即可收到登录链接。',
       tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。',
-      tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）', tplMore: 'Excel 模板与产品目录',
+      before: '开始之前', tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）', tplMore: 'Excel 模板与产品目录',
       helpLink: '使用帮助：如何登录、注册公司和上传库存',
       regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
@@ -301,7 +316,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       refresh: 'Refresh the QR code', loginNote: 'First time? Scan, then register your company.',
       menuHint: 'On a phone: open the “Adesio Central.Parts” account in WeChat and tap the menu “供应商” → “上传库存” to receive your login link.',
       tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Manufacturers and authorized distributors, please also fill in as far as possible: full manufacturer name, description, datasheet link, case, lifecycle, ECCN and HTS code. These fields are optional, but the more complete your data, the more likely buyers are to choose your offers; they will also count towards your supplier rating later.',
-      tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)', tplMore: 'Excel templates and product catalogue',
+      before: 'Before you start', tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)', tplMore: 'Excel templates and product catalogue',
       helpLink: 'Help: how to log in, register your company and upload your stock',
       regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
@@ -393,7 +408,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   var scene = null, pollTimer = null, invite = null;
   function startLogin() {
     show('v-login'); clearTimeout(pollTimer);
-    $('qr').hidden = true; $('qr-wait').hidden = false; $('qr-refresh').hidden = true;
+    $('qr').hidden = true; $('qr-wait').hidden = false; $('qr-wait').textContent = t().loading; $('qr-refresh').hidden = true;
     api('POST', '/qr', { invite: invite }).then(function (d) {
       scene = d.scene; $('qr').src = d.image; $('qr').hidden = false; $('qr-wait').hidden = true;
       $('qr').alt = t().scan;
@@ -411,7 +426,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
           $('qr-refresh').hidden = false; err(c);
         });
       })();
-    }, function (c) { $('qr-wait').hidden = true; $('qr-refresh').hidden = false; err(c); });
+    }, function (c) {
+      // Échec de création du QR code (revue UI/UX n° 22) : message dans le cadre du QR, et le bouton « Rafraîchir ».
+      $('qr-wait').textContent = t().e[c] || t().e.other; $('qr-wait').hidden = false; $('qr-refresh').hidden = false;
+    });
   }
   $('qr-refresh').addEventListener('click', function () { say('', ''); startLogin(); });
 
