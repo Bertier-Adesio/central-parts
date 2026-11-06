@@ -2,10 +2,12 @@
 // Déployée sans vérification de jeton Supabase (--no-verify-jwt) : la liste est publique, limitée à 30 requêtes
 // par minute et par adresse IP (compteur en base, adresse jamais gardée en clair).
 //
-//   GET /offers?q=TPS&cur=EUR → { query, currency, ttl_days, offers: [{ mpn, manufacturer, supplier: "partner",
+//   GET /offers?q=TPS&cur=EUR → { query, currency, ttl_days, total_refs, total_offers, total_units, offers: [{ mpn, manufacturer, supplier: "partner",
 //        seller_category, source, ship_from, availability, moq, price_from, updated_at }] }
 //   Sans q : les 50 offres confirmées le plus récemment. Seules les offres à jour (seuil d'expiration) sont rendues.
 //   brand_page : marque dont le fabricant a une page publique ; factory_direct : offre du fabricant lui-même (ADR 0032).
+//   GET /offers/manufacturers → annuaire des fabricants en direct (/fabricants/, migration 20261106000037) : logo, nom,
+//        positionnement, marques, siège, offres en ligne de leur canal officiel ; pages publiées seulement.
 //   GET /offers/manufacturer?brand=MARQUE → page publique du fabricant (/fabricants/) : présentation, logo, chiffres ;
 //        jamais de contact, d'adresse, de site web ni de chiffre d'affaires. 404 si la page n'est pas publiée.
 //
@@ -30,6 +32,13 @@ Deno.serve(async (req) => {
   const u = new URL(req.url);
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || req.headers.get('x-real-ip') || '';
   const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+  const logoUrl = (p: string | null) => p ? `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/seller-logos/${p}` : null;
+  if (u.pathname.endsWith('/manufacturers')) {
+    const { data, error } = await db.rpc('public_manufacturers', { p_ip: ip });
+    if (error) return json({ error: error.code === 'CP429' ? 'rate_limited' : 'server' }, error.code === 'CP429' ? 429 : 500);
+    // deno-lint-ignore no-explicit-any
+    return json((data || []).map(({ logo_path, ...m }: any) => ({ ...m, logo_url: logoUrl(logo_path) })));
+  }
   if (u.pathname.endsWith('/manufacturer')) {
     const brand = (u.searchParams.get('brand') || '').trim().slice(0, 60);
     const { data, error } = await db.rpc('public_manufacturer', { p_ip: ip, p_brand: brand });

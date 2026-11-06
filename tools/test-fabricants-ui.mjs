@@ -28,6 +28,12 @@ const external = [];
 async function offers(route) {
   const u = new URL(route.request().url());
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(data) });
+  // Annuaire (migration 20261106000037) : un fabricant avec logo, un sans.
+  if (u.pathname.endsWith('/manufacturers')) {
+    return reply([{ brand: 'Marque Démo', brands: ['Marque Démo', 'MD'], name: PAGE.name, logo_url: PAGE.logo_url, positioning: PAGE.positioning,
+      hq_city: 'Shenzhen', founded_year: 2013, offers: 1813 },
+      { brand: 'Autre Marque', brands: ['Autre Marque'], name: 'Autre fabricant (fictif)', logo_url: null, positioning: {}, hq_city: null, offers: 0 }]);
+  }
   if (u.pathname.endsWith('/manufacturer')) {
     const b = (u.searchParams.get('brand') || '').toLowerCase();
     // « MD » : même fabricant, présenté par son distributeur agréé (migration 20261105000033).
@@ -61,6 +67,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok(rows[1].includes('Fournisseur partenaire') && rows[2].includes('Fournisseur partenaire'), 'autres offres : vendeur anonyme');
   ok(rows[3].includes('Distributeur agréé') && !rows[3].includes('Direct fabricant'), 'offre du distributeur agréé : « Distributeur agréé »');
   const links = await page.$$eval('#rows a.mfr', (a) => a.map((x) => x.getAttribute('href')));
+  ok((await page.getAttribute('#to-mfrs', 'href')) === '/fabricants/?lang=fr', 'offres : lien vers l\'annuaire des fabricants');
   ok(links.length === 3 && links[0] === '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr', 'marque liée à la page du fabricant, marque sans page non liée');
   await page.click('[data-lang=zh]');
   ok((await page.textContent('#rows tr:first-child')).includes('原厂直供') && (await page.getAttribute('#rows a.mfr', 'href')).endsWith('lang=zh'), '中文 : 原厂直供, lien dans la langue');
@@ -74,7 +81,7 @@ for (const width of [1280, 390]) {
   await page.goto(BASE + '/fabricants/?b=Marque%20D%C3%A9mo&lang=fr');
   await page.waitForSelector('#page:not([hidden])');
   const text = (await page.textContent('main')).replace(/[  ]/g, ' ');
-  ok((await page.textContent('h1')) === PAGE.name && await page.isVisible('#logo') && (await page.getAttribute('#logo', 'src')) === PAGE.logo_url, width + ' px : nom et logo');
+  ok((await page.textContent('#name')) === PAGE.name && await page.isVisible('#logo') && (await page.getAttribute('#logo', 'src')) === PAGE.logo_url, width + ' px : nom et logo');
   ok(text.includes('2013') && text.includes('12 000 m²') && text.includes('120+') && text.includes('3 milliard(s)') && text.includes('Chongqing'), width + ' px : chiffres clés');
   ok((await page.$$('#about p')).length === 2 && text.includes('Fabricant fictif'), width + ' px : présentation FR en paragraphes');
   ok(text.includes('ISO 9001') && text.includes('中文, English') && text.includes('2 offre(s) en ligne en direct'), width + ' px : certifications, langues, offres');
@@ -102,9 +109,19 @@ for (const width of [1280, 390]) {
   await page.goto(BASE + '/fabricants/?b=Inconnue&lang=fr');
   await page.waitForSelector('#msg:not([hidden])');
   ok((await page.textContent('#msg')).includes('Aucune page publiée') && await page.isHidden('#page'), 'marque sans page : message, rien d\'autre');
-  await page.goto(BASE + '/fabricants/');
-  await page.waitForSelector('#msg:not([hidden])');
-  ok((await page.textContent('#msg')).includes('Aucune page publiée'), 'sans marque : message');
+  await page.goto(BASE + '/fabricants/?lang=fr');
+  await page.waitForSelector('#dir:not([hidden])');
+  const cards = await page.$$eval('#dir-list a', (a) => a.map((x) => [x.getAttribute('href'), x.textContent.replace(/[\u202f\u00a0]/g, ' ')]));
+  ok(cards.length === 2 && cards[0][0] === '?b=Marque%20D%C3%A9mo&lang=fr' && cards[0][1].includes('1 813 offre(s) en ligne') && await page.isVisible('#dir-list img.logo'),
+    'annuaire : fabricants en direct avec logo, offres, lien vers leur page');
+  ok(cards[1][1].includes('Autre fabricant') && (await page.textContent('#dir-list .logo-none')) === 'Aut', 'annuaire : fabricant sans logo, initiales à la place');
+  ok((await page.textContent('h1')) === 'Fabricants en direct' && await noScroll(page), 'annuaire : titre, 390 px sans défilement');
+  await page.click('#dir-list a');
+  await page.waitForSelector('#page:not([hidden])');
+  ok((await page.textContent('#name')) === PAGE.name && (await page.getAttribute('#to-dir', 'href')) === '/fabricants/?lang=fr', 'carte → page du fabricant, retour vers l\'annuaire');
+  await page.goto(BASE + '/fabricants/?lang=zh');
+  await page.waitForSelector('#dir:not([hidden])');
+  ok((await page.textContent('h1')) === '原厂直供制造商' && (await page.textContent('#dir-list')).includes('在线报价'), 'annuaire 中文');
   ok(errors.length === 0, 'marque sans page : aucune erreur console ' + errors.join(' | '));
   await page.close();
   const nojs = await browser.newPage({ javaScriptEnabled: false });

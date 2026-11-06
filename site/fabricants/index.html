@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<!-- Page publique d'un fabricant partenaire (ADR 0032). Écrite à la main, pas générée. Non indexée.
+<!-- Annuaire des fabricants en direct (/fabricants/) et page publique d'un fabricant (/fabricants/?b=MARQUE), ADR 0032.
+     Écrite à la main, pas générée. Non indexée.
      Lit la fonction Edge « offers » (route /manufacturer) : présentation, logo et chiffres saisis par Central.Parts
      dans le back office et publiés par un administrateur. Jamais de contact, d'adresse, de site web ni de chiffre
      d'affaires : les demandes passent par Central.Parts. Adresse : /fabricants/?b=MARQUE.
@@ -28,6 +29,14 @@ main.wrap{padding:32px 16px 64px}
 .logo{width:96px;height:96px;object-fit:contain;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);flex:none}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 4px;overflow-wrap:anywhere}
 .pos{color:var(--fg-2);margin:0}
+.grid{list-style:none;padding:0;margin:24px 0 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.grid a{display:flex;flex-direction:column;gap:8px;height:100%;box-sizing:border-box;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:16px;color:var(--fg-1);text-decoration:none}
+.grid a:hover{border-color:var(--border-2)}
+.grid .logo{width:72px;height:72px}
+.grid .logo-none{width:72px;height:72px;display:flex;align-items:center;justify-content:center;background:var(--bg-sunken);border-radius:var(--radius-md);font-weight:var(--weight-semibold);color:var(--fg-2)}
+.grid strong{overflow-wrap:anywhere}
+.lead{color:var(--fg-2);margin:0 0 8px;max-width:760px}
+.back{display:inline-block;margin:0 0 16px;color:var(--fg-2)}
 .tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap;margin:0 4px 4px 0}
 .card{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);padding:20px;margin:0 0 16px}
 .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:0 0 16px}
@@ -65,7 +74,15 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
   <noscript><p class="msg">Cette page a besoin de JavaScript. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
   <p class="msg" id="msg" role="status" hidden></p>
 
+  <!-- Annuaire : fabricants dont la page est publiée. -->
+  <div id="dir" hidden>
+    <h1 data-t="dirTitle">Fabricants en direct</h1>
+    <p class="lead" data-t="dirLead">Fabricants distribués en Europe par Central.Parts : offres du fabricant lui-même ou de son distributeur agréé, prix en euros, mises à jour en continu.</p>
+    <ul class="grid" id="dir-list"></ul>
+  </div>
+
   <div id="page" hidden>
+    <a class="back" id="to-dir" href="/fabricants/" data-t="toDir">← Tous les fabricants</a>
     <div class="head">
       <img class="logo" id="logo" alt="" hidden>
       <div>
@@ -92,8 +109,11 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
 (function () {
   'use strict';
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/offers/manufacturer';
+  var FN_LIST = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/offers/manufacturers';
   var T = {
-    fr: { eyebrow: 'Distribué en Europe par Central.Parts', aboutTitle: 'Présentation', certTitle: 'Certifications',
+    fr: { dirTitle: 'Fabricants en direct', dirLead: 'Fabricants distribués en Europe par Central.Parts : offres du fabricant lui-même ou de son distributeur agréé, prix en euros, mises à jour en continu.',
+      dirOffers: '{n} offre(s) en ligne', dirEmpty: 'Aucun fabricant publié pour l’instant.', toDir: '← Tous les fabricants', dirDoc: 'Fabricants en direct — Central.Parts',
+      eyebrow: 'Distribué en Europe par Central.Parts', aboutTitle: 'Présentation', certTitle: 'Certifications',
       buyTitle: 'Acheter auprès de ce fabricant', toOffers: 'Voir les offres', home: '/',
       buyText: 'Central.Parts distribue ce fabricant en Europe : ses offres viennent du fabricant lui-même ou de son distributeur agréé, prix en euros, avec la date de mise à jour de chaque offre. Les demandes de prix et les commandes passent par Central.Parts.',
       scope: 'La distribution par Central.Parts ne couvre que ces offres, marquées « Direct fabricant » ou « Distributeur agréé ». Les offres de la même marque venant d’autres sources (revendeurs, brokers, excédents de stock) n’en font pas partie.',
@@ -102,7 +122,9 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
       offers: '{n} offre(s) en ligne en direct du fabricant.', offersAuth: '{n} offre(s) en ligne par son distributeur agréé.', offersBoth: '{d} offre(s) en direct du fabricant et {a} par son distributeur agréé.', noOffers: 'Aucune offre en ligne pour l’instant : demandez un prix depuis la page des offres.',
       updated: 'Mis à jour le {d}.', notFound: 'Aucune page publiée pour cette marque.', network: 'Erreur réseau, réessayez.', other: 'Page indisponible, réessayez plus tard.',
       rate: 'Trop de demandes : réessayez dans une minute.', m2: '{n} m²', billion: '{n} milliard(s)', million: '{n} million(s)' },
-    en: { eyebrow: 'Distributed in Europe by Central.Parts', aboutTitle: 'Company overview', certTitle: 'Certifications',
+    en: { dirTitle: 'Direct manufacturers', dirLead: 'Manufacturers distributed in Europe by Central.Parts: offers from the manufacturer itself or its authorized distributor, priced in euros, continuously updated.',
+      dirOffers: '{n} live offer(s)', dirEmpty: 'No manufacturer published yet.', toDir: '← All manufacturers', dirDoc: 'Direct manufacturers — Central.Parts',
+      eyebrow: 'Distributed in Europe by Central.Parts', aboutTitle: 'Company overview', certTitle: 'Certifications',
       buyTitle: 'Buy from this manufacturer', toOffers: 'See the offers', home: '/en/',
       buyText: 'Central.Parts distributes this manufacturer in Europe: its offers come from the manufacturer itself or its authorized distributor, priced in euros, with the update date of each offer. Price requests and orders go through Central.Parts.',
       scope: 'Distribution by Central.Parts only covers these offers, marked “Manufacturer direct” or “Authorized distributor”. Offers of the same brand from other sources (resellers, brokers, excess inventory) are not part of it.',
@@ -111,7 +133,9 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
       offers: '{n} live offer(s) direct from the manufacturer.', offersAuth: '{n} live offer(s) through its authorized distributor.', offersBoth: '{d} offer(s) direct from the manufacturer and {a} through its authorized distributor.', noOffers: 'No live offer yet: request a price from the offers page.',
       updated: 'Updated {d}.', notFound: 'No page published for this brand.', network: 'Network error, please try again.', other: 'Page unavailable, please try again later.',
       rate: 'Too many requests: try again in a minute.', m2: '{n} m²', billion: '{n} billion', million: '{n} million' },
-    zh: { eyebrow: '由 Central.Parts 在欧洲分销', aboutTitle: '公司简介', certTitle: '认证',
+    zh: { dirTitle: '原厂直供制造商', dirLead: '由 Central.Parts 在欧洲分销的制造商：报价来自制造商本身或其授权代理商，以欧元计价，持续更新。',
+      dirOffers: '在线报价 {n} 条', dirEmpty: '暂无已发布的制造商。', toDir: '← 全部制造商', dirDoc: '原厂直供制造商 — Central.Parts',
+      eyebrow: '由 Central.Parts 在欧洲分销', aboutTitle: '公司简介', certTitle: '认证',
       buyTitle: '向该制造商采购', toOffers: '查看报价', home: '/zh/',
       buyText: 'Central.Parts 在欧洲分销该制造商：报价来自制造商本身或其授权代理商，以欧元计价，并标明每条报价的更新日期。询价和订单均通过 Central.Parts 处理。',
       scope: 'Central.Parts 的分销仅涵盖标有「原厂直供」或「授权代理商」的报价。同一品牌来自其他渠道（贸易商、经纪商、库存积压）的报价不在此列。',
@@ -128,7 +152,7 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
   var nav = (navigator.language || 'fr').slice(0, 2);
   var lang = T[params.get('lang')] ? params.get('lang') : T[nav] ? nav : 'en';
   try { var saved = localStorage.getItem('cp-lang-offres'); if (!params.get('lang') && T[saved]) lang = saved; } catch (e) {}
-  var brand = (params.get('b') || '').trim().slice(0, 60), page = null, err = null;
+  var brand = (params.get('b') || '').trim().slice(0, 60), page = null, err = null, dir = null;
   var t = function () { return T[lang]; };
   var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
@@ -143,7 +167,27 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
   }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind === 'err' ? ' err' : ''); m.textContent = text || ''; }
 
+  // Annuaire (sans marque dans l'adresse) : une carte par fabricant, vers sa page.
+  function renderDir() {
+    $('page').hidden = true;
+    if (err) { $('dir').hidden = true; say('err', err === 'rate_limited' ? t().rate : err === 'network' ? t().network : t().other); return; }
+    if (!dir) return;
+    say('', '');
+    $('dir').hidden = false;
+    document.title = t().dirDoc;
+    $('dir-list').innerHTML = dir.length ? dir.map(function (m) {
+      var logo = m.logo_url ? '<img class="logo" src="' + esc(m.logo_url) + '" alt="' + esc(m.brand) + '">' : '<span class="logo-none" aria-hidden="true">' + esc(String(m.brand).slice(0, 3)) + '</span>';
+      return '<li><a href="?b=' + encodeURIComponent(m.brand) + '&amp;lang=' + lang + '">' + logo + '<strong>' + esc(m.name) + '</strong>' +
+        (tri(m.positioning) ? '<span class="pos">' + esc(tri(m.positioning)) + '</span>' : '') +
+        '<span>' + (m.brands || []).map(function (b) { return '<span class="tag">' + esc(b) + '</span>'; }).join('') + '</span>' +
+        '<span class="muted">' + esc([m.hq_city, m.offers ? fill(t().dirOffers, { n: num(m.offers) }) : ''].filter(Boolean).join(' · ')) + '</span></a></li>';
+    }).join('') : '<li class="muted">' + esc(t().dirEmpty) + '</li>';
+  }
+
   function render() {
+    if (!brand) return renderDir();
+    $('dir').hidden = true;
+    $('to-dir').href = '/fabricants/?lang=' + lang;
     if (err) { $('page').hidden = true; say(err === 'not_found' ? '' : 'err', err === 'not_found' ? t().notFound : err === 'rate_limited' ? t().rate : err === 'network' ? t().network : t().other); return; }
     if (!page) return;
     say('', '');
@@ -185,7 +229,13 @@ h2{font-size:var(--text-lg);margin:0 0 12px}
   });
 
   applyLang();
-  if (!brand) { err = 'not_found'; render(); return; }
+  if (!brand) {
+    fetch(FN_LIST)
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
+            function () { throw 'network'; })
+      .then(function (d) { dir = d; err = null; render(); }, function (c) { err = c; render(); });
+    return;
+  }
   fetch(FN + '?brand=' + encodeURIComponent(brand))
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
           function () { throw 'network'; })

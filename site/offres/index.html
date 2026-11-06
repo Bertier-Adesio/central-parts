@@ -34,6 +34,10 @@ form.search input{flex:1;min-width:0}
 .msg{padding:12px 14px;border-radius:var(--radius-sm);margin:16px 0;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
 .msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
 .count{margin:24px 0 8px;font-size:var(--text-sm);color:var(--fg-2)}
+.totals{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0 0}
+.totals div{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-sm);padding:10px 14px}
+.totals b{display:block;font-size:var(--text-xl);font-variant-numeric:tabular-nums}
+.totals span{color:var(--fg-3);font-size:var(--text-sm)}
 table.offers{width:100%;border-collapse:collapse;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);overflow:hidden}
 table.offers th,table.offers td{text-align:left;padding:12px;border-top:1px solid var(--border-1);vertical-align:top;font-size:var(--text-sm)}
 table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-medium);background:var(--bg-sunken)}
@@ -96,6 +100,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
 
   <p class="msg" id="msg" role="status" hidden></p>
+  <div class="totals" id="totals" hidden></div>
   <p class="count" id="count" hidden></p>
   <table class="offers" id="table" hidden>
     <thead><tr>
@@ -106,6 +111,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   </table>
   <p class="muted" id="ttl" hidden></p>
   <p class="muted api-link"><a href="/conditions/" id="to-terms" data-t="termsLink">Conditions commerciales : livraison, paiement, retours</a></p>
+  <p class="muted"><a href="/fabricants/" id="to-mfrs" data-t="mfrs">Fabricants en direct, distribués en Europe par Central.Parts</a></p>
   <p class="muted"><a href="/api/" data-t="api">Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)</a></p>
 </main>
 
@@ -120,9 +126,10 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.',
       thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
       partner: 'Fournisseur partenaire', direct: 'Direct fabricant', auth: 'Distributeur agréé', official: 'Distribué en Europe par Central.Parts', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
-      termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
+      mfrs: 'Fabricants en direct, distribués en Europe par Central.Parts', termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
       cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
-      count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
+      count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment',
+      refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} offres affichées sur {t} : précisez la référence pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
       rates: 'Taux de référence de la BCE du {d}.',
       mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
@@ -133,9 +140,10 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
       thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
       partner: 'Partner Supplier', direct: 'Manufacturer direct', auth: 'Authorized distributor', official: 'Distributed in Europe by Central.Parts', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
-      termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
+      mfrs: 'Direct manufacturers, distributed in Europe by Central.Parts', termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
       cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
-      count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
+      count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)',
+      refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: '{n} of {t} offers shown: refine the part number to see them all.', none: 'No up-to-date offer for "{q}".', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
       rates: 'ECB reference rate of {d}.',
       mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
@@ -146,9 +154,10 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
       thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
       partner: '合作供应商', direct: '原厂直供', auth: '授权代理商', official: '由 Central.Parts 在欧洲分销', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
-      termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
+      mfrs: '原厂直供制造商（由 Central.Parts 在欧洲分销）', termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
       cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
-      count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
+      count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价',
+      refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示 {n} 条：请输入更完整的型号查看全部。', none: '没有「{q}」的最新报价。', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
       rates: '欧洲央行参考汇率日期：{d}。',
       mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
@@ -188,7 +197,13 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     if (!data) return;
     var list = data.offers || [], q = data.query;
     $('count').hidden = !list.length;
-    $('count').textContent = q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length });
+    $('count').textContent = (q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length })) +
+      (data.total_offers > list.length ? ' ' + fill(t().more, { n: list.length, t: Number(data.total_offers).toLocaleString(LOCALE[lang]) }) : '');
+    // Nombre de références et taille de l'inventaire (migration 20261106000036) : sur la recherche, sinon tout le catalogue.
+    $('totals').hidden = !data.total_refs;
+    $('totals').innerHTML = data.total_refs ? '<div><b id="n-refs">' + esc(Number(data.total_refs).toLocaleString(LOCALE[lang])) + '</b><span>' +
+      esc(q ? fill(t().refsQ, { q: q }) : t().refs) + '</span></div><div><b id="n-units">' + esc(Number(data.total_units).toLocaleString(LOCALE[lang])) +
+      '</b><span>' + esc(t().units) + '</span></div>' : '';
     $('table').hidden = !list.length;
     $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days }) +
       (data.rates_at ? ' ' + fill(t().rates, { d: new Date(data.rates_at).toLocaleDateString(LOCALE[lang]) }) : '');
@@ -232,7 +247,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
     return cartLoad().length === a.length ? 'ok' : 'off';
   }
-  function cartCount() { var n = cartLoad().length; $('cart-n').textContent = n ? '(' + n + ')' : ''; $('cart-link').href = t().cartHref; $('to-terms').href = t().termsHref; }
+  function cartCount() { var n = cartLoad().length; $('cart-n').textContent = n ? '(' + n + ')' : ''; $('cart-link').href = t().cartHref; $('to-terms').href = t().termsHref; $('to-mfrs').href = '/fabricants/?lang=' + lang; }
   $('rows').addEventListener('click', function (ev) {
     var b = ev.target.closest('button.add'); if (!b || !data) return;
     var o = data.offers[+b.getAttribute('data-i')], r = cartAdd(o);
@@ -252,7 +267,7 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     return fetch(FN + '?cur=EUR&q=' + encodeURIComponent(q))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
             function () { throw 'network'; })
-      .then(function (d) { data = d; render(); }, function (c) { data = null; $('table').hidden = $('count').hidden = true; say('err', t().e[c] || t().e.other); });
+      .then(function (d) { data = d; render(); }, function (c) { data = null; $('table').hidden = $('count').hidden = $('totals').hidden = true; say('err', t().e[c] || t().e.other); });
   }
 
   $('form').addEventListener('submit', function (e) { e.preventDefault(); load(); });

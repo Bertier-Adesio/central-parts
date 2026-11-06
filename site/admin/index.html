@@ -80,6 +80,14 @@ dl.kv dd{margin:0;overflow-wrap:anywhere}
 .pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0 12px}
 .logo-s{width:64px;height:64px;object-fit:contain;border:1px solid var(--border-1);border-radius:var(--radius-sm);background:var(--bg-surface);margin:0 0 12px}
 .pre{white-space:pre-wrap}
+ul.chan{list-style:none;padding:0;margin:0}
+ul.chan li{border-top:1px solid var(--border-1);padding:10px 0}
+ul.chan li:first-child{border-top:0}
+.ok-t{color:var(--status-success)}
+.warn-t{color:var(--status-warning)}
+details.more summary{cursor:pointer;color:var(--fg-2);font-size:var(--text-sm);margin:6px 0 0}
+details.more[open]{background:var(--bg-sunken);border-radius:var(--radius-sm);padding:8px 12px;margin:6px 0 0}
+.btn-link{background:none;border:0;color:var(--status-danger);padding:0 8px;min-height:0;text-decoration:underline}
 label.f input[type=checkbox]{margin:0 6px 0 0}
 ol.log{list-style:none;margin:0;padding:0;font-size:var(--text-sm)}
 ol.log li{border-left:3px solid var(--border-2);padding:4px 0 4px 12px;margin:0 0 8px}
@@ -619,7 +627,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   // Un fabricant a ses marques, sa présentation et sa page publique /fabricants/ ; il est rattaché aux comptes qui
   // vendent ses marques : lui-même (« Direct fabricant ») ou un distributeur agréé. Ces fabricants sont distribués en
   // Europe par Central.Parts ; jamais un revendeur, un broker ni un excédent de stock (refusé par la base).
-  var mfrs = [], mfr = null, sellers = [];
+  var mfrs = [], mfr = null, sellers = [], mfrOpen = {};
   function loadManufacturers() {
     return Promise.all([api('GET', '/manufacturers'), api('GET', '/suppliers?status=validated')]).then(function (r) {
       mfrs = r[0]; sellers = (r[1].rows || []).filter(function (o) { return o.profile === 'Manufacturer' || o.profile === 'Distributor'; });
@@ -680,26 +688,32 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       '<div class="actions"><button class="btn btn-line" type="button" data-mf="edit">Modifier le fabricant</button>' +
       (m.public_page ? '<button class="btn btn-line" type="button" data-mf="unpublish">Retirer la page publique</button>'
         : '<button class="btn btn-ok" type="button" data-mf="publish"' + (m.can_publish ? '' : ' disabled') + '>Publier la page fabricant</button>') + '</div>' +
-      '<h3>Comptes rattachés</h3><p class="muted">Leurs offres de ces marques portent « Direct fabricant » ou « Distributeur agréé » : distribution en Europe par Central.Parts. ' +
-      'Direct fabricant : le fabricant ou sa propre société de distribution, en contact direct. Fabricant ou distributeur seulement : jamais un revendeur, un broker ni un excédent de stock.</p>' +
-      (m.distributors.length ? '<ul class="addr" id="mf-dists">' + m.distributors.map(function (d) {
-        return '<li><strong>' + esc(d.name) + '</strong> <span class="mono">' + esc(d.org_id) + '</span> <span class="badge validated">' + esc(ROLE[d.role] || d.role) + '</span>' +
-          ' <span class="muted">· ' + num(d.offers) + ' offre(s) de ces marques</span>' +
-          '<br><span class="' + (d.consent_at ? 'badge validated' : 'badge pending') + '">' + (d.consent_at ? 'Accord donné le ' + esc(dt(d.consent_at)) : 'Accord non donné') + '</span>' +
-          (d.consent_at ? ' <span class="muted">' + esc(d.consent_by) + '</span> <button class="btn btn-line" type="button" data-mf="unconsent" data-org="' + esc(d.org_id) + '">Retirer l\'accord</button>'
-            : ' <button class="btn btn-line" type="button" data-mf="consent" data-org="' + esc(d.org_id) + '">Accord reçu hors plateforme</button>') + '<br>' +
-          ' <select class="ml-role-c" data-org="' + esc(d.org_id) + '" aria-label="Rôle de ' + esc(d.name) + '" style="width:auto">' +
-          '<option value="self"' + (d.role === 'self' ? ' selected' : '') + '>Direct fabricant</option>' +
-          '<option value="authorized"' + (d.role === 'authorized' ? ' selected' : '') + '>Distributeur agréé</option></select>' +
-          ' <button class="btn btn-line" type="button" data-mf="unlink" data-org="' + esc(d.org_id) + '">Détacher</button></li>';
+      // Canal de vente (back office seulement) : une ligne par compte, les réglages repliés sous « Modifier ».
+      '<h3>Canal de vente</h3><p class="muted">Comptes qui vendent ces marques par Central.Parts. Seules leurs offres portent le badge et la mention « distribué en Europe par Central.Parts ».</p>' +
+      (m.distributors.length ? '<ul class="chan" id="mf-dists">' + m.distributors.map(function (d) {
+        return '<li><div class="r1"><strong>' + esc(d.name) + '</strong><span class="badge validated">' + esc(ROLE[d.role] || d.role) + '</span></div>' +
+          '<div class="r2">' + esc(d.org_id) + ' · ' + num(d.offers) + ' offre(s) · ' +
+          (d.consent_at ? '<span class="ok-t">accord donné le ' + esc(dt(d.consent_at)) + '</span>' : '<span class="warn-t">accord en attente</span>') + '</div>' +
+          '<details class="more" data-k="d-' + esc(d.org_id) + '"><summary>Modifier</summary>' +
+          '<label class="f">Rôle<select class="ml-role-c" data-org="' + esc(d.org_id) + '" aria-label="Rôle de ' + esc(d.name) + '">' +
+          '<option value="self"' + (d.role === 'self' ? ' selected' : '') + '>Direct fabricant : le fabricant ou sa propre société de distribution</option>' +
+          '<option value="authorized"' + (d.role === 'authorized' ? ' selected' : '') + '>Distributeur agréé</option></select></label>' +
+          (d.consent_at ? '<p class="muted">Accord enregistré par ' + esc(d.consent_by) + '.</p>' : '<p class="muted">Le compte donne son accord dans /depot/. S\'il l\'a donné par WeChat ou e-mail, enregistrez-le ici.</p>') +
+          '<div class="actions">' + (d.consent_at ? '<button class="btn btn-line" type="button" data-mf="unconsent" data-org="' + esc(d.org_id) + '">Retirer l\'accord</button>'
+            : '<button class="btn btn-line" type="button" data-mf="consent" data-org="' + esc(d.org_id) + '">Accord reçu hors plateforme</button>') +
+          '<button class="btn btn-link" type="button" data-mf="unlink" data-org="' + esc(d.org_id) + '">Détacher ce compte</button></div></details></li>';
       }).join('') + '</ul>' : '<p class="muted" id="mf-dists">Aucun compte rattaché.</p>') +
-      (props ? '<h3>Corrections proposées</h3><ul class="addr" id="mf-props">' + props + '</ul>' : '') +
+      '<details class="more" data-k="add"><summary>Rattacher un autre compte</summary>' +
       '<form id="mf-link" class="tools" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto">' +
       '<label class="f" style="margin:0">Compte fournisseur<select id="ml-org">' + sellers.filter(function (o) { return linked.indexOf(o.org_id) < 0; }).map(function (o) {
         return '<option value="' + esc(o.org_id) + '">' + esc(o.name) + ' (' + esc(o.org_id) + ')</option>'; }).join('') + '</select></label>' +
-      '<label class="f" style="margin:0">Rôle<select id="ml-role"><option value="self">Direct fabricant (le fabricant ou sa société de distribution)</option>' +
+      '<label class="f" style="margin:0">Rôle<select id="ml-role"><option value="self">Direct fabricant</option>' +
       '<option value="authorized">Distributeur agréé</option></select></label>' +
-      '<button class="btn btn-main" type="submit">Rattacher</button></form>';
+      '<button class="btn btn-main" type="submit">Rattacher</button></form>' +
+      '<p class="muted">Fabricants et distributeurs seulement : jamais un revendeur, un broker ni un excédent de stock.</p></details>' +
+      (props ? '<h3>Corrections proposées</h3><ul class="addr" id="mf-props">' + props + '</ul>' : '');
+    // Réglages ouverts avant l'enregistrement : restent ouverts (même fabricant).
+    box.querySelectorAll('details[data-k]').forEach(function (el) { if (mfrOpen[m.id + '|' + el.getAttribute('data-k')]) el.open = true; });
   }
   function mfrForm(m) {
     return '<form id="mf-form"><h2>' + (m.id ? 'Modifier ' + esc(m.name) : 'Nouveau fabricant') + '</h2><div class="pf-grid">' +
@@ -732,6 +746,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         .then(function (r) { if (!r.ok) throw { code: 'invalid', detail: 'dépôt du logo refusé' }; return u.path; });
     });
   }
+  $('mfr-detail').addEventListener('toggle', function (ev) {
+    var k = ev.target.getAttribute && ev.target.getAttribute('data-k');
+    if (k && mfr) mfrOpen[mfr.id + '|' + k] = ev.target.open;
+  }, true);
   $('mfr-new').addEventListener('click', function () { mfr = null; renderMfrList(); renderMfr(true); $('mf-name-i').focus(); });
   $('mfr-list').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-mfr]'); if (b) openManufacturer(b.getAttribute('data-mfr')); });
   $('mfr-detail').addEventListener('submit', function (ev) {

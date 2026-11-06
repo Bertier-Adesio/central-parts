@@ -101,7 +101,9 @@ async function offers(route) {
     price_1k: (Object.entries(l.tiers).filter(([q]) => +q <= 1000).sort((a, b) => b[0] - a[0])[0]?.[1] ?? l.price) * 1.1, updated_at: l.confirmed_at,
   }));
   // Prix convertis en euros au taux de la BCE (migration 20261103000025), date du taux.
-  return reply({ query: q, currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', ttl_days: 7, ttl_days_manufacturer: 14, offers: list.slice(0, 50) });
+  // Totaux (migration 20261106000036) : références distinctes et pièces, sur toutes les offres trouvées.
+  return reply({ query: q, currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', ttl_days: 7, ttl_days_manufacturer: 14, offers: list.slice(0, 50),
+    total_refs: new Set(list.map((o) => o.mpn)).size, total_offers: q ? list.length : 1863, total_units: list.reduce((s, o) => s + (state.lots.get(o.sku)?.qty || 0), 0) || 245300000 });
 }
 
 const browser = await chromium.launch();
@@ -213,11 +215,15 @@ for (const width of [1280, 390]) {
   ok(/€/.test(text) && !/\$US/.test(text) && !(await page.$('#cur')), width + ' px : prix en euros, sans choix de devise');
   ok(text.includes('Taux de référence de la BCE du 03/11/2026') && text.includes('convertis au taux de référence de la BCE'), width + ' px : taux de la BCE et sa date');
   ok(await noScroll(page), width + ' px : pas de défilement horizontal');
+  const totals = (await page.textContent('#totals')).replace(/[\u202f\u00a0]/g, ' ');
+  ok(totals.includes('10') && totals.includes('références en ligne') && totals.includes('pièces en stock'), width + ' px : nombre de références et taille de l\'inventaire');
+  ok((await page.textContent('#count')).includes('10 offres affichées sur 1') , width + ' px : offres affichées sur le total');
   if (width === 1280) {
     await page.fill('#q', 'ad8');
     await page.click('#form button');
     await page.waitForFunction(() => document.querySelectorAll('#rows tr').length === 1);
     ok((await page.textContent('#count')).includes('AD8') && new URL(page.url()).searchParams.get('q') === 'ad8', 'recherche : une offre, adresse partageable');
+    ok((await page.textContent('#totals')).includes('référence(s) pour « AD8 »') && (await page.textContent('#n-refs')) === '1', 'recherche : totaux de la recherche');
     await page.fill('#q', 'AD');
     await page.click('#form button');
     await page.waitForSelector('#msg.err');
