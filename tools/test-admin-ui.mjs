@@ -54,6 +54,13 @@ await page.fill('#login-email', ADMIN_EMAIL);
 await page.click('#login-send');
 await page.waitForSelector('#msg.ok');
 ok(mock.state.logins[0] === ADMIN_EMAIL, 'lien de connexion demandé pour l\'adresse saisie');
+// Écran de connexion en FR/EN/中文 (?lang=) ; le reste du back office reste en français.
+await page.goto(BASE + '/admin/?lang=en');
+await page.waitForSelector('#v-login:not([hidden])');
+ok(await page.textContent('#v-login h1') === 'Log in' && await page.textContent('#login-send') === 'Send me the link' && await page.getAttribute('html', 'lang') === 'en', 'connexion en anglais (?lang=en)');
+await page.goto(BASE + '/admin/?lang=zh');
+await page.waitForSelector('#v-login:not([hidden])');
+ok(await page.textContent('#v-login h1') === '登录' && await page.getAttribute('html', 'lang') === 'zh-Hans', 'connexion en 中文 (?lang=zh)');
 
 // 2. Compte connecté mais pas administrateur : accès refusé, aucune donnée.
 await page.goto('about:blank');

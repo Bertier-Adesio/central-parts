@@ -180,6 +180,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   var $ = function (id) { return document.getElementById(id); };
   var lang = 'zh', me = null, imports = [];
   try { var saved = localStorage.getItem('cp-lang-depot'); if (T[saved]) lang = saved; } catch (e) {}
+  // ?lang= dans l'adresse l'emporte sur le choix mémorisé ; sinon 中文 par défaut (fournisseurs en Chine).
+  var askedLang = new URLSearchParams(location.search).get('lang'); if (T[askedLang]) lang = askedLang;
   var token = (/[#&]k=([0-9a-f]{20,})/.exec(location.hash) || [])[1] || '';
   var t = function () { return T[lang]; };
   var fill = function (s, o) { return s.replace(/\{(\w+)\}/g, function (_, k) { return o[k]; }); };

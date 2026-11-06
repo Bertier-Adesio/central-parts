@@ -147,12 +147,13 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   <!-- Connexion : lien envoyé par e-mail (Supabase Auth). -->
   <section id="v-login" hidden>
     <div class="card narrow">
-      <h1>Connexion</h1>
-      <p class="lead">Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.</p>
+      <h1 data-l="title">Connexion</h1>
+      <p class="lead" data-l="lead">Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.</p>
       <form id="login-form">
-        <label class="f">Adresse e-mail<input type="email" id="login-email" autocomplete="email" required></label>
-        <button class="btn btn-main" type="submit" id="login-send">Recevoir le lien</button>
+        <label class="f"><span data-l="email">Adresse e-mail</span><input type="email" id="login-email" autocomplete="email" required></label>
+        <button class="btn btn-main" type="submit" id="login-send" data-l="send">Recevoir le lien</button>
       </form>
+      <p class="muted login-langs" role="group" aria-label="Langue · Language · 语言"><a href="?lang=fr" lang="fr">FR</a> · <a href="?lang=en" lang="en">EN</a> · <a href="?lang=zh" lang="zh-Hans">中文</a></p>
     </div>
   </section>
 
@@ -310,6 +311,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   }
   function view(id) {
     ['v-login', 'v-denied', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; });
+    setDocLang(id === 'v-login' && loginLang ? loginLang : 'fr');
     $('who').hidden = id !== 'v-app';
   }
 
@@ -368,13 +370,32 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   }
 
   // ------------------------------------------------------------ connexion
+  // Écran de connexion en FR/EN/中文 (?lang= ou langue du navigateur) ; le reste du back office reste en français.
+  var LOGIN_T = {
+    fr: { title: 'Connexion', lead: 'Réservé aux administrateurs Central.Parts. Saisissez votre adresse : un lien de connexion vous est envoyé par e-mail.', email: 'Adresse e-mail', send: 'Recevoir le lien',
+      sent: 'Si cette adresse est celle d\'un administrateur, un lien de connexion vient de lui être envoyé. Ouvrez-le dans ce navigateur.' },
+    en: { title: 'Log in', lead: 'For Central.Parts administrators only. Enter your address and we will e-mail you a login link.', email: 'E-mail address', send: 'Send me the link',
+      sent: 'If this address belongs to an administrator, a login link has just been sent to it. Open it in this browser.' },
+    zh: { title: '登录', lead: '仅限 Central.Parts 管理员。请输入您的邮箱，我们将通过邮件发送登录链接。', email: '电子邮箱', send: '获取登录链接',
+      sent: '如果该邮箱属于管理员，登录链接已发送至该邮箱。请在本浏览器中打开。' }
+  };
+  var loginLang = (function () {
+    var l = new URLSearchParams(location.search).get('lang');
+    if (LOGIN_T[l]) return l;
+    var n = navigator.language || '';
+    return /^zh/i.test(n) ? 'zh' : /^en/i.test(n) ? 'en' : 'fr';
+  })();
+  document.querySelectorAll('#v-login [data-l]').forEach(function (el) { el.textContent = LOGIN_T[loginLang][el.getAttribute('data-l')]; });
+  document.querySelectorAll('.login-langs a').forEach(function (a) { if (a.getAttribute('href') === '?lang=' + loginLang) a.setAttribute('aria-current', 'true'); });
+  function setDocLang(l) { document.documentElement.lang = l === 'zh' ? 'zh-Hans' : l; }
+  setDocLang(loginLang);
   $('login-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var email = $('login-email').value.trim();
     $('login-send').disabled = true;
     fetch(FN + '/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email }) })
       .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw { code: d.error }; }); })
-      .then(function () { show('Si cette adresse est celle d\'un administrateur, un lien de connexion vient de lui être envoyé. Ouvrez-le dans ce navigateur.', 'ok'); })
+      .then(function () { show(LOGIN_T[loginLang].sent, 'ok'); })
       .catch(fail)
       .then(function () { $('login-send').disabled = false; });
   });

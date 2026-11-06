@@ -271,6 +271,41 @@ for (const width of [1280, 390]) {
   await page.close();
 }
 
+// Téléphone : fabricants distribués repliés au-delà de 8, bouton pour tout voir, zones tactiles de 44 px ; texte indicatif court.
+{
+  const { page, errors } = await newPage(390, { locale: 'fr-FR' });
+  const many = [{ name: 'Partenaire', key: 'PARTENAIRE', offers: 9, partner: true }]
+    .concat(Array.from({ length: 12 }, (_, i) => ({ name: 'Fabricant ' + (i + 1), key: 'FABRICANT ' + (i + 1), offers: 20 - i, partner: false })));
+  await page.route(SUPA + '/functions/v1/offers**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' },
+    body: JSON.stringify({ query: '', currency: 'EUR', rates_at: '2026-11-03T15:00:00Z', ttl_days: 7, ttl_days_manufacturer: 14, manufacturer: null, manufacturers: many,
+      offers: [{ mpn: 'NE555DR', manufacturer: 'Fabricant 1', supplier: 'partner', source: 'broker', ship_from: 'HK', currency: 'EUR', availability: '1000+', moq: 1, price_from: 0.1, price_1k: 0.1, updated_at: new Date().toISOString() }],
+      total_refs: 1, total_offers: 1, total_units: 1000 }) }));
+  await page.goto(BASE + '/offres/');
+  await page.waitForSelector('#mfrs-others');
+  const visible = () => page.$$eval('#mfrs-others button[data-m]', (b) => b.filter((x) => x.offsetParent !== null).length);
+  ok(await visible() === 8 && (await page.textContent('#mfrs-others .fold')).includes('Voir les 4 autres fabricants'), '390 px : 8 fabricants distribués visibles, bouton « Voir les 4 autres »');
+  ok(await page.$$eval('#mfrs button', (b) => b.filter((x) => x.offsetParent !== null).every((x) => x.getBoundingClientRect().height >= 44)), '390 px : boutons des fabricants de 44 px de haut');
+  await page.click('#mfrs-others .fold');
+  ok(await visible() === 12 && await page.getAttribute('#mfrs-others .fold', 'aria-expanded') === 'true', '390 px : liste dépliée, 12 fabricants');
+  ok(await page.getAttribute('#q', 'placeholder') === 'Référence, ex. TPS25990', 'texte indicatif court');
+  ok(await noScroll(page), '390 px : pas de défilement horizontal, liste dépliée');
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.click('#mfrs-others .fold').catch(() => {});
+  ok(await visible() === 12 && !(await page.isVisible('#mfrs-others .fold')), '1280 px : tous les fabricants, sans bouton de repli');
+  ok(errors.length === 0, 'repli des fabricants : aucune erreur console ' + errors.join(' | '));
+  await page.close();
+}
+
+// Dépôt par lien : ?lang= l'emporte sur le 中文 par défaut.
+{
+  const { page, errors } = await newPage(390);
+  await page.goto(BASE + '/depot/lien/?lang=en#k=' + 'b'.repeat(48));
+  await page.waitForSelector('#msg:not([hidden])');
+  ok(await page.getAttribute('html', 'lang') === 'en' && await page.getAttribute('[data-lang=en]', 'aria-pressed') === 'true', 'dépôt par lien : ?lang=en respecté');
+  ok(errors.length === 0, 'dépôt par lien ?lang : aucune erreur console ' + errors.join(' | '));
+  await page.close();
+}
+
 // Sans JavaScript : messages lisibles.
 {
   const page = await browser.newPage({ javaScriptEnabled: false, viewport: { width: 390, height: 800 } });

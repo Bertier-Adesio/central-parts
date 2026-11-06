@@ -144,6 +144,17 @@ ok((await page.textContent('#steps')).includes('cannot follow up') && !(await pa
 await page.goto(BASE + '/recherche/commande/?ref=PR-0001&k=faux&lang=en');
 await page.waitForSelector('#msg:not([hidden])');
 ok((await page.textContent('#msg')).includes('not found'), 'suivi : lien faux');
+// Suivi sans référence : aucun appel, explication au lieu d'une erreur ; titre de l'onglet dans la langue de la page.
+let statusCalls = 0;
+page.on('request', (r) => { if (r.url().includes('/order/status')) statusCalls++; });
+await page.goto(BASE + '/recherche/commande/?lang=en');
+await page.waitForSelector('#msg:not([hidden])');
+ok(statusCalls === 0 && (await page.getAttribute('#msg', 'class')).includes('info') && (await page.textContent('#msg')).includes('tracking link'), 'suivi sans référence : aucun appel, explication');
+ok(await page.title() === 'Request tracking — Central.Parts', 'suivi : titre de l\'onglet en anglais');
+await page.goto(BASE + '/recherche/?q=NE555&lang=zh');
+await page.waitForSelector('#list .item, #list article, #list > *');
+ok(await page.title() === '元器件搜索 — Central.Parts', 'recherche : titre de l\'onglet en 中文');
+ok(/。/.test(await page.textContent('#res .muted, #list .muted').catch(() => '')) || /共 \d+ 条报价。/.test(await page.textContent('main')), 'recherche : phrase du nombre d\'offres ponctuée');
 ok(errors.length === 0, 'aucune erreur ni requête externe : ' + errors.join(' | '));
 
 await browser.close();
