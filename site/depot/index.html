@@ -20,7 +20,11 @@ body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font
 .hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
 .brand .accent,.dot{color:var(--accent);fill:var(--accent)}
-.lang{background:none;border:1px solid var(--fg-inverse-2);color:var(--fg-inverse);border-radius:var(--radius-sm);padding:4px 10px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.lang{display:flex;gap:4px}
+.lang a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:var(--control-h-lg);padding:0 10px;box-sizing:border-box;border-radius:var(--radius-sm);color:var(--fg-inverse-2);text-decoration:none;font-size:var(--text-sm)}
+.lang a:hover{color:var(--fg-inverse)}
+.lang a[aria-current=true]{background:var(--bg-inverse-raised);color:var(--fg-inverse);font-weight:var(--weight-medium)}
+.lang a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main.wrap{padding:32px 16px 64px}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 .lead{color:var(--fg-2);margin:0 0 24px}
@@ -97,7 +101,7 @@ ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--spac
       <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
       <span>Central<span class="accent">.</span>Parts</span>
     </a>
-    <button class="lang" type="button" id="lang">EN</button>
+    <div class="lang" id="lang" role="group" aria-label="语言 · Language"><a href="/depot/?lang=zh" data-lang="zh" lang="zh-Hans" hreflang="zh-Hans">中文</a><a href="/depot/?lang=en" data-lang="en" lang="en" hreflang="en">EN</a></div>
   </div>
 </header>
 
@@ -343,6 +347,10 @@ ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--spac
   };
   var lang = 'zh';
   try { lang = localStorage.getItem('cp-depot-lang') || (/^zh/i.test(navigator.language) ? 'zh' : 'en'); } catch (e) {}
+  // ?lang= prioritaire (revue UI/UX n° 12) : zh ou en ; toute autre langue (fr) s'affiche en anglais.
+  var askLang = new URLSearchParams(location.search).get('lang');
+  if (askLang) lang = /^zh/i.test(askLang) ? 'zh' : 'en';
+  if (lang !== 'zh' && lang !== 'en') lang = 'en';
   var $ = function (id) { return document.getElementById(id); };
   var t = function () { return T[lang]; };
   var fill = function (s, o) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return o[k] == null ? '' : o[k]; }); };
@@ -351,7 +359,7 @@ ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--spac
 
   function applyLang() {
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
-    $('lang').textContent = lang === 'zh' ? 'EN' : '中文';
+    document.querySelectorAll('#lang a').forEach(function (a) { if (a.getAttribute('data-lang') === lang) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
     renderRegion(); renderImports(); document.querySelectorAll('[data-ct]').forEach(function (el) { el.textContent = CT[lang][el.getAttribute('data-ct')]; }); if (typeof co !== 'undefined' && co) renderCompany(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
@@ -874,9 +882,13 @@ ul.tpls .btn{min-height:var(--control-h-lg);text-align:center;padding:var(--spac
   });
   $('inv-copy').addEventListener('click', function () { copy($('inv-link').textContent); });
 
-  $('lang').addEventListener('click', function () {
-    lang = lang === 'zh' ? 'en' : 'zh';
+  // Sélecteur 中文 · EN (revue UI/UX n° 1) : deux liens, langue courante marquée ; changement sur place avec JavaScript.
+  $('lang').addEventListener('click', function (ev) {
+    var a = ev.target.closest('a[data-lang]'); if (!a) return;
+    ev.preventDefault();
+    lang = a.getAttribute('data-lang');
     try { localStorage.setItem('cp-depot-lang', lang); } catch (e) {}
+    try { var u = new URL(location.href); u.searchParams.set('lang', lang); history.replaceState(history.state, '', u); } catch (e) {}
     applyLang();
   });
 

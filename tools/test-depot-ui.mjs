@@ -108,7 +108,7 @@ await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) =
   await phone.goto(BASE + '/depot/');
   await phone.waitForSelector('#v-login:not([hidden])');
   ok(await phone.isVisible('#menu-hint') && (await phone.textContent('#menu-hint')).includes('「供应商」→「上传库存」'), 'téléphone : indication du menu « 供应商 › 上传库存 »');
-  await phone.click('#lang');
+  await phone.click('#lang a:not([aria-current])');
   ok((await phone.textContent('#menu-hint')).includes('to receive your login link'), 'téléphone : indication en anglais');
   ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'téléphone : pas de défilement horizontal');
   await phone.close();
@@ -183,14 +183,14 @@ ok((await page.textContent('#inv-link')).includes('?invite='), 'lien d\'invitati
 ok((await page.textContent('#team-list')).includes('小王'), 'invitation en cours listée');
 
 // 7. Anglais, et pas de défilement horizontal à 390 px.
-await page.click('#lang');
+await page.click('#lang a:not([aria-current])');
 ok((await page.textContent('h1')) === 'Supplier centre' && (await page.textContent('#org-alias')) === 'Under review', 'bascule en anglais');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
 
 // 7 bis. Société validée : demande d'achat reçue, confirmée depuis la page.
 state.org = { ...ORG, status: 'validated', alias: 'V-9', has_license: true };
 state.requests = [{ ref: 'PR-0001', status: 'submitted', mpn: 'NE555DR', qty: 2000, unit_price: 0.8, currency: 'CNH', delivery_country: 'FR' }];
-await page.click('#lang');
+await page.click('#lang a:not([aria-current])');
 await page.reload();
 await page.waitForSelector('#req-card:not([hidden])');
 ok((await page.textContent('#req-list')).includes('PR-0001') && !(await page.textContent('#req-list')).match(/@|Atelier/), 'demande d\'achat reçue, sans l\'acheteur');
@@ -250,9 +250,9 @@ ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.tex
   await page.click('#mf-list button[data-mf=unconsent]');
   await page.waitForSelector('#mf-list button[data-mf=consent]');
   ok(!state.company.manufacturers[0].consent_at, 'accord retiré');
-  await page.click('#lang');
+  await page.click('#lang a:not([aria-current])');
   ok((await page.textContent('#mf-list')).includes('Distributed in Europe by Central.Parts') && (await page.textContent('#co-card h2')) === 'Company profile', 'textes en anglais');
-  await page.click('#lang');
+  await page.click('#lang a:not([aria-current])');
   // Collègue (pas responsable de la fiche) : lecture seule.
   state.company.can_edit = false;
   await page.reload();
@@ -290,9 +290,9 @@ ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.tex
   await page.waitForSelector('[data-rfq-err="DEM-1043"]:not([hidden])');
   ok((await page.textContent('[data-rfq-err="DEM-1043"]')).includes('已过截止时间'), 'RFQ : réponse après l\'échéance refusée, motif affiché');
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'RFQ : pas de défilement horizontal à 390 px');
-  await page.click('#lang');
+  await page.click('#lang a:not([aria-current])');
   ok((await page.textContent('#rfq-card')).includes('Platform RFQs') && (await page.textContent('#rfq-card')).includes('Your handling rate: 75 %'), 'RFQ : anglais');
-  await page.click('#lang');
+  await page.click('#lang a:not([aria-current])');
 }
 
 // 8. Société refusée : motif affiché, dépôt masqué.
@@ -325,7 +325,7 @@ for (const width of [390, 1280]) {
   ok((await p2.textContent('#msg')).includes('统一社会信用代码有误') && !state.calls.includes('POST /register'), width + ' px : 15 caractères refusés pour la Chine continentale');
   await p2.selectOption('#r-region', 'HK');
   ok((await p2.textContent('#r-code-label')) === '公司注册号码' && (await p2.textContent('#r-code-hint')).includes('香港商业登记证') && await p2.getAttribute('#r-code', 'maxlength') === '30', width + ' px : Hong Kong : libellé, aide et longueur adaptés');
-  await p2.click('#lang');
+  await p2.click('#lang a:not([aria-current])');
   ok((await p2.textContent('#r-code-label')) === 'Company registration number' && (await p2.textContent('#r-code-hint')).includes('Hong Kong business registration'), width + ' px : libellé et aide en anglais');
   await p2.fill('#r-code', '12');
   await p2.click('#r-send');

@@ -20,7 +20,11 @@ body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font
 .hdr .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--fg-inverse);text-decoration:none;font-weight:var(--weight-medium)}
 .brand .accent,.dot{color:var(--accent);fill:var(--accent)}
-.lang{background:none;border:1px solid var(--fg-inverse-2);color:var(--fg-inverse);border-radius:var(--radius-sm);padding:4px 10px;font:inherit;font-size:var(--text-sm);cursor:pointer}
+.lang{display:flex;gap:4px}
+.lang a{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:var(--control-h-lg);padding:0 10px;box-sizing:border-box;border-radius:var(--radius-sm);color:var(--fg-inverse-2);text-decoration:none;font-size:var(--text-sm)}
+.lang a:hover{color:var(--fg-inverse)}
+.lang a[aria-current=true]{background:var(--bg-inverse-raised);color:var(--fg-inverse);font-weight:var(--weight-medium)}
+.lang a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main.wrap{padding:32px 16px 64px}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 h2{font-size:var(--text-lg);margin:0 0 8px}
@@ -56,7 +60,7 @@ html.js [data-l]:not(.on){display:none}
       <svg width="22" height="22" viewBox="24 24 432 432" aria-hidden="true"><path d="M370.50 99.17A192 192 0 1 0 370.50 380.83" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><path d="M302.28 156.72A104 104 0 1 0 302.28 323.28" fill="none" stroke="currentColor" stroke-width="48" stroke-linecap="round"/><circle cx="240" cy="240" r="40" class="dot"/></svg>
       <span>Central<span class="accent">.</span>Parts</span>
     </a>
-    <button class="lang" type="button" id="lang" hidden>EN</button>
+    <div class="lang" id="lang" role="group" aria-label="语言 · Language" hidden><a href="/depot/aide/?lang=zh" data-lang="zh" lang="zh-Hans" hreflang="zh-Hans">中文</a><a href="/depot/aide/?lang=en" data-lang="en" lang="en" hreflang="en">EN</a></div>
   </div>
 </header>
 
@@ -285,12 +289,14 @@ html.js [data-l]:not(.on){display:none}
   function apply() {
     root.lang = lang === 'zh' ? 'zh-Hans' : 'en';
     document.querySelectorAll('[data-l]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-l') === lang); });
-    btn.textContent = lang === 'zh' ? 'EN' : '中文';
+    btn.querySelectorAll('a').forEach(function (a) { if (a.getAttribute('data-lang') === lang) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
   }
   root.classList.add('js');
   btn.hidden = false;
-  btn.addEventListener('click', function () {
-    lang = lang === 'zh' ? 'en' : 'zh';
+  btn.addEventListener('click', function (ev) {
+    var a = ev.target.closest('a[data-lang]'); if (!a) return;
+    ev.preventDefault();
+    lang = a.getAttribute('data-lang');
     try { localStorage.setItem('cp-depot-lang', lang); } catch (e) {}
     apply();
   });

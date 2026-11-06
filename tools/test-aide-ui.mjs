@@ -30,7 +30,7 @@ for (const width of [390, 1280]) {
   const loaded = await page.$$eval('[data-l=zh] figure img', (l) => l.every((i) => i.naturalWidth > 0));
   ok(imgs.length === 4 && loaded, width + ' px : 4 captures chargées');
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), width + ' px : pas de défilement horizontal');
-  await page.click('#lang');
+  await page.click('#lang a:not([aria-current])');
   ok(await page.isVisible('[data-l=en] h1') && (await page.textContent('h1:visible')) === 'Supplier guide' && await page.evaluate(() => document.documentElement.lang) === 'en', width + ' px : bascule en anglais');
   // Modèles à télécharger : chaque lien répond.
   const hrefs = await page.$$eval('#modeles a[download]', (l) => l.map((a) => a.getAttribute('href')));
