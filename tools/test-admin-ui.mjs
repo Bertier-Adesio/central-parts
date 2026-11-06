@@ -165,6 +165,7 @@ ok(await page.inputValue('#pf-editor-i') === 'oFICTIF0110', 'responsable de la f
 await page.click('#pf-editor button[type=submit]');
 await page.waitForFunction(() => /Responsable de la fiche désigné/.test(document.getElementById('msg').textContent));
 ok(calls('POST /supplier-editor') === 1, 'responsable de la fiche : désignation envoyée');
+ok((await page.textContent('#pf-editor-st')).includes('Responsable de la fiche enregistré'), 'responsable de la fiche : confirmation affichée à côté du bouton');
 await page.click('button[data-pf=edit]');
 await page.fill('#pf-web', 'ftp://exemple');
 await page.click('#pf-save');
