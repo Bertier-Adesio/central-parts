@@ -92,16 +92,15 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, l
 let page = await ctx.newPage(), errors = [];
 await mock(page, errors);
 
-// 1. /offres/ : ajout au panier, compteur, bouton « Dans le panier ».
+// 1. /offres/ : ajout au panier, compteur, « Ajouté · Voir le panier ».
 await page.goto(BASE + '/offres/?lang=fr');
 await page.waitForSelector('#rows button.add');
 ok((await cartN(page)) === '', 'offres : panier vide au départ');
-ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => !!b.querySelector('svg') && b.textContent.trim() === '' && b.getAttribute('aria-label') === 'Ajouter au panier' && b.title === 'Ajouter au panier'),
-  'offres : icône de panier, libellé accessible et infobulle');
+ok(await page.$eval('#rows tr:nth-child(1) button.add', (b) => b.textContent.trim() === 'Ajouter au panier'), 'offres : bouton texte « Ajouter au panier »');
 await page.click('#rows tr:nth-child(1) button.add');
 ok(norm(await page.textContent('#msg')).includes('NE555DR ajouté au panier') && (await cartN(page)) === '1', 'offres : ajout, message et compteur');
 ok(await page.isVisible('#rows tr:nth-child(1) a.in') && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'href')) === '/panier/?lang=fr'
-  && (await page.getAttribute('#rows tr:nth-child(1) a.in', 'aria-label')) === 'Dans le panier ✓', 'offres : icône « dans le panier » qui mène au panier');
+  && norm(await page.textContent('#rows tr:nth-child(1) a.in')).trim() === 'Ajouté · Voir le panier', 'offres : « Ajouté · Voir le panier » qui mène au panier');
 await page.click('#rows tr:nth-child(2) button.add');
 await page.click('#rows tr:nth-child(3) button.add');
 ok((await cartN(page)) === '3', 'offres : trois références');
@@ -118,7 +117,7 @@ await page.goto(BASE + '/recherche/?q=BSS&lang=fr');
 await page.waitForSelector('#list button.add');
 await page.click('#list button.add');
 ok((await cartN(page)) === '4' && await page.isVisible('#list a.in'), 'recherche : ajout au panier, compteur partagé');
-ok(await page.$eval('#list a.in', (x) => !!x.querySelector('svg') && x.getAttribute('aria-label') === 'Dans le panier ✓'), 'recherche : icône « dans le panier »');
+ok(norm(await page.textContent('#list a.in')).trim() === 'Ajouté · Voir le panier' && norm(await page.textContent('#reqbar-n')) === '4 références', 'recherche : « Ajouté · Voir le panier » et barre du panier');
 
 // 3. /panier/ : devis par ligne, offre disparue bloquante, retrait, quantité.
 await page.goto(BASE + '/panier/');
@@ -202,7 +201,7 @@ ok(await page.isHidden('#steps') && !/V-\d|ORG-/.test(txt), 'suivi : pas d\'éta
 // 6. Panier vide, langues.
 await page.goto(BASE + '/panier/?lang=zh');
 await page.waitForSelector('#empty:not([hidden])');
-ok((await page.textContent('h1')) === '购物车' && (await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh', '中文 : panier vide, lien vers les offres');
+ok((await page.textContent('h1')) === '购物车' && (await page.getAttribute('#to-offers', 'href')) === '/offres/?lang=zh' && (await page.getAttribute('#to-search', 'href')) === '/recherche/?lang=zh', '中文 : panier vide, liens vers la recherche et les offres');
 await setLang(page, 'en');
 ok((await page.textContent('#empty')).includes('Your cart is empty'), 'EN : panier vide');
 ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'panier non indexé');

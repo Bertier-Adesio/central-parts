@@ -7,12 +7,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Offres · Offers · 报价 — Central.Parts</title>
+<title>Offres — Central.Parts</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/tokens.css">
 <link rel="stylesheet" href="/assets/fonts.css">
 <link rel="stylesheet" href="/assets/header.css">
+<link rel="stylesheet" href="/assets/site.css">
 <style>
 body{margin:0;background:var(--bg-page);color:var(--fg-1);font-family:var(--font-sans),var(--font-cjk),system-ui,sans-serif;line-height:var(--leading-body)}
 .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
@@ -20,35 +21,39 @@ main.wrap{padding:32px 16px 64px}
 .eyebrow{font-size:var(--text-sm);color:var(--fg-3);margin:0 0 8px;letter-spacing:.02em}
 h1{font-size:var(--text-2xl);line-height:var(--leading-tight);margin:0 0 8px}
 .lead{color:var(--fg-2);margin:0 0 24px;max-width:720px}
-form.search{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px}
-form.search input,form.search select{min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
-form.search input{flex:1;min-width:0}
+/* Recherche et filtre (handoff 03) : champ et bouton 44 px ; un seul filtre « Fabricant », select natif. */
+form.search{margin:0 0 8px}
+form.search .q-row{display:flex;gap:8px}
+form.search input,form.search select{box-sizing:border-box;min-height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+form.search input{flex:1;min-width:0;width:100%}
+form.search input::placeholder{color:var(--fg-3)}
+form.search .filter{display:flex;align-items:center;gap:12px;margin:12px 0 0}
+form.search .filter label{font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--fg-2)}
+form.search .select{flex:0 1 360px;min-width:0;max-width:100%}
 .btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 20px;border-radius:var(--radius-sm);border:1px solid transparent;font:inherit;font-weight:var(--weight-medium);cursor:pointer;text-decoration:none;background:var(--bg-inverse);color:var(--fg-inverse)}
-.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2);min-height:var(--control-h-md, 32px);padding:0 12px;font-size:var(--text-sm)}
+.btn-line{background:var(--bg-surface);color:var(--fg-1);border-color:var(--border-2);min-height:var(--control-h-md);padding:0 12px;font-size:var(--text-sm)}
 .muted{color:var(--fg-3);font-size:var(--text-sm)}
 .msg{padding:12px 14px;border-radius:var(--radius-sm);margin:16px 0;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
 .msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
-.count{margin:24px 0 8px;font-size:var(--text-sm);color:var(--fg-2)}
-.mfrs{margin:16px 0 0}
-.mfrs .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
-.mfrs .lbl{font-size:var(--text-sm);color:var(--fg-3);margin-right:4px}
-.mfrs button{border:1px solid var(--border-2);background:var(--bg-surface);color:var(--fg-1);border-radius:var(--radius-pill);padding:4px 12px;font:inherit;font-size:var(--text-sm);cursor:pointer}
-.mfrs button.partner{border-color:var(--status-success);color:var(--status-success)}
-.mfrs button[aria-pressed=true]{background:var(--bg-inverse);color:var(--fg-inverse);border-color:var(--bg-inverse)}
-.mfrs button span{color:inherit;opacity:.7;margin-left:4px}
-.totals{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 20px}
-.totals div{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-sm);padding:10px 14px}
-.totals b{display:block;font-size:var(--text-xl);font-variant-numeric:tabular-nums}
-.totals span{color:var(--fg-3);font-size:var(--text-sm)}
+.msg.ok{background:var(--status-success-bg);color:var(--status-success)}
+.msg .btn-line{margin:8px 0 0}
+.offers-count{margin:24px 0 8px;font-size:var(--text-sm);color:var(--fg-2)}
+/* Chiffres clés : deux colonnes, en tête de page. */
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 20px;max-width:520px}
+.stats div{background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-sm);padding:10px 14px;min-width:0}
+.stats b{display:block;font-size:var(--text-xl);font-variant-numeric:tabular-nums}
+.stats span{color:var(--fg-3);font-size:var(--text-sm)}
+.skel{height:96px}
 table.offers{width:100%;border-collapse:collapse;background:var(--bg-surface);border:1px solid var(--border-1);border-radius:var(--radius-md);overflow:hidden}
 table.offers th,table.offers td{text-align:left;padding:12px;border-top:1px solid var(--border-1);vertical-align:top;font-size:var(--text-sm)}
 table.offers thead th{border-top:0;color:var(--fg-3);font-weight:var(--weight-medium);background:var(--bg-sunken)}
-.mpn{font-family:var(--font-mono);font-weight:var(--weight-semibold);font-size:var(--text-base);overflow-wrap:anywhere}
+.mpn{font-family:var(--font-mono);font-weight:var(--weight-medium);font-size:var(--text-base);overflow-wrap:anywhere}
 .mfr{color:var(--fg-2)}
 a.mfr{text-decoration:underline;text-underline-offset:2px}
 .tag.direct,.tag.auth{background:var(--status-success-bg);color:var(--status-success)}
 .tag{display:inline-block;font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);white-space:nowrap}
-.price{font-weight:var(--weight-semibold);white-space:nowrap}
+.price{font-family:var(--font-mono);font-weight:var(--weight-medium);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.offers td.act{white-space:nowrap;text-align:right}
 .num{font-variant-numeric:tabular-nums}
 .api-link{margin:32px 0 0}
 .api-link a{color:var(--fg-2)}
@@ -62,15 +67,19 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   table.offers td::before{content:attr(data-label);color:var(--fg-3)}
   table.offers td.first{display:block}
   table.offers td.first::before{content:none}
-  /* Fabricants : zones tactiles de 44 px, liste des distribués repliée au-delà de 8 (bouton pour tout voir). */
-  .mfrs button{min-height:var(--control-h-lg)}
-  .mfrs .row.folded button.extra{display:none}
-  .mfrs button.fold{display:inline-flex}
-  .icon-btn{width:var(--control-h-lg);height:var(--control-h-lg)}
+  table.offers td .v{text-align:right}
+  table.offers td.act{display:block;padding:8px 16px 4px}
+  table.offers td.act::before{content:none}
+  table.offers td.act .btn-add,table.offers td.act .btn-done{width:100%}
 }
-.mfrs .fold{display:none;background:none;border-style:dashed;color:var(--fg-2)}
-.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0;border-radius:var(--radius-sm)}
-.btn-line.in{border-color:var(--status-success);color:var(--status-success)}
+@media (max-width:640px){
+  form.search .filter{flex-direction:column;align-items:stretch;gap:4px}
+  form.search .select{flex:none;width:100%}
+}
+/* Petit téléphone : champ et bouton pleine largeur, l'un sous l'autre, pour que l'exemple de référence tienne. */
+@media (max-width:480px){
+  form.search .q-row{flex-direction:column}
+}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -125,26 +134,37 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   <h1 data-t="title">Nos offres</h1>
   <p class="lead" data-t="lead">Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.</p>
 
-  <!-- Nombre de références et taille de l'inventaire, en tête de page (au-dessus de la recherche). -->
-  <div class="totals" id="totals" hidden></div>
-  <form class="search" id="form" action="" method="get">
-    <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence, ex. TPS25990">
-    <button class="btn" type="submit" data-t="go">Rechercher</button>
+  <!-- Nombre de références et taille de l'inventaire, en tête de page (au-dessus de la recherche), deux colonnes. -->
+  <div class="stats" id="totals" hidden></div>
+  <!-- Recherche et filtre « Fabricant » dans le même formulaire : sans script, ?q= et ?mfr= dans l'adresse. -->
+  <form class="search" id="form" action="" method="get" role="search">
+    <div class="q-row">
+      <input type="search" name="q" id="q" autocomplete="off" spellcheck="false" data-tp="placeholder" placeholder="Référence fabricant, par exemple TPS25990" aria-label="Référence fabricant">
+      <button class="btn" type="submit" data-t="go">Rechercher</button>
+    </div>
+    <div class="filter">
+      <label for="mfr" data-t="filterLabel">Fabricant</label>
+      <select class="select" name="mfr" id="mfr"><option value="">Tous les fabricants</option></select>
+    </div>
   </form>
-  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.</p>
   <noscript><p class="msg">Cette page a besoin de JavaScript pour afficher les offres. This page needs JavaScript. 本页面需要启用 JavaScript。</p></noscript>
 
   <p class="msg" id="msg" role="status" hidden></p>
+  <!-- Erreur de chargement : message et « Réessayer ». -->
+  <div class="msg err" id="err" role="alert" hidden><span id="err-t"></span><br><button class="btn btn-line" type="button" id="retry" data-t="retry">Réessayer</button></div>
+  <!-- Aucune offre pour le fabricant choisi : retirer le filtre. -->
+  <p id="unfilter" hidden><button class="btn btn-line" type="button" id="unfilter-b" data-t="unfilter">Retirer le filtre</button></p>
   <p id="to-sourcing" hidden><a class="btn" id="to-sourcing-a" href="/sourcing/"></a></p>
-  <div class="mfrs" id="mfrs" role="group" hidden></div>
-  <p class="count" id="count" hidden></p>
+  <p class="offers-count" id="count" hidden></p>
+  <div id="skel" hidden aria-busy="true"><p class="sr-only" data-t="loading">Chargement des offres…</p><span class="skel"></span><span class="skel"></span><span class="skel"></span></div>
   <table class="offers" id="table" hidden>
     <thead><tr>
-      <th data-t="thPart">Référence</th><th data-t="thSupplier">Fournisseur</th><th data-t="thAvail">Disponible</th>
-      <th data-t="thMoq">MOQ</th><th data-t="thPrice">Prix unitaire</th><th data-t="thUpdated">Mis à jour le</th><th></th>
+      <th data-t="thPart">Référence</th><th data-t="thSupplier">Source</th><th data-t="thAvail">Disponible</th>
+      <th data-t="thMoq">MOQ</th><th data-t="thPrice">Prix unitaire</th><th data-t="thUpdated">Mis à jour le</th><th><span class="sr-only" data-t="thAction">Demande</span></th>
     </tr></thead>
     <tbody id="rows"></tbody>
   </table>
+  <p class="muted" id="hint" data-t="hint">Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.</p>
   <p class="muted" id="ttl" hidden></p>
   <p class="muted api-link"><a href="/conditions/" id="to-terms" data-t="termsLink">Conditions commerciales : livraison, paiement, retours</a></p>
   <p class="muted"><a href="/fabricants/" id="to-mfrs" data-t="mfrs">Fabricants en direct, distribués en Europe par Central.Parts</a></p>
@@ -158,42 +178,48 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   var T = {
     fr: { eyebrow: 'Supply Network Operator · Chaque offre, tracée jusqu’à sa source.', title: 'Nos offres',
       lead: 'Central.Parts est le réseau qui relie les acheteurs européens aux stocks des fournisseurs d’Asie. Chaque offre porte sa source et est reconfirmée avant toute vente.',
-      placeholder: 'Référence, ex. TPS25990', go: 'Rechercher',
+      placeholder: 'Référence fabricant, par exemple TPS25990', phShort: 'Référence, ex. TPS25990', go: 'Rechercher',
       hint: 'Début de la référence, 3 caractères au moins ; sans recherche, les dernières offres. Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import.',
-      thPart: 'Référence', thSupplier: 'Fournisseur', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le',
-      partner: 'Fournisseur partenaire', direct: 'Direct fabricant', auth: 'Distributeur agréé', official: 'Distribué en Europe par Central.Parts', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', inCart: 'Dans le panier ✓', spq: 'SPQ',
+      thPart: 'Référence', thSupplier: 'Source', thAvail: 'Disponible', thMoq: 'MOQ', thPrice: 'Prix unitaire', thUpdated: 'Mis à jour le', thAction: 'Demande',
+      partner: 'Fournisseur partenaire', direct: 'Direct fabricant', auth: 'Distributeur agréé', official: 'Distribué en Europe par Central.Parts', brandTitle: 'Page du fabricant', from: 'à partir de', k1: 'prix 1 k :', onRequest: 'Sur demande', ask: 'Ajouter au panier', done: 'Ajouté', doneView: 'Voir le panier', spq: 'SPQ',
+      qLabel: 'Référence fabricant', filterLabel: 'Fabricant', filterAll: 'Tous les fabricants ({n})', filterPartners: 'Fabricants partenaires', filterDist: 'Fabricants distribués',
+      noneFilter: 'Aucune offre pour ce filtre.', unfilter: 'Retirer le filtre', loading: 'Chargement des offres…', retry: 'Réessayer',
       mfrs: 'Fabricants en direct, distribués en Europe par Central.Parts', termsLink: 'Conditions commerciales : livraison, paiement, retours', termsHref: '/conditions/?lang=fr',
-      cart: 'Panier', added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
-      count: '{n} offre(s) pour « {q} »', latest: '{n} offre(s) mise(s) à jour récemment',
-      byMfr: 'Fabricant :', partners: 'Fabricants partenaires :', others: 'Fabricants distribués :', allMfr: 'Tous', moreMfr: 'Voir les {n} autres fabricants', lessMfr: 'Moins de fabricants', countM: ' · {m}', refs: 'références en ligne', refsQ: 'référence(s) pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', sourcingCta: 'Lancer une recherche de sourcing pour {q} (49 € HT, déduits de la commande)', noneAll: 'Aucune offre à jour pour l’instant.',
+      added: '{mpn} ajouté au panier.', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.', cartHref: '/panier/?lang=fr',
+      countOne: '{n} offre pour « {q} »', count: '{n} offres pour « {q} »', latestOne: '{n} offre mise à jour récemment', latest: '{n} offres mises à jour récemment',
+      countM: ' · {m}', refs: 'références en ligne', refsQOne: 'référence pour « {q} »', refsQ: 'références pour « {q} »', units: 'pièces en stock', more: '{n} dernières offres sur {t} : précisez la référence ou choisissez un fabricant pour les voir toutes.', none: 'Aucune offre à jour pour « {q} ».', sourcingCta: 'Lancer une recherche de sourcing pour {q} (49 € HT, déduits de la commande)', noneAll: 'Aucune offre à jour pour l’instant.',
       ttl: 'Les fournisseurs reconfirment leurs offres ; une offre non reconfirmée est retirée après {n} jours ({m} jours pour un fabricant).',
       rates: 'Taux de référence de la BCE du {d}.',
       mail: 'Demande de prix', home: '/', api: 'Plateforme de chiffrage ou ERP ? API d’offres (spécification en cours)',
       e: { too_short: 'Saisissez au moins 3 caractères.', rate_limited: 'Trop de recherches : réessayez dans une minute.', network: 'Erreur réseau, réessayez.', other: 'Les offres sont indisponibles, réessayez plus tard.' } },
     en: { eyebrow: 'Supply Network Operator · Every offer, traced to its source.', title: 'Our offers',
       lead: 'Central.Parts is the network that connects European buyers with the stock of suppliers in Asia. Every offer carries its source and is reconfirmed before any sale.',
-      placeholder: 'Part number, e.g. TPS25990', go: 'Search',
+      placeholder: 'Manufacturer part number, e.g. TPS25990', phShort: 'Part number, e.g. TPS25990', go: 'Search',
       hint: 'Start of the part number, at least 3 characters; without a search, the latest offers. All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT.',
-      thPart: 'Part', thSupplier: 'Supplier', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated',
-      partner: 'Partner Supplier', direct: 'Manufacturer direct', auth: 'Authorized distributor', official: 'Distributed in Europe by Central.Parts', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', inCart: 'In the cart ✓', spq: 'SPQ',
+      thPart: 'Part number', thSupplier: 'Source', thAvail: 'Available', thMoq: 'MOQ', thPrice: 'Unit price', thUpdated: 'Updated', thAction: 'Request',
+      partner: 'Partner Supplier', direct: 'Direct from manufacturer', auth: 'Authorized distributor', official: 'Distributed in Europe by Central.Parts', brandTitle: 'Manufacturer page', from: 'from', k1: '1k price:', onRequest: 'On request', ask: 'Add to cart', done: 'Added', doneView: 'View cart', spq: 'SPQ',
+      qLabel: 'Manufacturer part number', filterLabel: 'Manufacturer', filterAll: 'All manufacturers ({n})', filterPartners: 'Partner manufacturers', filterDist: 'Distributed manufacturers',
+      noneFilter: 'No offers for this filter.', unfilter: 'Remove the filter', loading: 'Loading offers…', retry: 'Try again',
       mfrs: 'Direct manufacturers, distributed in Europe by Central.Parts', termsLink: 'Terms of sale: delivery, payment, returns', termsHref: '/conditions/?lang=en',
-      cart: 'Cart', added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
-      count: '{n} offer(s) for "{q}"', latest: '{n} recently updated offer(s)',
-      byMfr: 'Manufacturer:', partners: 'Partner manufacturers:', others: 'Distributed manufacturers:', allMfr: 'All', moreMfr: 'Show {n} more manufacturers', lessMfr: 'Fewer manufacturers', countM: ' · {m}', refs: 'part numbers online', refsQ: 'part number(s) for "{q}"', units: 'pieces in stock', more: 'Latest {n} of {t} offers: refine the part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', sourcingCta: 'Start a sourcing search for {q} (€49 excl. VAT, deducted from the order)', noneAll: 'No up-to-date offer yet.',
+      added: '{mpn} added to the cart.', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.', cartHref: '/panier/?lang=en',
+      countOne: '{n} offer for "{q}"', count: '{n} offers for "{q}"', latestOne: '{n} recently updated offer', latest: '{n} recently updated offers',
+      countM: ' · {m}', refs: 'part numbers online', refsQOne: 'part number for "{q}"', refsQ: 'part numbers for "{q}"', units: 'pieces in stock', more: 'Latest {n} offers out of {t}: enter a part number or choose a manufacturer to see them all.', none: 'No up-to-date offer for "{q}".', sourcingCta: 'Start a sourcing search for {q} (€49 excl. VAT, deducted from the order)', noneAll: 'No up-to-date offer yet.',
       ttl: 'Suppliers reconfirm their offers; an offer not reconfirmed is withdrawn after {n} days ({m} days for a manufacturer).',
       rates: 'ECB reference rate of {d}.',
       mail: 'Price request', home: '/en/', api: 'Costing platform or ERP? Offers API (specification in progress)',
       e: { too_short: 'Enter at least 3 characters.', rate_limited: 'Too many searches: try again in a minute.', network: 'Network error, please try again.', other: 'Offers are unavailable, please try again later.' } },
     zh: { eyebrow: 'Supply Network Operator · 每条报价，均可追溯至来源。', title: '我们的报价',
       lead: 'Central.Parts 连接欧洲采购方与亚洲供应商的库存。每条报价都标明来源，并在成交前重新确认。',
-      placeholder: '型号，例如 TPS25990', go: '搜索',
+      placeholder: '制造商型号，例如 TPS25990', phShort: '型号，例如 TPS25990', go: '搜索',
       hint: '输入型号开头，至少 3 个字符；不输入则显示最新报价。价格为总价，以欧元计价（按欧洲央行参考汇率换算），不含运费、进口关税和增值税。',
-      thPart: '型号', thSupplier: '供应商', thAvail: '库存', thMoq: '最小起订量', thPrice: '单价', thUpdated: '更新日期',
-      partner: '合作供应商', direct: '原厂直供', auth: '授权代理商', official: '由 Central.Parts 在欧洲分销', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', inCart: '已加入购物车 ✓', spq: '标准包装',
+      thPart: '型号', thSupplier: '来源', thAvail: '库存', thMoq: 'MOQ', thPrice: '单价', thUpdated: '更新日期', thAction: '购物车',
+      partner: '合作供应商', direct: '原厂直供', auth: '授权代理商', official: '由 Central.Parts 在欧洲分销', brandTitle: '制造商页面', from: '起', k1: '千颗单价：', onRequest: '请询价', ask: '加入购物车', done: '已加入', doneView: '查看购物车', spq: '标准包装',
+      qLabel: '制造商型号', filterLabel: '制造商', filterAll: '全部制造商（{n}）', filterPartners: '合作制造商', filterDist: '分销制造商',
+      noneFilter: '此筛选条件下暂无报价。', unfilter: '取消筛选', loading: '正在加载报价…', retry: '重试',
       mfrs: '原厂直供制造商（由 Central.Parts 在欧洲分销）', termsLink: '交易条件：运输、付款、退货', termsHref: '/conditions/?lang=zh',
-      cart: '购物车', added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
-      count: '「{q}」共 {n} 条报价', latest: '最近更新的 {n} 条报价',
-      byMfr: '制造商：', partners: '合作制造商：', others: '分销制造商：', allMfr: '全部', moreMfr: '查看其余 {n} 家制造商', lessMfr: '收起制造商', countM: ' · {m}', refs: '个在线型号', refsQ: '个「{q}」型号', units: '件库存', more: '共 {t} 条报价，显示最新 {n} 条：请输入更完整的型号或选择制造商查看全部。', none: '没有「{q}」的最新报价。', sourcingCta: '为 {q} 发起寻源（49 欧元不含税，可从订单抵扣）', noneAll: '暂无最新报价。',
+      added: '已将 {mpn} 加入购物车。', cartFull: '购物车已满（30 个型号），请先提交。', cartOff: '此浏览器无法使用购物车，请发送邮件至 contact@central.parts。', cartHref: '/panier/?lang=zh',
+      countOne: '「{q}」共 {n} 条报价', count: '「{q}」共 {n} 条报价', latestOne: '最近更新的 {n} 条报价', latest: '最近更新的 {n} 条报价',
+      countM: ' · {m}', refs: '个在线型号', refsQOne: '个「{q}」型号', refsQ: '个「{q}」型号', units: '件库存', more: '显示最新 {n} 条，共 {t} 条：输入型号或选择制造商可查看全部。', none: '没有「{q}」的最新报价。', sourcingCta: '为 {q} 发起寻源（49 欧元不含税，可从订单抵扣）', noneAll: '暂无最新报价。',
       ttl: '供应商定期重新确认报价；超过 {n} 天（原厂为 {m} 天）未重新确认的报价将被撤下。',
       rates: '欧洲央行参考汇率日期：{d}。',
       mail: '询价', home: '/zh/', api: '报价平台或 ERP？报价 API（规范制定中）',
@@ -213,52 +239,68 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   // Langue mémorisée par l'en-tête partagé (cp-lang), sauf si l'adresse en impose une.
   try { var cpl = localStorage.getItem('cp-lang'); if (!new URLSearchParams(location.search).get('lang') && T[cpl]) lang = cpl; } catch (e) {}
   function applyLang() {
+    document.title = { fr: 'Offres', en: 'Offers', zh: '报价' }[lang] + ' — Central.Parts'; // titre de l'onglet dans la langue de la page
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
-    document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
+    placeholder();
+    $('q').setAttribute('aria-label', t().qLabel);
+    if (errCode && !$('err').hidden) $('err-t').textContent = t().e[errCode] || t().e.other;
     cartCount();
     render();
   }
+  // Exemple de référence : texte court sur un écran étroit, pour qu'il ne soit pas coupé (review n° 3).
+  var narrow = window.matchMedia ? window.matchMedia('(max-width: 480px)') : null;
+  function placeholder() { $('q').placeholder = narrow && narrow.matches ? t().phShort : t().placeholder; }
+  if (narrow && narrow.addEventListener) narrow.addEventListener('change', placeholder);
+  // Changement de langue depuis l'en-tête partagé (sans rechargement).
   window.cpLang = function (l) { lang = l; try { localStorage.setItem('cp-lang-offres', lang); } catch (e) {} applyLang(); };
 
   function money(v, cur) {
     try { return new Intl.NumberFormat(LOCALE[lang], { style: 'currency', currency: cur === 'CNH' ? 'CNY' : cur, minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(v); }
     catch (e) { return v + ' ' + cur; }
   }
-  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind === 'err' ? ' err' : ''); m.textContent = text || ''; }
+  var keepMsg = false;
+  function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg' + (kind ? ' ' + kind : ''); m.textContent = text || ''; keepMsg = !!text && kind !== ''; }
+
+  var ICON_OK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  var num = function (v) { return Number(v).toLocaleString(LOCALE[lang]); };
+
+  // Filtre « Fabricant » (handoff 03) : un select natif, fabricants partenaires puis distribués (migrations
+  // 20261106000038 et 20261106000039) ; variantes de nom regroupées par clé (f.key), filtre appliqué : data.manufacturer.
+  function fillSelect(fac, cur) {
+    var opt = function (f) { return '<option value="' + esc(f.name) + '"' + (f.key === cur ? ' selected' : '') + '>' + esc(f.name) + ' (' + esc(num(f.offers)) + ')</option>'; };
+    var part = fac.filter(function (f) { return f.partner; }), other = fac.filter(function (f) { return !f.partner; });
+    var total = fac.length; // nombre de fabricants proposés (copy.md : « Tous les fabricants ({n}) »)
+    $('mfr').innerHTML = '<option value=""' + (cur ? '' : ' selected') + '>' + esc(fill(t().filterAll, { n: num(total) })) + '</option>' +
+      (part.length ? '<optgroup label="' + esc(t().filterPartners) + '">' + part.map(opt).join('') + '</optgroup>' : '') +
+      (other.length ? '<optgroup label="' + esc(t().filterDist) + '">' + other.map(opt).join('') + '</optgroup>' : '');
+    // Fabricant demandé mais absent de la liste (aucune offre) : gardé pour pouvoir le retirer.
+    if (cur && !fac.some(function (f) { return f.key === cur; })) $('mfr').insertAdjacentHTML('beforeend', '<option value="' + esc(mfr) + '" selected>' + esc(mfr) + ' (0)</option>');
+  }
 
   function render() {
     if (!data) return;
     var list = data.offers || [], q = data.query;
-    $('count').hidden = !list.length;
-    // Recherche rapide par fabricant (migration 20261106000038) : boutons des fabricants présents, filtre combiné à la recherche.
-    // Deux rangées (migration 20261106000039) : fabricants partenaires (canal direct, rattachés dans le back office), puis
-    // fabricants distribués ; variantes de nom regroupées par clé (f.key), filtre appliqué : data.manufacturer.
     var fac = data.manufacturers || [], cur = data.manufacturer || '';
-    var curName = (fac.filter(function (f) { return f.key === cur; })[0] || {}).name || (list[0] ? list[0].manufacturer : cur);
-    var FOLD_AT = 8;
-    var chip = function (f, i) { return '<button type="button" class="' + (f.partner ? 'partner' : '') + (!f.partner && i >= FOLD_AT && f.key !== cur ? ' extra' : '') + '" data-m="' + esc(f.name) + '" aria-pressed="' + (f.key === cur) + '">' +
-      esc(f.name) + '<span>' + esc(Number(f.offers).toLocaleString(LOCALE[lang])) + '</span></button>'; };
-    var part = fac.filter(function (f) { return f.partner; }), other = fac.filter(function (f) { return !f.partner; });
-    var all = '<button type="button" data-m="" aria-pressed="' + !cur + '">' + esc(t().allMfr) + '</button>';
-    $('mfrs').hidden = fac.length < 2 && !cur;
-    $('mfrs').setAttribute('aria-label', t().byMfr);
-    $('mfrs').innerHTML = (part.length ? '<div class="row" id="mfrs-partners"><span class="lbl">' + esc(t().partners) + '</span>' + all + part.map(chip).join('') + '</div>' : '') +
-      (other.length ? '<div class="row' + (mfrsOpen ? '' : ' folded') + '" id="mfrs-others"><span class="lbl">' + esc(part.length ? t().others : t().byMfr) + '</span>' + (part.length ? '' : all) + other.map(chip).join('') +
-        (other.length > FOLD_AT ? '<button type="button" class="fold" aria-expanded="' + mfrsOpen + '" aria-controls="mfrs-others">' + esc(mfrsOpen ? t().lessMfr : fill(t().moreMfr, { n: other.length - FOLD_AT })) + '</button>' : '') + '</div>' : '');
-    $('count').textContent = data.total_offers > list.length ? fill(t().more, { n: list.length, t: Number(data.total_offers).toLocaleString(LOCALE[lang]) }) + (cur ? fill(t().countM, { m: curName }) : '')
-      : (q ? fill(t().count, { n: list.length, q: q }) : fill(t().latest, { n: list.length })) + (cur ? fill(t().countM, { m: curName }) : '');
+    var curName = (fac.filter(function (f) { return f.key === cur; })[0] || {}).name || (list[0] ? list[0].manufacturer : mfr || cur);
+    fillSelect(fac, cur);
+    $('count').hidden = !list.length;
+    var n1 = list.length === 1;
+    $('count').textContent = data.total_offers > list.length ? fill(t().more, { n: list.length, t: num(data.total_offers) }) + (cur ? fill(t().countM, { m: curName }) : '')
+      : (q ? fill(n1 ? t().countOne : t().count, { n: list.length, q: q }) : fill(n1 ? t().latestOne : t().latest, { n: list.length })) + (cur ? fill(t().countM, { m: curName }) : '');
     // Nombre de références et taille de l'inventaire (migration 20261106000036) : sur la recherche, sinon tout le catalogue.
     $('totals').hidden = !data.total_refs;
-    $('totals').innerHTML = data.total_refs ? '<div><b id="n-refs">' + esc(Number(data.total_refs).toLocaleString(LOCALE[lang])) + '</b><span>' +
-      esc((q ? fill(t().refsQ, { q: q }) : t().refs) + (cur ? fill(t().countM, { m: curName }) : '')) + '</span></div><div><b id="n-units">' + esc(Number(data.total_units).toLocaleString(LOCALE[lang])) +
+    $('totals').innerHTML = data.total_refs ? '<div><b id="n-refs">' + esc(num(data.total_refs)) + '</b><span>' +
+      esc((q ? fill(data.total_refs === 1 ? t().refsQOne : t().refsQ, { q: q }) : t().refs) + (cur ? fill(t().countM, { m: curName }) : '')) + '</span></div><div><b id="n-units">' + esc(num(data.total_units)) +
       '</b><span>' + esc(t().units) + '</span></div>' : '';
     $('table').hidden = !list.length;
     $('ttl').hidden = false; $('ttl').textContent = fill(t().ttl, { n: data.ttl_days, m: data.ttl_days_manufacturer || data.ttl_days }) +
       (data.rates_at ? ' ' + fill(t().rates, { d: new Date(data.rates_at).toLocaleDateString(LOCALE[lang]) }) : '');
-    if (!list.length) say('', q ? fill(t().none, { q: q }) : t().noneAll); else say('', '');
+    // Vide : avec un fabricant choisi, « Aucune offre pour ce filtre » et « Retirer le filtre » ; sinon le message de la recherche.
+    if (!list.length) say('', cur || mfr ? t().noneFilter : q ? fill(t().none, { q: q }) : t().noneAll); else if (!keepMsg) say('', '');
+    $('unfilter').hidden = !(!list.length && (cur || mfr));
     // Référence introuvable : recherche payante de composants rares (ADR 0033), référence pré-remplie.
-    $('to-sourcing').hidden = !(q && !list.length);
+    $('to-sourcing').hidden = !(q && !list.length && !(cur || mfr));
     $('to-sourcing-a').textContent = q ? fill(t().sourcingCta, { q: q }) : '';
     $('to-sourcing-a').href = '/sourcing/?lang=' + lang + '&q=' + encodeURIComponent(q || '');
     $('rows').innerHTML = list.map(function (o, i) {
@@ -274,20 +316,18 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
         '<td data-label="' + esc(t().thSupplier) + '">' + (o.factory_direct ? '<span class="tag direct" title="' + esc(t().official) + '">' + esc(t().direct) + '</span>' : o.authorized_distributor ? '<span class="tag auth" title="' + esc(t().official) + '">' + esc(t().auth) + '</span>'
           : '<span class="tag">' + esc(t().partner) + '</span>') + '</td>' +
         '<td data-label="' + esc(t().thAvail) + '" class="num">' + esc(o.availability) + '</td>' +
-        '<td data-label="' + esc(t().thMoq) + '" class="num">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(Number(o.spq).toLocaleString(LOCALE[lang])) + '</div>' : '') + '</td>' +
-        '<td data-label="' + esc(t().thPrice) + '">' + price + '</td>' +
+        '<td data-label="' + esc(t().thMoq) + '" class="num"><div class="v">' + esc(o.moq || 1) + (o.spq > 1 ? '<div class="muted">' + esc(t().spq) + ' ' + esc(num(o.spq)) + '</div>' : '') + '</div></td>' +
+        '<td data-label="' + esc(t().thPrice) + '"><div class="v">' + price + '</div></td>' +
         '<td data-label="' + esc(t().thUpdated) + '" class="num">' + esc(new Date(o.updated_at).toLocaleDateString(LOCALE[lang])) + '</td>' +
-        '<td data-label="">' + (cartHas(o) ? '<a class="btn btn-line in icon-btn" href="' + esc(t().cartHref) + '" aria-label="' + esc(t().inCart) + '" title="' + esc(t().inCart) + '">' + ICON_IN + '</a>'
-          : '<button class="btn btn-line add icon-btn" type="button" data-i="' + i + '" aria-label="' + esc(t().ask) + '" title="' + esc(t().ask) + '">' + ICON_ADD + '</button>') + '</td>' +
+        // « Ajouter au panier », puis « Ajouté · Voir le panier » (handoff 02 et 03).
+        '<td class="act">' + (cartHas(o) ? '<a class="btn-done in" href="' + esc(t().cartHref) + '">' + ICON_OK + '<span>' + esc(t().done) + ' · ' + esc(t().doneView) + '</span></a>'
+          : '<button class="btn-add add" type="button" data-i="' + i + '">' + esc(t().ask) + '</button>') + '</td>' +
         '</tr>';
     }).join('');
   }
 
   // ------------------------------------------------------------ panier (ADR 0028) : gardé dans ce navigateur, envoyé depuis /panier/
   var CART = 'cp-cart', CART_MAX = 30;
-  // Icônes du panier (ajouter, déjà dans le panier), dessinées ici : aucune ressource externe.
-  var ICON_ADD = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M13.5 8.5v5M11 11h5"/></svg>';
-  var ICON_IN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6.2"/><path d="M10.5 11l2 2 3.5-3.5"/></svg>';
   function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
   function cartAdd(o) {
@@ -303,12 +343,18 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
   function cartCount() { if (window.cpCount) cpCount(); $('to-terms').href = t().termsHref; $('to-mfrs').href = '/fabricants/?lang=' + lang; }
   $('rows').addEventListener('click', function (ev) {
     var b = ev.target.closest('button.add'); if (!b || !data) return;
-    var o = data.offers[+b.getAttribute('data-i')], r = cartAdd(o);
+    var i = +b.getAttribute('data-i'), o = data.offers[i], r = cartAdd(o);
     render(); cartCount();
-    say(r === 'ok' ? '' : 'err', r === 'ok' ? fill(t().added, { mpn: o.mpn }) : r === 'full' ? t().cartFull : t().cartOff);
+    say(r === 'ok' ? 'ok' : 'err', r === 'ok' ? fill(t().added, { mpn: o.mpn }) : r === 'full' ? t().cartFull : t().cartOff);
+    // Ajout réussi : la ligne le montre déjà ; le message reste annoncé aux lecteurs d'écran sans décaler la page.
+    if (r === 'ok') $('msg').classList.add('sr-only');
+    // Le focus passe au lien « Voir le panier » qui remplace le bouton.
+    var done = $('rows').children[i] && $('rows').children[i].querySelector('.in'); if (done) done.focus();
   });
   window.addEventListener('storage', function (ev) { if (ev.key === CART) { cartCount(); render(); } });
 
+  // Chargement : trois cartes grises à la place des offres ; erreur : message et « Réessayer ».
+  var errCode = null;
   function load() {
     // Prix en euros, convertis au taux de la BCE (migration 20261103000025, ADR 0027) ; o.currency donne la devise
     // de chaque offre, data.rates_at la date du taux le plus ancien utilisé.
@@ -318,23 +364,26 @@ a.mfr{text-decoration:underline;text-underline-offset:2px}
     mfr ? url.searchParams.set('mfr', mfr) : url.searchParams.delete('mfr');
     url.searchParams.delete('cur');
     history.replaceState(null, '', url);
+    errCode = null; $('err').hidden = true; say('', '');
+    $('table').hidden = $('count').hidden = $('unfilter').hidden = $('to-sourcing').hidden = true; $('skel').hidden = false;
+    // L'API rend au plus 50 offres sans recherche (fonction « offers ») : pas de paramètre de taille côté page.
     return fetch(FN + '?cur=EUR&q=' + encodeURIComponent(q) + (mfr ? '&mfr=' + encodeURIComponent(mfr) : ''))
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); },
             function () { throw 'network'; })
-      .then(function (d) { data = d; render(); }, function (c) { data = null; $('table').hidden = $('count').hidden = $('totals').hidden = true; say('err', t().e[c] || t().e.other); });
+      .then(function (d) { $('skel').hidden = true; data = d; render(); }, function (c) {
+        $('skel').hidden = true; data = null; $('table').hidden = $('count').hidden = $('totals').hidden = true;
+        // Recherche trop courte : simple consigne ; autres erreurs : message et « Réessayer ».
+        if (c === 'too_short') return say('err', t().e[c]);
+        errCode = c; $('err').hidden = false; $('err-t').textContent = t().e[c] || t().e.other;
+      });
   }
 
-  $('form').addEventListener('submit', function (e) { e.preventDefault(); load(); });
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); mfr = $('mfr').value; load(); });
   var mfr = (params.get('mfr') || '').slice(0, 80);
-  // Téléphone : la liste des fabricants distribués reste repliée tant qu'on ne la déplie pas (choix gardé pendant la visite).
-  var mfrsOpen = false;
-  $('mfrs').addEventListener('click', function (ev) {
-    var f = ev.target.closest('button.fold');
-    if (f) { mfrsOpen = !mfrsOpen; $('mfrs-others').classList.toggle('folded', !mfrsOpen); f.setAttribute('aria-expanded', String(mfrsOpen));
-      f.textContent = mfrsOpen ? t().lessMfr : fill(t().moreMfr, { n: $('mfrs-others').querySelectorAll('button.extra').length }); return; }
-    var b = ev.target.closest('button[data-m]'); if (!b) return;
-    mfr = b.getAttribute('data-m'); load();
-  });
+  // Sans bouton : changer de fabricant recharge les offres sur place.
+  $('mfr').addEventListener('change', function () { mfr = $('mfr').value; load(); });
+  $('unfilter-b').addEventListener('click', function () { mfr = ''; load(); });
+  $('retry').addEventListener('click', function () { load(); });
   $('q').value = params.get('q') || '';
   applyLang();
   load();
