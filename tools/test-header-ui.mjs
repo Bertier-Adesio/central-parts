@@ -164,10 +164,11 @@ for (const [cart, pill, lang, read] of [[0, null, 'fr', ''], [1, '1', 'fr', ', 1
   await ctx.close();
 }
 
-// 6. Back office : ni langue ni menu avant connexion ; logo vers /admin/.
+// 6. Back office : langue dans la barre, ni adresse ni menu avant connexion ; logo vers /admin/.
 {
   const { page, ctx } = await open('/admin/', { width: 390 });
-  ok(!(await page.isVisible('#who')) && !(await page.isVisible('.sh-menu')) && (await page.$$('.site-hdr .sh-lang')).length === 0, 'back office avant connexion : ni adresse, ni menu, ni langue');
+  ok(!(await page.isVisible('#who')) && !(await page.isVisible('.sh-menu')) && await page.isVisible('.sh-tools > .sh-lang') && (await page.$$('.sh-tools > .sh-lang a')).length === 3,
+  'back office avant connexion : ni adresse ni menu, langue FR · EN · 中文 dans la barre');
   ok(await page.getAttribute('a.sh-brand', 'href') === '/admin/', 'back office : logo vers /admin/');
   await ctx.close();
 }

@@ -33,7 +33,7 @@ const browser = await chromium.launch();
 async function open(viewport) {
   const page = await browser.newPage({ viewport, locale: 'fr-FR' });
   const errors = [];
-  page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|409|422)/.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' && !/status of (401|403|409|422|500)/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.route(BASE + '/functions/v1/admin/**', api);
   await page.route(BASE + '/storage/**', storage);
@@ -50,17 +50,55 @@ await page.goto(BASE + '/admin/');
 await page.waitForSelector('#v-login:not([hidden])');
 ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'page non indexée (noindex)');
 ok(!(await page.isVisible('#v-app')), 'sans session : aucune donnée affichée');
+ok(await page.getAttribute('html', 'lang') === 'fr' && norm(await page.textContent('#v-login h1')) === 'Connexion', 'connexion en français par défaut (navigateur fr-FR)');
+ok(norm(await page.textContent('#login-send')) === 'Recevoir le lien', 'bouton « Recevoir le lien »');
+// Carte centrée (handoff 06) : largeur 440 px au plus, au milieu de la page.
+const card = await page.$eval('#v-login .login', (el) => { const r = el.getBoundingClientRect(); return { w: r.width, mid: r.left + r.width / 2 }; });
+ok(card.w <= 440 && Math.abs(card.mid - 640) < 2, 'connexion : carte centrée, 440 px au plus');
+// Envoi : bouton désactivé « Envoi… » pendant l'appel.
+let release;
+await page.route(BASE + '/functions/v1/admin/login', async (route) => { await new Promise((r) => { release = r; }); return api(route); });
 await page.fill('#login-email', ADMIN_EMAIL);
 await page.click('#login-send');
-await page.waitForSelector('#msg.ok');
+await page.waitForFunction(() => document.getElementById('login-send').disabled);
+ok(norm(await page.textContent('#login-send')) === 'Envoi…', 'envoi en cours : bouton désactivé « Envoi… »');
+release();
+await page.waitForSelector('#login-msg.ok');
+await page.unroute(BASE + '/functions/v1/admin/login');
 ok(mock.state.logins[0] === ADMIN_EMAIL, 'lien de connexion demandé pour l\'adresse saisie');
-// Écran de connexion en FR/EN/中文 (?lang=) ; le reste du back office reste en français.
+const sentText = norm(await page.textContent('#login-msg'));
+ok(sentText.includes('Lien envoyé. Ouvrez-le depuis cet appareil.') && sentText.includes(ADMIN_EMAIL) && sentText.includes('courriers indésirables'),
+  'lien envoyé : confirmation, adresse saisie, conseil « courriers indésirables »');
+ok(!(await page.isDisabled('#login-send')) && norm(await page.textContent('#login-send')) === 'Recevoir le lien', 'après l\'envoi : bouton rétabli');
+await page.click('#login-resend');
+await page.waitForFunction(() => document.querySelectorAll('#login-msg.ok').length && !document.getElementById('login-send').disabled);
+ok(mock.state.logins.length === 2, '« Renvoyer » : nouveau lien demandé');
+// Erreur : message neutre, qui ne dit pas si l'adresse existe.
+await page.route(BASE + '/functions/v1/admin/login', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"server"}' }));
+await page.click('#login-send');
+await page.waitForSelector('#login-msg.err');
+ok(norm(await page.textContent('#login-msg')).includes('Envoi impossible pour le moment'), 'erreur d\'envoi : message neutre');
+await page.unroute(BASE + '/functions/v1/admin/login');
+
+// 1 bis. Langues (review n° 9 et 12) : ?lang= respecté, changement sur place, choix gardé.
+await page.goto('about:blank');
 await page.goto(BASE + '/admin/?lang=en');
 await page.waitForSelector('#v-login:not([hidden])');
-ok(await page.textContent('#v-login h1') === 'Log in' && await page.textContent('#login-send') === 'Send me the link' && await page.getAttribute('html', 'lang') === 'en', 'connexion en anglais (?lang=en)');
-await page.goto(BASE + '/admin/?lang=zh');
+ok(await page.getAttribute('html', 'lang') === 'en' && norm(await page.textContent('#v-login h1')) === 'Sign in' &&
+  norm(await page.textContent('#login-send')) === 'Get the link' && norm(await page.textContent('#v-login label')) === 'E-mail address',
+  '?lang=en : connexion en anglais');
+ok(await page.title() === 'Back office — Central.Parts', '?lang=en : titre de l\'onglet traduit');
+await page.evaluate(() => { window.__sansRechargement = true; });
+await page.click('.sh-tools > .sh-lang a[hreflang=zh]');
+await page.waitForFunction(() => document.documentElement.lang === 'zh-Hans');
+ok(await page.evaluate(() => window.__sansRechargement === true), 'changement de langue sur place, sans recharger la page');
+ok(norm(await page.textContent('#v-login h1')) === '登录' && norm(await page.textContent('#login-send')) === '获取登录链接', '中文 : connexion traduite');
+ok(new URL(page.url()).searchParams.get('lang') === 'zh' && await page.getAttribute('.sh-tools > .sh-lang a[hreflang=zh]', 'aria-current') === 'true',
+  'changement de langue : ?lang= et langue active de l\'en-tête à jour');
+await page.goto(BASE + '/admin/');
 await page.waitForSelector('#v-login:not([hidden])');
-ok(await page.textContent('#v-login h1') === '登录' && await page.getAttribute('html', 'lang') === 'zh-Hans', 'connexion en 中文 (?lang=zh)');
+ok(await page.getAttribute('html', 'lang') === 'zh-Hans', 'sans ?lang= : dernier choix gardé (localStorage)');
+await page.evaluate(() => localStorage.removeItem('cp-lang-admin'));
 
 // 2. Compte connecté mais pas administrateur : accès refusé, aucune donnée.
 await page.goto('about:blank');
@@ -79,6 +117,9 @@ ok(norm(await page.textContent('#who-email')) === ADMIN_EMAIL, 'administrateur c
 const order = await page.$$eval('#sup-list button[data-org]', (b) => b.map((x) => x.dataset.org));
 ok(order.join(',') === 'ORG-0112,ORG-0108,ORG-0107', 'en attente : tri par date de demande, la plus récente d\'abord');
 ok(norm(await page.textContent('[data-c=pending]')) === '(3)' && norm(await page.textContent('[data-c=rejected]')) === '(1)', 'compteurs par statut');
+ok(norm(await page.textContent('#sup-count')) === '3' && await page.getAttribute('#sup-count', 'aria-label') === '3 à valider', 'onglet Fournisseurs : compteur des sociétés en attente');
+ok(norm(await page.textContent('#sup-detail')) === 'Choisissez une société dans la liste.' &&
+  (await page.$eval('#sup-detail', (el) => el.getBoundingClientRect().height)) >= 160, 'panneau de droite sans sélection : ligne discrète, hauteur fixe');
 await page.click('#filters button[data-s=rejected]');
 await page.waitForFunction(() => document.querySelectorAll('#sup-list button[data-org]').length === 1);
 ok(norm(await page.textContent('#sup-list')).includes('上海样例贸易有限公司'), 'filtre « refusés » ; libellé chinois affiché');
@@ -202,7 +243,7 @@ ok(ctc.includes('ventes@distributeur.example') && ctc.includes('RFQ') && ctc.inc
 
 // Fabricants : création, logo, rattachement du distributeur agréé et du fabricant lui-même, publication.
 await page.click('#tab-mfr');
-await page.waitForSelector('#mfr-list li');
+await page.waitForSelector('#mfr-list li:not(.loading)');
 ok(norm(await page.textContent('#mfr-list')).includes('Aucun fabricant'), 'fabricants : liste vide au départ');
 await page.click('#mfr-new');
 await page.fill('#mf-name-i', 'Fabricant Démo (fictif)');
@@ -300,6 +341,7 @@ ok(sum.includes('1 812') && sum.includes('库存表-2026-10-31.xlsx') && sum.inc
 await page.click('#stock-sum tr[data-org="ORG-0111"]');
 await page.waitForFunction(() => document.getElementById('lot-count').textContent.replace(/[\u202f\u00a0]/g, ' ').includes('1 812'));
 ok(norm(await page.textContent('#lot-count')).includes('1 à 50 sur 1 812') && (await page.$$('#lot-list > tr')).length === 50, 'fichier de 1 812 références : 50 par page');
+ok(await page.isVisible('#lot-pager') && await page.isDisabled('#lot-prev'), 'plusieurs pages : « Précédents / Suivants » affichés');
 await page.click('#lot-next');
 await page.waitForFunction(() => document.getElementById('lot-count').textContent.replace(/[\u202f\u00a0]/g, ' ').includes('51 à 100'));
 ok(true, 'page suivante');
@@ -308,6 +350,12 @@ ok(new Set(nTiers).size > 1, 'paliers propres à chaque référence (nombre de p
 await page.selectOption('#lot-org', 'ORG-0110');
 await page.waitForFunction(() => document.getElementById('lot-count').textContent.replace(/[\u202f\u00a0]/g, ' ').includes('sur 10'));
 ok(norm(await page.textContent('#lot-list')).includes('STM32G071RBT6'), 'démonstration du 9 novembre : 10 références');
+ok(await page.isHidden('#lot-pager'), 'une seule page : « Précédents / Suivants » masqués');
+await page.fill('#lot-q', 'ZZZ-INTROUVABLE');
+await page.click('#lot-form button[type=submit]');
+await page.waitForSelector('#lot-list td.empty');
+ok(norm(await page.textContent('#lot-list')).includes('Aucune référence ne correspond à cette recherche.') && await page.isHidden('#lot-pager'),
+  'recherche sans résultat : message dans le tableau, pas de pagination');
 await page.fill('#lot-q', 'sot-223');
 await page.click('#lot-form button[type=submit]');
 await page.waitForFunction(() => / sur 1\.$/.test(document.getElementById('lot-count').textContent.replace(/[\u202f\u00a0]/g, ' ')));
@@ -416,6 +464,8 @@ await page.click('#c-ok');
 await page.waitForSelector('#rfq-list li.empty');
 ok(mock.state.rfqs.find((d) => d.id === 'DEM-1004').status === 'auction', 'RFQ validée et diffusée');
 ok((await page.isHidden('#req-count')), 'plus rien à valider : compteur masqué');
+ok(norm(await page.textContent('#req-list')).startsWith('Aucune demande à valider.') && norm(await page.textContent('#rfq-list')).startsWith('Aucune RFQ à valider.'),
+  'filtre « À valider » vide : « Aucune demande à valider », « Aucune RFQ à valider »');
 // Toutes les demandes : statuts et décisions.
 await page.click('#req-filters button[data-r=""]');
 await page.waitForSelector('#req-list li[data-ref="PR-0010"]');
@@ -436,13 +486,51 @@ ok(norm(await page.textContent('#msg')).includes('déjà été traitée'), 'dema
 await page.click('#tab-sup');
 await page.click('#filters button[data-s=""]');
 await page.waitForSelector('#sup-list button[data-org="ORG-0110"]');
-await page.click('#sup-list button[data-org="ORG-0110"]');
+// La fiche de ORG-0110 peut déjà être affichée (étape 9) : attendre la réponse de la nouvelle ouverture.
+await Promise.all([page.waitForResponse((r) => r.url().includes('/supplier-addresses')), page.click('#sup-list button[data-org="ORG-0110"]')]);
 await page.waitForFunction(() => (document.getElementById('d-addr') || {}).textContent?.includes('Entrepôt Shenzhen'));
 const addr = norm(await page.textContent('#d-addr'));
 ok(addr.includes('par défaut') && addr.includes('Futian, bâtiment 1, 518000 Shenzhen, CN') && addr.includes('Entrepôt Hong Kong (fictif)') && addr.includes('10 lot(s)'),
   'fiche vendeur : adresses d\'expédition, la principale signalée');
 
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
+await page.close();
+
+// 9 quater. Listes de demandes : chargement, vide selon le filtre, erreur avec « Réessayer », langue changée sur place.
+mock = createMock();
+for (const k of ['requests', 'rfqs', 'sourcing']) mock.state[k].length = 0;
+({ page, errors } = await open({ width: 1280, height: 900 }));
+await page.goto(BASE + '/admin/?lang=en#access_token=DEMO-ADMIN&expires_in=3600');
+await page.waitForSelector('#sup-list button[data-org]');
+ok(norm(await page.textContent('#tab-req')) === 'Requests' && norm(await page.textContent('#tab-sup')).startsWith('Suppliers'), '?lang=en : onglets en anglais');
+let hold;
+await page.route(BASE + '/functions/v1/admin/requests**', async (route) => { await new Promise((r) => { hold = r; }); return api(route); });
+await page.click('#tab-req');
+await page.waitForSelector('#req-list li.loading');
+ok(norm(await page.textContent('#req-list')) === 'Loading…' && norm(await page.textContent('#rfq-list')) === 'Loading…', 'chargement : ligne « Loading… » sous chaque titre');
+hold();
+await page.waitForSelector('#req-list li.empty:not(.loading)');
+ok(norm(await page.textContent('#req-list')).startsWith('No requests to validate.') && norm(await page.textContent('#req-list')).includes('appear here'), 'vide, « To validate » : message et explication');
+await page.unroute(BASE + '/functions/v1/admin/requests**');
+await page.click('#req-filters button[data-r=""]');
+await page.waitForFunction(() => /No requests yet/.test(document.getElementById('req-list').textContent));
+await page.waitForFunction(() => /No sourcing searches yet/.test(document.getElementById('src-list').textContent));
+ok(norm(await page.textContent('#rfq-list')).startsWith('No RFQs yet.'), 'vide, « All » : message propre au filtre');
+await page.click('.sh-tools > .sh-lang a[hreflang=fr]');
+await page.waitForFunction(() => document.documentElement.lang === 'fr');
+ok(norm(await page.textContent('#req-list')).startsWith('Aucune demande pour le moment.') && norm(await page.textContent('#req-filters')).includes('Toutes') &&
+  norm(await page.textContent('#tab-stock')) === 'Stocks et offres' && norm(await page.textContent('#logout')) === 'Déconnexion', 'passage en français sur place : listes, filtres, onglets, en-tête');
+ok(norm(await page.textContent('#sup-list')).includes('demande du') && norm(await page.textContent('#sup-list')).includes('En attente'), 'passage en français : liste des sociétés redessinée');
+// Erreur du serveur : message dans la liste et « Réessayer ».
+await page.route(BASE + '/functions/v1/admin/rfq**', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"server"}' }));
+await page.click('#req-filters button[data-r="pending_validation"]');
+await page.waitForSelector('#req-list li.err button[data-retry]');
+ok(norm(await page.textContent('#req-list')).includes('Chargement impossible.') && norm(await page.textContent('#req-list button')) === 'Réessayer', 'erreur : message et « Réessayer »');
+await page.unroute(BASE + '/functions/v1/admin/rfq**');
+await page.click('#req-list button[data-retry]');
+await page.waitForFunction(() => /Aucune demande à valider/.test(document.getElementById('req-list').textContent));
+ok(true, '« Réessayer » : liste rechargée');
+ok(errors.every((e) => /status of 500/.test(e)), 'aucune autre erreur console : ' + errors.join(' | '));
 await page.close();
 
 // 10. Téléphone (390 px) : pas de défilement horizontal, fiche puis retour à la liste.
@@ -452,6 +540,8 @@ await page.goto(BASE + '/admin/#access_token=DEMO-ADMIN&expires_in=3600');
 await page.waitForSelector('#sup-list button[data-org]');
 const wide = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 ok(await wide(), '390 px : liste sans défilement horizontal');
+const tb = await page.$$eval('.tabs button', (b) => b.map((x) => { const r = x.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.left), r.height]; }));
+ok(new Set(tb.map((x) => x[0])).size === 2 && new Set(tb.map((x) => x[1])).size === 2 && tb.every((x) => x[2] >= 44), '390 px : onglets en grille 2 × 2, cibles de 44 px');
 await page.click('button[data-org="ORG-0108"]');
 await page.waitForSelector('#d-code-l:text("Registration no. (Hong Kong)")');
 ok(!(await page.isVisible('#sup-list')) && (await page.isVisible('#back')), '390 px : fiche seule, bouton retour');
@@ -471,7 +561,7 @@ await page.close();
 ({ page, errors } = await open({ width: 1280, height: 900 }));
 await page.goto(BASE + '/admin/#access_token=PERIME&expires_in=3600');
 await page.waitForSelector('#v-login:not([hidden])');
-ok(norm(await page.textContent('#msg')).includes('Session expirée'), 'jeton expiré : retour à la connexion');
+ok(norm(await page.textContent('#login-msg')).includes('Session expirée'), 'jeton expiré : retour à la connexion');
 await page.close();
 
 // 12. Plusieurs onglets du même navigateur : une connexion vaut pour tous, une déconnexion aussi.
@@ -500,7 +590,7 @@ mock = createMock();
   await a.click('#logout');
   await b.waitForSelector('#v-login:not([hidden])');
   await c.waitForSelector('#v-login:not([hidden])');
-  ok(norm(await b.textContent('#msg')).includes('autre onglet') && await c.isHidden('#v-app'), 'onglets : se déconnecter dans un onglet déconnecte les autres');
+  ok(norm(await b.textContent('#login-msg')).includes('autre onglet') && await c.isHidden('#v-app'), 'onglets : se déconnecter dans un onglet déconnecte les autres');
   const stored = await a.evaluate(() => [localStorage.getItem('cp-admin-session'), sessionStorage.getItem('cp-admin-session')]);
   ok(stored[0] === null && stored[1] === null, 'onglets : aucun jeton gardé après la déconnexion');
   // Jeton expiré dans le stockage partagé : effacé, écran de connexion.

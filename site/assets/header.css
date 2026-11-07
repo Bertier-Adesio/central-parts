@@ -80,12 +80,16 @@
 }
 /* Variante lien personnel : pas de menu, la langue reste dans la barre */
 @media (max-width: 1139px) {
-  .site-hdr[data-variant="supplier-link"] .sh-tools > .sh-lang { display: inline-flex; }
-  .site-hdr[data-variant="supplier-link"] .sh-lang a { height: var(--control-h-lg); min-width: var(--control-h-lg); }
+  .site-hdr[data-variant="supplier-link"] .sh-tools > .sh-lang,
+  .site-hdr[data-variant="admin"] .sh-tools > .sh-lang { display: inline-flex; }
+  .site-hdr[data-variant="supplier-link"] .sh-lang a,
+  .site-hdr[data-variant="admin"] .sh-lang a { height: var(--control-h-lg); min-width: var(--control-h-lg); }
 }
+/* Back office : la langue reste dans la barre (le menu n'apparaît qu'une fois connecté) ; pas de doublon dans le menu */
+.site-hdr[data-variant="admin"] .sh-lang-m, .site-hdr[data-variant="admin"] #sh-l { display: none; }
 /* Petits écrans : l'étiquette du centre fournisseur disparaît de la barre (elle reste dans le titre de la page) */
 @media (max-width: 479px) {
-  .site-hdr[data-variant^="supplier"] .sh-tag { display: none; }
+  .site-hdr[data-variant^="supplier"] .sh-tag, .site-hdr[data-variant="admin"] .sh-tag { display: none; }
 }
 
 /* Verrou de défilement : la classe est posée sur <html> par le script quand le menu est ouvert */

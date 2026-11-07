@@ -30,7 +30,7 @@ const PAGES = [
   { path: 'depot/aide', variant: 'supplier', cur: 'help', langs: ['zh', 'en'] },
   // Lien personnel : le FR reste proposé, il sert aux opérateurs de Central.Parts (accès depuis le back office).
   { path: 'depot/lien', variant: 'supplier-link', cur: null, langs: ['zh', 'en', 'fr'] },
-  { path: 'admin', variant: 'admin', cur: null, langs: [] },
+  { path: 'admin', variant: 'admin', cur: null, langs: ['fr', 'en', 'zh'] },
 ];
 
 // Textes de l'en-tête (header-spec.md, « Chaînes nouvelles » ; variante « Panier » tant que le renommage n'est pas tranché).
