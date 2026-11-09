@@ -46,7 +46,7 @@ async function api(route) {
   }
   if (path === '/imports') return reply(state.uploaded ? [{ id: 'IMP-1', file_name: 'f.csv', status: 'done', created: 3, updated: 0, rejected: 0, duplicates: 0, missing_date_code: 3, withdrawn: 0, received_at: '2026-10-31T10:05:00Z', report: { rejected: [], completeness: { lines: 3, manufacturer: 3, description: 2, datasheet: 3, package_case: 3, lifecycle: 0, eccn: 1, hts_code: 0, unknown_manufacturers: ['ACME Semi'] } }, currency: state.uploadCurrency, currency_used: { [state.uploadCurrency + '|upload']: 3 } }] : []);
   if (path === '/quality') return reply(state.uploaded ? { lots: 3, completeness: 0.571, rates: {} } : {});
-  if (path === '/offers-status') return reply(state.uploaded ? { live: state.expired ? 0 : 3, to_reconfirm: state.expired ? 3 : 0, ttl_days: 14, expires_at: '2026-11-17T02:06:00Z', last_confirmed: '2026-11-03T02:06:00Z' } : { live: 0, to_reconfirm: 0, ttl_days: 14 });
+  if (path === '/offers-status') return reply(state.uploaded ? { live: state.expired ? 0 : 3, to_reconfirm: state.expired ? 3 : 0, ttl_days: 14, expires_at: '2026-11-17T02:06:00Z', last_confirmed: '2026-11-03T02:06:00Z', updates: { month_days: 2, days_30: 2, last_update_at: '2026-11-03T02:06:00Z' } } : { live: 0, to_reconfirm: 0, ttl_days: 14 });
   if (path === '/reconfirm') { state.reconfirmed = (state.reconfirmed || 0) + 1; state.expired = false; return reply({ lots: 3, ttl_days: 14, expires_at: '2026-11-18T08:00:00Z' }); }
   if (path === '/contacts') return reply(state.contacts);
   if (path === '/requests') return reply(state.requests || []);
@@ -175,6 +175,7 @@ ok((await page.textContent('[data-t=tpl]')).includes('今后也将计入供应�
 // 5 bis. Validité des offres et reconfirmation sans nouveau fichier (ADR 0025).
 await page.waitForSelector('#validity:not([hidden])');
 ok((await page.textContent('#val-text')).includes('3 条报价在线') && (await page.textContent('#val-text')).includes('有效期 14 天'), 'validité : offres en ligne, échéance et durée de 14 jours');
+ok((await page.textContent('#val-upd')).includes('本月已更新 2 天') && (await page.textContent('#val-upd')).includes('供应商评分'), 'validité : jours mis à jour ce mois-ci, comptés dans la note (ADR 0023)');
 state.expired = true;
 await page.click('#reconfirm');
 await page.waitForFunction(() => /已确认：3 条报价/.test(document.getElementById('msg').textContent));

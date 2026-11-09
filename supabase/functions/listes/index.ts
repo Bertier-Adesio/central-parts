@@ -57,12 +57,20 @@ Deno.serve(async (req) => {
       const key = base.replace(/\.([A-Za-z0-9]+)$/, `-devise-${cur}.$1`);
       const { data, error } = await db.storage.from('stock-imports').createSignedUploadUrl(key);
       if (error) return json({ error: 'storage' }, 500);
+      // Accès opérateur (lien créé depuis le back office) : le fichier est importé, mais ne compte pas dans la note
+      // de fréquence de mise à jour du fournisseur (ADR 0023, complément du 9 novembre 2026).
+      if (who.operator === true) {
+        const { error: opErr } = await db.from('operator_uploads').insert({ storage_path: key, org_id: org, by_who: 'operator' });
+        if (opErr) return json({ error: 'storage' }, 500);
+      }
       return json({ signed_url: data.signedUrl, path: key, max_bytes: 52428800 });
     }
 
     // Reconfirmation sans nouveau fichier (ADR 0025) : le vendeur atteste que son stock n'a pas changé.
     if (req.method === 'POST' && path.endsWith('/reconfirm')) {
-      const { data, error } = await db.rpc('seller_reconfirm', { p_org: org, p_by: 'link', p_channel: 'lien' });
+      // Accès opérateur : journalisé à part (canal « admin »), ne compte pas dans la note du fournisseur.
+      const op = who.operator === true;
+      const { data, error } = await db.rpc('seller_reconfirm', { p_org: org, p_by: op ? 'operator' : 'link', p_channel: op ? 'admin' : 'lien' });
       if (error) return json({ error: error.code === 'P0002' ? 'no_stock' : 'database' }, error.code === 'P0002' ? 422 : 500);
       return json(data);
     }

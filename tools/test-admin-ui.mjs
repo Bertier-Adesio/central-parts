@@ -154,6 +154,7 @@ await page.waitForSelector('button[data-org="ORG-0110"]');
 await page.click('button[data-org="ORG-0110"]');
 await page.waitForSelector('#d-org:text("ORG-0110")');
 ok(norm(await page.textContent('#d-cur')) === 'USD (lue dans le fichier, 8 lignes) · USD (choisie au dépôt, 2 lignes)', 'fiche : devise du dernier import et provenance');
+ok(/^1 jour\(s\) ce mois-ci · 1 sur les 30 derniers jours · dernière le .+ \(heure de Paris\)$/.test(norm(await page.textContent('#d-upd'))), 'fiche : fréquence de mise à jour du fournisseur (ADR 0023)');
 
 // 8 ter. Accès au dépôt d'un fournisseur approuvé (ADR 0021, complément) : lien de 8 heures, ouvert dans un nouvel onglet.
 await page.click('#d-depot');

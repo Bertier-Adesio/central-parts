@@ -150,7 +150,9 @@ export function createMock() {
   const fiche = (o) => {
     const { import: imp, ...rest } = o;
     const srcs = [...new Set(lots.filter((l) => l.org_id === o.org_id).map((l) => l.source))];
-    return { ...rest, stock: { lines: lines(o.org_id), lines_total: lots.filter((l) => l.org_id === o.org_id).length, sources: srcs }, last_import: imp || null };
+    return { ...rest, stock: { lines: lines(o.org_id), lines_total: lots.filter((l) => l.org_id === o.org_id).length, sources: srcs }, last_import: imp || null,
+      // Fréquence de mise à jour (migration 20261109000041) : comme seller_updates, un jour par import réussi.
+      updates: { month_days: imp ? 1 : 0, days_30: imp ? 1 : 0, last_update_at: imp?.received_at || null } };
   };
 
   // Renvoie [statut HTTP, corps] pour une requête vers /functions/v1/admin.
