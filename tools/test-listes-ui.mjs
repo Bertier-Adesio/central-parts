@@ -69,7 +69,8 @@ async function listes(route) {
   const operator = req.headers().authorization === 'Bearer ' + OP_TOKEN;
   if (req.headers().authorization !== 'Bearer ' + TOKEN && !operator) return reply({ error: 'link_invalid' }, 401);
   const live = [...state.lots.values()].filter((l) => l.qty > 0);
-  if (path === '/me') return reply({ name: VENDOR, currency: 'USD', ttl_days: 7, status: { live: live.length, to_reconfirm: 0, last_confirmed: live[0]?.confirmed_at || null },
+  if (path === '/me') return reply({ name: VENDOR, currency: 'USD', ttl_days: 7, status: { live: live.length, to_reconfirm: 0, last_confirmed: live[0]?.confirmed_at || null,
+    updates: { month_days: live.length ? 1 : 0, days_30: live.length ? 1 : 0, last_update_at: live[0]?.confirmed_at || null } },
     operator, expires_at: operator ? OP_EXPIRES : null });
   if (path === '/upload-url') {
     const { file_name, currency } = JSON.parse(req.postData() || '{}');
@@ -168,6 +169,7 @@ const noScroll = (page) => page.evaluate(() => document.documentElement.scrollWi
   ok((await page.textContent('#msg')).includes('0 行需修改'), 'liste de test : 10 lignes acceptées, aucune à corriger');
   await page.waitForFunction(() => document.getElementById('n-live').textContent === '10', null, { timeout: 5000 }).catch(() => {});
   ok((await page.textContent('#n-live')) === '10', 'liste de test : 10 offres en ligne');
+  ok((await page.textContent('#n-days')) === '1' && (await page.textContent('[data-t=updHint]')).includes('供应商评分'), 'liste de test : jours mis à jour ce mois-ci et règle de la note (ADR 0023)');
   ok(await noScroll(page), '390 px : pas de défilement horizontal après le rapport');
 
   await page.setInputFiles('#file', fixture('liste-erreurs.csv'));

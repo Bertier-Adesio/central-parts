@@ -176,6 +176,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     <section class="card" id="validity" hidden>
       <h2 data-t="valTitle">报价有效期</h2>
       <p id="val-text"></p>
+      <p class="muted" id="val-upd" hidden></p>
       <button class="btn btn-line" type="button" id="reconfirm" data-t="reconfirm">库存无变化，一键确认</button>
       <p class="muted" data-t="reconfirmHint">确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。</p>
     </section>
@@ -289,7 +290,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       curLabel: '报价币种', curHint: '文件中未注明币种的行按此币种计价；文件中的币种列（币种 / currency）或价格列名（price-usd-1…）优先。',
       curSrc: { file: '读取自文件', upload: '上传时选择', company: '公司设置' }, curLine: '币种：',
       valTitle: '报价有效期', reconfirm: '库存无变化，一键确认', reconfirmHint: '确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。',
-      valLive: '{live} 条报价在线，有效期至 {date}（有效期 {ttl} 天）。', valOld: '{n} 条报价已过期，不再向采购方展示。',
+      valLive: '{live} 条报价在线，有效期至 {date}（有效期 {ttl} 天）。', valOld: '{n} 条报价已过期，不再向采购方展示。', valUpd: '本月已更新 {n} 天（北京时间，每天最多计一次），计入您的供应商评分。',
       reconfirmed: '已确认：{n} 条报价有效期至 {date}。',
       e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
         session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
@@ -336,7 +337,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       curLabel: 'Price currency', curHint: 'Used for lines whose currency is not in the file; a currency column (currency / 币种) or price headers (price-usd-1…) take priority.',
       curSrc: { file: 'read from the file', upload: 'chosen at upload', company: 'company setting' }, curLine: 'Currency: ',
       valTitle: 'Offer validity', reconfirm: 'Stock unchanged: confirm', reconfirmHint: 'Confirming keeps all your offers in stock visible for another period. When your stock changes, upload a new file.',
-      valLive: '{live} offers online, valid until {date} ({ttl}-day validity).', valOld: '{n} offers have expired and are no longer shown to buyers.',
+      valLive: '{live} offers online, valid until {date} ({ttl}-day validity).', valOld: '{n} offers have expired and are no longer shown to buyers.', valUpd: 'Updated on {n} day(s) this month (China time, once a day at most): this counts towards your supplier rating.',
       reconfirmed: 'Confirmed: {n} offers valid until {date}.',
       e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
         session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
@@ -603,6 +604,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     if (v.live) parts.push(fill(t().valLive, { live: v.live, date: shortDate(v.expires_at), ttl: v.ttl_days }));
     if (v.to_reconfirm) parts.push(fill(t().valOld, { n: v.to_reconfirm }));
     $('val-text').textContent = parts.join(' ');
+    // Fréquence de mise à jour (ADR 0023, complément du 9 novembre 2026).
+    var u = v.updates;
+    $('val-upd').hidden = !u || u.month_days == null;
+    $('val-upd').textContent = u && u.month_days != null ? fill(t().valUpd, { n: u.month_days }) : '';
   }
   $('reconfirm').addEventListener('click', function () {
     var b = this; b.disabled = true;

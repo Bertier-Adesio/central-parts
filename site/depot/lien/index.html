@@ -89,9 +89,11 @@ details{font-size:var(--text-sm);margin:6px 0 0}
       <div class="stat"><b id="n-live">0</b><span data-t="live">在线报价</span></div>
       <div class="stat warn"><b id="n-old">0</b><span data-t="toReconfirm">待重新确认</span></div>
       <div class="stat"><b id="d-last">—</b><span data-t="lastUpload">最近更新</span></div>
+      <div class="stat"><b id="n-days">—</b><span data-t="updDays">本月更新天数</span></div>
     </div>
     <p style="margin:16px 0 0"><button class="btn" type="button" id="reconfirm" data-t="reconfirm">库存无变化，一键确认</button></p>
     <p class="muted" data-t="reconfirmHint">确认后，所有在售报价继续展示一个有效期。库存有变化时，请上传新的库存表。</p>
+    <p class="muted" data-t="updHint">每天上传或确认一次即计为一天（北京时间），计入您的供应商评分。</p>
   </section>
 
   <section class="card" id="upload-card" hidden>
@@ -120,7 +122,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/listes';
   var T = {
     zh: { title: '上传库存表', lead: '每次上传都会替换您之前的库存表。被拒绝的行会列出原因，修改后重新上传即可。',
-      live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新',
+      live: '在线报价', toReconfirm: '待重新确认', lastUpload: '最近更新', updDays: '本月更新天数', updHint: '每天上传或确认一次即计为一天（北京时间），计入您的供应商评分。',
       operator: '您正在以 Central.Parts 运营人员身份为该公司操作（链接有效至 {t}）。',
       ttl: '报价在最后一次上传后 {n} 天内向采购方展示，之后变为“待重新确认”，不再展示。请定期重新上传。',
       uploadTitle: '上传新的库存表', format: '格式：CSV（分号分隔，小数点用逗号）或 Excel（.xlsx），每行一个型号。列：manufacturer、mpn、sku、quantity、price-break-1…5、price-usd-1…5、moq、currency；选填但建议填写（原厂和授权分销商尤其欢迎，今后也将计入供应商评分）：description、datasheet-url、distributor-url、case（封装）、lifecycle（生命周期）、eccn、hts-code；manufacturer 请填写制造商全称。',
@@ -138,7 +140,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
         breaks_qty_order: '价格阶梯：数量须递增', breaks_price_order: '价格阶梯：数量越大，价格不得上涨', currency: '不支持该币种' },
       f: { empty: '文件为空：需要一行表头和至少一行数据。', columns: '缺少必填列：mpn 和 quantity。', other: '无法读取文件。' } },
     en: { title: 'Upload your stock list', lead: 'Each upload replaces your previous list. Rejected lines are listed with the reason: correct them and upload again.',
-      live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update',
+      live: 'Live offers', toReconfirm: 'To reconfirm', lastUpload: 'Last update', updDays: 'Update days this month', updHint: 'Each day you upload or confirm counts once (Beijing time) in your supplier rating.',
       operator: 'Central.Parts operator access: you are acting for this company (link valid until {t}).',
       ttl: 'Offers are shown to buyers for {n} days after your last upload, then marked “to reconfirm” and hidden. Upload again regularly.',
       uploadTitle: 'Upload a new list', format: 'Format: CSV (semicolon separated, decimal comma) or Excel (.xlsx), one part per line. Columns: manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency; optional but appreciated (especially from manufacturers and authorized distributors; they will also count towards your supplier rating later): description, datasheet-url, distributor-url, case, lifecycle, eccn, hts-code; please give the full manufacturer name.',
@@ -156,7 +158,7 @@ details{font-size:var(--text-sm);margin:6px 0 0}
         breaks_qty_order: 'Price breaks: quantities must increase', breaks_price_order: 'Price breaks: the price must not rise with quantity', currency: 'Currency not supported' },
       f: { empty: 'Empty file: a header line and at least one data line are expected.', columns: 'Required columns missing: mpn and quantity.', other: 'The file could not be read.' } },
     fr: { title: 'Charger votre liste de stock', lead: 'Chaque chargement remplace votre liste précédente. Les lignes refusées sont listées avec leur raison : corrigez-les et rechargez le fichier.',
-      live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour',
+      live: 'Offres en ligne', toReconfirm: 'À reconfirmer', lastUpload: 'Dernière mise à jour', updDays: 'Jours mis à jour ce mois-ci', updHint: 'Chaque jour où vous chargez ou confirmez votre liste compte une fois (heure de Pékin) dans votre note fournisseur.',
       operator: 'Accès opérateur Central.Parts : vous agissez pour cette société (lien valable jusqu’à {t}).',
       ttl: 'Les offres sont montrées aux acheteurs pendant {n} jours après votre dernier chargement, puis passent « à reconfirmer » et ne sont plus montrées. Rechargez votre liste régulièrement.',
       uploadTitle: 'Charger une nouvelle liste', format: 'Format : CSV (séparateur point-virgule, virgule décimale) ou Excel (.xlsx), une ligne par référence. Colonnes : manufacturer, mpn, sku, quantity, price-break-1…5, price-usd-1…5, moq, currency ; facultatives mais appréciées (surtout des fabricants et distributeurs agréés ; elles compteront aussi plus tard dans la notation du fournisseur) : description, datasheet-url, distributor-url, case (boîtier), lifecycle (cycle de vie), eccn, hts-code ; indiquer le nom complet du fabricant.',
@@ -215,6 +217,8 @@ details{font-size:var(--text-sm);margin:6px 0 0}
     $('n-live').textContent = s.live || 0;
     $('n-old').textContent = s.to_reconfirm || 0;
     $('d-last').textContent = s.last_confirmed ? new Date(s.last_confirmed).toLocaleDateString(LOCALE[lang]) : '—';
+    // Fréquence de mise à jour (ADR 0023, complément du 9 novembre 2026) : jours de ce mois, heure de Pékin.
+    $('n-days').textContent = s.updates && s.updates.month_days != null ? s.updates.month_days : '—';
   }
 
   // Raison d'un rejet de fichier entier (message de la base, en français) → texte de la langue choisie.
