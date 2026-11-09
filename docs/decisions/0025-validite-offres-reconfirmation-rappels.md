@@ -33,4 +33,5 @@ Depuis l'ADR 0021, une offre non rechargée depuis 7 jours n'est plus montrée a
 - Les offres d'un fabricant déjà en ligne gagnent 7 jours dès l'application de la migration.
 - Pour régler la durée d'un vendeur : `update public.organizations set offer_ttl_days = 30 where id = 'ORG-…';` (`null` pour revenir à la règle par type).
 - Remplace, dans l'ADR 0021, « seuil de 7 jours pour tous ».
+- La fréquence des mises à jour (fichiers et reconfirmations) compte dans la note du fournisseur : ADR 0023, complément du 9 novembre 2026.
 - À faire plus tard : message modèle WeChat ; durée et dernière reconfirmation visibles dans le back office ; relecture automatique d'un flux de stock (adresse du fichier du vendeur), pour supprimer tout geste.
