@@ -17,6 +17,8 @@ const ORIGIN = 'https://central.parts';
 // Seule exception externe : le formulaire partenaire Tencent Docs (accessible depuis la Chine).
 const TENCENT_FORM = 'https://docs.qq.com/form/page/';
 const CONTACT_EMAIL = 'contact@central.parts';
+// Fonctions Edge (recherche et offres du héros) : même projet que les autres pages, autorisé par la CSP (ADR 0031).
+const SUPABASE = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
 
 const LANGS = {
   fr: {
@@ -172,6 +174,73 @@ const SCRIPT = `<script>
     location.href = 'mailto:${CONTACT_EMAIL}?subject=' + encodeURIComponent(MAIL.subject + ' — ' + f.societe.value) + '&body=' + encodeURIComponent(lines.join('\\n'));
     sent.hidden = false;
   });
+
+  // Recherche du héros (FR, EN), la recherche gratuite : sans JavaScript, le formulaire mène à /recherche/ ; avec, les
+  // offres s'affichent ici, ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028). Pièce introuvable ou
+  // résultats insuffisants : recherche payante auprès des brokers (/sourcing/, ADR 0033), référence pré-remplie.
+  var hf = document.getElementById('hero-search');
+  if (!hf || !HS.add) return;
+  var API = '${SUPABASE}/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
+  var fmt = function (n) { return Number(n).toLocaleString(HS.locale); };
+  var escH = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (v, cur) { try { return new Intl.NumberFormat(HS.locale, { style: 'currency', currency: cur === 'CNH' ? 'CNY' : cur, maximumSignificantDigits: 4 }).format(v); } catch (e) { return v + ' ' + cur; } };
+  var region = function (c) { try { return new Intl.DisplayNames([HS.locale], { type: 'region' }).of(c); } catch (e) { return c; } };
+  // Réseau vivant : nombre de références et de pièces, date du taux de la BCE (même source que /offres/).
+  fetch(API + 'offers?cur=EUR').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (d && d.total_refs) live.textContent = HS.live.replace('{refs}', fmt(d.total_refs)).replace('{units}', fmt(d.total_units || 0))
+      .replace('{date}', d.rates_at ? new Date(d.rates_at).toLocaleDateString(HS.locale) : '—');
+  }).catch(function () {});
+  var CART = 'cp-cart';
+  function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
+  function cartAdd(o) {
+    var a = cartLoad();
+    if (cartHas(o)) return 'ok';
+    if (a.length >= 30) return 'full';
+    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from, qty: 1, moq: 1, spq: 1 });
+    try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
+    return cartLoad().length === a.length ? 'ok' : 'off';
+  }
+  var last = null;
+  function show(d) {
+    last = d;
+    var r = d.results || [], term = d.query;
+    if (!r.length) {
+      res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
+        '<a class="hs-cta" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.noneCta) + '</a></div>';
+      return;
+    }
+    res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
+      var cur = x.currency || d.currency;
+      var price = x.price_from == null ? '<i>' + escH(HS.onRequest) + '</i>' : '<i>' + escH(HS.from) + '</i> ' + escH(money(x.price_from, cur)) +
+        (x.price_1k != null ? '<small>' + escH(HS.k1) + ' ' + escH(money(x.price_1k, cur)) + '</small>' : '');
+      var act = cartHas(x) ? '<a class="hs-add in" href="' + escH(HS.cartHref) + '">' + escH(HS.inCart) + '</a>'
+        : '<button class="hs-add" type="button" data-i="' + i + '">' + escH(HS.add) + '</button>';
+      return '<div class="hs-row"><div><div class="hs-mpn">' + escH(x.mpn) + '</div><div class="hs-sub">' + escH(x.manufacturer) + '</div>' +
+        '<span class="hs-tag' + (x.source === 'manufacturer' ? ' mfr' : '') + '">' + escH(HS.src[x.source] || x.source) + '</span>' +
+        '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
+        '<div class="hs-price">' + price + '</div>' + act + '</div>';
+    }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
+      '<span class="hs-links"><a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a>' +
+      '<a href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.more) + '</a></span></div></div>';
+    res.querySelectorAll('button.hs-add').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var out = cartAdd(r[+b.getAttribute('data-i')]);
+        if (out === 'ok') show(last); else { b.disabled = true; b.textContent = out === 'full' ? HS.cartFull : HS.cartOff; }
+      });
+    });
+  }
+  hf.addEventListener('submit', function (e) {
+    var term = hf.elements.q.value.replace(/\\s+/g, '').toUpperCase().slice(0, 60);
+    e.preventDefault();
+    if (term.length < 3) { res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.tooShort) + '</div>'; return; }
+    res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.loading) + '</div>';
+    fetch(API + 'search?cur=EUR&q=' + encodeURIComponent(term))
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw d; return d; }); })
+      .then(function (d) { d.query = d.query || term; show(d); }, function () {
+        res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.error) + ' <a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div>';
+      });
+  });
 })();
 </script>`;
 
@@ -249,7 +318,7 @@ ${hv.sheet}
 </head>
 <body>
 ${html}
-${SCRIPT.replace('(function () {', `(function () {\n  var MAIL = ${mail};`)}
+${SCRIPT.replace('(function () {', `(function () {\n  var MAIL = ${mail};\n  var HS = ${JSON.stringify(t.hs || {})};`)}
 </body>
 </html>
 `;

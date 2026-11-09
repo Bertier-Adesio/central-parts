@@ -126,6 +126,7 @@ jobs:
           node tools/test-panier-ui.mjs
           node tools/test-csp.mjs
           node tools/test-header-ui.mjs
+          node tools/test-landing-ui.mjs
           node tools/test-fabricants-ui.mjs
           node tools/test-sourcing-ui.mjs
           node tools/test-api-page-ui.mjs
