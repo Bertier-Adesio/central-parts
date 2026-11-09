@@ -74,3 +74,24 @@ Fonctions Supabase : redéployées automatiquement à chaque push sur `main` qui
 
 
 Hébergement OVH `centryv.cluster129.hosting.ovh.net`, dossier `www/`, envoi en SFTP via `ssh.cluster129.hosting.ovh.net` (OVH refuse le FTPS), domaines `central.parts` et `www.central.parts`. Secrets GitHub requis : `OVH_FTP_USER`, `OVH_FTP_PASSWORD`. Le certificat SSL doit être actif avant le premier déploiement, car `site/.htaccess` force le HTTPS.
+
+## Choisir les contrôles selon ce que la PR touche (miroir de .github/workflows/tests.yml)
+- Toujours (groupe "base") : node tools/test-import.mjs, node tools/test-app.mjs, deno check supabase/functions/*/index.ts,
+  node tools/test-rfq.mjs, node tools/test-catalog.mjs, deno run --allow-env tools/test-rfq-dispatch.ts.
+- Si supabase/migrations, checks, functions, seed.sql, reference.sql, sandbox-rfq.sql ou tools/test-rfq* changent :
+  tools/test-db.sh puis node tools/test-rfq-e2e.mjs.
+- Si site/ ou tools/test-*-ui.mjs changent : lancer le serveur local et les tests UI concernés dans Chromium.
+- Dans la réponse finale, dire quels groupes ont tourné et lesquels non, avec les résultats.
+
+## Production
+- Un push sur main déploie le site (OVH) et les fonctions Supabase touchées. Toujours passer par une pull request, jamais de
+  push direct sur main sans accord explicite de Bertier.
+- Les migrations sont manuelles : si une PR en contient une, le dire en tête de la réponse (elle doit être appliquée avant la
+  fusion, ADR 0016).
+
+## Comportement
+- Ne jamais prétendre qu'une page ou un parcours est vérifié sans l'avoir ouvert (1280 px et 390 px, avec et sans JavaScript).
+- Tout contournement, instruction contradictoire ou étape impossible est signalé en fin de tâche sous
+  "Frictions et contournements" (ou "Aucun"), avec la ligne exacte de ce fichier à corriger.
+- Une décision structurante sans ADR (numéroté dans docs/decisions/) est signalée, pas tranchée en silence.
+- Note : docs/decisions/ saute les numéros 0019 et 0020 ; ne pas réutiliser ni combler ces numéros sans demander.
