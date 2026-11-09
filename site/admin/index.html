@@ -192,6 +192,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       <ul class="reqs" id="rfq-list"></ul>
       <h2>Composants rares · recherches de sourcing</h2>
       <ul class="reqs" id="src-list"></ul>
+      <h2>Composants rares · brokers volontaires <span id="vol-n"></span></h2>
+      <p class="r2">Inscrits depuis /depot/ : ils reçoivent chaque recherche payée dans WeChat et s'engagent à répondre sous 48 h. Laboratoires : visibles ici seulement.</p>
+      <ul class="reqs" id="vol-list"></ul>
     </div>
 
     <!-- Approbation des fournisseurs. -->
@@ -1011,7 +1014,47 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   // ------------------------------------------------------------ recherches payées de composants rares (ADR 0033)
   // « À valider » : demandes payées pas encore traitées et proformas en attente de virement ; « Toutes » : tout sauf les
   // paiements en ligne abandonnés. Proforma : marquer « Payée » à réception du virement.
-  var SRC = { awaiting_payment: 'En attente de virement (proforma)', paid: 'Payée, à traiter', in_progress: 'Recherche en cours', offers_sent: 'Offres envoyées', not_found: 'Introuvable', cancelled: 'Annulée' };
+  var SRC = { awaiting_payment: 'En attente de virement (proforma)', paid: 'Payée, à traiter', in_progress: 'Ouverte aux volontaires', offers_sent: 'Terminée, offres reçues', not_found: 'Introuvable', ordered: 'Commandée', cancelled: 'Annulée' };
+  var SRC_RESP = { pending: 'à répondre', quoted: 'offre', declined: 'pas trouvé', expired: 'hors délai', closed: 'arrêtée avant l\'échéance' };
+  // Volontaires prévenus et offres reçues (l'administrateur voit le vendeur et son prix net ; l'acheteur, jamais).
+  function srcOffersHtml(r) {
+    var win = r.open_until ? '<div class="r2">' + (r.closed_at ? 'Close le ' + esc(dt(r.closed_at)) + ' (' + esc(r.close_reason || '') + ')' : 'Ouverte jusqu\'au ' + esc(dt(r.open_until))) +
+      (r.extended_at ? ' · prolongée' : '') + ' · ' + (r.sellers || []).filter(function (x) { return x.notify === 'sent'; }).length + ' volontaire(s) prévenu(s)' +
+      ((r.sellers || []).some(function (x) { return x.notify === 'failed' || x.notify === 'no_channel'; }) ? ', non joints : ' +
+        r.sellers.filter(function (x) { return x.notify === 'failed' || x.notify === 'no_channel'; }).map(function (x) { return esc(x.name); }).join(', ') : '') + '</div>' : '';
+    var sellers = (r.sellers || []).length ? '<div class="r2">' + r.sellers.map(function (x) { return esc(x.name) + ' : ' + esc(SRC_RESP[x.response] || x.response); }).join(' · ') + '</div>' : '';
+    var offers = (r.offers || []).map(function (o) {
+      return '<li class="r2" data-sof="' + esc(o.id) + '"><span class="mono">' + esc(o.id) + '</span> · ' + esc(o.name) + ' (' + esc(o.org_id) + ') · net ' + esc(o.net) + ' ' + esc(o.currency) +
+        ' → ' + (o.unit_price_eur != null ? price(o.unit_price_eur, 'EUR') + ' / pièce' : '<strong>sans marge : non montrée à l\'acheteur</strong>') +
+        ' · ' + esc(o.lead_days) + ' j' + (o.date_code ? ' · DC ' + esc(o.date_code) : '') + (o.qty ? ' · ' + num(o.qty) + ' pièces' : '') +
+        (o.ordered ? ' · <strong>commandée</strong>' : '') +
+        (o.withdrawn_at ? ' · retirée' : ' <button class="btn btn-line" type="button" data-withdraw="' + esc(o.id) + '">Retirer</button>') + '</li>';
+    }).join('');
+    return win + sellers + (offers ? '<ul class="plain">' + offers + '</ul>' : '');
+  }
+  function loadVolunteers() {
+    return api('GET', '/sourcing/volunteers').then(function (rows) {
+      rows = rows || [];
+      $('vol-n').textContent = '(' + rows.filter(function (v) { return v.active && v.eligible; }).length + ' actifs)';
+      $('vol-list').innerHTML = rows.length ? rows.map(function (v) {
+        var sc = v.score || {};
+        return '<li data-vol="' + esc(v.org_id) + '"><div class="r1"><strong>' + esc(v.name) + ' · ' + esc(v.org_id) + '</strong>' +
+          '<span class="badge ' + (v.active && v.eligible ? 'validated' : 'rejected') + '">' + (v.active ? (v.eligible ? 'Actif' : 'Non éligible') : 'Retiré') + '</span></div>' +
+          '<div class="r2">' + esc(v.profile || '') + ' · inscrit le ' + esc(dt(v.joined_at)) + ' · ' + v.contacts + ' contact(s) WeChat · recherches : ' +
+          (sc.received || 0) + ' reçues, ' + (sc.quoted || 0) + ' offres, ' + (sc.declined || 0) + ' pas trouvé, ' + (sc.expired || 0) + ' hors délai</div>' +
+          '<details class="more"><summary>Laboratoires et inscription</summary><form class="vol-f" data-org="' + esc(v.org_id) + '">' +
+          '<label class="f">Laboratoires partenaires<textarea name="labs" maxlength="1000">' + esc(v.labs || '') + '</textarea></label>' +
+          '<label class="f">Inscription<select name="active"><option value="true"' + (v.active ? ' selected' : '') + '>Actif</option><option value="false"' + (v.active ? '' : ' selected') + '>Retiré</option></select></label>' +
+          '<div class="actions"><button class="btn btn-main" type="submit">Enregistrer</button></div></form></details></li>';
+      }).join('') : '<li class="empty">Aucun broker volontaire pour l\'instant.</li>';
+    }).catch(fail);
+  }
+  $('vol-list').addEventListener('submit', function (ev) {
+    var f = ev.target.closest('form.vol-f'); if (!f) return;
+    ev.preventDefault();
+    api('POST', '/sourcing/volunteer', { org: f.getAttribute('data-org'), update: { labs: f.labs.value, active: f.active.value === 'true' } })
+      .then(function () { show('Volontaire ' + f.getAttribute('data-org') + ' enregistré.', 'ok'); loadVolunteers(); }).catch(fail);
+  });
   function loadSourcing() {
     return api('GET', '/sourcing?status=' + (state.reqFilter ? 'open' : '')).then(function (d) {
       var rows = d.rows || [];
@@ -1024,7 +1067,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
           (r.condition === 'any' ? 'neuf ou reconditionné' : 'neuf d\'origine') + ' · ' +
           (r.paid_at ? 'payé ' + price(r.amount_ttc / 100, 'EUR') + ' le ' + esc(dt(r.paid_at)) : 'proforma de ' + price(r.amount_ttc / 100, 'EUR') + ' à envoyer, puis à marquer payée à réception du virement') +
           ' · ' + (r.payment_mode === 'proforma' ? 'proforma et virement' : 'virement en ligne (GoCardless)') + '</div>' +
-          (r.notes ? '<p class="pre">' + esc(r.notes) + '</p>' : '') +
+          (r.notes ? '<p class="pre">' + esc(r.notes) + '</p>' : '') + srcOffersHtml(r) +
           '<details class="more"><summary>Traiter</summary><form class="src-f" data-id="' + esc(r.id) + '">' +
           '<label class="f">État<select name="status">' + Object.keys(SRC).filter(function (k) { return k !== 'awaiting_payment' || r.status === k; }).map(function (k) { return '<option value="' + k + '"' + (k === r.status ? ' selected' : '') + '>' + SRC[k] + '</option>'; }).join('') + '</select></label>' +
           '<label class="f">Message pour l\'acheteur (visible sur sa page de suivi)<textarea name="buyer_note" maxlength="2000">' + esc(r.buyer_note || '') + '</textarea></label>' +
@@ -1032,8 +1075,16 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
           '<label class="f">Frais déduits sur la demande d\'achat (PR-…)<input type="text" name="credit_used_by" value="' + esc(r.credit_used_by || '') + '"></label>' +
           '<div class="actions"><button class="btn btn-main" type="submit">Enregistrer</button></div></form></details></li>';
       }).join('') : '<li class="empty">' + (state.reqFilter ? 'Aucune recherche de sourcing à traiter.' : 'Aucune recherche de sourcing.') + '</li>';
+      return loadVolunteers();
     }).catch(fail);
   }
+  $('src-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-withdraw]'); if (!b) return;
+    var why = window.prompt('Motif du retrait de l\'offre ' + b.getAttribute('data-withdraw') + ' (interne) :');
+    if (!why || !why.trim()) return;
+    api('POST', '/sourcing/offer/withdraw', { id: b.getAttribute('data-withdraw'), reason: why.trim() })
+      .then(function () { show('Offre ' + b.getAttribute('data-withdraw') + ' retirée de la page de l\'acheteur.', 'ok'); loadSourcing(); }).catch(fail);
+  });
   $('src-list').addEventListener('submit', function (ev) {
     var f = ev.target.closest('form.src-f'); if (!f) return;
     ev.preventDefault();

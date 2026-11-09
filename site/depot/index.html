@@ -70,6 +70,9 @@ dl.kv dd{margin:0;overflow-wrap:anywhere}
 ul.plain{list-style:none;padding:0;margin:0}
 ul.plain li{border-top:1px solid var(--border-1);padding:8px 0;font-size:var(--text-sm);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 ul.plain li:first-child{border-top:0}
+.src-join textarea{width:100%;box-sizing:border-box;min-height:72px;padding:8px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
+.src-join .row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+.src-join ul{margin:8px 0;padding-left:20px}
 .rfq-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 0}
 .rfq-form input,.rfq-form select{min-height:var(--control-h-lg);min-width:0;box-sizing:border-box;padding:0 8px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
 @media (max-width:480px){.rfq-form{grid-template-columns:1fr 1fr}}
@@ -210,6 +213,13 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       <p class="muted" id="rfq-score"></p>
       <ul class="plain" id="rfq-list"></ul>
     </section>
+    <section class="card" id="src-card" hidden>
+      <h2 data-t="srcTitle">寻货（付费搜索）</h2>
+      <p class="muted" data-t="srcLead">欧洲买家付费请我们寻找稀缺或停产的元器件。参加后，每次寻货都会通过微信发给您。</p>
+      <div id="src-join"></div>
+      <p class="muted" id="src-score"></p>
+      <ul class="plain" id="src-list"></ul>
+    </section>
     <section class="card" id="imports-card">
       <h2 data-t="history">上传记录</h2>
       <p class="muted" id="quality" hidden></p>
@@ -278,6 +288,17 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       rfqScore: '您的处理率：{rate}（收到 {received}，已报价 {quoted}，无货 {declined}，逾期 {expired}）',
       rfqS: { pending: '待回复', quoted: '已报价', declined: '无货', expired: '已逾期', closed: '已结束' },
       rfqPrice: '单价', rfqLead2: '交期（天）', rfqDc: '批号', rfqQuote: '报价', rfqNone: '无货',
+      srcTitle: '寻货（付费搜索）', srcLead: '欧洲买家付费请我们寻找稀缺或停产的元器件。参加后，每次寻货都会通过微信发给您。',
+      srcRules: ['您承诺在 48 小时内回复每次寻货：找到请报价，找不到请回复无货。回复速度计入您的供应商评分。', '寻货开放 7 天（买方可延长 7 天）；之后找到也可在开放期内报价。',
+        '您的报价按 Central.Parts 与您约定的条件直接展示给买方，不显示您的公司名称；买方不会看到您的联系方式。', '合作的检测实验室只有 Central.Parts 可见；买方只看到“可安排实验室检测”。'],
+      srcLabs: '合作检测实验室（可选）', srcLabsPh: '例如：实验室名称、城市', srcCommit: '我承诺在 48 小时内回复每次寻货', srcJoin: '参加寻货',
+      srcIn: '您已参加寻货（{d} 起）。', srcSave: '保存实验室', srcSaved: '已保存。', srcLeave: '退出寻货', srcLeaveAsk: '退出寻货？之后不会再收到新的寻货。',
+      srcOut: '您已退出寻货，可以随时重新参加。', srcNotEligible: '寻货仅向已通过审核的经纪商和库存积压供应商开放。',
+      srcLine: '数量 {qty} · 送达 {country} · 回复截止 {deadline} · 开放至 {open}', srcMine: '您的报价：{price} {cur}，交期 {lead} 天，批号 {dc}{qty}',
+      srcS: { pending: '待回复', quoted: '已报价', declined: '无货', expired: '已逾期', closed: '已结束' },
+      srcQty: '数量（可选）', srcFound: '报价', srcNone: '无货',
+      srcScore: '寻货回复：收到 {received}，已报价 {quoted}，无货 {declined}，逾期 {expired}',
+      srcE: { closed: '寻货已结束。', answered: '您已回复过。找到货可以直接报价。', max_offers: '每次寻货最多报价 5 次。', invalid: '请检查单价、币种、交期和数量。', not_eligible: '寻货仅向已通过审核的经纪商和库存积压供应商开放。', other: '提交失败，请重试。' },
       rfqE: { expired: '已过截止时间，报价未被接受。', answered: '您已回复过该询价。', closed: '询价已结束。', invalid: '请检查单价、币种、交期和批号。', other: '提交失败，请重试。' },
       teamTitle: '同事', teamLead: '邀请同事上传库存：每个链接仅限一人使用，14 天内有效。通过微信发送给同事。',
       invName: '同事姓名', invSend: '生成邀请链接', admin: '管理员', member: '成员', me: '（您）', you: '您', invited: '已邀请，待接受',
@@ -325,6 +346,17 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       rfqScore: 'Your handling rate: {rate} ({received} received, {quoted} quoted, {declined} no stock, {expired} expired)',
       rfqS: { pending: 'To answer', quoted: 'Quoted', declined: 'No stock', expired: 'Expired', closed: 'Closed' },
       rfqPrice: 'Unit price', rfqLead2: 'Lead (days)', rfqDc: 'Date code', rfqQuote: 'Quote', rfqNone: 'No stock',
+      srcTitle: 'Paid sourcing requests', srcLead: 'European buyers pay us to find rare or obsolete components. Once you join, every request is sent to you in WeChat.',
+      srcRules: ['You commit to answer every request within 48 hours: quote if you find the parts, "no stock" if not. Your response time counts in your supplier score.', 'A request stays open 7 days (the buyer can extend it by 7 days); you can still quote later while it is open.',
+        'Your quote is shown to the buyer directly, under the terms agreed with Central.Parts, without your company name; the buyer never sees your contact details.', 'Your partner test laboratories are visible to Central.Parts only; the buyer only sees "laboratory testing available".'],
+      srcLabs: 'Partner test laboratories (optional)', srcLabsPh: 'e.g. laboratory name, city', srcCommit: 'I commit to answer every request within 48 hours', srcJoin: 'Join',
+      srcIn: 'You take part in paid sourcing (since {d}).', srcSave: 'Save laboratories', srcSaved: 'Saved.', srcLeave: 'Leave', srcLeaveAsk: 'Leave paid sourcing? You will no longer receive new requests.',
+      srcOut: 'You have left paid sourcing; you can join again at any time.', srcNotEligible: 'Paid sourcing is open to approved brokers and surplus sellers only.',
+      srcLine: 'Quantity {qty} · ship to {country} · answer by {deadline} · open until {open}', srcMine: 'Your quote: {price} {cur}, {lead} days, D/C {dc}{qty}',
+      srcS: { pending: 'To answer', quoted: 'Quoted', declined: 'No stock', expired: 'Expired', closed: 'Closed' },
+      srcQty: 'Quantity (optional)', srcFound: 'Quote', srcNone: 'No stock',
+      srcScore: 'Sourcing answers: {received} received, {quoted} quoted, {declined} no stock, {expired} expired',
+      srcE: { closed: 'This request is closed.', answered: 'You have already answered; you can still send a quote.', max_offers: 'At most 5 quotes per request.', invalid: 'Check the price, currency, lead time and quantity.', not_eligible: 'Paid sourcing is open to approved brokers and surplus sellers only.', other: 'Could not send, please try again.' },
       rfqE: { expired: 'The deadline has passed: quote not accepted.', answered: 'You have already answered this RFQ.', closed: 'This RFQ is closed.', invalid: 'Check the price, currency, lead time and date code.', other: 'Could not send, please try again.' },
       teamTitle: 'Colleagues', teamLead: 'Invite colleagues to upload stock: each link is for one person and valid for 14 days. Send it on WeChat.',
       invName: 'Colleague name', invSend: 'Create an invitation link', admin: 'Admin', member: 'Member', me: ' (you)', you: 'You', invited: 'Invited, pending',
@@ -359,7 +391,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : 'en';
     document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t()[el.getAttribute('data-t')]; });
     document.querySelectorAll('[data-tp]').forEach(function (el) { el.placeholder = t()[el.getAttribute('data-tp')]; });
-    renderRegion(); renderImports(); document.querySelectorAll('[data-ct]').forEach(function (el) { el.textContent = CT[lang][el.getAttribute('data-ct')]; }); if (typeof co !== 'undefined' && co) renderCompany(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs();
+    renderRegion(); renderImports(); document.querySelectorAll('[data-ct]').forEach(function (el) { el.textContent = CT[lang][el.getAttribute('data-ct')]; }); if (typeof co !== 'undefined' && co) renderCompany(); if (typeof renderValidity === 'function') renderValidity(); if (typeof renderQuality === 'function') renderQuality(); if (org) renderOrg(); if (typeof renderRequests === 'function' && requests.length) renderRequests(); if (typeof renderRfqs === 'function' && rfqs) renderRfqs(); if (typeof renderSrc === 'function' && src) renderSrc();
   }
   function show(id) { ['v-login', 'v-register', 'v-app'].forEach(function (v) { $(v).hidden = v !== id; }); }
   function say(kind, text) { var m = $('msg'); m.hidden = !text; m.className = 'msg ' + kind; m.textContent = text || ''; }
@@ -480,7 +512,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     org = o; renderOrg(); show('v-app');
     if (o.status !== 'rejected') refresh();
     if (o.role === 'admin') loadTeam();
-    if (o.status === 'validated') { loadRequests(); loadRfqs(); loadCompany(); }
+    if (o.status === 'validated') { loadRequests(); loadRfqs(); loadSrc(); loadCompany(); }
   }
 
   // ---------------------------------------------------------------- demandes d'achat reçues (ADR 0014)
@@ -558,6 +590,91 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     });
     $('rfq-list').querySelectorAll('[data-none]').forEach(function (b) {
       b.addEventListener('click', function () { send(b.getAttribute('data-none'), { ref: b.getAttribute('data-none'), kind: 'decline' }, b); });
+    });
+  }
+  // ---------------------------------------------------------------- recherches payantes : brokers volontaires (ADR 0033)
+  // Inscription par le vendeur (engagement de répondre sous 48 h, laboratoires visibles de Central.Parts seulement),
+  // puis réponses : 报价 tant que la recherche est ouverte, 无货 tant qu'aucune réponse n'est donnée.
+  var src = null, srcErr = {}, srcMsg = '';
+  function loadSrc() {
+    api('GET', '/sourcing').then(function (d) { src = d; renderSrc(); }, function () {});
+  }
+  function srcState(r) {
+    if (!r.open) return r.response === 'pending' ? 'closed' : r.response;
+    if (r.response === 'pending' && r.deadline_at && new Date(r.deadline_at) < new Date()) return 'expired';
+    return r.response || 'pending';
+  }
+  function renderSrc() {
+    var v = src && src.volunteer, list = (src && src.requests) || [], active = !!(v && v.active);
+    $('src-card').hidden = !src || (!src.eligible && !list.length);
+    if ($('src-card').hidden) return;
+    var when = function (iso) { try { return new Date(iso).toLocaleString(lang === 'zh' ? 'zh-CN' : 'en-GB', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + (lang === 'zh' ? '（北京时间）' : ' (China time)'); } catch (e) { return iso; } };
+    var rules = '<ul>' + t().srcRules.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+    var labs = '<label class="muted" for="src-labs">' + esc(t().srcLabs) + '</label><textarea id="src-labs" maxlength="1000" placeholder="' + esc(t().srcLabsPh) + '">' + esc((v && v.labs) || '') + '</textarea>';
+    var msg = srcMsg ? '<p class="msg ' + (srcErr._join ? 'err' : 'info') + '">' + esc(srcMsg) + '</p>' : '';
+    var html;
+    if (!src.eligible && !active) html = '<p class="muted">' + esc(t().srcNotEligible) + '</p>';
+    else if (active) html = '<p>' + esc(t().srcIn.replace('{d}', new Date(v.joined_at).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-GB'))) + '</p>' + rules + labs +
+      '<div class="row"><button class="btn btn-line" type="button" id="src-save">' + esc(t().srcSave) + '</button>' +
+      '<button class="btn btn-line" type="button" id="src-leave">' + esc(t().srcLeave) + '</button></div>' + msg;
+    else html = (v ? '<p class="muted">' + esc(t().srcOut) + '</p>' : '') + rules + labs +
+      '<label class="check"><input type="checkbox" id="src-commit"><span>' + esc(t().srcCommit) + '</span></label>' +
+      '<div class="row"><button class="btn btn-main" type="button" id="src-join-btn" disabled>' + esc(t().srcJoin) + '</button></div>' + msg;
+    $('src-join').className = 'src-join';
+    $('src-join').innerHTML = html;
+    var sc = src.score;
+    $('src-score').textContent = sc && sc.received ? t().srcScore.replace('{received}', sc.received).replace('{quoted}', sc.quoted).replace('{declined}', sc.declined).replace('{expired}', sc.expired) : '';
+    var join = function (on, btn) {
+      btn.disabled = true; srcMsg = ''; delete srcErr._join;
+      api('POST', '/sourcing/join', { on: on, labs: $('src-labs') ? $('src-labs').value : null }).then(function (d) {
+        src = Object.assign(src, d); srcMsg = on && btn.id === 'src-save' ? t().srcSaved : ''; renderSrc();
+      }, function (code) {
+        if (code === 'session_expired' || code === 'not_bound') return lost(code);
+        btn.disabled = false; srcErr._join = true; srcMsg = t().srcE[code] || t().srcE.other; renderSrc();
+      });
+    };
+    if ($('src-commit')) $('src-commit').addEventListener('change', function () { $('src-join-btn').disabled = !$('src-commit').checked; });
+    if ($('src-join-btn')) $('src-join-btn').addEventListener('click', function () { join(true, $('src-join-btn')); });
+    if ($('src-save')) $('src-save').addEventListener('click', function () { join(true, $('src-save')); });
+    if ($('src-leave')) $('src-leave').addEventListener('click', function () { if (window.confirm(t().srcLeaveAsk)) join(false, $('src-leave')); });
+
+    $('src-list').innerHTML = list.map(function (r) {
+      var st = srcState(r);
+      var line = t().srcLine.replace('{qty}', r.qty).replace('{country}', r.ship_to).replace('{deadline}', r.deadline_at ? when(r.deadline_at) : '—').replace('{open}', r.open_until ? when(r.open_until) : '—');
+      var mine = (r.my_offers || []).filter(function (o) { return !o.withdrawn; }).map(function (o) {
+        return '<p class="muted" style="margin:4px 0">' + esc(t().srcMine.replace('{price}', o.net).replace('{cur}', o.currency).replace('{lead}', o.lead_days).replace('{dc}', o.date_code || '—').replace('{qty}', o.qty ? ' · ' + o.qty : '')) + '</p>';
+      }).join('');
+      var form = r.open && (r.my_offers || []).length < 5 ? '<form class="rfq-form" data-src="' + esc(r.ref) + '">' +
+          '<input type="text" inputmode="decimal" name="price" required aria-label="' + esc(t().rfqPrice) + '" placeholder="' + esc(t().rfqPrice) + '">' +
+          '<select name="currency" aria-label="Currency">' + RFQ_CURRENCIES.map(function (c) { return '<option' + (c === (org && org.currency) ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select>' +
+          '<input type="text" inputmode="numeric" name="lead" required aria-label="' + esc(t().rfqLead2) + '" placeholder="' + esc(t().rfqLead2) + '">' +
+          '<input type="text" name="dc" aria-label="' + esc(t().rfqDc) + '" placeholder="' + esc(t().rfqDc) + '">' +
+          '<input type="text" inputmode="numeric" name="qty" aria-label="' + esc(t().srcQty) + '" placeholder="' + esc(t().srcQty) + '">' +
+          '<button class="btn btn-main" type="submit">' + esc(t().srcFound) + '</button>' +
+          (r.response === 'pending' ? '<button class="btn btn-line" type="button" data-src-none="' + esc(r.ref) + '">' + esc(t().srcNone) + '</button>' : '') + '</form>' : '';
+      if (srcErr[r.ref]) form += '<p class="msg err">' + esc(t().srcE[srcErr[r.ref]] || t().srcE.other) + '</p>';
+      return '<li style="display:block" data-src-ref="' + esc(r.ref) + '"><div class="org"><strong>' + esc(r.ref) + ' · ' + esc(r.mpn) + (r.manufacturer ? ' (' + esc(r.manufacturer) + ')' : '') +
+        '</strong><span class="badge">' + esc(t().srcS[st] || st) + '</span></div><p class="muted" style="margin:4px 0">' + esc(line) + '</p>' + mine + form + '</li>';
+    }).join('');
+    var send = function (ref, payload, btn) {
+      btn.disabled = true; delete srcErr[ref];
+      api('POST', '/sourcing/answer', payload).then(loadSrc, function (code) {
+        btn.disabled = false;
+        if (code === 'session_expired' || code === 'not_bound') return lost(code);
+        srcErr[ref] = code;
+        if (code === 'closed' || code === 'answered') loadSrc(); else renderSrc();
+      });
+    };
+    $('src-list').querySelectorAll('form[data-src]').forEach(function (f) {
+      f.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var ref = f.getAttribute('data-src'), q = parseInt(f.qty.value, 10);
+        send(ref, { ref: ref, kind: 'quote', price: Number(String(f.price.value).replace(',', '.')), currency: f.currency.value,
+          lead_days: parseInt(f.lead.value, 10), date_code: f.dc.value.trim() || null, qty: q > 0 ? q : null }, f.querySelector('[type=submit]'));
+      });
+    });
+    $('src-list').querySelectorAll('[data-src-none]').forEach(function (b) {
+      b.addEventListener('click', function () { send(b.getAttribute('data-src-none'), { ref: b.getAttribute('data-src-none'), kind: 'decline' }, b); });
     });
   }
   function renderOrg() {

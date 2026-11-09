@@ -366,6 +366,87 @@ export function rfqHelpText(ref) {
     `Format: 报价 ${ref} price currency lead_days date_code`;
 }
 
+// ---- recherches payantes : brokers volontaires (ADR 0033, complément du 9 novembre 2026)
+// card : ref (SRC-…), mpn, manufacturer?, qty, needed_by?, condition (new|any), ship_to, open_until.
+// Jamais la société de l'acheteur, son contact, son prix cible ni ses précisions.
+export function sourcingSupplierText(card, deadlineIso) {
+  const zh = [
+    `【Central.Parts 寻货】${card.ref}`,
+    `型号：${card.mpn}${card.manufacturer ? `（${card.manufacturer}）` : ''}  数量：${card.qty}` +
+      (card.condition === 'new' ? '  全新原装' : '  新旧均可'),
+    `送达国家：${countryName(card.ship_to, 'zh-CN')}` + (card.needed_by ? `  需要日期：${card.needed_by}` : ''),
+    `您承诺在 ${rfqDeadline(deadlineIso, 'zh')} 前回复：`,
+    `找到请回复：报价 ${card.ref} 单价 币种 交期天数 批号（数量不足请加：数量 N）`,
+    `例如：报价 ${card.ref} 2.5 USD 10 2420 数量 400`,
+    `找不到请回复：无货 ${card.ref}`,
+    `寻货开放至 ${rfqDeadline(card.open_until, 'zh')}，之后找到也可报价。报价直接展示给买方（价格含 Central.Parts 约定的费用，您的公司名称不展示）。回复速度计入您的供应商评分。`,
+    `详情：${RFQ_SITE}`,
+  ];
+  const en = [
+    `[Central.Parts sourcing] ${card.ref}: ${card.mpn} × ${card.qty}, ship to ${countryName(card.ship_to, 'en')}.`,
+    `Please answer by ${rfqDeadline(deadlineIso, 'en')}: "报价 ${card.ref} price currency lead_days date_code [数量 N]" or "无货 ${card.ref}" (not found).`,
+    `Open until ${rfqDeadline(card.open_until, 'en')}: you can still quote later if you find the parts.`,
+  ];
+  return [...zh, '', ...en].join('\n');
+}
+
+export function sourcingReminderText(card) {
+  return [
+    `【Central.Parts 寻货提醒】${card.ref} 剩余12小时`,
+    `型号：${card.mpn}  数量：${card.qty}`,
+    `回复截止：${rfqDeadline(card.deadline_at, 'zh')}`,
+    `报价 ${card.ref} 单价 币种 交期天数 批号 · 无货 ${card.ref}`,
+    '',
+    `[Central.Parts] Reminder: 12 hours left to answer sourcing request ${card.ref}.`,
+  ].join('\n');
+}
+
+export function sourcingClosedText(ref) {
+  return `【Central.Parts】寻货 ${ref} 已结束，无需回复，不影响您的评分。\nSourcing request ${ref} is closed: no reply needed, no effect on your score.`;
+}
+
+export function sourcingQuoteOkText(r, q) {
+  return `已收到报价 ${r.ref}：${q.price} ${q.currency}，交期 ${q.lead} 天${q.dateCode ? `，批号 ${q.dateCode}` : ''}${q.qty ? `，数量 ${q.qty}` : ''}。报价已展示给买方，买方下单后 Central.Parts 将联系您。\n` +
+    `Quote received for ${r.ref} and shown to the buyer. Central.Parts will contact you if the buyer orders.`;
+}
+
+export function sourcingDeclineOkText(ref) {
+  return `已记录：${ref} 未找到。如果之后找到，寻货结束前仍可报价。\nRecorded: not found for ${ref}. You can still quote while the request is open.`;
+}
+
+export function sourcingAnswerErrorText(ref, code, detail) {
+  if (code === 'CP409') {
+    if (detail === 'answered') return `您已回复过 ${ref}。找到货可直接报价。\nYou have already answered ${ref}; you can still send a quote.`;
+    if (detail === 'max_offers') return `${ref} 每家公司最多报价 5 次。\nAt most 5 quotes per company for ${ref}.`;
+    return `寻货 ${ref} 已结束。\nSourcing request ${ref} is closed.`;
+  }
+  if (code === '22023') {
+    const zh = { currency: '币种无效，可用 EUR、USD、CNH、HKD、GBP、JPY', price: '单价无效', lead: '交期无效', qty: '数量无效' }[detail] || '格式错误';
+    const en = { currency: 'currency not accepted (EUR, USD, CNH, HKD, GBP, JPY)', price: 'invalid price', lead: 'invalid lead time', qty: 'invalid quantity' }[detail] || 'invalid format';
+    return `${zh}。\n${ref}: ${en}.`;
+  }
+  return `未找到寻货 ${ref}。\nSourcing request ${ref} not found.`;
+}
+
+// Avis aux opérateurs (anglais, comme les autres commandes de l'administrateur).
+export function sourcingOpenedOperatorText(o, res) {
+  return `[Sourcing ${o.id}] paid, open to volunteers until ${String(o.open_until || '').slice(0, 16).replace('T', ' ')} UTC: ` +
+    `${res.sent.length} notified${res.failed.length ? `, ${res.failed.length} not reached (${res.failed.join(', ')})` : ''}` +
+    (o.volunteers ? '' : ' · no active volunteer: handle it by hand');
+}
+export function sourcingOfferOperatorText(r, q, sellerId) {
+  return `[Sourcing ${r.ref}] ${sellerId}: ${q.kind === 'quote' ? `quote ${q.price} ${q.currency}, ${q.lead} d${q.qty ? `, qty ${q.qty}` : ''}` +
+    (r.priced ? ' · shown to the buyer' : ' · NO MARGIN: not shown, set the seller margin') : 'not found'}`;
+}
+export function sourcingOrderOperatorText(o) {
+  return `[Sourcing ${o.id}] ORDER: offer ${o.offer} (${o.seller_id}, net ${o.net} ${o.currency}, ${o.lead_days} d) · ${o.mpn} × ${o.qty} ` +
+    `at ${o.unit_price} EUR · buyer ${o.company} (${o.country}), ${o.email}${o.keep_open ? ' · search kept open' : ''}. ` +
+    'Send the proforma (sourcing fee deducted).';
+}
+export function sourcingClosedOperatorText(c) {
+  return `[Sourcing ${c.id}] closed (${c.reason}): ${c.offers} offer(s), status ${c.status}.`;
+}
+
 // ---- administrateur (anglais)
 
 const RFQ_STATUS_EN = { pending_validation: 'pending validation', rejected: 'rejected', auction: 'open (suppliers notified)',

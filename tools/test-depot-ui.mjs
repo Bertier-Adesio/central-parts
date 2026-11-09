@@ -59,6 +59,21 @@ async function api(route) {
     Object.assign(d, body.kind === 'quote' ? { response: 'quoted', my_net: body.price, my_currency: body.currency, my_lead_days: body.lead_days, my_date_code: body.date_code } : { response: 'declined' });
     return reply({ ...d, all_done: true });
   }
+  // Recherches payantes : inscription comme broker volontaire et réponses (ADR 0033).
+  if (path === '/sourcing') return reply(state.src || { eligible: false, volunteer: null, requests: [] });
+  if (path === '/sourcing/join') {
+    state.srcJoin = body;
+    state.src.volunteer = { active: body.on, labs: body.labs, joined_at: '2026-11-09T10:00:00Z', left_at: body.on ? null : '2026-11-09T11:00:00Z' };
+    return reply(state.src);
+  }
+  if (path === '/sourcing/answer') {
+    state.srcAnswer = body;
+    if (body.ref === 'SRC-0031') return reply({ error: 'closed' }, 409);
+    const r = state.src.requests.find((x) => x.ref === body.ref);
+    if (body.kind === 'quote') { r.response = 'quoted'; r.my_offers.push({ id: 'SOF-0009', net: body.price, currency: body.currency, lead_days: body.lead_days, date_code: body.date_code, qty: body.qty }); }
+    else r.response = 'declined';
+    return reply({ ref: body.ref, kind: body.kind, on_time: true });
+  }
   if (path === '/invite') { state.contacts.invites.push({ label: body.label }); return reply({ link: 'https://central.parts/depot/?invite=' + 'c'.repeat(36) }); }
   // Fiche société et fabricants (migration 20261106000035), comme supplier_company et suivantes.
   const co = state.company ||= { org_id: 'ORG-0107', name: ORG.name, can_edit: true, founded_year: null, website: null, about: {}, hq_city: null, staff: null,
@@ -302,6 +317,68 @@ ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.tex
   await toggleLang(page);
   ok((await page.textContent('#rfq-card')).includes('Platform RFQs') && (await page.textContent('#rfq-card')).includes('Your handling rate: 75 %'), 'RFQ : anglais');
   await toggleLang(page);
+}
+
+// 7 quater. Recherches payantes : inscription comme broker volontaire, laboratoires, réponses (ADR 0033).
+{
+  const soon = new Date(Date.now() + 30 * 3600e3).toISOString(), week = new Date(Date.now() + 6 * 86400e3).toISOString();
+  state.rfqs = { demands: [], score: null };
+  state.src = { eligible: true, volunteer: null, score: null, requests: [] };
+  await page.reload();
+  await page.waitForSelector('#src-card:not([hidden])');
+  let txt = await page.textContent('#src-card');
+  ok(txt.includes('48 小时内回复') && txt.includes('不显示您的公司名称') && txt.includes('只有 Central.Parts 可见'), 'volontaires : engagement, anonymat et laboratoires expliqués');
+  ok(await page.isDisabled('#src-join-btn'), 'volontaires : inscription impossible sans cocher l\'engagement');
+  await page.fill('#src-labs', 'Laboratoire fictif, Shenzhen');
+  await page.check('#src-commit');
+  await page.click('#src-join-btn');
+  await page.waitForSelector('#src-leave');
+  ok(state.srcJoin.on === true && state.srcJoin.labs === 'Laboratoire fictif, Shenzhen' && (await page.textContent('#src-card')).includes('您已参加寻货'), 'volontaires : inscription avec laboratoires');
+  // Recherches reçues : offre avec quantité partielle ; 无货 ; recherche close.
+  state.src.score = { received: 3, quoted: 1, declined: 1, expired: 1 };
+  state.src.requests = [
+    { ref: 'SRC-0030', mpn: 'LM317HVK', manufacturer: 'Texas Instruments', qty: 500, ship_to: 'FR', open: true, open_until: week, deadline_at: soon, response: 'pending', my_offers: [] },
+    { ref: 'SRC-0029', mpn: 'XC2S50', qty: 4, ship_to: 'DE', open: true, open_until: week, deadline_at: soon, response: 'pending', my_offers: [] },
+    { ref: 'SRC-0031', mpn: 'AD7714', qty: 10, ship_to: 'IT', open: true, open_until: week, deadline_at: soon, response: 'pending', my_offers: [] },
+    { ref: 'SRC-0020', mpn: 'MC68000', qty: 20, ship_to: 'FR', open: false, open_until: '2026-11-01T08:00:00Z', deadline_at: '2026-10-27T08:00:00Z', response: 'expired', my_offers: [] },
+  ];
+  await page.reload();
+  await page.waitForSelector('form[data-src="SRC-0030"]');
+  txt = await page.textContent('#src-card');
+  ok(txt.includes('SRC-0030 · LM317HVK (Texas Instruments)') && txt.includes('开放至') && txt.includes('北京时间') && txt.includes('收到 3'), 'volontaires : recherches reçues, échéances, note');
+  ok(!/Acheteur|company|@|prix cible|target/i.test(txt), 'volontaires : rien sur l\'acheteur');
+  ok((await page.$$('form[data-src]')).length === 3 && txt.includes('已逾期'), 'volontaires : formulaire seulement pour les recherches ouvertes');
+  await page.fill('form[data-src="SRC-0030"] [name=price]', '2,1');
+  await page.selectOption('form[data-src="SRC-0030"] [name=currency]', 'USD');
+  await page.fill('form[data-src="SRC-0030"] [name=lead]', '30');
+  await page.fill('form[data-src="SRC-0030"] [name=dc]', '2318');
+  await page.fill('form[data-src="SRC-0030"] [name=qty]', '400');
+  await page.click('form[data-src="SRC-0030"] [type=submit]');
+  await page.waitForFunction(() => /2\.1 USD/.test(document.getElementById('src-card').textContent));
+  ok(JSON.stringify(state.srcAnswer) === JSON.stringify({ ref: 'SRC-0030', kind: 'quote', price: 2.1, currency: 'USD', lead_days: 30, date_code: '2318', qty: 400 }),
+    'volontaires : offre envoyée, quantité partielle ' + JSON.stringify(state.srcAnswer));
+  ok(await page.$('form[data-src="SRC-0030"]') !== null && !(await page.$('[data-src-none="SRC-0030"]')), 'volontaires : après une offre, nouvelle offre possible, plus de 无货');
+  await page.click('[data-src-none="SRC-0029"]');
+  await page.waitForFunction(() => !document.querySelector('[data-src-none="SRC-0029"]'));
+  ok(state.srcAnswer.kind === 'decline', 'volontaires : 无货');
+  await page.fill('form[data-src="SRC-0031"] [name=price]', '1');
+  await page.fill('form[data-src="SRC-0031"] [name=lead]', '1');
+  await page.click('form[data-src="SRC-0031"] [type=submit]');
+  await page.waitForFunction(() => /寻货已结束/.test(document.getElementById('src-card').textContent));
+  ok(true, 'volontaires : recherche close, motif affiché');
+  ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'volontaires : pas de défilement horizontal à 390 px');
+  await toggleLang(page);
+  ok((await page.textContent('#src-card')).includes('Paid sourcing requests'), 'volontaires : anglais');
+  await toggleLang(page);
+  page.once('dialog', (d) => d.accept());
+  await page.click('#src-leave');
+  await page.waitForSelector('#src-join-btn');
+  ok(state.srcJoin.on === false && (await page.textContent('#src-card')).includes('您已退出寻货'), 'volontaires : retrait');
+  state.src = { eligible: false, volunteer: null, requests: [] };
+  await page.reload();
+  await page.waitForSelector('#v-app:not([hidden])');
+  await page.waitForTimeout(300);
+  ok(await page.isHidden('#src-card'), 'volontaires : carte masquée pour un fabricant ou un distributeur');
 }
 
 // 8. Société refusée : motif affiché, dépôt masqué.

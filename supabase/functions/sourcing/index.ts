@@ -9,7 +9,13 @@
 //                             autres pays : { id, mode: "proforma", tracking_url } (proforma envoyée par Central.Parts)
 //   POST /sourcing/webhook  événements GoCardless signés : billing_requests fulfilled → montant relu sur le paiement, demande
 //                           payée, opérateurs prévenus ; payments failed/cancelled → opérateurs prévenus
-//   GET  /sourcing/status   (Authorization: Bearer <jeton du lien de suivi>) → état de la demande pour l'acheteur
+//   GET  /sourcing/status   (Authorization: Bearer <jeton du lien de suivi>) → état de la demande pour l'acheteur, avec
+//                           la fenêtre d'ouverture et les offres des brokers volontaires (vendeur anonyme, prix en euros)
+//   POST /sourcing/action   (même en-tête) {action: extend|stop|order, offer?, keep_open?} → prolonger de 7 jours (une
+//                           fois), arrêter la recherche, ou commander une offre (la recherche s'arrête sauf keep_open)
+//
+// Au paiement (webhook), la recherche s'ouvre 7 jours aux brokers volontaires, prévenus dans WeChat (ADR 0033,
+// complément du 9 novembre 2026 ; _shared/sourcing-dispatch.ts).
 //
 // Secrets (jamais dans le dépôt) : GOCARDLESS_ACCESS_TOKEN, GOCARDLESS_WEBHOOK_SECRET ; GOCARDLESS_ENV (« live » en
 // production, bac à sable sinon) ; GOCARDLESS_COUNTRIES (pays couverts par Pay By Bank, « FR,DE,IE » par défaut).
@@ -18,6 +24,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { billingRequestBody, billingRequestFlowBody, failedPayments, fulfilledBillingRequests, gcBase, GC_VERSION, verifyWebhook } from '../_shared/gocardless.js';
 import { viesValid } from '../_shared/vies.ts';
 import { notifyOperators } from '../_shared/wechat.ts';
+import { sourcingOrderOperatorText } from '../_shared/robot-texts.js';
+import { openSourcing, tellSourcingClosed } from '../_shared/sourcing-dispatch.ts';
 
 const ORIGINS = (Deno.env.get('SEARCH_ORIGINS') || 'https://central.parts').split(',');
 const SITE = 'https://central.parts';
@@ -73,6 +81,8 @@ Deno.serve(async (req) => {
           await notifyOperators(db, `Recherche de sourcing payée ${data.id} : ${summary(data)}` +
             `${data.needed_by ? ', pour le ' + data.needed_by : ''}${data.target_price ? ', prix cible ' + data.target_price + ' ' + data.target_currency : ''}.` +
             ' À traiter dans le back office, onglet Demandes.').catch(() => {});
+          // Ouverture aux brokers volontaires (une seule fois, même si l'événement est rejoué).
+          await openSourcing(db, data.id).catch(() => {});
         }
       }
       for (const f of failedPayments(body)) {
@@ -83,8 +93,24 @@ Deno.serve(async (req) => {
     }
 
     // ---------------------------------------------------------------- suivi (lien personnel)
+    const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+    if (req.method === 'POST' && u.pathname.endsWith('/action')) {
+      if (!/^[0-9a-f]{48}$/.test(token)) return json({ error: 'link_invalid' }, 401);
+      const b = await req.json().catch(() => ({}));
+      const action = String(b.action || '');
+      if (!['extend', 'stop', 'order'].includes(action)) return json({ error: 'invalid' }, 422);
+      const { data, error } = await db.rpc('sourcing_buyer_action', { p_token: token, p_action: action,
+        p_offer: action === 'order' ? String(b.offer || '') : null, p_keep_open: b.keep_open === true });
+      if (error) {
+        if (error.code === 'CP409') return json({ error: error.details || 'closed' }, 409);
+        if (error.code === 'P0002') return json({ error: action === 'order' ? 'offer_unknown' : 'link_invalid' }, action === 'order' ? 404 : 401);
+        return json({ error: 'server' }, 500);
+      }
+      if (data.order) await notifyOperators(db, sourcingOrderOperatorText(data.order)).catch(() => {});
+      await tellSourcingClosed(db, data.closed).catch(() => {});
+      return json(data.status);
+    }
     if (req.method === 'GET' && u.pathname.endsWith('/status')) {
-      const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
       if (!/^[0-9a-f]{48}$/.test(token)) return json({ error: 'link_invalid' }, 401);
       const { data, error } = await db.rpc('sourcing_status', { p_token: token });
       if (error) return json({ error: 'server' }, 500);

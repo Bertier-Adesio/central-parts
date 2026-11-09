@@ -2,10 +2,12 @@
 //   - drapeau RFQ_WECHAT_OPEN fermé : rien n'est envoyé ;
 //   - envoi réussi : échéance = heure de l'envoi + 48 h, inscrite avec cette heure ; échec : rien ne démarre ;
 //   - bac à sable : aucun message, même drapeau ouvert ;
-//   - tâche planifiée : rappels, clôtures, livraison signée des webhooks.
+//   - tâche planifiée : rappels, clôtures, livraison signée des webhooks ;
+//   - recherches payantes (ADR 0033) : envoi aux brokers volontaires sans drapeau, échéance de 48 h, rappel, clôture.
 // Usage : deno run --allow-env tools/test-rfq-dispatch.ts
 import { closeRfq, deliverWebhooks, dispatchRfq, tick } from '../supabase/functions/_shared/rfq-dispatch.ts';
 import { verifyWebhook, webhookSecret } from '../supabase/functions/_shared/rfq.js';
+import { openSourcing, sourcingTick, tellSourcingClosed } from '../supabase/functions/_shared/sourcing-dispatch.ts';
 
 let n = 0, bad = 0;
 const ok = (cond: unknown, label: string) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
@@ -155,6 +157,40 @@ Deno.env.set('RFQ_WECHAT_OPEN', 'true');
   await closeRfq(db as never, 'DEM-2000');
   ok(!outbox.length, 'bac à sable : clôture sans message à l\'administrateur');
 }
+// ---------------------------------------------------------------- recherches payantes : brokers volontaires
+Deno.env.delete('RFQ_WECHAT_OPEN');
+{
+  sent.length = 0; outbox.length = 0;
+  const srcCard = { ref: 'SRC-0012', mpn: 'LM317HVK', qty: 500, condition: 'new', ship_to: 'FR', open_until: '2026-11-17T08:00:00Z' };
+  const db = fakeDb({ sourcing_open: { id: 'SRC-0012', open_until: '2026-11-17T08:00:00Z', volunteers: 3, contacts: [
+    { seller_id: 'ORG-0201', openids: ['oV1'], card: srcCard },
+    { seller_id: 'ORG-0202', openids: ['oV2'], card: srcCard },
+    { seller_id: 'ORG-0203', openids: [], card: srcCard }] } });
+  const before = Date.now();
+  const r = await openSourcing(db as never, 'SRC-0012', sender({ oV2: false }));
+  const rec = db.calls.filter((c) => c.name === 'sourcing_notify_result');
+  ok(r !== null && JSON.stringify(r.sent) === '["ORG-0201"]' && JSON.stringify(r.failed) === '["ORG-0202","ORG-0203"]', 'volontaires : envoi sans drapeau ; échec et aucun canal');
+  const a = rec.find((c) => c.args.p_seller === 'ORG-0201')!;
+  const at = Date.parse(String(a.args.p_now));
+  ok(a.args.p_ok === true && at >= before && at <= Date.now(), 'volontaires : envoi réussi inscrit avec son heure');
+  const hh = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(at + 48 * 3600e3));
+  ok(sent.find((x) => x.to === 'oV1')!.text.includes(hh + '（北京时间）'), 'volontaires : échéance = envoi + 48 h');
+  ok(rec.find((c) => c.args.p_seller === 'ORG-0203')?.args.p_error === 'no_channel', 'volontaires : aucun compte WeChat');
+  ok(outbox.some((m) => m.to === 'oOPERATOR' && m.text.includes('[Sourcing SRC-0012] paid') && m.text.includes('1 notified')), 'volontaires : opérateur prévenu');
+  ok(await openSourcing(fakeDb({ sourcing_open: null }) as never, 'SRC-0012', sender({})) === null, 'volontaires : ouverture rejouée sans envoi');
+}
+{
+  sent.length = 0; outbox.length = 0;
+  const srcCard = { ref: 'SRC-0012', mpn: 'LM317HVK', qty: 500, deadline_at: new Date(Date.now() + 12 * 3600e3).toISOString() };
+  const db = fakeDb({ sourcing_tick: { reminders: [{ seller_id: 'ORG-0201', openids: ['oV1'], card: srcCard }], expired: 2,
+    closed: [{ id: 'SRC-0011', mpn: 'X', status: 'not_found', reason: 'expired', offers: 0, tell: [{ seller_id: 'ORG-0202', openids: ['oV2'] }] }] } });
+  const r = await sourcingTick(db as never, sender({}));
+  ok(r.reminders === 1 && r.expired === 2 && r.closed === 1, 'volontaires : tâche planifiée (rappel, échéances, clôture)');
+  ok(sent.some((x) => x.to === 'oV1' && x.text.includes('剩余12小时')) && sent.some((x) => x.to === 'oV2' && x.text.includes('寻货 SRC-0011 已结束')), 'volontaires : rappel et avis de clôture');
+  ok(outbox.some((m) => m.text.includes('[Sourcing SRC-0011] closed (expired)')), 'volontaires : clôture signalée à l\'opérateur');
+  await tellSourcingClosed(db as never, null, sender({}));
+}
+
 ok(!fetched.some((f) => !/^https:\/\/(api\.weixin\.qq\.com|plateforme\.example)\//.test(f.url)), 'aucun autre appel réseau');
 
 console.log(`${n - bad}/${n} vérifications réussies`);

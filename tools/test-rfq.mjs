@@ -2,6 +2,7 @@
 // textes envoyés (anonymat, échéance à Pékin et à Paris, langue), erreurs de l'API, empreintes et signature des webhooks.
 // Les règles en base (48 h, notation, clôture, idempotence, plafond, droits) : supabase/checks/16_route_rfq.sql.
 // La diffusion avec sendText simulé : tools/test-rfq-dispatch.ts (Deno).
+// Recherches payantes (brokers volontaires, ADR 0033) : mêmes commandes avec SRC-…, textes et anonymat de l'acheteur.
 // Usage : node tools/test-rfq.mjs
 import { readFileSync } from 'node:fs';
 import * as Q from '../supabase/functions/_shared/rfq.js';
@@ -13,11 +14,11 @@ const eq = (got, want, label) => ok(JSON.stringify(got) === JSON.stringify(want)
 const CJK = /[㐀-鿿＀-￯　-〿]/;
 
 // ---------------------------------------------------------------- commandes du fournisseur
-eq(Q.parseSupplierRfq('报价 DEM-0431 0.52 USD 7 2425'), { kind: 'quote', ref: 'DEM-0431', price: 0.52, currency: 'USD', lead: 7, dateCode: '2425', lot: null }, 'fournisseur : 报价 complet');
+eq(Q.parseSupplierRfq('报价 DEM-0431 0.52 USD 7 2425'), { kind: 'quote', ref: 'DEM-0431', price: 0.52, currency: 'USD', lead: 7, dateCode: '2425', lot: null, qty: null }, 'fournisseur : 报价 complet');
 eq(Q.parseSupplierRfq('报价 dem-0431 0.52 usd 7天 2425 lot LOT-0187').lot, 'LOT-0187', 'fournisseur : lot précisé');
 eq(Q.parseSupplierRfq('报价DEM-0431，0.52，RMB，7，DC2425').currency, 'CNH', 'fournisseur : RMB → CNH, virgules chinoises');
 eq(Q.parseSupplierRfq('报价DEM-0431，0.52，RMB，7，DC2425').dateCode, '2425', 'fournisseur : préfixe DC retiré');
-eq(Q.parseSupplierRfq('报价 DEM-0431 0.52 USD 7'), { kind: 'quote', ref: 'DEM-0431', price: 0.52, currency: 'USD', lead: 7, dateCode: null, lot: null }, 'fournisseur : date code facultatif (celui du lot)');
+eq(Q.parseSupplierRfq('报价 DEM-0431 0.52 USD 7'), { kind: 'quote', ref: 'DEM-0431', price: 0.52, currency: 'USD', lead: 7, dateCode: null, lot: null, qty: null }, 'fournisseur : date code facultatif (celui du lot)');
 eq(Q.parseSupplierRfq('报价 DEM-0431'), { kind: 'help', ref: 'DEM-0431' }, 'fournisseur : 报价 incomplet → aide');
 eq(Q.parseSupplierRfq('报价 DEM-0431 abc USD 7').kind, 'help', 'fournisseur : prix illisible → aide');
 eq(Q.parseSupplierRfq('quote DEM-0431 1.2 EUR 3 2401').kind, 'quote', 'fournisseur : mot-clé anglais');
@@ -25,6 +26,13 @@ eq(Q.parseSupplierRfq('无货 DEM-0431'), { kind: 'decline', ref: 'DEM-0431' }, 
 eq(Q.parseSupplierRfq('no stock DEM-0431').kind, 'decline', 'fournisseur : no stock');
 eq(Q.parseSupplierRfq('确认 PR-0001'), null, 'fournisseur : commande de demande d\'achat laissée à son traitement');
 eq(Q.parseSupplierRfq('你好'), null, 'fournisseur : message libre non interprété');
+// Recherche payante : SRC-…, quantité partielle facultative.
+eq(Q.parseSupplierRfq('报价 src-0012 2.5 USD 10 2420 数量 400'), { kind: 'quote', ref: 'SRC-0012', price: 2.5, currency: 'USD', lead: 10, dateCode: '2420', lot: null, qty: 400 },
+  'volontaire : 报价 SRC-… avec quantité');
+eq(Q.parseSupplierRfq('报价SRC-0012，2.5，USD，10，2420').qty, null, 'volontaire : quantité facultative');
+eq(Q.parseSupplierRfq('quote SRC-0012 2.5 usd 10 qty 400 2420').dateCode, '2420', 'volontaire : qty avant le date code');
+eq(Q.parseSupplierRfq('无货 SRC-0012'), { kind: 'decline', ref: 'SRC-0012' }, 'volontaire : 无货 SRC-…');
+eq(Q.parseSupplierRfq('报价 SRC-0012'), { kind: 'help', ref: 'SRC-0012' }, 'volontaire : 报价 incomplet → aide');
 
 // ---------------------------------------------------------------- commandes de l'administrateur
 eq(Q.parseOperatorRfq('rfq'), { cmd: 'list' }, 'administrateur : rfq');
@@ -132,6 +140,26 @@ ok(/demands:write/.test(fn) && /Idempotency-Key header is required/.test(fn) && 
 ok(/X-RateLimit-Limit/.test(fn) && /X-RateLimit-Remaining/.test(fn) && /X-RateLimit-Reset/.test(fn), 'fonction rfq : en-têtes X-RateLimit-*');
 ok(/Sandbox endpoints need a cp_test_ key/.test(fn), 'fonction rfq : bac à sable réservé aux clés de test');
 ok(/RFQ_JOBS_SECRET/.test(fn) && /x-cp-jobs-secret/.test(fn), 'fonction rfq : tâche planifiée protégée');
+// ---------------------------------------------------------------- recherches payantes : textes WeChat
+{
+  const card = { ref: 'SRC-0012', mpn: 'LM317HVK', manufacturer: 'Texas Instruments', qty: 500, condition: 'new', ship_to: 'FR', needed_by: '2026-12-01', open_until: '2026-11-17T08:00:00Z' };
+  const m = R.sourcingSupplierText({ ...card, company: 'Acheteur secret', email: 'secret@exemple.test', target_price: 3, notes: 'Note secrète' }, '2026-11-12T08:00:00Z');
+  ok(m.includes('SRC-0012') && m.includes('LM317HVK（Texas Instruments）') && m.includes('数量：500') && m.includes('法国'), 'volontaire : référence, fabricant, quantité, pays');
+  ok(m.includes('11月12日 16:00（北京时间）') && m.includes('前回复'), 'volontaire : échéance de réponse à Pékin');
+  ok(m.includes('报价 SRC-0012 单价 币种 交期天数 批号') && m.includes('无货 SRC-0012') && m.includes('数量 N'), 'volontaire : format de réponse');
+  ok(m.includes('计入您的供应商评分') && m.includes('不展示'), 'volontaire : note et anonymat rappelés');
+  ok(!/Acheteur|secret|Note secrète|\b3\b EUR/i.test(m), 'volontaire : rien sur l\'acheteur ni le prix cible');
+  ok(R.sourcingReminderText({ ...card, deadline_at: '2026-11-12T08:00:00Z' }).includes('剩余12小时'), 'volontaire : rappel à 36 h');
+  ok(R.sourcingClosedText('SRC-0012').includes('不影响您的评分'), 'volontaire : clôture sans effet sur la note');
+  ok(R.sourcingAnswerErrorText('SRC-0012', 'CP409', 'closed').includes('已结束') && R.sourcingAnswerErrorText('SRC-0012', 'CP409', 'max_offers').includes('5')
+    && R.sourcingAnswerErrorText('SRC-0012', '22023', 'qty').includes('数量无效') && R.sourcingAnswerErrorText('SRC-0012', 'P0002', '').includes('未找到'), 'volontaire : erreurs');
+  ok(R.sourcingQuoteOkText({ ref: 'SRC-0012' }, { price: 2.5, currency: 'USD', lead: 10, dateCode: '2420', qty: 400 }).includes('数量 400'), 'volontaire : accusé de réception de l\'offre');
+  ok(R.sourcingOfferOperatorText({ ref: 'SRC-0012', priced: false }, { kind: 'quote', price: 15, currency: 'CNH', lead: 7 }, 'ORG-0201').includes('NO MARGIN'), 'opérateur : offre sans marge signalée');
+  ok(R.sourcingOrderOperatorText({ id: 'SRC-0012', offer: 'SOF-0002', seller_id: 'ORG-0201', net: 2.1, currency: 'USD', lead_days: 30, mpn: 'LM317HVK', qty: 400, unit_price: 2.1252,
+    company: 'Acheteur (fictif)', country: 'FR', email: 'a@exemple.test', keep_open: true }).includes('kept open'), 'opérateur : commande, recherche gardée ouverte');
+  ok(R.sourcingOpenedOperatorText({ id: 'SRC-0012', open_until: '2026-11-17T08:00:00Z', volunteers: 0 }, { sent: [], failed: [] }).includes('handle it by hand'), 'opérateur : aucun volontaire');
+}
+
 const dep = readFileSync(new URL('./deploy-functions.sh', import.meta.url), 'utf8');
 ok(/^ALL=".*\brfq\b/m.test(dep) && /^PUBLIC=".*\brfq\b/m.test(dep) && /^SHARED=".*\brfq\b/m.test(dep), 'déploiement : rfq déclarée, sans jeton Supabase, avec _shared');
 

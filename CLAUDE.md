@@ -59,7 +59,7 @@ node tools/test-panier-ui.mjs          # panier site/panier/ : ajout depuis les 
 node tools/test-csp.mjs                # en-tête CSP sur chaque page (même serveur) : aucune violation, script injecté et envoi externe refusés
 node tools/test-landing-ui.mjs         # recherche du héros de la landing / et /en/ (même serveur) : offres sur place, panier, pièce introuvable, sans JavaScript, 1280/390 px, API simulée
 node tools/test-header-ui.mjs          # en-tête partagé (même serveur) : variantes, paliers 1280/1180/1024/390/320 px, langue, compteur du panier, menu, sans JavaScript
-node tools/test-sourcing-ui.mjs        # recherche payante site/sourcing/ et son suivi (même serveur), fonction et paiement simulés ; node tools/test-sourcing.mjs : signature des webhooks GoCardless
+node tools/test-sourcing-ui.mjs        # recherche payante site/sourcing/ et son suivi, offres des brokers volontaires, prolongation, commande, arrêt (même serveur), fonction et paiement simulés ; node tools/test-sourcing.mjs : signature des webhooks GoCardless
 node tools/test-fabricants-ui.mjs      # page publique du fabricant site/fabricants/ et liens depuis les offres (même serveur), API simulée
 node tools/test-api-page-ui.mjs        # documentation de l'API d'offres site/api/ (même serveur) : langues, endpoints, mots interdits, noindex
 node tools/test-admin-ui.mjs           # back office site/admin/ (même serveur), API simulée, demandes à valider ; démonstration : node tools/demo-admin.mjs
