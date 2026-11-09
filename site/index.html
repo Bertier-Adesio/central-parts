@@ -185,6 +185,31 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* Recherche du héros : résultats et pièce introuvable, remplis par le script de la page (tokens de brand/tokens.css) */
+#hero-res:empty{display:none}
+.hs-box{background:var(--bg-raised);border:1px solid var(--border-1);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);overflow:hidden}
+.hs-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-1)}
+.hs-mpn{font-family:var(--font-mono);font-weight:500;font-size:15px;overflow-wrap:anywhere}
+.hs-sub{font-size:13px;color:var(--fg-3)}
+.hs-tag{display:inline-block;margin:4px 6px 0 0;padding:1px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);font-size:12px}
+.hs-tag.mfr{background:var(--status-success-bg);color:var(--status-success)}
+.hs-price{font-family:var(--font-mono);font-size:15px;text-align:right}.hs-price small{display:block;font-size:12px;color:var(--fg-3)}
+.hs-price i{font-family:var(--font-sans);font-style:normal;font-size:13px;color:var(--fg-2)}
+.hs-add{min-height:var(--control-h-lg);padding:0 14px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);color:var(--fg-1);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;text-decoration:none}
+.hs-add:hover{border-color:var(--border-strong);color:var(--fg-1)}
+.hs-add.in{border-color:var(--status-success);color:var(--status-success);background:var(--status-success-bg)}
+.hs-foot{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-surface);font-size:13px;color:var(--fg-2)}
+.hs-foot a{color:var(--fg-1);text-decoration:underline;text-underline-offset:3px;font-weight:500}
+.hs-none{padding:20px}
+.hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
+.hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
+.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
+.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta:hover{background:var(--accent-hover)}
+.hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
+.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -210,9 +235,9 @@ input,textarea,select{font-size:16px!important}
 <style>
 [hidden] { display: none !important; }
 .hv1:hover { border-color: #F4F2EE !important; color: #F4F2EE !important }
-.hv2:hover { background: #B3122E !important; color: #FFFFFF !important }
-.hv3:hover { border-color: #15171C !important; color: #15171C !important }
-.hv4:hover { background: #33363D !important; color: #F4F2EE !important }
+.hv2:hover { background: #B3122E !important }
+.hv3:hover { background: #33363D !important; color: #F4F2EE !important }
+.hv4:hover { border-color: #15171C !important; color: #15171C !important }
 .fc5:focus, .fc5:focus-within { border-color: #15171C !important; outline: none !important }
 .hv6:hover { background: #33363D !important }
 </style>
@@ -249,13 +274,17 @@ input,textarea,select{font-size:16px!important}
 <div style="position: relative; max-width: 1280px; margin: 0 auto; padding: clamp(64px, 10vw, 128px) 24px clamp(56px, 8vw, 104px); display: flex; flex-direction: column; gap: 28px">
 <span style="margin-bottom: -16px; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
-<h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">Les fabricants chinois de composants, connectés aux acheteurs européens.</h1>
-<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Central.Parts est un Supply Network Operator. Nous structurons vos données produit et proposons vos composants aux acheteurs EMS et OEM européens, sur les plateformes de cotation et les ERP qu’ils utilisent déjà.</p>
+<h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">Le prix de votre composant, tout de suite.</h1>
+<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Si personne ne l’a en ligne, nous la cherchons pour vous.</p>
 <p data-event="1" style="margin: 0; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; padding: 8px 14px; border: 1px solid #C9C5BD; border-radius: 999px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.4; color: #15171C"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D7262E; flex: none"></span>electronica 2026 · Munich · 10-13 novembre · Hall B4, stand 251/12</p>
-<div style="display: flex; flex-wrap: wrap; gap: 12px">
-<a href="#contact" data-pick-tab="dist" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 16px; font-weight: 500" class="hv2">Devenir fabricant partenaire</a>
-<a href="#contact" data-pick-tab="buyer" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 16px; font-weight: 500" class="hv3">Je suis acheteur</a>
-</div>
+<form id="hero-search" action="/recherche/" method="get" role="search" style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 860px">
+<input type="hidden" name="lang" value="fr">
+<input id="hero-q" name="q" type="search" required minlength="3" maxlength="60" autocomplete="off" spellcheck="false" aria-label="Référence fabricant" placeholder="Référence, ex. AMS1117" style="flex: 1 1 280px; min-width: 0; height: 60px; padding: 0 20px; border: 2px solid #15171C; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #15171C">
+<button type="submit" style="flex: 0 0 auto; height: 60px; padding: 0 26px; border: 0; border-radius: 8px; background: #D7262E; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 500; cursor: pointer" class="hv2">Rechercher</button>
+</form>
+<p id="hero-live" style="margin: -16px 0 0; max-width: 860px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.5; color: #4A4E57">Stock des fabricants et distributeurs partenaires, prix tout compris en euros au taux de la BCE.</p>
+<div id="hero-res" aria-live="polite" style="max-width: 860px"></div>
+<p style="margin: 0; font-size: 15px; color: #4A4E57">Vous êtes fabricant ou distributeur ? <a href="#contact" data-pick-tab="dist" style="color: #15171C; text-decoration: underline; text-underline-offset: 3px">Devenir fabricant partenaire</a></p>
 </div>
 </section>
 
@@ -269,7 +298,7 @@ input,textarea,select{font-size:16px!important}
 <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
 <span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Vos données produit structurées et publiées par API</span><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Vos composants présentés aux acheteurs européens</span><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Demandes transmises sur WeChat</span>
 </div>
-<a href="#contact" data-pick-tab="dist" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" class="hv4">Devenir fabricant partenaire</a>
+<a href="#contact" data-pick-tab="dist" style="margin-top: auto; align-self: flex-start; height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" class="hv3">Devenir fabricant partenaire</a>
 </div>
 <div style="background: #FFFFFF; border: 1px solid #D9D5CD; border-radius: 10px; padding: 32px; display: flex; flex-direction: column; gap: 18px">
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #62676F">Acheteurs</span>
@@ -279,8 +308,8 @@ input,textarea,select{font-size:16px!important}
 <span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Stock et prix disponibles, au même endroit</span><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Cotation pour les quantités et délais spécifiques</span><span style="display: flex; gap: 10px; align-items: baseline"><span style="width: 6px; height: 6px; border-radius: 50%; background: #15171C; flex: none; transform: translateY(-2px)"></span>Un seul interlocuteur pour vos demandes</span>
 </div>
 <div style="margin-top: auto; display: flex; flex-wrap: wrap; gap: 10px">
-<a href="/offres/?lang=fr" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" class="hv4">Voir les offres</a>
-<a href="#contact" data-pick-tab="buyer" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 15px; font-weight: 500" class="hv3">Nous contacter</a>
+<a href="/offres/?lang=fr" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; background: #15171C; color: #F4F2EE; font-size: 15px; font-weight: 500" class="hv3">Voir les offres</a>
+<a href="#contact" data-pick-tab="buyer" style="height: 44px; padding: 0 18px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 15px; font-weight: 500" class="hv4">Nous contacter</a>
 </div>
 </div>
 </div>
@@ -377,6 +406,7 @@ input,textarea,select{font-size:16px!important}
 <script>
 (function () {
   var MAIL = {"subject":"Demande de contact","profile":"Profil","optin":"Espace client : informer et recontacter","yes":"oui","no":"non"};
+  var HS = {"locale":"fr-FR","live":"{refs} références en ligne · {units} pièces en stock · prix tout compris en euros, taux de la BCE du {date}","loading":"Recherche…","error":"La recherche ne répond pas. Réessayez, ou ouvrez la page de recherche.","tooShort":"Tapez au moins 3 caractères de la référence.","from":"à partir de","k1":"1 k :","onRequest":"Prix sur demande","avail":"Disponible","shipFrom":"Expédié de","src":{"manufacturer":"Direct fabricant","distributor":"Distributeur","broker":"Broker vérifié","surplus":"Surplus vérifié"},"add":"Ajouter à ma demande","inCart":"Dans le panier · Voir le panier","cartFull":"Panier plein (30 références) : envoyez-le d’abord.","cartOff":"Panier indisponible dans ce navigateur : écrivez à contact@central.parts.","count":"{n} offre(s) pour « {q} ». Sans compte et sans engagement : vous recevez une facture proforma.","all":"Voir toutes les offres","cartHref":"/panier/?lang=fr","searchHref":"/recherche/?lang=fr&q=","noneTitle":"{q} n’est pas en stock en ligne aujourd’hui.","noneText":"Nous la cherchons pour vous dans le réseau (fabricants, distributeurs, surplus vérifiés), avec prix et délai, sans engagement.","qty":"Quantité","noneCta":"Trouvez-la pour moi","noneMsg":"Référence introuvable en ligne : {q}, quantité {qty}. Merci de la chercher pour moi.","sourcing":"Ou recherche prioritaire de composants rares (49 € HT, déduits de la commande)","sourcingHref":"/sourcing/?lang=fr&q="};
   // Navigation : fondu à droite seulement si des liens restent masqués à droite.
   var nav = document.querySelector('[data-nav]');
   function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
@@ -407,6 +437,82 @@ input,textarea,select{font-size:16px!important}
     var lines = [label.textContent + ' :', f.message.value, '', f.nom.value, f.societe.value, f.email.value, MAIL.profile + ' : ' + f.profil.value, MAIL.optin + ' : ' + (f.espace_client.checked ? MAIL.yes : MAIL.no)];
     location.href = 'mailto:contact@central.parts?subject=' + encodeURIComponent(MAIL.subject + ' — ' + f.societe.value) + '&body=' + encodeURIComponent(lines.join('\n'));
     sent.hidden = false;
+  });
+
+  // Recherche du héros (FR, EN) : sans JavaScript, le formulaire mène à /recherche/ ; avec, les offres s'affichent ici,
+  // ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028) ; une pièce introuvable devient une demande
+  // (formulaire de contact pré-rempli) ou une recherche prioritaire payante (/sourcing/, ADR 0033).
+  var hf = document.getElementById('hero-search');
+  if (!hf || !HS.add) return;
+  var API = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
+  var fmt = function (n) { return Number(n).toLocaleString(HS.locale); };
+  var escH = function (v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var money = function (v, cur) { try { return new Intl.NumberFormat(HS.locale, { style: 'currency', currency: cur === 'CNH' ? 'CNY' : cur, maximumSignificantDigits: 4 }).format(v); } catch (e) { return v + ' ' + cur; } };
+  var region = function (c) { try { return new Intl.DisplayNames([HS.locale], { type: 'region' }).of(c); } catch (e) { return c; } };
+  // Réseau vivant : nombre de références et de pièces, date du taux de la BCE (même source que /offres/).
+  fetch(API + 'offers?cur=EUR').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (d && d.total_refs) live.textContent = HS.live.replace('{refs}', fmt(d.total_refs)).replace('{units}', fmt(d.total_units || 0))
+      .replace('{date}', d.rates_at ? new Date(d.rates_at).toLocaleDateString(HS.locale) : '—');
+  }).catch(function () {});
+  var CART = 'cp-cart';
+  function cartLoad() { try { var a = JSON.parse(localStorage.getItem(CART) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function cartHas(o) { return cartLoad().some(function (l) { return l.mpn === o.mpn && l.source === o.source && l.ship_from === o.ship_from; }); }
+  function cartAdd(o) {
+    var a = cartLoad();
+    if (cartHas(o)) return 'ok';
+    if (a.length >= 30) return 'full';
+    a.push({ mpn: o.mpn, manufacturer: o.manufacturer, source: o.source, ship_from: o.ship_from, qty: 1, moq: 1, spq: 1 });
+    try { localStorage.setItem(CART, JSON.stringify(a)); } catch (e) { return 'off'; }
+    return cartLoad().length === a.length ? 'ok' : 'off';
+  }
+  var last = null;
+  function show(d) {
+    last = d;
+    var r = d.results || [], term = d.query;
+    if (!r.length) {
+      res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
+        '<form class="hs-form" id="hs-find"><input name="qty" inputmode="numeric" autocomplete="off" placeholder="' + escH(HS.qty) + '" aria-label="' + escH(HS.qty) + '">' +
+        '<button class="hs-cta" type="submit">' + escH(HS.noneCta) + '</button></form>' +
+        '<a class="hs-alt" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.sourcing) + '</a></div>';
+      document.getElementById('hs-find').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var qty = this.elements.qty.value.trim() || '—';
+        pick('buyer');
+        form.elements.message.value = HS.noneMsg.replace('{q}', term).replace('{qty}', qty);
+        document.getElementById('contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        form.elements.nom.focus({ preventScroll: true });
+      });
+      return;
+    }
+    res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
+      var cur = x.currency || d.currency;
+      var price = x.price_from == null ? '<i>' + escH(HS.onRequest) + '</i>' : '<i>' + escH(HS.from) + '</i> ' + escH(money(x.price_from, cur)) +
+        (x.price_1k != null ? '<small>' + escH(HS.k1) + ' ' + escH(money(x.price_1k, cur)) + '</small>' : '');
+      var act = cartHas(x) ? '<a class="hs-add in" href="' + escH(HS.cartHref) + '">' + escH(HS.inCart) + '</a>'
+        : '<button class="hs-add" type="button" data-i="' + i + '">' + escH(HS.add) + '</button>';
+      return '<div class="hs-row"><div><div class="hs-mpn">' + escH(x.mpn) + '</div><div class="hs-sub">' + escH(x.manufacturer) + '</div>' +
+        '<span class="hs-tag' + (x.source === 'manufacturer' ? ' mfr' : '') + '">' + escH(HS.src[x.source] || x.source) + '</span>' +
+        '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
+        '<div class="hs-price">' + price + '</div>' + act + '</div>';
+    }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
+      '<a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div></div>';
+    res.querySelectorAll('button.hs-add').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var out = cartAdd(r[+b.getAttribute('data-i')]);
+        if (out === 'ok') show(last); else { b.disabled = true; b.textContent = out === 'full' ? HS.cartFull : HS.cartOff; }
+      });
+    });
+  }
+  hf.addEventListener('submit', function (e) {
+    var term = hf.elements.q.value.replace(/\s+/g, '').toUpperCase().slice(0, 60);
+    e.preventDefault();
+    if (term.length < 3) { res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.tooShort) + '</div>'; return; }
+    res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.loading) + '</div>';
+    fetch(API + 'search?cur=EUR&q=' + encodeURIComponent(term))
+      .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw d; return d; }); })
+      .then(function (d) { d.query = d.query || term; show(d); }, function () {
+        res.innerHTML = '<div class="hs-box hs-msg">' + escH(HS.error) + ' <a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div>';
+      });
   });
 })();
 </script>

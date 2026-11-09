@@ -309,6 +309,31 @@ body{margin:0;background:#F4F2EE;color:#15171C;font-family:'Space Grotesk',syste
 a{color:#15171C;text-decoration:none}a:hover{color:#D7262E}
 input,textarea,select,button{font-family:inherit}
 [data-nav]::-webkit-scrollbar{display:none}
+/* Recherche du héros : résultats et pièce introuvable, remplis par le script de la page (tokens de brand/tokens.css) */
+#hero-res:empty{display:none}
+.hs-box{background:var(--bg-raised);border:1px solid var(--border-1);border-radius:var(--radius-lg);box-shadow:var(--shadow-pop);overflow:hidden}
+.hs-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-1)}
+.hs-mpn{font-family:var(--font-mono);font-weight:500;font-size:15px;overflow-wrap:anywhere}
+.hs-sub{font-size:13px;color:var(--fg-3)}
+.hs-tag{display:inline-block;margin:4px 6px 0 0;padding:1px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);font-size:12px}
+.hs-tag.mfr{background:var(--status-success-bg);color:var(--status-success)}
+.hs-price{font-family:var(--font-mono);font-size:15px;text-align:right}.hs-price small{display:block;font-size:12px;color:var(--fg-3)}
+.hs-price i{font-family:var(--font-sans);font-style:normal;font-size:13px;color:var(--fg-2)}
+.hs-add{min-height:var(--control-h-lg);padding:0 14px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);color:var(--fg-1);font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;text-decoration:none}
+.hs-add:hover{border-color:var(--border-strong);color:var(--fg-1)}
+.hs-add.in{border-color:var(--status-success);color:var(--status-success);background:var(--status-success-bg)}
+.hs-foot{display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-surface);font-size:13px;color:var(--fg-2)}
+.hs-foot a{color:var(--fg-1);text-decoration:underline;text-underline-offset:3px;font-weight:500}
+.hs-none{padding:20px}
+.hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
+.hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
+.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
+.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta:hover{background:var(--accent-hover)}
+.hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
+.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -370,10 +395,17 @@ input,textarea,select{font-size:16px!important}
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">{{ t.heroTitle }}</h1>
 <p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">{{ t.heroSub }}</p>
 <p data-event="1" style="margin: 0; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; padding: 8px 14px; border: 1px solid #C9C5BD; border-radius: 999px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.4; color: #15171C"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D7262E; flex: none"></span>{{ t.event }}</p>
-<div style="display: flex; flex-wrap: wrap; gap: 12px">
+<sc-if value="{{ t.searchHero }}" hint-placeholder-val="{{ true }}"><form id="hero-search" action="/recherche/" method="get" role="search" style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 860px">
+<input type="hidden" name="lang" value="{{ t.searchLang }}">
+<input id="hero-q" name="q" type="search" required minlength="3" maxlength="60" autocomplete="off" spellcheck="false" aria-label="{{ t.searchLabel }}" placeholder="{{ t.searchPh }}" style="flex: 1 1 280px; min-width: 0; height: 60px; padding: 0 20px; border: 2px solid #15171C; border-radius: 8px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: #15171C">
+<button type="submit" style="flex: 0 0 auto; height: 60px; padding: 0 26px; border: 0; border-radius: 8px; background: #D7262E; color: #FFFFFF; font-family: inherit; font-size: 17px; font-weight: 500; cursor: pointer" style-hover="background: #B3122E">{{ t.searchGo }}</button>
+</form>
+<p id="hero-live" style="margin: -16px 0 0; max-width: 860px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.5; color: #4A4E57">{{ t.searchHint }}</p>
+<div id="hero-res" aria-live="polite" style="max-width: 860px"></div>
+<p style="margin: 0; font-size: 15px; color: #4A4E57">{{ t.mfrLine }} <a href="#contact" data-pick-tab="dist" style="color: #15171C; text-decoration: underline; text-underline-offset: 3px">{{ t.heroCtaDist }}</a></p></sc-if><sc-if value="{{ t.ctaHero }}" hint-placeholder-val="{{ false }}"><div style="display: flex; flex-wrap: wrap; gap: 12px">
 <a href="#contact" data-pick-tab="dist" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; background: #D7262E; color: #FFFFFF; font-size: 16px; font-weight: 500" style-hover="background: #B3122E; color: #FFFFFF">{{ t.heroCtaDist }}</a>
 <a href="#contact" data-pick-tab="buyer" style="height: 52px; padding: 0 22px; display: inline-flex; align-items: center; border-radius: 6px; border: 1px solid #C9C5BD; background: #FFFFFF; color: #15171C; font-size: 16px; font-weight: 500" style-hover="border-color: #15171C; color: #15171C">{{ t.heroCtaBuyer }}</a>
-</div>
+</div></sc-if>
 </div>
 </section>
 
@@ -490,8 +522,18 @@ fr: {
   navOffers: 'Offres', offersHref: '/offres/?lang=fr', buyerOffers: 'Voir les offres',
   navPaths: 'Fabricants · Acheteurs', navHow: 'Fonctionnement', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10-13 novembre · Hall B4, stand 251/12',
-  heroTitle: 'Les fabricants chinois de composants, connectés aux acheteurs européens.',
-  heroSub: 'Central.Parts est un Supply Network Operator. Nous structurons vos données produit et proposons vos composants aux acheteurs EMS et OEM européens, sur les plateformes de cotation et les ERP qu’ils utilisent déjà.',
+  heroTitle: 'Le prix de votre composant, tout de suite.',
+  heroSub: 'Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Si personne ne l’a en ligne, nous la cherchons pour vous.',
+  searchHero: true, ctaHero: false, searchLang: 'fr', searchLabel: 'Référence fabricant', searchPh: 'Référence, ex. AMS1117', searchGo: 'Rechercher',
+  searchHint: 'Stock des fabricants et distributeurs partenaires, prix tout compris en euros au taux de la BCE.', mfrLine: 'Vous êtes fabricant ou distributeur ?',
+  hs: { locale: 'fr-FR', live: '{refs} références en ligne · {units} pièces en stock · prix tout compris en euros, taux de la BCE du {date}', loading: 'Recherche…',
+    error: 'La recherche ne répond pas. Réessayez, ou ouvrez la page de recherche.', tooShort: 'Tapez au moins 3 caractères de la référence.',
+    from: 'à partir de', k1: '1 k :', onRequest: 'Prix sur demande', avail: 'Disponible', shipFrom: 'Expédié de', src: { manufacturer: 'Direct fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
+    add: 'Ajouter à ma demande', inCart: 'Dans le panier · Voir le panier', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.',
+    count: '{n} offre(s) pour « {q} ». Sans compte et sans engagement : vous recevez une facture proforma.', all: 'Voir toutes les offres', cartHref: '/panier/?lang=fr', searchHref: '/recherche/?lang=fr&q=',
+    noneTitle: '{q} n’est pas en stock en ligne aujourd’hui.', noneText: 'Nous la cherchons pour vous dans le réseau (fabricants, distributeurs, surplus vérifiés), avec prix et délai, sans engagement.',
+    qty: 'Quantité', noneCta: 'Trouvez-la pour moi', noneMsg: 'Référence introuvable en ligne : {q}, quantité {qty}. Merci de la chercher pour moi.',
+    sourcing: 'Ou recherche prioritaire de composants rares (49 € HT, déduits de la commande)', sourcingHref: '/sourcing/?lang=fr&q=' },
   heroCtaDist: 'Devenir fabricant partenaire', heroCtaBuyer: 'Je suis acheteur',
   pathsTitle: 'Deux parcours, un même réseau',
   distTag: 'Fabricants', distTitle: 'Toucher les acheteurs européens',
@@ -527,8 +569,18 @@ en: {
   navOffers: 'Offers', offersHref: '/offres/?lang=en', buyerOffers: 'See the offers',
   navPaths: 'Manufacturers · Buyers', navHow: 'How it works', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10–13 November · Hall B4, Booth 251/12',
-  heroTitle: 'Chinese component makers, connected to European buyers.',
-  heroSub: 'Central.Parts is a Supply Network Operator. We structure your product data and offer your parts to European EMS and OEM buyers, on the quoting platforms and ERPs they already use.',
+  heroTitle: 'The price of your component, right now.',
+  heroSub: 'Type a manufacturer part number: real stock, prices break by break, every offer traced to its source. If no one has it online, we find it for you.',
+  searchHero: true, ctaHero: false, searchLang: 'en', searchLabel: 'Manufacturer part number', searchPh: 'Part number, e.g. AMS1117', searchGo: 'Search',
+  searchHint: 'Stock from partner manufacturers and distributors, all-inclusive prices in euros at the ECB rate.', mfrLine: 'Are you a manufacturer or distributor?',
+  hs: { locale: 'en-GB', live: '{refs} part numbers online · {units} pieces in stock · all-inclusive prices in euros, ECB rate of {date}', loading: 'Searching…',
+    error: 'Search is not responding. Try again, or open the search page.', tooShort: 'Type at least 3 characters of the part number.',
+    from: 'from', k1: '1k:', onRequest: 'Price on request', avail: 'Available', shipFrom: 'Ships from', src: { manufacturer: 'Manufacturer direct', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
+    add: 'Add to my request', inCart: 'In the cart · View cart', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.',
+    count: '{n} offer(s) for "{q}". No account, no commitment: you receive a proforma invoice.', all: 'See all offers', cartHref: '/panier/?lang=en', searchHref: '/recherche/?lang=en&q=',
+    noneTitle: '{q} is not in stock online today.', noneText: 'We search the network for you (manufacturers, distributors, verified surplus) and come back with price and lead time, no commitment.',
+    qty: 'Quantity', noneCta: 'Find it for me', noneMsg: 'Part not found online: {q}, quantity {qty}. Please find it for me.',
+    sourcing: 'Or priority search for hard-to-find parts (€49 excl. VAT, deducted from the order)', sourcingHref: '/sourcing/?lang=en&q=' },
   heroCtaDist: 'Become a partner manufacturer', heroCtaBuyer: 'I am a buyer',
   pathsTitle: 'Two paths, one network',
   distTag: 'Manufacturers', distTitle: 'Reach European buyers',
@@ -565,6 +617,9 @@ zh: {
   navPaths: '制造商 · 采购方', navHow: '使用流程', navContact: '联系我们',
   event: 'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位',
   heroTitle: '中国元器件制造商，直连欧洲采购方。',
+  searchHero: false, ctaHero: true, searchLang: 'zh', searchLabel: '制造商型号', searchPh: '型号，例如 AMS1117', searchGo: '搜索',
+  searchHint: '', mfrLine: '',
+  hs: {},
   heroSub: 'Central.Parts 是供应网络运营商（SNO）。我们为您整理产品数据，并通过欧洲 EMS 与 OEM 采购方已在使用的询价平台和 ERP，向他们推介您的元器件。',
   heroCtaDist: '成为合作制造商', heroCtaBuyer: '我是采购方',
   pathsTitle: '两种角色，同一网络',
