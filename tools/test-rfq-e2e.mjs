@@ -67,8 +67,10 @@ const fnEnv = { SUPABASE_URL: 'http://localhost:54400', SUPABASE_SERVICE_ROLE_KE
 const denoArgs = ['run', '--allow-env', '--allow-net', '--allow-read', `--allow-write=${CAPTURE}`, E2E + 'main.ts'];
 start(DENO, denoArgs, { ...fnEnv, PORT: '54401', FN: 'file://' + REPO + '/supabase/functions/rfq/index.ts' });
 start(DENO, denoArgs, { ...fnEnv, PORT: '54402', FN: 'file://' + REPO + '/supabase/functions/wechat-events/index.ts' });
+// Attendre les trois processus, passerelle PostgreSQL comprise : sans elle, les premiers appels qui lisent la base
+// échouent (vu en CI le 9 novembre : « clé inconnue », /v1/me… en échec, seul « sans clé » passait).
 for (let i = 0; i < 120; i++) {
-  try { await fetch('http://localhost:54401/rfq/v1/health'); await fetch('http://localhost:54402/'); break; } catch { await sleep(500); }
+  try { await fetch('http://localhost:54400/'); await fetch('http://localhost:54401/rfq/v1/health'); await fetch('http://localhost:54402/'); break; } catch { await sleep(500); }
 }
 
 const api = async (method, path, key, body, headers = {}) => {
