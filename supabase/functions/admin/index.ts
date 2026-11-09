@@ -28,6 +28,14 @@
 //   GET  /admin/sourcing?status=                → recherches de composants rares (ADR 0033) ; « open » : à traiter ; vide : toutes
 //   POST /admin/sourcing/update {id, update}    → état, notes interne et acheteur, demande d'achat sur laquelle les frais sont déduits ;
 //                                               proforma marquée payée : la recherche s'ouvre aux brokers volontaires (WeChat)
+//   GET  /admin/dashboard                       → accueil : à valider, offres en ligne et expirées, vendeurs expirés ou proches
+//                                               de l'échéance, envois WeChat échoués (migration 20261110000043)
+//   GET  /admin/validity                        → validité des offres par vendeur (en ligne, expirées, retirées, échéances,
+//                                               dernier import, dernière reconfirmation et son canal, expirations passées)
+//   GET  /admin/lot-history?id=LOT-…            → historique d'une offre (changements, retrait, remise en ligne après expiration)
+//   POST /admin/validity/reconfirm {org, reason} → remet en ligne toutes les offres en stock d'un vendeur (motif obligatoire,
+//                                               canal « admin », hors note du vendeur)
+//   POST /admin/validity/remind {org}           → relance le vendeur dans WeChat (même texte que les rappels automatiques)
 //   GET  /admin/sourcing/volunteers             → brokers volontaires, leurs laboratoires et leur taux de réponse
 //   POST /admin/sourcing/volunteer {org, update: {active?, labs?}} → inscrit, retire ou corrige un volontaire
 //   POST /admin/sourcing/offer/withdraw {id, reason} → retire une offre de la page de l'acheteur
@@ -50,7 +58,7 @@
 // Secrets et variables (jamais dans le dépôt) : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournis
 // par Supabase), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot), ADMIN_ORIGINS et ADMIN_SITE (facultatifs).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { approvedNotice, rejectedNotice } from '../_shared/robot-texts.js';
+import { approvedNotice, rejectedNotice, stockReminderText } from '../_shared/robot-texts.js';
 import { notifySupplierOfRequest, sendText } from '../_shared/wechat.ts';
 import { deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
 import { openSourcing } from '../_shared/sourcing-dispatch.ts';
@@ -167,8 +175,13 @@ Deno.serve(async (req) => {
       if (path === '/offer-views') return send('admin_offer_views', { p_org: q('org') });
       if (path === '/data-quality') return send('admin_supplier_data_quality', { p_org: q('org') });
       if (path === '/lots') {
-        return send('admin_lots', { p_org: q('org'), p_q: q('q') || '', p_limit: 50, p_offset: Number(q('offset')) || 0 });
+        const st = q('state');
+        return send('admin_lots', { p_org: q('org'), p_q: q('q') || '', p_limit: 50, p_offset: Number(q('offset')) || 0,
+          p_state: ['live', 'expired', 'withdrawn'].includes(st || '') ? st : null });
       }
+      if (path === '/dashboard') return send('admin_dashboard');
+      if (path === '/validity') return send('admin_offer_validity');
+      if (path === '/lot-history') return send('admin_lot_history', { p_lot: q('id') });
     }
 
     // RFQ des plateformes : la décision passe par la base avec le jeton de l'administrateur ; la diffusion aux
@@ -223,6 +236,24 @@ Deno.serve(async (req) => {
         return json({ ...r.data, ...(opened ? { status: 'in_progress', open_until: opened.open_until, dispatch: opened } : {}) });
       }
       return json(r.data);
+    }
+    // Validité des offres (migration 20261110000043) : remise en ligne avec motif ; relance WeChat avec la clé de service.
+    if (req.method === 'POST' && path === '/validity/reconfirm') {
+      const b = await body();
+      return send('admin_reconfirm', { p_org: String(b.org || ''), p_reason: String(b.reason || '') });
+    }
+    if (req.method === 'POST' && path === '/validity/remind') {
+      const b = await body();
+      const r = await call('admin_reminder_targets', { p_org: String(b.org || '') });
+      if (r.res) return r.res;
+      const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+      const site = 'https://central.parts/depot/';
+      let delivered = 0;
+      for (const openid of (r.data.openids || []) as string[]) {
+        const { data: scene } = await svc.rpc('depot_login_link', { p_openid: openid });
+        if (await sendText(svc, openid, stockReminderText(r.data.kind, r.data.lots, r.data.expires_at, scene ? `${site}?login=${scene}` : site))) delivered++;
+      }
+      return json({ org_id: r.data.org_id, contacts: (r.data.openids || []).length, delivered });
     }
     if (req.method === 'POST' && path === '/sourcing/volunteer') {
       const b = await body();

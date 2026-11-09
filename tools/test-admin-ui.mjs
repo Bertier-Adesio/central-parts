@@ -71,9 +71,17 @@ ok(calls('GET /suppliers') === 0 && !(await page.isVisible('#v-app')), 'non-admi
 await page.click('#denied-logout');
 await page.waitForSelector('#v-login:not([hidden])');
 
-// 3. Administrateur : liste des sociétés en attente, la plus récente d'abord.
+// 3. Administrateur : accueil (à traiter, offres, vendeurs expirés), puis liste des sociétés en attente.
 await page.goto('about:blank');
 await page.goto(BASE + '/admin/#access_token=DEMO-ADMIN&expires_in=3600');
+await page.waitForSelector('#v-app:not([hidden]) #dash-todo .tile');
+const dash = norm(await page.textContent('#p-home'));
+ok(dash.includes('3fournisseur(s) à approuver') && dash.includes('offres expirées (en mémoire)') && dash.includes('1envoi(s) WeChat non remis'),
+  'accueil : à traiter, offres en ligne et expirées, alertes');
+ok(norm(await page.textContent('#dash-expired')).includes('ORG-0110') && norm(await page.textContent('#dash-expired')).includes('expirées le 06/11/2026'),
+  'accueil : vendeur dont toutes les offres ont expiré, avec la date');
+ok(norm(await page.textContent('#dash-rates')).includes('09/11/2026'), 'accueil : date des taux de la BCE');
+await page.click('#dash-todo button[data-go="sup"]');
 await page.waitForSelector('#v-app:not([hidden]) #sup-list button[data-org]');
 ok(norm(await page.textContent('#who-email')) === ADMIN_EMAIL, 'administrateur connecté affiché');
 const order = await page.$$eval('#sup-list button[data-org]', (b) => b.map((x) => x.dataset.org));
@@ -463,6 +471,51 @@ const addr = norm(await page.textContent('#d-addr'));
 ok(addr.includes('par défaut') && addr.includes('Futian, bâtiment 1, 518000 Shenzhen, CN') && addr.includes('Entrepôt Hong Kong (fictif)') && addr.includes('10 lot(s)'),
   'fiche vendeur : adresses d\'expédition, la principale signalée');
 
+// 9 bis. Validité des offres, âge et historique, remise en ligne avec motif, relance, fiche (migration 20261110000043).
+await page.click('#tab-stock');
+await page.waitForSelector('#stock-sum tr[data-org="ORG-0110"]');
+await page.selectOption('#lot-org', '');
+await page.fill('#lot-q', '');
+await page.selectOption('#lot-state', 'expired');
+await page.waitForFunction(() => / sur 10\.$/.test(document.getElementById('lot-count').textContent.replace(/[\u202f\u00a0]/g, ' ')));
+ok(true, 'filtre « expirées » : 9 offres du distributeur (la 10e est retirée) et 1 d\'un autre fournisseur');
+const vrow = norm(await page.textContent('#stock-sum tr[data-org="ORG-0110"]'));
+ok(vrow.includes('expirées le 06/11/2026') && vrow.includes('Import du 30/10/2026') && vrow.includes('demo-9-novembre.csv'), 'validité : échéance passée et dernier import');
+await page.selectOption('#lot-state', '');
+await page.selectOption('#lot-org', 'ORG-0110');
+await page.waitForFunction(() => document.getElementById('lot-list').textContent.includes('Historique (1)'));
+const age = norm(await page.textContent('#lot-list > tr:first-child td[data-l="Âge"]'));
+ok(age.includes('Expirée le 06/11/2026') && age.includes('Import du 30/10/2026'), 'âge de l\'offre : « Import du 30/10/2026 », expirée le 06/11');
+await page.click('#lot-list details.hist summary');
+await page.waitForFunction(() => /modifiée/.test(document.querySelector('#lot-list details.hist').textContent));
+ok(norm(await page.textContent('#lot-list details.hist')).includes('5 000 → 4 800 pièces'), 'historique : changement de quantité et de prix');
+ok(norm(await page.textContent('#lot-list')).includes('Retirée'), 'offre retirée gardée en mémoire');
+// Relance WeChat, puis remise en ligne : motif obligatoire.
+await page.click('#stock-sum button[data-remind="ORG-0110"]');
+await page.waitForFunction(() => /Relance envoyée/.test(document.getElementById('msg').textContent));
+ok(mock.state.notified.some((x) => x.org === 'ORG-0110' && x.kind === 'remind'), 'relance du fournisseur dans WeChat');
+page.once('dialog', (d) => d.dismiss());
+await page.click('#stock-sum button[data-renew="ORG-0110"]');
+ok(!mock.state.notified.some((x) => x.kind === 'renew'), 'remise en ligne annulée sans motif : rien n\'est fait');
+page.once('dialog', (d) => d.accept('Salon : stock confirmé par téléphone (fictif)'));
+await page.click('#stock-sum button[data-renew="ORG-0110"]');
+await page.waitForFunction(() => /remises en ligne jusqu/.test(document.getElementById('msg').textContent));
+await page.waitForFunction(() => document.querySelector('#stock-sum tr[data-org="ORG-0110"]') && /Reconfirmée le/.test(document.querySelector('#stock-sum tr[data-org="ORG-0110"]').textContent));
+const vrow2 = norm(await page.textContent('#stock-sum tr[data-org="ORG-0110"]'));
+ok(vrow2.includes('par Central.Parts') && vrow2.includes('Motif : Salon : stock confirmé par téléphone (fictif)') && vrow2.includes('1 expiration(s) en 90 j'),
+  'remise en ligne : canal Central.Parts, motif, expiration gardée en mémoire');
+ok(mock.state.history['LOT-D1'][0].event === 'renewed', 'historique : remise en ligne après expiration');
+// Fiche : validité, note, marge, recherches payantes, reconfirmations.
+await page.click('#tab-sup');
+await page.click('#filters button[data-s=validated]');
+await page.click('button[data-org="ORG-0110"]');
+await page.waitForSelector('#d-valid');
+const fv = norm(await page.textContent('#sup-detail'));
+ok(fv.includes('9 en ligne') && fv.includes('validité 7 j') && fv.includes('remise en ligne le') && fv.includes('8 % (négociée avec le fournisseur)') && fv.includes('pas inscrit'),
+  'fiche : validité, dernière expiration, marge, recherches payantes');
+ok(norm(await page.textContent('#d-reconf')).includes('Central.Parts (' + ADMIN_EMAIL + ')') && norm(await page.textContent('#d-reconf')).includes('Motif : Salon'), 'fiche : journal des reconfirmations');
+await page.click('#filters button[data-s=pending]');
+
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
 await page.close();
 
@@ -470,8 +523,11 @@ await page.close();
 mock = createMock();
 ({ page, errors } = await open({ width: 390, height: 844 }));
 await page.goto(BASE + '/admin/#access_token=DEMO-ADMIN&expires_in=3600');
-await page.waitForSelector('#sup-list button[data-org]');
+await page.waitForSelector('#dash-todo .tile');
 const wide = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+ok(await wide(), '390 px : accueil sans défilement horizontal');
+await page.click('#tab-sup');
+await page.waitForSelector('#sup-list button[data-org]');
 ok(await wide(), '390 px : liste sans défilement horizontal');
 await page.click('button[data-org="ORG-0108"]');
 await page.waitForSelector('#d-code-l:text("Registration no. (Hong Kong)")');

@@ -1,7 +1,9 @@
 // Fonction « admin » simulée, pour la démonstration locale (tools/demo-admin.mjs) et le test Chromium
 // (tools/test-admin-ui.mjs) du back office site/admin/. Mêmes routes, mêmes réponses et mêmes règles que
 // supabase/functions/admin/index.ts et les fonctions SQL admin_* (migrations 20261102000014, 20261102000020 pour les RFQ,
-// 20261103000024 pour les demandes d'achat). Données fictives.
+// 20261103000024 pour les demandes d'achat, 20261110000043 pour la validité et la mémoire des offres). Données fictives.
+// Validité : les 10 offres du distributeur ORG-0110 (7 jours) ont expiré le 6 novembre, celles du fabricant ORG-0111
+// (14 jours) sont en ligne jusqu'au 14 novembre ; états fixés, indépendants de l'horloge.
 //
 // Jetons simulés : DEMO-ADMIN (administrateur), DEMO-OTHER (compte connecté, pas administrateur) ; tout autre
 // jeton est expiré (401).
@@ -85,6 +87,21 @@ export function createMock() {
       ((i * 7919) % 50000) + 1000, 0.01 + ((i * 37) % 300) / 1000, 'CNH', 7 + (i % 3) * 7, i));
   }
   lots.push(lot('LOT-C1', 'ORG-0107', orgs[0].name, 'CJ-NE555-F01', '长电 (fictif)', 'SOP-8', 20000, 0.35, 'CNH', 3, 1));
+  // Âge et état de chaque offre (app.lot_age) ; une offre retirée et un historique sur LOT-D0.
+  const ttl = { 'ORG-0110': 7, 'ORG-0111': 14, 'ORG-0107': 7 };
+  const imported = { 'ORG-0110': day(30, 8), 'ORG-0111': day(31, 3, 20), 'ORG-0107': day(31, 9, 30) };
+  const plus = (iso, d) => new Date(Date.parse(iso) + d * 86400e3).toISOString();
+  for (const l of lots) {
+    const at = imported[l.org_id];
+    l.age = { imported_at: at, import_file: null, confirmed_at: at, expires_at: plus(at, ttl[l.org_id]),
+      state: l.org_id === 'ORG-0111' ? 'live' : 'expired', history: 0 };
+  }
+  Object.assign(lots[9], { qty: 0 });
+  lots[9].age.state = 'withdrawn';
+  lots[0].age.history = 1;
+  const history = { 'LOT-D0': [{ lot_id: 'LOT-D0', event: 'changed', qty: 5000, new_qty: 4800, unit_price: 1.7, new_unit_price: 1.62, currency: 'USD',
+    new_currency: 'USD', imported_at: day(23, 8), confirmed_at: day(23, 8), expired_at: null, via: 'file', at: day(30, 8) }] };
+  const reconfirms = [];
   orgs[0].import = { file_name: '库存.csv', status: 'done', received_at: day(31, 9, 30), rows_total: 1, rejected: 0 };
 
   // Demandes d'achat du site (fiches request_for_operator) et RFQ des plateformes (rfq_for_operator), fictives.
@@ -132,7 +149,7 @@ export function createMock() {
       { id: 'SOF-0002', org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', net: 15, currency: 'CNH', unit_price_eur: null, qty: null, lead_days: 7, date_code: null, at: day(1, 10), withdrawn_at: null, ordered: false }] }];
   const volunteers = [{ org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', profile: 'Broker', active: true, eligible: true, labs: 'Laboratoire fictif, Shenzhen',
     joined_at: day(10, 9), left_at: null, contacts: 1, score: { received: 3, quoted: 2, declined: 0, expired: 1 } }];
-  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [], sourcing, volunteers };
+  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [], sourcing, volunteers, reconfirms, history };
   // Fiche société (ADR 0032), comme admin_supplier_profile : vide au départ, contacts à part, fabricants rattachés.
   const profile = (o) => {
     const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, certifications: [], languages: [],
@@ -163,7 +180,21 @@ export function createMock() {
     const srcs = [...new Set(lots.filter((l) => l.org_id === o.org_id).map((l) => l.source))];
     return { ...rest, stock: { lines: lines(o.org_id), lines_total: lots.filter((l) => l.org_id === o.org_id).length, sources: srcs }, last_import: imp || null,
       // Fréquence de mise à jour (migration 20261109000041) : comme seller_updates, un jour par import réussi.
-      updates: { month_days: imp ? 1 : 0, days_30: imp ? 1 : 0, last_update_at: imp?.received_at || null } };
+      updates: { month_days: imp ? 1 : 0, days_30: imp ? 1 : 0, last_update_at: imp?.received_at || null },
+      validity: validity(o.org_id), score: { received: 0, quoted: 0, declined: 0, expired: 0, treatment_rate: null, sourcing: { received: 0 } },
+      margin: { own: o.org_id === 'ORG-0110' ? 8 : null, category: o.profile === 'Manufacturer' ? 'manufacturer' : 'distributor', applied: o.org_id === 'ORG-0110' ? 8 : 6 },
+      volunteer: null, reconfirmations: reconfirms.filter((r) => r.org_id === o.org_id) };
+  };
+  // Validité par vendeur (app.seller_validity).
+  const validity = (id) => {
+    const mine = lots.filter((l) => l.org_id === id), live = mine.filter((l) => l.age.state === 'live'), exp = mine.filter((l) => l.age.state === 'expired');
+    const o = find(id), rc = reconfirms.filter((r) => r.org_id === id)[0];
+    return { live: live.length, expired: exp.length, withdrawn: mine.filter((l) => l.qty === 0).length, ttl_days: ttl[id] || 7,
+      next_expiry: live.length ? live[0].age.expires_at : null, last_expired: exp.length ? exp[0].age.expires_at : null,
+      last_import: o?.import ? { at: o.import.received_at, file: o.import.file_name, status: o.import.status } : null,
+      last_reconfirm: rc || null, lapses_90: rc && rc.channel === 'admin' ? 1 : 0,
+      last_lapse: rc && rc.channel === 'admin' ? { expired_at: plus(imported[id], ttl[id]), renewed_at: rc.at, via: 'admin', lots: rc.lots } : null,
+      updates: { month_days: o?.import ? 1 : 0, days_30: o?.import ? 1 : 0, last_update_at: o?.import?.received_at || null } };
   };
 
   // Renvoie [statut HTTP, corps] pour une requête vers /functions/v1/admin.
@@ -220,6 +251,24 @@ export function createMock() {
           (s === 'open' && (r.status === 'paid' || r.status === 'in_progress' || (r.status === 'awaiting_payment' && r.payment_mode === 'proforma')))) }];
       }
       if (path === '/sourcing/volunteers') return [200, volunteers];
+      if (path === '/validity') {
+        return [200, orgs.filter((o) => lots.some((l) => l.org_id === o.org_id)).map((o) => ({ org_id: o.org_id, name: o.name, alias: o.alias,
+          status: o.status, profile: o.profile, category: o.profile === 'Manufacturer' ? 'manufacturer' : 'distributor', currency: o.currency,
+          validity: validity(o.org_id), contacts: o.contacts.length }))
+          .sort((a, b) => (b.validity.expired > 0 && !b.validity.live) - (a.validity.expired > 0 && !a.validity.live))];
+      }
+      if (path === '/lot-history') return [200, history[query.get('id')] || []];
+      if (path === '/dashboard') {
+        const all = (st) => lots.filter((l) => l.qty > 0 && l.age.state === st).length;
+        const expiredOrgs = orgs.filter((o) => { const v = lots.some((l) => l.org_id === o.org_id) && validity(o.org_id); return v && v.expired && !v.live; });
+        return [200, { suppliers_pending: orgs.filter((o) => o.status === 'pending').length,
+          requests_pending: requests.filter((r) => r.status === 'pending_validation').length, rfq_pending: rfqs.filter((d) => d.status === 'pending_validation').length,
+          sourcing_open: sourcing.filter((r) => ['paid', 'in_progress'].includes(r.status) || (r.status === 'awaiting_payment' && r.payment_mode === 'proforma')).length,
+          sourcing_unpriced: sourcing.flatMap((r) => r.offers || []).filter((f) => f.unit_price_eur == null && !f.withdrawn_at).length,
+          volunteers: volunteers.filter((v) => v.active).length, offers_live: all('live'), offers_expired: all('expired'),
+          sellers_expired: expiredOrgs.map((o) => ({ org_id: o.org_id, name: o.name, lots: validity(o.org_id).expired, expired_at: validity(o.org_id).last_expired })),
+          sellers_expiring: [], notify_failed: 1, rates_at: '2026-11-09T15:00:00Z' }];
+      }
       if (path === '/manufacturer') { const m = mfind(query.get('id')); return m ? [200, mjson(m)] : [409, { error: 'not_allowed' }]; }
       if (path === '/supplier-addresses') {
         return [200, query.get('org') === 'ORG-0110' ? [
@@ -227,8 +276,8 @@ export function createMock() {
           { id: 'ADR-0002', label: 'Entrepôt Hong Kong (fictif)', address: 'Kwun Tong, unit 2', postal_code: null, city: 'Hong Kong', country: 'HK', contact: null, phone: null, is_default: false, lots: 0 }] : []];
       }
       if (path === '/lots') {
-        const org = query.get('org'), q = (query.get('q') || '').toLowerCase(), off = Math.max(0, Number(query.get('offset')) || 0);
-        const m = lots.filter((l) => (!org || l.org_id === org) &&
+        const org = query.get('org'), q = (query.get('q') || '').toLowerCase(), off = Math.max(0, Number(query.get('offset')) || 0), st = query.get('state');
+        const m = lots.filter((l) => (!org || l.org_id === org) && (!st || l.age.state === st) &&
           (!q || l.mpn.toLowerCase().includes(q) || l.manufacturer.toLowerCase().includes(q) || (l.pack || '').toLowerCase().includes(q)
             || (l.description || '').toLowerCase().includes(q)))
           .sort((a, b) => a.seller.localeCompare(b.seller) || a.mpn.toUpperCase().localeCompare(b.mpn.toUpperCase()));
@@ -267,6 +316,30 @@ export function createMock() {
       delete d.candidates;
       state.notified.push({ org: (d.sellers[0] || {}).org, kind: 'rfq', ref: d.id });
       return [200, { ...d, dispatch: { sent: d.sellers.length } }];
+    }
+    // Validité (migration 20261110000043) : remise en ligne avec motif, relance WeChat simulée.
+    if (method === 'POST' && path === '/validity/reconfirm') {
+      if (!String(body.reason || '').trim()) return [422, { error: 'reason_required' }];
+      const mine = lots.filter((l) => l.org_id === body.org && l.qty > 0);
+      if (!mine.length) return [409, { error: 'not_allowed' }];
+      const now = new Date().toISOString(), exp = plus(now, ttl[body.org] || 7);
+      for (const l of mine) {
+        if (l.age.state === 'expired') {
+          (history[l.id] ||= []).unshift({ lot_id: l.id, event: 'renewed', qty: l.qty, unit_price: l.unit_price, currency: l.currency, imported_at: l.age.imported_at,
+            confirmed_at: l.age.confirmed_at, expired_at: l.age.expires_at, via: 'admin', at: now });
+          l.age.history++;
+        }
+        Object.assign(l.age, { confirmed_at: now, expires_at: exp, state: 'live' });
+      }
+      reconfirms.unshift({ org_id: body.org, at: now, channel: 'admin', by: 'admin:' + ADMIN_EMAIL, reason: String(body.reason).trim(), lots: mine.length });
+      state.notified.push({ org: body.org, kind: 'renew' });
+      return [200, { lots: mine.length, expires_at: exp, ttl_days: ttl[body.org] || 7, org_id: body.org }];
+    }
+    if (method === 'POST' && path === '/validity/remind') {
+      const o = find(body.org);
+      if (!o) return [409, { error: 'not_allowed' }];
+      state.notified.push({ org: body.org, kind: 'remind' });
+      return [200, { org_id: body.org, contacts: o.contacts.length, delivered: o.contacts.length }];
     }
     if (method === 'POST' && path === '/sourcing/volunteer') {
       const v = volunteers.find((x) => x.org_id === body.org);
