@@ -26,7 +26,11 @@
 //   POST /admin/supplier-profile {org, profile} → enregistre la fiche (clé absente : inchangée)
 //   POST /admin/supplier-editor {org, openid}   → désigne le seul compte WeChat qui modifie la fiche dans /depot/
 //   GET  /admin/sourcing?status=                → recherches de composants rares (ADR 0033) ; « open » : à traiter ; vide : toutes
-//   POST /admin/sourcing/update {id, update}    → état, notes interne et acheteur, demande d'achat sur laquelle les frais sont déduits
+//   POST /admin/sourcing/update {id, update}    → état, notes interne et acheteur, demande d'achat sur laquelle les frais sont déduits ;
+//                                               proforma marquée payée : la recherche s'ouvre aux brokers volontaires (WeChat)
+//   GET  /admin/sourcing/volunteers             → brokers volontaires, leurs laboratoires et leur taux de réponse
+//   POST /admin/sourcing/volunteer {org, update: {active?, labs?}} → inscrit, retire ou corrige un volontaire
+//   POST /admin/sourcing/offer/withdraw {id, reason} → retire une offre de la page de l'acheteur
 //   GET  /admin/manufacturers                   → fabricants, leurs marques, leurs comptes rattachés et leur page publique
 //   GET  /admin/manufacturer?id=MFR-0001        → fiche d'un fabricant
 //   POST /admin/manufacturer {id?, manufacturer} → crée (sans id) ou modifie un fabricant
@@ -49,6 +53,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { approvedNotice, rejectedNotice } from '../_shared/robot-texts.js';
 import { notifySupplierOfRequest, sendText } from '../_shared/wechat.ts';
 import { deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
+import { openSourcing } from '../_shared/sourcing-dispatch.ts';
 
 const ORIGINS = (Deno.env.get('ADMIN_ORIGINS') || 'https://central.parts,https://www.central.parts').split(',');
 const SITE = Deno.env.get('ADMIN_SITE') || 'https://central.parts/admin/';
@@ -155,6 +160,7 @@ Deno.serve(async (req) => {
       if (path === '/supplier-profile') return send('admin_supplier_profile', { p_org: q('org') });
       if (path === '/manufacturers') return send('admin_manufacturers');
       if (path === '/sourcing') return send('admin_sourcing_list', { p_status: q('status') });
+      if (path === '/sourcing/volunteers') return send('admin_sourcing_volunteers');
       if (path === '/manufacturer') return send('admin_manufacturer', { p_id: q('id') });
       if (path === '/supplier-addresses') return send('admin_seller_addresses', { p_org: q('org') });
       if (path === '/supplier-score') return send('admin_supplier_score', { p_org: q('org') });
@@ -208,7 +214,23 @@ Deno.serve(async (req) => {
     // Recherches payées de composants rares (migration 20261106000040).
     if (req.method === 'POST' && path === '/sourcing/update') {
       const b = await body();
-      return send('admin_sourcing_update', { p_id: String(b.id || ''), p: b.update || {} });
+      const r = await call('admin_sourcing_update', { p_id: String(b.id || ''), p: b.update || {} });
+      if (r.res) return r.res;
+      // Virement reçu sur proforma : ouverture aux brokers volontaires avec la clé de service, comme le webhook.
+      if (r.data.status === 'paid') {
+        const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+        const opened = await openSourcing(svc, r.data.id).catch(() => null);
+        return json({ ...r.data, ...(opened ? { status: 'in_progress', open_until: opened.open_until, dispatch: opened } : {}) });
+      }
+      return json(r.data);
+    }
+    if (req.method === 'POST' && path === '/sourcing/volunteer') {
+      const b = await body();
+      return send('admin_sourcing_volunteer_set', { p_org: String(b.org || ''), p: b.update || {} });
+    }
+    if (req.method === 'POST' && path === '/sourcing/offer/withdraw') {
+      const b = await body();
+      return send('admin_sourcing_offer_withdraw', { p_offer: String(b.id || ''), p_reason: String(b.reason || '') });
     }
 
     // Fabricants (migration 20261105000033) : identifiés par leur id MFR-…, pas par une société.

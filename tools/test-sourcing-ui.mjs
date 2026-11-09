@@ -4,6 +4,7 @@
 //   2. /sourcing/ : contrôles du formulaire, TVA selon le pays, montant, envoi, redirection vers le paiement, annulation ;
 //      pays sans paiement en ligne : proforma et lien de suivi.
 //   3. /sourcing/suivi/ : paiement en cours de confirmation puis payée, note de Central.Parts, proforma, lien invalide, 3 langues.
+//   4. /sourcing/suivi/ : offres des brokers volontaires (vendeur anonyme), prolongation, commande, arrêt (ADR 0033).
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-sourcing-ui.mjs
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
 const { chromium } = pw.default || pw;
@@ -11,7 +12,15 @@ const { chromium } = pw.default || pw;
 const BASE = process.env.BASE || 'http://localhost:8765';
 const SUPA = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
 const CHECKOUT = 'https://pay.gocardless.com/billing/static/flow?id=BRF_FICTIF';
-const TOKEN = 'c'.repeat(48), PF_TOKEN = 'e'.repeat(48);
+const TOKEN = 'c'.repeat(48), PF_TOKEN = 'e'.repeat(48), VOL_TOKEN = 'f'.repeat(48);
+// Recherche ouverte aux volontaires : deux offres, état modifié par les actions de l'acheteur.
+const vol = { open: true, can_extend: true, open_until: '2026-11-17T08:00:00Z', closed_at: null, status: 'in_progress', ordered: [], actions: [] };
+const volStatus = () => ({ id: 'SRC-0003', payment_mode: 'bank', status: vol.status, mpn: 'LM317HVK', qty: 500, condition: 'new',
+  company: 'Acheteur de démonstration (fictif)', amount_ht: 4900, amount_ttc: 5880, vat_rate: 0.2, paid_at: '2026-11-10T08:00:00Z', buyer_note: null,
+  credit_used: false, open: vol.open, can_extend: vol.can_extend, open_until: vol.open_until, closed_at: vol.closed_at, sellers: 4,
+  offers: [
+    { id: 'SOF-0001', unit_price: 2.1252, qty: 400, partial: true, total: 850.08, currency: 'EUR', lead_days: 30, date_code: '2318', source: 'broker', ship_from: 'HK', lab_test: true, ordered: vol.ordered.includes('SOF-0001') },
+    { id: 'SOF-0002', unit_price: 2.53, qty: 500, partial: false, total: 1265, currency: 'EUR', lead_days: 10, date_code: '2420', source: 'surplus', ship_from: 'DE', lab_test: false, ordered: vol.ordered.includes('SOF-0002') }] });
 let n = 0, bad = 0;
 const ok = (cond, label) => { n++; if (!cond) { bad++; console.log('ÉCHEC ' + label); } };
 // En-tête partagé (tools/build-header.mjs) : langue dans la barre (bureau) ou dans le menu (sous 1140 px).
@@ -28,7 +37,17 @@ async function sourcing(route) {
   const req = route.request(), u = new URL(req.url());
   const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' }, body: JSON.stringify(data) });
   if (req.method() === 'OPTIONS') return reply({});
+  if (u.pathname.endsWith('/action')) {
+    if (req.headers().authorization !== 'Bearer ' + VOL_TOKEN) return reply({ error: 'link_invalid' }, 401);
+    const a = JSON.parse(req.postData() || '{}');
+    vol.actions.push({ ...a });
+    if (a.action === 'extend') { vol.can_extend = false; vol.open_until = '2026-11-24T08:00:00Z'; }
+    if (a.action === 'order') { vol.ordered.push(a.offer); if (!a.keep_open) a.action = 'stop'; }
+    if (a.action === 'stop') { vol.open = false; vol.can_extend = false; vol.closed_at = '2026-11-12T09:00:00Z'; vol.status = vol.ordered.length ? 'ordered' : 'offers_sent'; }
+    return reply(volStatus());
+  }
   if (u.pathname.endsWith('/status')) {
+    if (req.headers().authorization === 'Bearer ' + VOL_TOKEN) return reply(volStatus());
     if (req.headers().authorization === 'Bearer ' + PF_TOKEN) {
       state.pfCalls = (state.pfCalls || 0) + 1;
       return reply({ id: 'SRC-0002', status: 'awaiting_payment', payment_mode: 'proforma', mpn: 'XC2S50-5PQ208C', qty: 4, condition: 'any',
@@ -148,18 +167,53 @@ for (const width of [1280, 390]) {
   await page.goto(BASE + '/sourcing/suivi/?lang=fr#' + TOKEN);
   await page.waitForSelector('#card:not([hidden])');
   ok((await page.textContent('#st')).includes('Paiement en cours de confirmation'), 'retour du paiement : confirmation en attente');
-  await page.waitForFunction(() => /Offres envoyées/.test(document.getElementById('st').textContent), null, { timeout: 8000 });
+  await page.waitForFunction(() => /Recherche terminée/.test(document.getElementById('st').textContent), null, { timeout: 8000 });
   const txt = (await page.textContent('#card')).replace(/[  ]/g, ' ');
   ok(state.statusCalls >= 2 && txt.includes('CM8071505024905') && txt.includes('Deux offres envoyées') && txt.includes('(49,00 € HT) seront déduits'), 'mise à jour automatique : offres envoyées, note, déduction');
   ok(await noScroll(page), 'suivi, 390 px : pas de défilement horizontal');
   await setLang(page, 'en');
-  ok((await page.textContent('#st')) === 'Offers sent', 'suivi EN');
+  ok((await page.textContent('#st')) === 'Search completed', 'suivi EN');
+  ok(await page.isHidden('#offers-card'), 'suivi sans recherche auprès des volontaires : pas de section des offres');
   // Autre adresse (pas seulement un autre fragment) : la page se recharge.
   await page.goto(BASE + '/sourcing/suivi/?lang=fr&v=2#' + 'd'.repeat(48));
   await page.waitForSelector('#msg:not([hidden])');
   ok((await page.textContent('#msg')).includes('pas valide') && await page.isHidden('#card'), 'lien invalide : message');
   ok(await page.getAttribute('meta[name=robots]', 'content') === 'noindex, nofollow', 'suivi non indexé');
   ok(errors.length === 0, 'suivi : aucune erreur console ' + errors.join(' | '));
+  await page.close();
+}
+
+// ---------------------------------------------------------------- 4. offres des volontaires, actions de l'acheteur
+for (const width of [1280, 390]) {
+  Object.assign(vol, { open: true, can_extend: true, open_until: '2026-11-17T08:00:00Z', closed_at: null, status: 'in_progress', ordered: [], actions: [] });
+  const { page, errors } = await newPage(width);
+  page.on('dialog', (d) => d.accept());
+  await page.goto(BASE + '/sourcing/suivi/?lang=fr#' + VOL_TOKEN);
+  await page.waitForSelector('#offers li');
+  const txt = (await page.textContent('#offers-card')).replace(/[\u00a0\u202f]/g, ' ');
+  ok((await page.textContent('#st')) === 'Recherche en cours' && txt.includes('4 vendeur(s) consulté(s)'), width + ' px : recherche ouverte, vendeurs consultés');
+  ok((await page.$$('#offers li')).length === 2 && txt.includes('2,13 €') && txt.includes('Total 850,08 € pour 400 pièces') && txt.includes('Quantité partielle'),
+    width + ' px : offres, prix tout compris, quantité partielle');
+  ok(txt.includes('Broker vérifié') && txt.includes('Surplus vérifié') && txt.includes('Test en laboratoire possible') && txt.includes('Expédié de Hong Kong'),
+    width + " px : source, laboratoire, pays d'expédition");
+  ok(!/SOF-|ORG-|fictif/.test(txt), width + ' px : aucun identifiant de vendeur affiché');
+  await page.click('#extend');
+  await page.waitForFunction(() => document.getElementById('extend').hidden);
+  ok(vol.actions.at(-1).action === 'extend' && (await page.textContent('#win')).includes('24 novembre'), width + ' px : prolongation de 7 jours, une fois');
+  await page.check('#keep');
+  await page.click('#offers [data-order="SOF-0002"]');
+  await page.waitForSelector('#offers li[data-offer="SOF-0002"] .badge');
+  ok(vol.actions.at(-1).offer === 'SOF-0002' && vol.actions.at(-1).keep_open === true && !(await page.isHidden('#stop')), width + ' px : commande, recherche gardée ouverte');
+  await page.click('#stop');
+  await page.waitForFunction(() => document.getElementById('stop').hidden);
+  ok((await page.textContent('#st')) === 'Commande reçue' && (await page.textContent('#win')).includes('Recherche arrêtée') && await page.isHidden('#keep-box'),
+    width + " px : arrêt par l'acheteur, commande reçue");
+  ok(await page.$('#offers [data-order="SOF-0001"]') !== null, width + " px : autre offre encore commandable après l'arrêt");
+  ok(await noScroll(page), width + ' px : offres sans défilement horizontal');
+  if (width === 390) ok((await page.$eval('#offers [data-order]', (b) => b.getBoundingClientRect().height)) >= 44, '390 px : bouton de commande de 44 px');
+  await setLang(page, 'zh');
+  ok((await page.textContent('#offers-card')).includes('已核实经纪商'), width + ' px : offres en chinois');
+  ok(errors.length === 0, width + ' px : offres, aucune erreur console ' + errors.join(' | '));
   await page.close();
 }
 

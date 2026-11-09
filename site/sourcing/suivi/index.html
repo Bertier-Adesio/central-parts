@@ -29,6 +29,19 @@ dd{margin:0;overflow-wrap:anywhere}
 .muted{color:var(--fg-3);font-size:var(--text-sm)}
 .msg{padding:12px 14px;border-radius:var(--radius-sm);margin:0 0 16px;font-size:var(--text-sm);background:var(--status-info-bg);color:var(--status-info)}
 .msg.err{background:var(--status-danger-bg);color:var(--status-danger)}
+h2.sec{font-size:var(--text-lg);margin:0 0 8px}
+.win{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin:0 0 12px}
+.win p{margin:0;flex:1 1 260px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:var(--control-h-lg);padding:0 16px;border-radius:var(--radius-sm);border:1px solid var(--accent);background:var(--accent);color:var(--accent-fg);font:inherit;font-weight:600;cursor:pointer}
+.btn.line{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.6;cursor:default}
+.offers{list-style:none;margin:0;padding:0}
+.offers li{border-top:1px solid var(--border-1);padding:12px 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:center}
+.offers .price{font-size:var(--text-lg);font-weight:700;font-variant-numeric:tabular-nums}
+.offers .sub{color:var(--fg-3);font-size:var(--text-sm)}
+.tag{display:inline-block;font-size:var(--text-xs);padding:1px 8px;border-radius:var(--radius-pill);background:var(--bg-sunken);color:var(--fg-2);margin:0 4px 0 0}
+.check{display:flex;gap:8px;align-items:center;font-size:var(--text-sm);margin:8px 0 0}
+@media (max-width:480px){.offers li{grid-template-columns:1fr}.offers .btn,.win .btn{width:100%}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -89,6 +102,13 @@ dd{margin:0;overflow-wrap:anywhere}
     <div id="note-box" hidden><h2 data-t="noteTitle" style="font-size:var(--text-lg);margin:16px 0 8px">Message de Central.Parts</h2><p class="note" id="note"></p></div>
     <p class="muted" id="credit"></p>
   </section>
+  <section class="card" id="offers-card" hidden>
+    <h2 class="sec" data-t="offersTitle">Offres reçues</h2>
+    <div class="win"><p id="win"></p><button class="btn line" type="button" id="extend" hidden></button><button class="btn line" type="button" id="stop" hidden></button></div>
+    <p class="muted" id="offers-lead"></p>
+    <ul class="offers" id="offers"></ul>
+    <label class="check" id="keep-box" hidden><input type="checkbox" id="keep"><span data-t="keep_open">Garder la recherche ouverte après ma commande</span></label>
+  </section>
   <p class="muted" data-t="keep">Gardez ce lien : il donne accès au suivi de votre demande. Une question ? contact@central.parts</p>
 </main>
 
@@ -96,17 +116,27 @@ dd{margin:0;overflow-wrap:anywhere}
 (function () {
   'use strict';
   var FN = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/sourcing/status';
+  var ACT = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/sourcing/action';
   var T = {
     fr: { title: 'Votre recherche de composant', noteTitle: 'Message de Central.Parts', home: '/',
       keep: 'Gardez ce lien : il donne accès au suivi de votre demande. Une question ? contact@central.parts',
       s: { awaiting_payment: 'Paiement en cours de confirmation', proforma: 'En attente de votre virement', paid: 'Payée : recherche en préparation', in_progress: 'Recherche en cours',
-        offers_sent: 'Offres envoyées', not_found: 'Aucune offre trouvée', cancelled: 'Annulée' },
+        offers_sent: 'Recherche terminée', not_found: 'Aucune offre trouvée', ordered: 'Commande reçue', cancelled: 'Annulée' },
       d: { awaiting_payment: 'Nous attendons la confirmation de votre paiement : cette page se met à jour toute seule.',
         proforma: 'Nous vous envoyons une proforma de {a} par e-mail. La recherche commence à réception de votre virement.',
-        paid: 'Votre paiement est confirmé. Nous lançons la recherche et revenons vers vous par e-mail.',
-        in_progress: 'Nous interrogeons les surplus, les brokers et notre réseau, et vérifions chaque source.',
-        offers_sent: 'Nous vous avons envoyé les offres trouvées par e-mail.', not_found: 'Nous n’avons pas trouvé d’offre fiable pour cette référence.',
+        paid: 'Votre paiement est confirmé. Nous lançons la recherche.',
+        in_progress: 'Les brokers volontaires de notre réseau cherchent la pièce. Leurs offres s’affichent ci-dessous dès leur arrivée.',
+        offers_sent: 'La recherche est terminée. Les offres reçues restent ci-dessous.', not_found: 'Nous n’avons pas trouvé d’offre pour cette référence.',
+        ordered: 'Nous avons reçu votre commande : la proforma vous est envoyée par e-mail.',
         cancelled: 'Cette demande a été annulée.' },
+      offersTitle: 'Offres reçues', keep_open: 'Garder la recherche ouverte après ma commande',
+      winOpen: 'Recherche ouverte jusqu’au {d} · {n} vendeur(s) consulté(s).', winClosed: 'Recherche arrêtée le {d}.',
+      extend: 'Prolonger de 7 jours', stop: 'Arrêter la recherche', stopAsk: 'Arrêter la recherche ? Les vendeurs ne pourront plus proposer d’offre. Les offres reçues restent visibles.',
+      offersLead: 'Prix tout compris en euros, convertis au taux de référence de la BCE, hors transport, droits et TVA à l’import. Chaque offre vient d’un vendeur vérifié de notre réseau ; son nom n’est pas communiqué.',
+      none: 'Aucune offre pour l’instant : elles s’affichent ici dès leur arrivée.', unit: '/ pièce', total: 'Total {a} pour {q} pièces', partial: 'Quantité partielle',
+      lead: 'Délai {n} j', dc: 'Date code {v}', from: 'Expédié de {c}', lab: 'Test en laboratoire possible', src: { broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
+      order: 'Commander cette offre', ordered: 'Commandée', orderAsk: 'Commander cette offre ? Nous vous envoyons la proforma par e-mail ; les frais de recherche en sont déduits.',
+      ae: { closed: 'La recherche est close.', extended: 'La recherche a déjà été prolongée.', ordered: 'Offre déjà commandée.', offer_unknown: 'Cette offre n’est plus disponible.', other: 'Action impossible, réessayez.' },
       ref: 'Demande', mpn: 'Référence', mfr: 'Fabricant', qty: 'Quantité', by: 'Date souhaitée', target: 'Prix cible', cond: 'État accepté',
       cNew: 'Neuf d’origine uniquement', cAny: 'Neuf ou reconditionné', company: 'Société', paid: 'Frais payés',
       credit: 'Les frais de recherche ({a} HT) seront déduits de votre commande.', creditUsed: 'Les frais de recherche ont été déduits de votre commande.',
@@ -114,23 +144,40 @@ dd{margin:0;overflow-wrap:anywhere}
     en: { title: 'Your component search', noteTitle: 'Message from Central.Parts', home: '/en/',
       keep: 'Keep this link: it gives access to your request status. Any question? contact@central.parts',
       s: { awaiting_payment: 'Payment being confirmed', proforma: 'Awaiting your transfer', paid: 'Paid: search being prepared', in_progress: 'Search in progress',
-        offers_sent: 'Offers sent', not_found: 'No offer found', cancelled: 'Cancelled' },
+        offers_sent: 'Search completed', not_found: 'No offer found', ordered: 'Order received', cancelled: 'Cancelled' },
       d: { awaiting_payment: 'We are waiting for your payment confirmation: this page updates itself.',
         proforma: 'We are emailing you a pro forma invoice of {a}. The search starts when your transfer is received.',
-        paid: 'Your payment is confirmed. We are starting the search and will get back to you by email.',
-        in_progress: 'We are querying surplus stock, brokers and our network, and checking every source.',
-        offers_sent: 'We have sent you the offers found by email.', not_found: 'We did not find a reliable offer for this part.',
+        paid: 'Your payment is confirmed. We are starting the search.',
+        in_progress: 'The volunteer brokers of our network are looking for the part. Their offers appear below as soon as they arrive.',
+        offers_sent: 'The search is completed. The offers received stay below.', not_found: 'We did not find an offer for this part.',
+        ordered: 'We have received your order: the pro forma invoice is on its way by email.',
         cancelled: 'This request was cancelled.' },
+      offersTitle: 'Offers received', keep_open: 'Keep the search open after my order',
+      winOpen: 'Search open until {d} · {n} seller(s) consulted.', winClosed: 'Search stopped on {d}.',
+      extend: 'Extend by 7 days', stop: 'Stop the search', stopAsk: 'Stop the search? Sellers will no longer be able to send offers. The offers received stay visible.',
+      offersLead: 'All-inclusive prices in euros, converted at the ECB reference rate, excluding shipping, import duties and VAT. Each offer comes from a verified seller in our network; the seller’s name is not disclosed.',
+      none: 'No offer yet: offers appear here as soon as they arrive.', unit: '/ piece', total: 'Total {a} for {q} pieces', partial: 'Partial quantity',
+      lead: '{n}-day lead time', dc: 'Date code {v}', from: 'Ships from {c}', lab: 'Laboratory testing available', src: { broker: 'Verified broker', surplus: 'Verified surplus' },
+      order: 'Order this offer', ordered: 'Ordered', orderAsk: 'Order this offer? We will email you the pro forma invoice, with the search fee deducted.',
+      ae: { closed: 'The search is closed.', extended: 'The search has already been extended.', ordered: 'Offer already ordered.', offer_unknown: 'This offer is no longer available.', other: 'Action failed, please try again.' },
       ref: 'Request', mpn: 'Part number', mfr: 'Manufacturer', qty: 'Quantity', by: 'Required by', target: 'Target price', cond: 'Accepted condition',
       cNew: 'New original only', cAny: 'New or refurbished', company: 'Company', paid: 'Fee paid',
       credit: 'The search fee ({a} excl. VAT) will be deducted from your order.', creditUsed: 'The search fee has been deducted from your order.',
       e: { link_invalid: 'This status link is not valid. Check that it is complete, or write to contact@central.parts.', network: 'Network error, please try again.', other: 'Status unavailable, please try again later.' } },
     zh: { title: '您的元器件寻源', noteTitle: 'Central.Parts 留言', home: '/zh/',
       keep: '请保存此链接，用于查看需求进度。如有疑问：contact@central.parts',
-      s: { awaiting_payment: '支付确认中', proforma: '等待您的转账', paid: '已支付：准备寻源', in_progress: '寻源中', offers_sent: '已发送报价', not_found: '未找到报价', cancelled: '已取消' },
+      s: { awaiting_payment: '支付确认中', proforma: '等待您的转账', paid: '已支付：准备寻源', in_progress: '寻源中', offers_sent: '寻源已结束', not_found: '未找到报价', ordered: '已收到订单', cancelled: '已取消' },
       d: { awaiting_payment: '正在等待支付确认，本页面会自动更新。', proforma: '我们将通过邮件向您发送金额为 {a} 的形式发票。收到您的转账后开始寻源。', paid: '您的支付已确认。我们正在开始寻源，并将通过邮件联系您。',
-        in_progress: '我们正在向库存积压、经纪商和我们的网络询价，并核实每个来源。', offers_sent: '我们已通过邮件向您发送找到的报价。',
-        not_found: '我们未能为该型号找到可靠的报价。', cancelled: '该需求已取消。' },
+        in_progress: '我们网络中的志愿经纪商正在寻找该器件，报价到达后会立即显示在下方。', offers_sent: '寻源已结束，收到的报价仍显示在下方。',
+        not_found: '我们未能为该型号找到报价。', ordered: '我们已收到您的订单，形式发票将通过邮件发送。', cancelled: '该需求已取消。' },
+      offersTitle: '收到的报价', keep_open: '下单后继续寻源',
+      winOpen: '寻源开放至 {d} · 已询价 {n} 家供应商。', winClosed: '寻源已于 {d} 结束。',
+      extend: '延长 7 天', stop: '结束寻源', stopAsk: '结束寻源？供应商将无法再报价，已收到的报价仍然可见。',
+      offersLead: '欧元含费价格，按欧洲央行参考汇率换算，不含运费、进口关税和增值税。每条报价来自我们网络中经过核实的供应商，不披露供应商名称。',
+      none: '暂无报价：报价到达后会立即显示在这里。', unit: '/ 件', total: '共 {q} 件，合计 {a}', partial: '部分数量',
+      lead: '交期 {n} 天', dc: '批号 {v}', from: '发货地 {c}', lab: '可安排实验室检测', src: { broker: '已核实经纪商', surplus: '已核实库存积压' },
+      order: '订购此报价', ordered: '已订购', orderAsk: '订购此报价？我们将通过邮件发送形式发票，并抵扣寻源费用。',
+      ae: { closed: '寻源已结束。', extended: '寻源已延长过。', ordered: '该报价已订购。', offer_unknown: '该报价已不可用。', other: '操作失败，请重试。' },
       ref: '需求编号', mpn: '型号', mfr: '制造商', qty: '数量', by: '需求日期', target: '目标价格', cond: '可接受状态',
       cNew: '仅限全新原装', cAny: '全新或翻新', company: '公司', paid: '已付费用',
       credit: '寻源费用（{a}，不含税）将从您的订单中抵扣。', creditUsed: '寻源费用已从您的订单中抵扣。',
@@ -158,7 +205,7 @@ dd{margin:0;overflow-wrap:anywhere}
     // Proforma (pays sans paiement en ligne) : en attente du virement, marqué payé à la main par Central.Parts.
     var s = data.status === 'awaiting_payment' && data.payment_mode === 'proforma' ? 'proforma' : data.status;
     $('st').textContent = t().s[s] || s;
-    $('st').className = 'badge' + (s === 'offers_sent' || s === 'paid' || s === 'in_progress' ? ' ok' : s === 'not_found' || s === 'cancelled' ? ' ko' : '');
+    $('st').className = 'badge' + (s === 'offers_sent' || s === 'paid' || s === 'in_progress' || s === 'ordered' ? ' ok' : s === 'not_found' || s === 'cancelled' ? ' ko' : '');
     $('st-text').textContent = fill(t().d[s] || '', { a: money(data.amount_ttc / 100) });
     var f = [[t().ref, data.id], [t().mpn, data.mpn], [t().mfr, data.manufacturer], [t().qty, Number(data.qty).toLocaleString(LOCALE[lang])],
       [t().by, data.needed_by ? new Date(data.needed_by).toLocaleDateString(LOCALE[lang]) : null],
@@ -169,7 +216,46 @@ dd{margin:0;overflow-wrap:anywhere}
     $('note-box').hidden = !data.buyer_note;
     $('note').textContent = data.buyer_note || '';
     $('credit').textContent = data.paid_at ? (data.credit_used ? t().creditUsed : fill(t().credit, { a: money(data.amount_ht / 100) })) : '';
+    renderOffers();
   }
+  // Offres des brokers volontaires (ADR 0033) : montrées dès leur arrivée, vendeur anonyme, prix tout compris en euros.
+  var region = function (c) { try { return new Intl.DisplayNames([LOCALE[lang]], { type: 'region' }).of(c) || c; } catch (e) { return c; } };
+  var when = function (iso) { return new Date(iso).toLocaleString(LOCALE[lang], { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); };
+  function renderOffers() {
+    var offers = data.offers || [];
+    var shown = !!(data.open_until || offers.length);
+    $('offers-card').hidden = !shown;
+    if (!shown) return;
+    $('win').textContent = data.open ? fill(t().winOpen, { d: when(data.open_until), n: data.sellers || 0 }) : data.closed_at ? fill(t().winClosed, { d: when(data.closed_at) }) : '';
+    $('extend').hidden = !data.can_extend; $('extend').textContent = t().extend;
+    $('stop').hidden = !data.open; $('stop').textContent = t().stop;
+    $('keep-box').hidden = !(data.open && offers.length);
+    $('offers-lead').textContent = offers.length ? t().offersLead : data.open ? t().none : '';
+    $('offers').innerHTML = offers.map(function (o) {
+      var tags = [t().src[o.source] || '', o.lab_test ? t().lab : '', o.partial ? t().partial : ''].filter(Boolean)
+        .map(function (x) { return '<span class="tag">' + esc(x) + '</span>'; }).join('');
+      var sub = [fill(t().lead, { n: o.lead_days }), o.date_code ? fill(t().dc, { v: o.date_code }) : '', o.ship_from ? fill(t().from, { c: region(o.ship_from) }) : ''].filter(Boolean).join(' · ');
+      var btn = o.ordered ? '<span class="badge ok">' + esc(t().ordered) + '</span>'
+        : '<button class="btn" type="button" data-order="' + esc(o.id) + '">' + esc(t().order) + '</button>';
+      return '<li data-offer="' + esc(o.id) + '"><div><span class="price">' + esc(money(o.unit_price)) + '</span> <span class="sub">' + esc(t().unit) + '</span>' +
+        '<div class="sub">' + esc(fill(t().total, { a: money(o.total), q: Number(o.qty).toLocaleString(LOCALE[lang]) })) + '</div>' +
+        '<div class="sub">' + esc(sub) + '</div><div>' + tags + '</div></div><div>' + btn + '</div></li>';
+    }).join('');
+    $('offers').querySelectorAll('[data-order]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (!window.confirm(t().orderAsk)) return;
+        act({ action: 'order', offer: b.getAttribute('data-order'), keep_open: $('keep').checked }, b);
+      });
+    });
+  }
+  function act(payload, btn) {
+    if (btn) btn.disabled = true;
+    fetch(ACT, { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
+      .then(function (d) { data = d; err = null; render(); }, function (c) { if (btn) btn.disabled = false; say('err', t().ae[c] || (c === 'network' ? t().e.network : t().ae.other)); });
+  }
+  $('extend').addEventListener('click', function () { act({ action: 'extend' }, $('extend')); });
+  $('stop').addEventListener('click', function () { if (window.confirm(t().stopAsk)) act({ action: 'stop' }, $('stop')); });
   // Langue mémorisée par l'en-tête partagé (cp-lang), sauf si l'adresse en impose une.
   try { var cpl = localStorage.getItem('cp-lang'); if (!new URLSearchParams(location.search).get('lang') && T[cpl]) lang = cpl; } catch (e) {}
   function applyLang() {
@@ -185,7 +271,12 @@ dd{margin:0;overflow-wrap:anywhere}
     if (!/^[0-9a-f]{48}$/.test(token)) { err = 'link_invalid'; render(); return; }
     fetch(FN, { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw d.error || 'other'; return d; }); }, function () { throw 'network'; })
-      .then(function (d) { data = d; err = null; render(); if (d.status === 'awaiting_payment' && d.payment_mode !== 'proforma' && ++tries < 15) setTimeout(load, 4000); },
+      .then(function (d) {
+        data = d; err = null; render();
+        if (d.status === 'awaiting_payment' && d.payment_mode !== 'proforma' && ++tries < 15) setTimeout(load, 4000);
+        // Recherche ouverte : nouvelles offres relues toutes les minutes.
+        else if (d.open) setTimeout(load, 60000);
+      },
         function (c) { err = c; render(); });
   }
   applyLang();

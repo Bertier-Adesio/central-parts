@@ -21,6 +21,10 @@
 //   GET  /depot/rfqs        → RFQ des plateformes reçues (90 jours) et taux de traitement de la société (ADR 0023)
 //   POST /depot/rfqs/answer {ref, kind: quote|decline, price, currency, lead_days, date_code} → réponse, refusée après
 //                           l'échéance de 48 h (même fonction que 报价 / 无货 DEM-… dans WeChat)
+//   GET  /depot/sourcing    → recherches payantes : éligibilité, inscription comme broker volontaire, recherches reçues
+//   POST /depot/sourcing/join {on, labs} → s'inscrire (s'engager à répondre sous 48 h) ou se retirer ; laboratoires partenaires
+//   POST /depot/sourcing/answer {ref, kind: quote|decline, price, currency, lead_days, date_code, qty?} → même fonction que
+//                           报价 / 无货 SRC-… dans WeChat ; l'offre est montrée tout de suite à l'acheteur (ADR 0033)
 //   GET  /depot/contacts    → contacts et invitations en cours (administrateur)
 //   POST /depot/invite      {label}      → lien d'invitation d'un collègue (administrateur)
 //   GET  /depot/company     → fiche de la société, contacts et fabricants rattachés (page, accord, correction en attente)
@@ -37,6 +41,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { licensePath, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
 import { notifyOperators, requestAnswerNote, supplierCard, wechatPost } from '../_shared/wechat.ts';
 import { closeRfq, deliverWebhooks } from '../_shared/rfq-dispatch.ts';
+import { sourcingOfferOperatorText } from '../_shared/robot-texts.js';
 
 // Devises proposées au dépôt (mêmes codes que public.currencies et l'inscription).
 const CURRENCIES = ['USD', 'CNH', 'EUR', 'HKD'];
@@ -222,6 +227,38 @@ Deno.serve(async (req) => {
       })().catch(() => {});
       const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
       if (rt) rt.waitUntil(done); else await done;
+      return json(data);
+    }
+
+    // ---------------------------------------------------------------- recherches payantes : brokers volontaires (ADR 0033)
+    if (req.method === 'GET' && path.endsWith('/sourcing')) {
+      const { data, error } = await db.rpc('supplier_sourcing', { p_openid: session.openid });
+      if (error) return json({ error: 'database', detail: error.message }, 500);
+      return json(data || {});
+    }
+    if (req.method === 'POST' && path.endsWith('/sourcing/join')) {
+      const b = await body();
+      const { data, error } = await db.rpc('supplier_sourcing_join', { p_openid: session.openid, p_on: b.on === true,
+        p_labs: typeof b.labs === 'string' ? b.labs.slice(0, 1000) : null });
+      if (error) return json({ error: error.code === '42501' ? 'not_eligible' : 'database' }, error.code === '42501' ? 403 : 500);
+      if (b.on === true) {
+        await notifyOperators(db, `[Sourcing] ${who?.name || org} volunteers for paid searches${typeof b.labs === 'string' && b.labs.trim() ? ` · labs: ${b.labs.trim().slice(0, 200)}` : ''}`).catch(() => {});
+      }
+      return json(data);
+    }
+    if (req.method === 'POST' && path.endsWith('/sourcing/answer')) {
+      const b = await body();
+      const kind = b.kind === 'decline' ? 'decline' : 'quote';
+      const qty = Number.isInteger(b.qty) && b.qty > 0 ? b.qty : null;
+      const { data, error } = await db.rpc('sourcing_answer', {
+        p_openid: session.openid, p_ref: String(b.ref || ''), p_kind: kind, p_net: kind === 'quote' ? Number(b.price) || null : null,
+        p_currency: b.currency ?? null, p_lead: Number.isInteger(b.lead_days) ? b.lead_days : null, p_date_code: b.date_code ?? null, p_qty: qty,
+      });
+      if (error) {
+        const code = error.code === 'CP409' ? (error.details || 'closed') : error.code === '22023' ? 'invalid' : 'not_found';
+        return json({ error: code, field: error.details || null }, code === 'not_found' ? 404 : 409);
+      }
+      await notifyOperators(db, sourcingOfferOperatorText(data, { kind, price: b.price, currency: b.currency, lead: b.lead_days, qty }, org)).catch(() => {});
       return json(data);
     }
 

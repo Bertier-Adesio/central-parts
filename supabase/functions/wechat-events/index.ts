@@ -20,6 +20,7 @@
 //     - message d'un fournisseur : 确认 PR-… ou 无货 PR-… pour répondre à une demande d'achat ; 确认库存 (confirm stock)
 //       pour reconfirmer toutes ses offres sans nouveau fichier (ADR 0025) ; 报价 DEM-… prix devise
 //       délai date code [lot LOT-…] ou 无货 DEM-… pour répondre à une RFQ (refusé après l'échéance de 48 h) ;
+//       même format avec SRC-… (et « 数量 N ») pour répondre à une recherche payante, broker volontaire (ADR 0033) ;
 //     - tout autre message d'un contact (texte, image, voix) : gardé en base et transféré aux opérateurs, qui
 //       répondent par « reply <n°> texte » ; accusé de réception au contact rattaché, accueil sinon.
 //
@@ -38,6 +39,7 @@ import {
 } from '../_shared/robot-texts.js';
 import { parseOperatorRfq, parseSupplierRfq } from '../_shared/rfq.js';
 import { closeRfq, deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
+import { sourcingAnswerErrorText, sourcingDeclineOkText, sourcingOfferOperatorText, sourcingQuoteOkText } from '../_shared/robot-texts.js';
 
 // Textes du robot : _shared/robot-texts.js. Opérateur : anglais seul ; fournisseur ou inconnu : chinois et anglais.
 const SITE = 'https://central.parts/depot/';
@@ -175,6 +177,7 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
 async function supplierRfqCommand(db: SupabaseClient, openid: string, text: string): Promise<string | null> {
   const q = parseSupplierRfq(text);
   if (!q) return null;
+  if (q.ref.startsWith('SRC-')) return supplierSourcingCommand(db, openid, q);
   if (q.kind === 'help') return rfqHelpText(q.ref);
   const { data, error } = await db.rpc('supplier_rfq_answer', q.kind === 'quote'
     ? { p_openid: openid, p_ref: q.ref, p_kind: 'quote', p_net: q.price, p_currency: q.currency, p_lead: q.lead, p_date_code: q.dateCode, p_lot: q.lot }
@@ -192,6 +195,22 @@ async function supplierRfqCommand(db: SupabaseClient, openid: string, text: stri
     await deliverWebhooks(db);
   })());
   return q.kind === 'quote' ? rfqQuoteOkText(data, q) : rfqDeclineOkText(data.ref);
+}
+
+// Réponse d'un broker volontaire à une recherche payante (ADR 0033) : 报价 SRC-… prix devise délai date code [数量 N],
+// ou 无货 SRC-…. L'offre est montrée tout de suite à l'acheteur, au prix tout compris ; l'opérateur est prévenu.
+// deno-lint-ignore no-explicit-any
+async function supplierSourcingCommand(db: SupabaseClient, openid: string, q: any): Promise<string> {
+  if (q.kind === 'help') return rfqHelpText(q.ref);
+  const { data, error } = await db.rpc('sourcing_answer', q.kind === 'quote'
+    ? { p_openid: openid, p_ref: q.ref, p_kind: 'quote', p_net: q.price, p_currency: q.currency, p_lead: q.lead, p_date_code: q.dateCode, p_qty: q.qty }
+    : { p_openid: openid, p_ref: q.ref, p_kind: 'decline' });
+  if (error) return sourcingAnswerErrorText(q.ref, error.code || '', error.details || '');
+  later((async () => {
+    const { data: me } = await db.from('wechat_identities').select('org_id').eq('openid', openid).maybeSingle();
+    await notifyOperators(db, sourcingOfferOperatorText(data, q, me?.org_id || '?'));
+  })());
+  return q.kind === 'quote' ? sourcingQuoteOkText(data, q) : sourcingDeclineOkText(data.ref);
 }
 
 // Réponse d'un fournisseur à une demande d'achat : 确认 PR-… (disponible) ou 无货 PR-… (indisponible).

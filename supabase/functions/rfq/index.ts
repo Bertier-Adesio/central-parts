@@ -27,7 +27,8 @@
 //   POST   /v1/sandbox/demands/{id}/approve
 //   POST   /v1/sandbox/demands/{id}/respond {kind: "quote"|"decline", unit_price, currency, lead_time_days, date_code}
 //   Tâche planifiée (en-tête X-CP-Jobs-Secret = RFQ_JOBS_SECRET), toutes les 5 minutes :
-//   POST   /jobs/tick                      rappels, expirations, clôtures, livraison des webhooks
+//   POST   /jobs/tick                      rappels, expirations, clôtures, livraison des webhooks ; même passage pour les
+//                                          recherches payantes ouvertes aux brokers volontaires (ADR 0033)
 //
 // Secrets et variables : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (fournis par Supabase) ; RFQ_WEBHOOK_KEY (dérivation
 // des secrets de webhooks), RFQ_JOBS_SECRET, RFQ_WECHAT_OPEN (« true » pour ouvrir la diffusion aux fournisseurs
@@ -40,6 +41,7 @@ import {
   toTiProduct,
 } from '../_shared/catalog.js';
 import { closeRfq, deliverWebhooks, dispatchRfq, tellCancelled, tick } from '../_shared/rfq-dispatch.ts';
+import { sourcingTick } from '../_shared/sourcing-dispatch.ts';
 import { notifyOperators } from '../_shared/wechat.ts';
 
 type Auth = { key_id: string; org_id: string; org_name: string; sandbox: boolean; environment: string; scopes: string[];
@@ -74,7 +76,8 @@ Deno.serve(async (req) => {
     if (path === '/jobs/tick') {
       const secret = Deno.env.get('RFQ_JOBS_SECRET') || '';
       if (req.method !== 'POST' || !secret || req.headers.get('x-cp-jobs-secret') !== secret) return failWith(403, 'forbidden', 'Forbidden');
-      return reply(await tick(db));
+      const rfq = await tick(db);
+      return reply({ ...rfq, sourcing: await sourcingTick(db) });
     }
 
     // ---------------------------------------------------------------- authentification

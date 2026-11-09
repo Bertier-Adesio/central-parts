@@ -377,6 +377,26 @@ await page.selectOption('#src-list li[data-src="SRC-0002"] select[name=status]',
 await page.click('#src-list li[data-src="SRC-0002"] form button[type=submit]');
 await page.waitForFunction(() => /SRC-0002 enregistrée/.test(document.getElementById('msg').textContent));
 ok(mock.state.sourcing[1].status === 'paid' && mock.state.sourcing[1].paid_at, 'proforma : virement reçu, demande marquée payée');
+// Brokers volontaires (migration 20261109000042) : vendeurs prévenus, offres avec le vendeur et son prix net, retrait.
+await page.waitForSelector('#src-list li[data-src="SRC-0003"]');
+const volText = norm(await page.textContent('#src-list li[data-src="SRC-0003"]'));
+ok(volText.includes('Ouverte aux volontaires') && volText.includes('1 volontaire(s) prévenu(s), non joints : Surplus volontaire (fictif)') && volText.includes('Broker volontaire (fictif) : offre'),
+  'recherche ouverte : fenêtre, volontaires prévenus et non joints, réponses');
+ok(volText.includes('SOF-0001') && volText.includes('net 2.1 USD') && volText.includes('400 pièces') && volText.includes('sans marge : non montrée'),
+  'offres : vendeur, prix net, prix tout compris, offre sans marge signalée');
+page.once('dialog', (d) => d.accept('Prix à revoir avec le vendeur'));
+await page.click('#src-list button[data-withdraw="SOF-0001"]');
+await page.waitForFunction(() => /SOF-0001 retirée/.test(document.getElementById('msg').textContent));
+ok(mock.state.sourcing[2].offers[0].withdrawn_reason === 'Prix à revoir avec le vendeur', 'offre retirée avec un motif');
+await page.waitForSelector('#vol-list li[data-vol="ORG-0201"]');
+const vText = norm(await page.textContent('#vol-list'));
+ok(vText.includes('Broker volontaire (fictif)') && vText.includes('Laboratoire fictif, Shenzhen') && vText.includes('3 reçues, 2 offres') && (await page.textContent('#vol-n')).includes('1 actifs'),
+  'volontaires : laboratoires, taux de réponse, nombre d\'actifs');
+await page.$eval('#vol-list details', (d) => { d.open = true; });
+await page.fill('#vol-list textarea[name=labs]', 'Laboratoire corrigé (fictif)');
+await page.click('#vol-list form button[type=submit]');
+await page.waitForFunction(() => /ORG-0201 enregistré/.test(document.getElementById('msg').textContent));
+ok(mock.state.volunteers[0].labs === 'Laboratoire corrigé (fictif)' && mock.state.volunteers[0].active === true, 'volontaires : laboratoires corrigés par l\'administrateur');
 ok(reqText.includes('Facturation') && reqText.includes('75000 Paris') && reqText.includes('Par Central.Parts (DAP), DHL préféré') && reqText.includes('Entrepôt Shenzhen (fictif) · Shenzhen CN'),
   'demande : facturation, transport choisi et adresse d\'expédition du lot (ADR 0030)');
 ok(norm(await page.textContent('#rfq-list')).includes('DEM-1004') && !norm(await page.textContent('#rfq-list')).includes('DEM-1003'), 'RFQ de l\'API à valider');

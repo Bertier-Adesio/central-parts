@@ -120,8 +120,19 @@ export function createMock() {
   { id: 'SRC-0002', status: 'awaiting_payment', mpn: 'XC2S50-5PQ208C', manufacturer: null, qty: 4, target_price: null, target_currency: 'EUR',
     needed_by: null, condition: 'any', notes: null, company: 'Bureau d\'études fictif', contact: 'Contact fictif 2',
     email: 'be@exemple.test', country: 'IT', vat_number: 'IT12345678901', vat_checked: true, amount_ht: 4900, vat_rate: 0, amount_ttc: 4900,
-    paid_at: null, buyer_note: null, admin_note: null, credit_used_by: null, payment_mode: 'proforma' }];
-  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [], sourcing };
+    paid_at: null, buyer_note: null, admin_note: null, credit_used_by: null, payment_mode: 'proforma' },
+  // Ouverte aux brokers volontaires (migration 20261109000042) : vendeurs prévenus, offres (une sans marge).
+  { id: 'SRC-0003', status: 'in_progress', mpn: 'LM317HVK', manufacturer: 'Texas Instruments', qty: 500, target_price: null, target_currency: 'EUR',
+    needed_by: null, condition: 'new', notes: null, company: 'Acheteur de démonstration (fictif)', contact: 'Contact fictif',
+    email: 'achat@exemple.test', country: 'FR', vat_number: 'FR12345678901', vat_checked: true, amount_ht: 4900, vat_rate: 0.2, amount_ttc: 5880,
+    paid_at: day(2, 9), buyer_note: null, admin_note: null, credit_used_by: null, payment_mode: 'bank', open_until: day(-5, 9), closed_at: null, extended_at: null,
+    sellers: [{ org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', notify: 'sent', response: 'quoted' },
+      { org_id: 'ORG-0202', name: 'Surplus volontaire (fictif)', notify: 'no_channel', response: 'pending' }],
+    offers: [{ id: 'SOF-0001', org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', net: 2.1, currency: 'USD', unit_price_eur: 2.1252, qty: 400, lead_days: 30, date_code: '2318', at: day(1, 9), withdrawn_at: null, ordered: false },
+      { id: 'SOF-0002', org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', net: 15, currency: 'CNH', unit_price_eur: null, qty: null, lead_days: 7, date_code: null, at: day(1, 10), withdrawn_at: null, ordered: false }] }];
+  const volunteers = [{ org_id: 'ORG-0201', name: 'Broker volontaire (fictif)', profile: 'Broker', active: true, eligible: true, labs: 'Laboratoire fictif, Shenzhen',
+    joined_at: day(10, 9), left_at: null, contacts: 1, score: { received: 3, quoted: 2, declined: 0, expired: 1 } }];
+  const state = { orgs, lots, requests, rfqs, notified: [], calls: [], logins: [], profiles: {}, mfrs: [], sourcing, volunteers };
   // Fiche société (ADR 0032), comme admin_supplier_profile : vide au départ, contacts à part, fabricants rattachés.
   const profile = (o) => {
     const p = state.profiles[o.org_id] ||= { org_id: o.org_id, about: {}, positioning: {}, certifications: [], languages: [],
@@ -206,8 +217,9 @@ export function createMock() {
       if (path === '/sourcing') {
         const s = query.get('status');
         return [200, { counts: {}, rows: sourcing.filter((r) => !s || r.status === s ||
-          (s === 'open' && (r.status === 'paid' || (r.status === 'awaiting_payment' && r.payment_mode === 'proforma')))) }];
+          (s === 'open' && (r.status === 'paid' || r.status === 'in_progress' || (r.status === 'awaiting_payment' && r.payment_mode === 'proforma')))) }];
       }
+      if (path === '/sourcing/volunteers') return [200, volunteers];
       if (path === '/manufacturer') { const m = mfind(query.get('id')); return m ? [200, mjson(m)] : [409, { error: 'not_allowed' }]; }
       if (path === '/supplier-addresses') {
         return [200, query.get('org') === 'ORG-0110' ? [
@@ -255,6 +267,19 @@ export function createMock() {
       delete d.candidates;
       state.notified.push({ org: (d.sellers[0] || {}).org, kind: 'rfq', ref: d.id });
       return [200, { ...d, dispatch: { sent: d.sellers.length } }];
+    }
+    if (method === 'POST' && path === '/sourcing/volunteer') {
+      const v = volunteers.find((x) => x.org_id === body.org);
+      if (!v) return [422, { error: 'invalid' }];
+      Object.assign(v, body.update || {});
+      return [200, volunteers];
+    }
+    if (method === 'POST' && path === '/sourcing/offer/withdraw') {
+      if (!String(body.reason || '').trim()) return [422, { error: 'reason_required' }];
+      const o = sourcing.flatMap((r) => r.offers || []).find((x) => x.id === body.id);
+      if (!o || o.withdrawn_at) return [409, { error: 'not_allowed' }];
+      o.withdrawn_at = new Date().toISOString(); o.withdrawn_reason = body.reason;
+      return [200, { id: o.id }];
     }
     if (method === 'POST' && path === '/sourcing/update') {
       const r = sourcing.find((x) => x.id === body.id);

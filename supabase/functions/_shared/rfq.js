@@ -25,16 +25,18 @@ export function normalizeWechatText(text) {
 }
 
 // Réponse du fournisseur. Renvoie null si le texte n'est pas une commande RFQ, sinon
-// { kind: 'decline', ref } ou { kind: 'quote', ref, price, currency, lead, dateCode, lot } ou { kind: 'help', ref }.
+// { kind: 'decline', ref } ou { kind: 'quote', ref, price, currency, lead, dateCode, lot, qty } ou { kind: 'help', ref }.
 //   报价 DEM-0431 0.52 USD 7 2425          prix net unitaire, devise, délai en jours, date code
 //   报价 DEM-0431 0.52 USD 7 2425 lot LOT-0187
 //   无货 DEM-0431                           pas de stock
+// Même format pour une recherche payante (ADR 0033) : 报价 SRC-0012 2.5 USD 10 2420 [数量 400] · 无货 SRC-0012 ;
+// « 数量 N » (ou « qty N ») : quantité proposée, si elle est inférieure à la quantité demandée.
 // Mots-clés anglais acceptés : quote, nostock / no stock.
 export function parseSupplierRfq(text) {
   const t = normalizeWechatText(text);
-  let m = /^(无货|沒貨|没货|no ?stock)\s*(DEM-\d+)$/i.exec(t);
+  let m = /^(无货|沒貨|没货|no ?stock)\s*((?:DEM|SRC)-\d+)$/i.exec(t);
   if (m) return { kind: 'decline', ref: m[2].toUpperCase() };
-  m = /^(报价|報價|quote)\s*(DEM-\d+)(?:\s+(.*))?$/i.exec(t);
+  m = /^(报价|報價|quote)\s*((?:DEM|SRC)-\d+)(?:\s+(.*))?$/i.exec(t);
   if (!m) return null;
   const ref = m[2].toUpperCase();
   const tokens = (m[3] || '').split(' ').filter(Boolean);
@@ -43,14 +45,15 @@ export function parseSupplierRfq(text) {
   const currency = tokens[1].toUpperCase() === 'RMB' || tokens[1].toUpperCase() === 'CNY' ? 'CNH' : tokens[1].toUpperCase();
   const leadMatch = /^(\d{1,4})(?:天|d|days?)?$/i.exec(tokens[2]);
   if (!Number.isFinite(price) || price <= 0 || !leadMatch) return { kind: 'help', ref };
-  let dateCode = null, lot = null;
+  let dateCode = null, lot = null, qty = null;
   for (let i = 3; i < tokens.length; i++) {
     const k = tokens[i];
+    if (/^(数量|數量|qty)$/i.test(k) && /^\d{1,9}$/.test(tokens[i + 1] || '')) { qty = Number(tokens[++i]); continue; }
     if (/^lot$/i.test(k) && tokens[i + 1]) { lot = tokens[++i].toUpperCase(); continue; }
     if (/^LOT-[\w-]+$/i.test(k)) { lot = k.toUpperCase(); continue; }
     if (!dateCode) dateCode = k.replace(/^(DC|D\/C|批号)/i, '') || null;
   }
-  return { kind: 'quote', ref, price, currency, lead: Number(leadMatch[1]), dateCode, lot };
+  return { kind: 'quote', ref, price, currency, lead: Number(leadMatch[1]), dateCode, lot, qty };
 }
 
 // Commandes RFQ de l'administrateur (en anglais). Renvoie null si le texte n'en est pas une.
