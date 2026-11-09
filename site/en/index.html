@@ -203,13 +203,12 @@ input,textarea,select,button{font-family:inherit}
 .hs-none{padding:20px}
 .hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
 .hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
-.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
-.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta{display:inline-flex;align-items:center;height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;text-decoration:none;cursor:pointer}
+.hs-cta:hover{color:var(--accent-fg)}
+.hs-links{display:flex;flex-wrap:wrap;gap:6px 16px}
 .hs-cta:hover{background:var(--accent-hover)}
 .hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
-.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
-@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-cta{width:100%;justify-content:center}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -275,7 +274,7 @@ input,textarea,select{font-size:16px!important}
 <span style="margin-bottom: -16px; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">The price of your component, right now.</h1>
-<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Type a manufacturer part number: real stock, prices break by break, every offer traced to its source. If no one has it online, we find it for you.</p>
+<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Type a manufacturer part number: real stock, prices break by break, every offer traced to its source. Part not found or not enough results: our brokers search for it.</p>
 <p data-event="1" style="margin: 0; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; padding: 8px 14px; border: 1px solid #C9C5BD; border-radius: 999px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.4; color: #15171C"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D7262E; flex: none"></span>electronica 2026 · Munich · 10–13 November · Hall B4, Booth 251/12</p>
 <form id="hero-search" action="/recherche/" method="get" role="search" style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 860px">
 <input type="hidden" name="lang" value="en">
@@ -406,7 +405,7 @@ input,textarea,select{font-size:16px!important}
 <script>
 (function () {
   var MAIL = {"subject":"Contact request","profile":"Profile","optin":"Customer area: notify and contact","yes":"yes","no":"no"};
-  var HS = {"locale":"en-GB","live":"{refs} part numbers online · {units} pieces in stock · all-inclusive prices in euros, ECB rate of {date}","loading":"Searching…","error":"Search is not responding. Try again, or open the search page.","tooShort":"Type at least 3 characters of the part number.","from":"from","k1":"1k:","onRequest":"Price on request","avail":"Available","shipFrom":"Ships from","src":{"manufacturer":"Manufacturer direct","distributor":"Distributor","broker":"Verified broker","surplus":"Verified surplus"},"add":"Add to my request","inCart":"In the cart · View cart","cartFull":"Cart full (30 part numbers): send it first.","cartOff":"The cart is not available in this browser: write to contact@central.parts.","count":"{n} offer(s) for \"{q}\". No account, no commitment: you receive a proforma invoice.","all":"See all offers","cartHref":"/panier/?lang=en","searchHref":"/recherche/?lang=en&q=","noneTitle":"{q} is not in stock online today.","noneText":"We search our database and our partner manufacturers and distributors for you, free of charge, and come back with price and lead time, no commitment.","qty":"Quantity","noneCta":"Find it for me","noneMsg":"Part not found online: {q}, quantity {qty}. Please find it for me.","sourcing":"Rare or obsolete part? Paid search with verified brokers and surplus sellers (€49 excl. VAT, deducted from the order)","sourcingHref":"/sourcing/?lang=en&q="};
+  var HS = {"locale":"en-GB","live":"{refs} part numbers online · {units} pieces in stock · all-inclusive prices in euros, ECB rate of {date}","loading":"Searching…","error":"Search is not responding. Try again, or open the search page.","tooShort":"Type at least 3 characters of the part number.","from":"from","k1":"1k:","onRequest":"Price on request","avail":"Available","shipFrom":"Ships from","src":{"manufacturer":"Manufacturer direct","distributor":"Distributor","broker":"Verified broker","surplus":"Verified surplus"},"add":"Add to my request","inCart":"In the cart · View cart","cartFull":"Cart full (30 part numbers): send it first.","cartOff":"The cart is not available in this browser: write to contact@central.parts.","count":"{n} offer(s) for \"{q}\". No account, no commitment: you receive a proforma invoice.","all":"See all offers","cartHref":"/panier/?lang=en","searchHref":"/recherche/?lang=en&q=","noneTitle":"{q} is not in stock online today.","noneText":"Start a paid search: our brokers look for it and come back with price and lead time. €49 excl. VAT per part number, deducted from your order.","noneCta":"Start a paid search","more":"Not enough results? Paid search (€49 excl. VAT)","sourcingHref":"/sourcing/?lang=en&q="};
   // Navigation : fondu à droite seulement si des liens restent masqués à droite.
   var nav = document.querySelector('[data-nav]');
   function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
@@ -439,9 +438,9 @@ input,textarea,select{font-size:16px!important}
     sent.hidden = false;
   });
 
-  // Recherche du héros (FR, EN) : sans JavaScript, le formulaire mène à /recherche/ ; avec, les offres s'affichent ici,
-  // ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028) ; une pièce introuvable devient une demande
-  // (formulaire de contact pré-rempli) ou une recherche prioritaire payante (/sourcing/, ADR 0033).
+  // Recherche du héros (FR, EN), la recherche gratuite : sans JavaScript, le formulaire mène à /recherche/ ; avec, les
+  // offres s'affichent ici, ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028). Pièce introuvable ou
+  // résultats insuffisants : recherche payante auprès des brokers (/sourcing/, ADR 0033), référence pré-remplie.
   var hf = document.getElementById('hero-search');
   if (!hf || !HS.add) return;
   var API = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
@@ -471,17 +470,7 @@ input,textarea,select{font-size:16px!important}
     var r = d.results || [], term = d.query;
     if (!r.length) {
       res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
-        '<form class="hs-form" id="hs-find"><input name="qty" inputmode="numeric" autocomplete="off" placeholder="' + escH(HS.qty) + '" aria-label="' + escH(HS.qty) + '">' +
-        '<button class="hs-cta" type="submit">' + escH(HS.noneCta) + '</button></form>' +
-        '<a class="hs-alt" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.sourcing) + '</a></div>';
-      document.getElementById('hs-find').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var qty = this.elements.qty.value.trim() || '—';
-        pick('buyer');
-        form.elements.message.value = HS.noneMsg.replace('{q}', term).replace('{qty}', qty);
-        document.getElementById('contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        form.elements.nom.focus({ preventScroll: true });
-      });
+        '<a class="hs-cta" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.noneCta) + '</a></div>';
       return;
     }
     res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
@@ -495,7 +484,8 @@ input,textarea,select{font-size:16px!important}
         '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
         '<div class="hs-price">' + price + '</div>' + act + '</div>';
     }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
-      '<a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div></div>';
+      '<span class="hs-links"><a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a>' +
+      '<a href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.more) + '</a></span></div></div>';
     res.querySelectorAll('button.hs-add').forEach(function (b) {
       b.addEventListener('click', function () {
         var out = cartAdd(r[+b.getAttribute('data-i')]);

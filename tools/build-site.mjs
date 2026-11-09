@@ -175,9 +175,9 @@ const SCRIPT = `<script>
     sent.hidden = false;
   });
 
-  // Recherche du héros (FR, EN) : sans JavaScript, le formulaire mène à /recherche/ ; avec, les offres s'affichent ici,
-  // ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028) ; une pièce introuvable devient une demande
-  // (formulaire de contact pré-rempli) ou une recherche prioritaire payante (/sourcing/, ADR 0033).
+  // Recherche du héros (FR, EN), la recherche gratuite : sans JavaScript, le formulaire mène à /recherche/ ; avec, les
+  // offres s'affichent ici, ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028). Pièce introuvable ou
+  // résultats insuffisants : recherche payante auprès des brokers (/sourcing/, ADR 0033), référence pré-remplie.
   var hf = document.getElementById('hero-search');
   if (!hf || !HS.add) return;
   var API = '${SUPABASE}/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
@@ -207,17 +207,7 @@ const SCRIPT = `<script>
     var r = d.results || [], term = d.query;
     if (!r.length) {
       res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
-        '<form class="hs-form" id="hs-find"><input name="qty" inputmode="numeric" autocomplete="off" placeholder="' + escH(HS.qty) + '" aria-label="' + escH(HS.qty) + '">' +
-        '<button class="hs-cta" type="submit">' + escH(HS.noneCta) + '</button></form>' +
-        '<a class="hs-alt" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.sourcing) + '</a></div>';
-      document.getElementById('hs-find').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var qty = this.elements.qty.value.trim() || '—';
-        pick('buyer');
-        form.elements.message.value = HS.noneMsg.replace('{q}', term).replace('{qty}', qty);
-        document.getElementById('contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        form.elements.nom.focus({ preventScroll: true });
-      });
+        '<a class="hs-cta" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.noneCta) + '</a></div>';
       return;
     }
     res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
@@ -231,7 +221,8 @@ const SCRIPT = `<script>
         '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
         '<div class="hs-price">' + price + '</div>' + act + '</div>';
     }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
-      '<a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div></div>';
+      '<span class="hs-links"><a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a>' +
+      '<a href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.more) + '</a></span></div></div>';
     res.querySelectorAll('button.hs-add').forEach(function (b) {
       b.addEventListener('click', function () {
         var out = cartAdd(r[+b.getAttribute('data-i')]);

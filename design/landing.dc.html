@@ -327,13 +327,12 @@ input,textarea,select,button{font-family:inherit}
 .hs-none{padding:20px}
 .hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
 .hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
-.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
-.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta{display:inline-flex;align-items:center;height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;text-decoration:none;cursor:pointer}
+.hs-cta:hover{color:var(--accent-fg)}
+.hs-links{display:flex;flex-wrap:wrap;gap:6px 16px}
 .hs-cta:hover{background:var(--accent-hover)}
 .hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
-.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
-@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-cta{width:100%;justify-content:center}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -523,7 +522,7 @@ fr: {
   navPaths: 'Fabricants · Acheteurs', navHow: 'Fonctionnement', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10-13 novembre · Hall B4, stand 251/12',
   heroTitle: 'Le prix de votre composant, tout de suite.',
-  heroSub: 'Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Si personne ne l’a en ligne, nous la cherchons pour vous.',
+  heroSub: 'Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Pièce introuvable ou résultats insuffisants : nos brokers la cherchent pour vous.',
   searchHero: true, ctaHero: false, searchLang: 'fr', searchLabel: 'Référence fabricant', searchPh: 'Référence, ex. AMS1117', searchGo: 'Rechercher',
   searchHint: 'Stock des fabricants et distributeurs partenaires, prix tout compris en euros au taux de la BCE.', mfrLine: 'Vous êtes fabricant ou distributeur ?',
   hs: { locale: 'fr-FR', live: '{refs} références en ligne · {units} pièces en stock · prix tout compris en euros, taux de la BCE du {date}', loading: 'Recherche…',
@@ -531,9 +530,8 @@ fr: {
     from: 'à partir de', k1: '1 k :', onRequest: 'Prix sur demande', avail: 'Disponible', shipFrom: 'Expédié de', src: { manufacturer: 'Direct fabricant', distributor: 'Distributeur', broker: 'Broker vérifié', surplus: 'Surplus vérifié' },
     add: 'Ajouter à ma demande', inCart: 'Dans le panier · Voir le panier', cartFull: 'Panier plein (30 références) : envoyez-le d’abord.', cartOff: 'Panier indisponible dans ce navigateur : écrivez à contact@central.parts.',
     count: '{n} offre(s) pour « {q} ». Sans compte et sans engagement : vous recevez une facture proforma.', all: 'Voir toutes les offres', cartHref: '/panier/?lang=fr', searchHref: '/recherche/?lang=fr&q=',
-    noneTitle: '{q} n’est pas en stock en ligne aujourd’hui.', noneText: 'Nous la cherchons gratuitement dans notre base et chez nos fabricants et distributeurs partenaires, et revenons vers vous avec prix et délai, sans engagement.',
-    qty: 'Quantité', noneCta: 'Trouvez-la pour moi', noneMsg: 'Référence introuvable en ligne : {q}, quantité {qty}. Merci de la chercher pour moi.',
-    sourcing: 'Pièce rare ou obsolète ? Recherche payante auprès de brokers et surplus vérifiés (49 € HT, déduits de la commande)', sourcingHref: '/sourcing/?lang=fr&q=' },
+    noneTitle: '{q} n’est pas en stock en ligne aujourd’hui.', noneText: 'Lancez une recherche payante : nos brokers la cherchent pour vous et reviennent avec prix et délai. 49 € HT par référence, déduits de votre commande.',
+    noneCta: 'Lancer la recherche payante', more: 'Résultats insuffisants ? Recherche payante (49 € HT)', sourcingHref: '/sourcing/?lang=fr&q=' },
   heroCtaDist: 'Devenir fabricant partenaire', heroCtaBuyer: 'Je suis acheteur',
   pathsTitle: 'Deux parcours, un même réseau',
   distTag: 'Fabricants', distTitle: 'Toucher les acheteurs européens',
@@ -570,7 +568,7 @@ en: {
   navPaths: 'Manufacturers · Buyers', navHow: 'How it works', navContact: 'Contact',
   event: 'electronica 2026 · Munich · 10–13 November · Hall B4, Booth 251/12',
   heroTitle: 'The price of your component, right now.',
-  heroSub: 'Type a manufacturer part number: real stock, prices break by break, every offer traced to its source. If no one has it online, we find it for you.',
+  heroSub: 'Type a manufacturer part number: real stock, prices break by break, every offer traced to its source. Part not found or not enough results: our brokers search for it.',
   searchHero: true, ctaHero: false, searchLang: 'en', searchLabel: 'Manufacturer part number', searchPh: 'Part number, e.g. AMS1117', searchGo: 'Search',
   searchHint: 'Stock from partner manufacturers and distributors, all-inclusive prices in euros at the ECB rate.', mfrLine: 'Are you a manufacturer or distributor?',
   hs: { locale: 'en-GB', live: '{refs} part numbers online · {units} pieces in stock · all-inclusive prices in euros, ECB rate of {date}', loading: 'Searching…',
@@ -578,9 +576,8 @@ en: {
     from: 'from', k1: '1k:', onRequest: 'Price on request', avail: 'Available', shipFrom: 'Ships from', src: { manufacturer: 'Manufacturer direct', distributor: 'Distributor', broker: 'Verified broker', surplus: 'Verified surplus' },
     add: 'Add to my request', inCart: 'In the cart · View cart', cartFull: 'Cart full (30 part numbers): send it first.', cartOff: 'The cart is not available in this browser: write to contact@central.parts.',
     count: '{n} offer(s) for "{q}". No account, no commitment: you receive a proforma invoice.', all: 'See all offers', cartHref: '/panier/?lang=en', searchHref: '/recherche/?lang=en&q=',
-    noneTitle: '{q} is not in stock online today.', noneText: 'We search our database and our partner manufacturers and distributors for you, free of charge, and come back with price and lead time, no commitment.',
-    qty: 'Quantity', noneCta: 'Find it for me', noneMsg: 'Part not found online: {q}, quantity {qty}. Please find it for me.',
-    sourcing: 'Rare or obsolete part? Paid search with verified brokers and surplus sellers (€49 excl. VAT, deducted from the order)', sourcingHref: '/sourcing/?lang=en&q=' },
+    noneTitle: '{q} is not in stock online today.', noneText: 'Start a paid search: our brokers look for it and come back with price and lead time. €49 excl. VAT per part number, deducted from your order.',
+    noneCta: 'Start a paid search', more: 'Not enough results? Paid search (€49 excl. VAT)', sourcingHref: '/sourcing/?lang=en&q=' },
   heroCtaDist: 'Become a partner manufacturer', heroCtaBuyer: 'I am a buyer',
   pathsTitle: 'Two paths, one network',
   distTag: 'Manufacturers', distTitle: 'Reach European buyers',

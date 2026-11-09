@@ -203,13 +203,12 @@ input,textarea,select,button{font-family:inherit}
 .hs-none{padding:20px}
 .hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
 .hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
-.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
-.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta{display:inline-flex;align-items:center;height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;text-decoration:none;cursor:pointer}
+.hs-cta:hover{color:var(--accent-fg)}
+.hs-links{display:flex;flex-wrap:wrap;gap:6px 16px}
 .hs-cta:hover{background:var(--accent-hover)}
 .hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
-.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
-@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-cta{width:100%;justify-content:center}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -431,9 +430,9 @@ input,textarea,select{font-size:16px!important}
     sent.hidden = false;
   });
 
-  // Recherche du héros (FR, EN) : sans JavaScript, le formulaire mène à /recherche/ ; avec, les offres s'affichent ici,
-  // ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028) ; une pièce introuvable devient une demande
-  // (formulaire de contact pré-rempli) ou une recherche prioritaire payante (/sourcing/, ADR 0033).
+  // Recherche du héros (FR, EN), la recherche gratuite : sans JavaScript, le formulaire mène à /recherche/ ; avec, les
+  // offres s'affichent ici, ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028). Pièce introuvable ou
+  // résultats insuffisants : recherche payante auprès des brokers (/sourcing/, ADR 0033), référence pré-remplie.
   var hf = document.getElementById('hero-search');
   if (!hf || !HS.add) return;
   var API = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
@@ -463,17 +462,7 @@ input,textarea,select{font-size:16px!important}
     var r = d.results || [], term = d.query;
     if (!r.length) {
       res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
-        '<form class="hs-form" id="hs-find"><input name="qty" inputmode="numeric" autocomplete="off" placeholder="' + escH(HS.qty) + '" aria-label="' + escH(HS.qty) + '">' +
-        '<button class="hs-cta" type="submit">' + escH(HS.noneCta) + '</button></form>' +
-        '<a class="hs-alt" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.sourcing) + '</a></div>';
-      document.getElementById('hs-find').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var qty = this.elements.qty.value.trim() || '—';
-        pick('buyer');
-        form.elements.message.value = HS.noneMsg.replace('{q}', term).replace('{qty}', qty);
-        document.getElementById('contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        form.elements.nom.focus({ preventScroll: true });
-      });
+        '<a class="hs-cta" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.noneCta) + '</a></div>';
       return;
     }
     res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
@@ -487,7 +476,8 @@ input,textarea,select{font-size:16px!important}
         '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
         '<div class="hs-price">' + price + '</div>' + act + '</div>';
     }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
-      '<a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div></div>';
+      '<span class="hs-links"><a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a>' +
+      '<a href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.more) + '</a></span></div></div>';
     res.querySelectorAll('button.hs-add').forEach(function (b) {
       b.addEventListener('click', function () {
         var out = cartAdd(r[+b.getAttribute('data-i')]);

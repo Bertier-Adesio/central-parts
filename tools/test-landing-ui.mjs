@@ -1,6 +1,6 @@
 // Recherche du héros de la landing (/, /en/ ; /zh/ garde son héros de fabricants) dans Chromium, API simulée :
-// chiffres du réseau, offres affichées sur place, ajout au panier (cp-cart, ADR 0028), pièce introuvable transformée
-// en demande (formulaire de contact pré-rempli) ou en recherche prioritaire (/sourcing/), recherche en panne,
+// chiffres du réseau, offres affichées sur place, ajout au panier (cp-cart, ADR 0028), pièce introuvable
+// ou résultats insuffisants menant à la recherche payante (/sourcing/), recherche en panne,
 // sans JavaScript (le formulaire mène à /recherche/), 1280 et 390 px sans défilement horizontal ni requête externe.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/test-landing-ui.mjs
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
@@ -55,7 +55,7 @@ for (const width of [1280, 390]) {
   const first = await page.textContent('#hero-res .hs-row');
   ok(first.includes('AMS1117-3.3') && first.includes('Direct fabricant') && /0,1639/.test(first) && first.includes('Chine'), `${width} px : référence, source, prix, pays d'expédition`);
   ok((await page.textContent('#hero-res .hs-row:nth-child(3)')).includes('Prix sur demande'), `${width} px : prix sur demande`);
-  ok((await page.getAttribute('#hero-res .hs-foot a', 'href')) === '/recherche/?lang=fr&q=AMS1117', `${width} px : lien vers toutes les offres`);
+  ok((await page.getAttribute('#hero-res .hs-links a', 'href')) === '/recherche/?lang=fr&q=AMS1117', `${width} px : lien vers toutes les offres`);
   await page.click('#hero-res button.hs-add');
   await page.waitForSelector('#hero-res a.hs-add.in');
   const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('cp-cart')));
@@ -67,18 +67,15 @@ for (const width of [1280, 390]) {
     ok(h >= 44, '390 px : bouton d\'ajout de 44 px');
   }
 
-  // Pièce introuvable : demande pré-remplie dans le formulaire de contact, ou recherche prioritaire.
+  ok((await page.getAttribute('#hero-res .hs-links a:nth-child(2)', 'href')) === '/sourcing/?lang=fr&q=AMS1117', `${width} px : résultats insuffisants, recherche payante`);
+
+  // Pièce introuvable : recherche payante (/sourcing/), sans impasse.
   await search(page, 'STM32F103');
   await page.waitForSelector('#hero-res .hs-none');
   ok((await page.textContent('#hero-res h3')) === 'STM32F103 n’est pas en stock en ligne aujourd’hui.', `${width} px : pièce introuvable, sans impasse`);
-  ok((await page.getAttribute('#hero-res .hs-alt', 'href')) === '/sourcing/?lang=fr&q=STM32F103', `${width} px : recherche prioritaire (/sourcing/)`);
-  await page.fill('#hs-find input[name=qty]', '2000');
-  await page.click('#hs-find button');
-  await page.waitForFunction(() => /STM32F103/.test(document.querySelector('#contact-form textarea').value));
-  const msg = await page.$eval('#contact-form textarea', (t) => t.value);
-  ok(msg.includes('STM32F103') && msg.includes('2000'), `${width} px : formulaire de contact pré-rempli (référence, quantité)`);
-  ok(await page.$eval('#contact-form [data-tab=buyer]', (b) => b.getAttribute('aria-pressed')) === 'true', `${width} px : onglet Acheteur choisi`);
-  ok(await page.evaluate(() => document.activeElement && document.activeElement.name === 'nom'), `${width} px : curseur dans le premier champ`);
+  ok((await page.getAttribute('#hero-res a.hs-cta', 'href')) === '/sourcing/?lang=fr&q=STM32F103', `${width} px : recherche payante (/sourcing/)`);
+  ok((await page.textContent('#hero-res .hs-none')).includes('49 € HT'), `${width} px : prix de la recherche payante`);
+  ok(await noScroll(page), `${width} px : pas de défilement horizontal, pièce introuvable`);
 
   // Recherche en panne, référence trop courte.
   await search(page, 'PANNE');
@@ -102,7 +99,7 @@ for (const width of [1280, 390]) {
   ok((await page.textContent('h1')) === 'The price of your component, right now.', 'EN : accroche');
   await search(page, 'AMS1117');
   await page.waitForSelector('#hero-res .hs-row');
-  ok((await page.textContent('#hero-res')).includes('Add to my request') && (await page.getAttribute('#hero-res .hs-foot a', 'href')) === '/recherche/?lang=en&q=AMS1117', 'EN : offres et liens en anglais');
+  ok((await page.textContent('#hero-res')).includes('Add to my request') && (await page.getAttribute('#hero-res .hs-links a', 'href')) === '/recherche/?lang=en&q=AMS1117' && (await page.getAttribute('#hero-res .hs-links a:nth-child(2)', 'href')) === '/sourcing/?lang=en&q=AMS1117', 'EN : offres et liens en anglais');
   ok(errors.length === 0, 'EN : aucune erreur ' + errors.join(' | '));
   await ctx.close();
 }

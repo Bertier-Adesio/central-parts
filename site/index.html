@@ -203,13 +203,12 @@ input,textarea,select,button{font-family:inherit}
 .hs-none{padding:20px}
 .hs-none h3{margin:0 0 4px;font-size:18px;font-weight:600;letter-spacing:-0.01em}
 .hs-none p{margin:0 0 14px;color:var(--fg-2);font-size:15px;line-height:1.5}
-.hs-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.hs-form input{width:140px;height:var(--control-h-lg);padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-md);background:var(--bg-raised);font-size:15px}
-.hs-cta{height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;cursor:pointer}
+.hs-cta{display:inline-flex;align-items:center;height:var(--control-h-lg);padding:0 18px;border:0;border-radius:var(--radius-md);background:var(--accent);color:var(--accent-fg);font-size:15px;font-weight:500;text-decoration:none;cursor:pointer}
+.hs-cta:hover{color:var(--accent-fg)}
+.hs-links{display:flex;flex-wrap:wrap;gap:6px 16px}
 .hs-cta:hover{background:var(--accent-hover)}
 .hs-msg{padding:14px 16px;font-size:14px;color:var(--fg-2)}
-.hs-none .hs-alt{display:inline-block;margin-top:12px;font-size:14px;color:var(--fg-2);text-decoration:underline;text-underline-offset:3px}
-@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-form input{flex:1 1 120px;width:auto}.hs-cta{flex:1 1 100%}}
+@media (max-width:640px){.hs-row{grid-template-columns:1fr auto}.hs-row .hs-add{grid-column:1/-1;justify-content:center}.hs-cta{width:100%;justify-content:center}}
 /* QR WeChat : miniature agrandie au clic (ancre + :target, sans JavaScript) */
 [data-qr-pop]{display:none;position:fixed;inset:0;z-index:100;align-items:center;justify-content:center;padding:24px;background:rgba(21,23,28,.78)}
 [data-qr-pop]:target{display:flex}
@@ -275,7 +274,7 @@ input,textarea,select{font-size:16px!important}
 <span style="margin-bottom: -16px; font-weight: 500; letter-spacing: -0.025em; font-size: clamp(26px, 2.8vw, 34px); line-height: 1; color: #15171C">Central<span style="color: #D7262E">.</span>Parts</span>
 <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #4A4E57">Supply Network Operator</span>
 <h1 style="margin: 0; max-width: 900px; font-size: clamp(36px, 5.4vw, 64px); line-height: 1.05; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">Le prix de votre composant, tout de suite.</h1>
-<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Si personne ne l’a en ligne, nous la cherchons pour vous.</p>
+<p style="margin: 0; max-width: 620px; font-size: 18px; line-height: 1.5; color: #4A4E57; text-wrap: pretty">Tapez une référence fabricant : stock réel, prix palier par palier, chaque offre tracée jusqu’à sa source. Pièce introuvable ou résultats insuffisants : nos brokers la cherchent pour vous.</p>
 <p data-event="1" style="margin: 0; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start; padding: 8px 14px; border: 1px solid #C9C5BD; border-radius: 999px; background: #FFFFFF; font-family: 'IBM Plex Mono', monospace; font-size: 13px; line-height: 1.4; color: #15171C"><span style="width: 8px; height: 8px; border-radius: 50%; background: #D7262E; flex: none"></span>electronica 2026 · Munich · 10-13 novembre · Hall B4, stand 251/12</p>
 <form id="hero-search" action="/recherche/" method="get" role="search" style="display: flex; flex-wrap: wrap; gap: 8px; max-width: 860px">
 <input type="hidden" name="lang" value="fr">
@@ -406,7 +405,7 @@ input,textarea,select{font-size:16px!important}
 <script>
 (function () {
   var MAIL = {"subject":"Demande de contact","profile":"Profil","optin":"Espace client : informer et recontacter","yes":"oui","no":"non"};
-  var HS = {"locale":"fr-FR","live":"{refs} références en ligne · {units} pièces en stock · prix tout compris en euros, taux de la BCE du {date}","loading":"Recherche…","error":"La recherche ne répond pas. Réessayez, ou ouvrez la page de recherche.","tooShort":"Tapez au moins 3 caractères de la référence.","from":"à partir de","k1":"1 k :","onRequest":"Prix sur demande","avail":"Disponible","shipFrom":"Expédié de","src":{"manufacturer":"Direct fabricant","distributor":"Distributeur","broker":"Broker vérifié","surplus":"Surplus vérifié"},"add":"Ajouter à ma demande","inCart":"Dans le panier · Voir le panier","cartFull":"Panier plein (30 références) : envoyez-le d’abord.","cartOff":"Panier indisponible dans ce navigateur : écrivez à contact@central.parts.","count":"{n} offre(s) pour « {q} ». Sans compte et sans engagement : vous recevez une facture proforma.","all":"Voir toutes les offres","cartHref":"/panier/?lang=fr","searchHref":"/recherche/?lang=fr&q=","noneTitle":"{q} n’est pas en stock en ligne aujourd’hui.","noneText":"Nous la cherchons gratuitement dans notre base et chez nos fabricants et distributeurs partenaires, et revenons vers vous avec prix et délai, sans engagement.","qty":"Quantité","noneCta":"Trouvez-la pour moi","noneMsg":"Référence introuvable en ligne : {q}, quantité {qty}. Merci de la chercher pour moi.","sourcing":"Pièce rare ou obsolète ? Recherche payante auprès de brokers et surplus vérifiés (49 € HT, déduits de la commande)","sourcingHref":"/sourcing/?lang=fr&q="};
+  var HS = {"locale":"fr-FR","live":"{refs} références en ligne · {units} pièces en stock · prix tout compris en euros, taux de la BCE du {date}","loading":"Recherche…","error":"La recherche ne répond pas. Réessayez, ou ouvrez la page de recherche.","tooShort":"Tapez au moins 3 caractères de la référence.","from":"à partir de","k1":"1 k :","onRequest":"Prix sur demande","avail":"Disponible","shipFrom":"Expédié de","src":{"manufacturer":"Direct fabricant","distributor":"Distributeur","broker":"Broker vérifié","surplus":"Surplus vérifié"},"add":"Ajouter à ma demande","inCart":"Dans le panier · Voir le panier","cartFull":"Panier plein (30 références) : envoyez-le d’abord.","cartOff":"Panier indisponible dans ce navigateur : écrivez à contact@central.parts.","count":"{n} offre(s) pour « {q} ». Sans compte et sans engagement : vous recevez une facture proforma.","all":"Voir toutes les offres","cartHref":"/panier/?lang=fr","searchHref":"/recherche/?lang=fr&q=","noneTitle":"{q} n’est pas en stock en ligne aujourd’hui.","noneText":"Lancez une recherche payante : nos brokers la cherchent pour vous et reviennent avec prix et délai. 49 € HT par référence, déduits de votre commande.","noneCta":"Lancer la recherche payante","more":"Résultats insuffisants ? Recherche payante (49 € HT)","sourcingHref":"/sourcing/?lang=fr&q="};
   // Navigation : fondu à droite seulement si des liens restent masqués à droite.
   var nav = document.querySelector('[data-nav]');
   function navFade() { nav.toggleAttribute('data-more', nav.scrollWidth - nav.clientWidth - nav.scrollLeft > 1); }
@@ -439,9 +438,9 @@ input,textarea,select{font-size:16px!important}
     sent.hidden = false;
   });
 
-  // Recherche du héros (FR, EN) : sans JavaScript, le formulaire mène à /recherche/ ; avec, les offres s'affichent ici,
-  // ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028) ; une pièce introuvable devient une demande
-  // (formulaire de contact pré-rempli) ou une recherche prioritaire payante (/sourcing/, ADR 0033).
+  // Recherche du héros (FR, EN), la recherche gratuite : sans JavaScript, le formulaire mène à /recherche/ ; avec, les
+  // offres s'affichent ici, ajout au panier (même stockage que /recherche/ et /offres/, ADR 0028). Pièce introuvable ou
+  // résultats insuffisants : recherche payante auprès des brokers (/sourcing/, ADR 0033), référence pré-remplie.
   var hf = document.getElementById('hero-search');
   if (!hf || !HS.add) return;
   var API = 'https://tuhbzziqyisdnqzfvtkh.supabase.co/functions/v1/', res = document.getElementById('hero-res'), live = document.getElementById('hero-live');
@@ -471,17 +470,7 @@ input,textarea,select{font-size:16px!important}
     var r = d.results || [], term = d.query;
     if (!r.length) {
       res.innerHTML = '<div class="hs-box hs-none"><h3>' + escH(HS.noneTitle.replace('{q}', term)) + '</h3><p>' + escH(HS.noneText) + '</p>' +
-        '<form class="hs-form" id="hs-find"><input name="qty" inputmode="numeric" autocomplete="off" placeholder="' + escH(HS.qty) + '" aria-label="' + escH(HS.qty) + '">' +
-        '<button class="hs-cta" type="submit">' + escH(HS.noneCta) + '</button></form>' +
-        '<a class="hs-alt" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.sourcing) + '</a></div>';
-      document.getElementById('hs-find').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var qty = this.elements.qty.value.trim() || '—';
-        pick('buyer');
-        form.elements.message.value = HS.noneMsg.replace('{q}', term).replace('{qty}', qty);
-        document.getElementById('contact').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        form.elements.nom.focus({ preventScroll: true });
-      });
+        '<a class="hs-cta" href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.noneCta) + '</a></div>';
       return;
     }
     res.innerHTML = '<div class="hs-box">' + r.slice(0, 5).map(function (x, i) {
@@ -495,7 +484,8 @@ input,textarea,select{font-size:16px!important}
         '<span class="hs-tag">' + escH(HS.avail + ' ' + x.availability) + '</span><span class="hs-tag">' + escH(HS.shipFrom + ' ' + region(x.ship_from)) + '</span></div>' +
         '<div class="hs-price">' + price + '</div>' + act + '</div>';
     }).join('') + '<div class="hs-foot"><span>' + escH(HS.count.replace('{n}', r.length).replace('{q}', term)) + '</span>' +
-      '<a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a></div></div>';
+      '<span class="hs-links"><a href="' + escH(HS.searchHref + encodeURIComponent(term)) + '">' + escH(HS.all) + '</a>' +
+      '<a href="' + escH(HS.sourcingHref + encodeURIComponent(term)) + '">' + escH(HS.more) + '</a></span></div></div>';
     res.querySelectorAll('button.hs-add').forEach(function (b) {
       b.addEventListener('click', function () {
         var out = cartAdd(r[+b.getAttribute('data-i')]);
