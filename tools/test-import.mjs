@@ -267,7 +267,13 @@ ok(both(R.supplierHelpText()) && R.supplierHelpText().includes('https://central.
 }
 ok(Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32))) < 2048 && Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32), true)) < 2048, 'accueil : sous 2 048 octets');
 ok(R.receivedText() === '已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.', 'fournisseur, inchangé : accusé de réception');
-ok(R.approvedNotice('CP-S-0042') === '您的公司已通过 Central.Parts 审核（编号 CP-S-0042），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (CP-S-0042).', 'fournisseur, inchangé : avis de validation');
+{
+  const t = R.approvedNotice('CP-S-0042');
+  ok(t.startsWith('您的公司已通过 Central.Parts 审核（编号 CP-S-0042）') && t.includes('Your company has been approved by Central.Parts (CP-S-0042)'), 'fournisseur : avis de validation, chinois puis anglais, avec le numéro');
+  ok(t.includes('7 天（制造商 14 天）') && t.includes('7 days after its last update (14 days for manufacturers)'), 'avis de validation : durée de validité des offres (ADR 0025)');
+  ok(R.isReconfirmRequest('确认库存') && R.isReconfirmRequest('confirm stock') && t.includes('回复「确认库存」') && t.includes('reply 确认库存'), 'avis de validation : la reconfirmation en un geste, mot reconnu par le robot');
+  ok(t.includes('https://central.parts/depot/') && !/escrow|IC ?Superman/i.test(t), 'avis de validation : lien du centre fournisseur, aucun mot interdit');
+}
 ok(R.rejectedNotice('licence illisible').startsWith('您的公司未通过 Central.Parts 审核：licence illisible\n如有疑问，请直接回复此消息。\n') && both(R.rejectedNotice('x')), 'fournisseur, bilingue : avis de refus (chinois d\'origine, puis anglais)');
 ok(R.rejectedNotice('').startsWith('您的公司未通过 Central.Parts 审核。\n') && !R.rejectedNotice('').includes('reason above'), 'fournisseur : refus sans motif');
 ok(R.operatorReplyText('Please send your stock list.') === 'Central.Parts 回复 · Reply from Central.Parts:\nPlease send your stock list.', 'fournisseur, bilingue : réponse d\'un opérateur (en-tête chinois et anglais, texte tel quel)');

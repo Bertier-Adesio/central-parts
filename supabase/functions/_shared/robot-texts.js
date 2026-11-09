@@ -241,8 +241,19 @@ export function operatorErrorText(subject, message) {
 // ---------------------------------------------------------------- messages envoyés aux fournisseurs par une
 // décision ou une réponse d'opérateur : chinois et anglais. Le texte chinois d'origine est inchangé.
 
+// Accueil d'un fournisseur approuvé : dit dès le départ que les offres se reconfirment (ADR 0025), et comment, en un
+// geste. Durées par défaut de app.settings (7 jours, 14 pour un fabricant) : à mettre à jour ici si elles changent.
 export function approvedNotice(alias) {
-  return `您的公司已通过 Central.Parts 审核（编号 ${alias}），库存已纳入 Central.Parts 平台。\nYour company has been approved by Central.Parts (${alias}).`;
+  return `您的公司已通过 Central.Parts 审核（编号 ${alias}），欢迎加入！\n` +
+    '您的报价将向欧洲采购商展示。为保证库存真实，每条报价在最后一次更新后展示 7 天（制造商 14 天），到期后自动隐藏。\n' +
+    '· 库存没有变化：回复「确认库存」，或在供应商中心点「库存无变化，一键确认」，所有报价立即续期。\n' +
+    '· 库存有变化：在供应商中心上传新的库存表。\n' +
+    '建议每周确认一次。供应商中心：https://central.parts/depot/\n\n' +
+    `Your company has been approved by Central.Parts (${alias}). Welcome!\n` +
+    'Your offers will be shown to European buyers. To keep stock accurate, each offer stays visible for 7 days after its last update (14 days for manufacturers), then is hidden automatically.\n' +
+    '· Stock unchanged: reply 确认库存 (or "confirm stock"), or tap "库存无变化，一键确认" in the supplier centre: all your offers are renewed at once.\n' +
+    '· Stock changed: upload a new stock file in the supplier centre.\n' +
+    'We recommend confirming once a week. Supplier centre: https://central.parts/depot/';
 }
 
 // Refus : ligne anglaise ajoutée ; le motif, écrit une fois par l'opérateur, n'est pas répété.
