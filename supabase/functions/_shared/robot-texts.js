@@ -248,12 +248,12 @@ export function approvedNotice(alias) {
     '您的报价将向欧洲采购商展示。为保证库存真实，每条报价在最后一次更新后展示 7 天（制造商 14 天），到期后自动隐藏。\n' +
     '· 库存没有变化：回复「确认库存」，或在供应商中心点「库存无变化，一键确认」，所有报价立即续期。\n' +
     '· 库存有变化：在供应商中心上传新的库存表。\n' +
-    '建议每周确认一次。供应商中心：https://central.parts/depot/\n\n' +
+    '建议至少每周确认一次；库存变化快（如贸易商）可以每天上传或确认。报价越新越准确，更新频率也将计入您的供应商评分。供应商中心：https://central.parts/depot/\n\n' +
     `Your company has been approved by Central.Parts (${alias}). Welcome!\n` +
     'Your offers will be shown to European buyers. To keep stock accurate, each offer stays visible for 7 days after its last update (14 days for manufacturers), then is hidden automatically.\n' +
     '· Stock unchanged: reply 确认库存 (or "confirm stock"), or tap "库存无变化，一键确认" in the supplier centre: all your offers are renewed at once.\n' +
     '· Stock changed: upload a new stock file in the supplier centre.\n' +
-    'We recommend confirming once a week. Supplier centre: https://central.parts/depot/';
+    'Confirm at least once a week. If your stock moves fast (brokers, traders), you can upload or confirm every day. The fresher your offers, the more accurate they are for buyers, and how often you update will also count towards your supplier rating. Supplier centre: https://central.parts/depot/';
 }
 
 // Refus : ligne anglaise ajoutée ; le motif, écrit une fois par l'opérateur, n'est pas répété.
