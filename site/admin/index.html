@@ -126,6 +126,8 @@ ul.plain2 li:first-child{border-top:0}
 details.hist summary{cursor:pointer;color:var(--fg-2);font-size:var(--text-xs)}
 details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-space:normal;min-width:220px}
 .tools.t4{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,2fr) auto}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:820px){.grid3{grid-template-columns:minmax(0,1fr)}}
 [hidden]{display:none!important}
 @media (max-width:820px){
   .tools.t4{grid-template-columns:minmax(0,1fr)}
@@ -145,6 +147,7 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
   table.cards td{display:block;border:0;padding:2px 0;text-align:left}
   table.cards td[data-l]::before{content:attr(data-l) " : ";color:var(--fg-3)}
 }
+.sg-logo{width:64px;height:64px;object-fit:contain;border:1px solid var(--border-1);border-radius:var(--radius-sm);background:var(--bg-sunken);vertical-align:middle}
 </style>
 </head>
 <body>
@@ -315,11 +318,18 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
   var STATUS = { pending: 'En attente', validated: 'Approuvée', rejected: 'Refusée', none: 'Non soumise' };
   var REGION = { CN: 'Chine continentale', HK: 'Hong Kong', OTHER: 'Autre' };
   var CODE_LABEL = { CN: 'Credit code (Mainland China)', HK: 'Registration no. (Hong Kong)', OTHER: 'Registration no.' };
-  var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker' };
+  var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker', Surplus: 'Surplus',
+    Spot: 'Stock disponible (broker ou surplus à préciser)' };
+  // Inscription par profil (ADR 0034) : pièce fournie à l'inscription.
+  var PIECE = { both: 'photo de la licence et numéro', license: 'photo de la licence seule', number: 'numéro seul', none: 'aucune (inscrite avant le 11 novembre 2026)' };
+  var MISS = { license: 'photo de la licence', number: 'numéro', region: 'région', city: 'ville', brands: 'marques', website: 'site web', logo: 'logo',
+    wecom: 'WeChat pro ou compte de service', contact: 'coordonnées d\'un contact' };
+  var DUTY = { main: 'contact principal', sales: 'ventes / devis', logistics: 'logistique / expédition', finance: 'finance', other: 'autre' };
   var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
   var ACTION = { approved: 'Approuvée', rejected: 'Refusée', pending: 'Remise en attente' };
   var ERR = {
     reason_required: 'Le motif du refus est obligatoire.',
+    spot_category_required: 'Stock disponible : choisir broker ou surplus pour approuver.',
     already_pending: 'Cette société est déjà en attente.',
     not_allowed: 'Action impossible dans l\'état actuel de la société (une société approuvée doit d\'abord être remise en attente).',
     email: 'Adresse e-mail invalide.',
@@ -493,7 +503,9 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
       $('sup-list').innerHTML = rows.length ? rows.map(function (o) {
         return '<li><button type="button" data-org="' + esc(o.org_id) + '"' + (o.org_id === state.org ? ' aria-current="true"' : '') + '>' +
           '<span class="r1"><strong>' + esc(o.name) + '</strong><span class="badge ' + esc(o.status) + '">' + esc(STATUS[o.status] || o.status) + '</span></span>' +
-          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) + '</span>' +
+          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) +
+            (o.status === 'pending' && o.missing ? ' · <span class="' + (o.missing.length ? 'warn-t' : '') + '" data-complete="' + (o.missing.length ? 'no' : 'yes') + '">' +
+              (o.missing.length ? 'fiche incomplète' : 'fiche complète') + '</span>' : '') + '</span>' +
           '</button></li>';
       }).join('') : '<li class="empty">Aucune société dans cette liste.</li>';
     }).catch(fail);
@@ -517,7 +529,10 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
       var openids = (o.contacts || []).map(function (c) { return esc(c.openid); }).join('<br>') || esc(o.registered_by || '—');
       var st = o.stock || {}, imp = o.last_import;
       var acts = '';
-      if (o.status !== 'validated') acts += '<button class="btn btn-ok" type="button" data-act="approve">Approuver</button>';
+      // Stock disponible : broker ou surplus à choisir pour approuver (ADR 0034).
+      if (o.status !== 'validated' && o.profile === 'Spot') acts += '<button class="btn btn-ok" type="button" data-act="approve_broker">Approuver comme broker</button>' +
+        '<button class="btn btn-ok" type="button" data-act="approve_surplus">Approuver comme surplus</button>';
+      else if (o.status !== 'validated') acts += '<button class="btn btn-ok" type="button" data-act="approve">Approuver</button>';
       if (o.status === 'pending' || o.status === 'none') acts += '<button class="btn btn-danger" type="button" data-act="reject">Refuser</button>';
       if (o.status === 'validated' || o.status === 'rejected') acts += '<button class="btn btn-line" type="button" data-act="pending">Remettre en attente</button>';
       $('sup-detail').innerHTML =
@@ -545,6 +560,7 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
         '<dt>Recherches payantes</dt><dd id="d-vol">' + esc(o.volunteer ? (o.volunteer.active ? 'volontaire depuis le ' + dd(o.volunteer.joined_at) : 'retiré') +
           (o.volunteer.labs ? ' · laboratoires : ' + o.volunteer.labs : '') : 'pas inscrit') + '</dd>' +
         '</dl>' +
+        '<div id="d-signup"></div>' +
         '<div class="actions" id="d-actions">' + acts + '</div>' +
         (o.status === 'validated' ? '<h3>Dépôt du fournisseur</h3><p class="muted">Charger un fichier de stock pour lui, voir ses imports, reconfirmer ses offres. ' +
           'Lien personnel à votre nom, valable 8 heures, inscrit au journal ; les fichiers sont chargés au nom du fournisseur, mais ne comptent pas dans sa note de mise à jour.</p>' +
@@ -564,6 +580,7 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
             (d.reason ? '<br><span class="muted">Motif : ' + esc(d.reason) + '</span>' : '') + '</li>';
         }).join('') + '</ol>' : '<p class="muted" id="d-log">Aucune décision enregistrée.</p>');
       $('sup-detail').dataset.org = o.org_id;
+      loadSignup(o.org_id);
       api('GET', '/supplier-addresses?org=' + encodeURIComponent(o.org_id)).then(function (list) {
         if (!$('d-addr')) return;
         $('d-addr').classList.toggle('muted', !list.length);
@@ -915,6 +932,10 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
   var DECISION = {
     approve: { title: 'Approuver la société', ok: 'Approuver', cls: 'btn-ok', reason: false,
       text: 'La société sera approuvée et ses offres pourront être publiées. Le fournisseur reçoit le même message WeChat qu\'avec la commande du robot.' },
+    approve_broker: { title: 'Approuver comme broker', ok: 'Approuver comme broker', cls: 'btn-ok', reason: false, spot: 'broker',
+      text: 'Stock disponible approuvé comme broker : présenté « Broker vérifié », jamais « agréé » ni « direct ». Le fournisseur reçoit le message d\'accueil du stock disponible.' },
+    approve_surplus: { title: 'Approuver comme surplus', ok: 'Approuver comme surplus', cls: 'btn-ok', reason: false, spot: 'surplus',
+      text: 'Stock disponible approuvé comme surplus : présenté « Surplus vérifié », jamais « agréé » ni « direct ». Le fournisseur reçoit le message d\'accueil du stock disponible.' },
     reject: { title: 'Refuser la société', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
       text: 'La société sera refusée. Le motif est obligatoire ; il est transmis au fournisseur dans WeChat, comme avec la commande du robot.' },
     pending: { title: 'Remettre en attente', ok: 'Remettre en attente', cls: 'btn-main', reason: 'optional',
@@ -940,7 +961,9 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
     var a = b.getAttribute('data-act'), d = DECISION[a];
     pending = a; reqPending = null;
     $('c-title').textContent = d.title + ' · ' + this.dataset.org;
-    $('c-text').textContent = this.dataset.name + ' — ' + d.text;
+    var one = /^approve/.test(a) && state.signup && state.signup.org_id === this.dataset.org && { license: 'licence', number: 'numéro' }[state.signup.piece];
+    $('c-text').textContent = this.dataset.name + ' — ' + d.text + (one ? ' Attention : une seule pièce fournie (' + one + ' seul). L\'approbation sera inscrite au journal'
+      + ' « pièce unique : ' + one + ' » ; la pièce manquante reste demandée au fournisseur dans « 补充资料 ».' : '');
     $('c-reason-l').hidden = !d.reason;
     $('c-reason-l').firstChild.textContent = d.reason === 'required' ? 'Motif du refus (obligatoire)' : 'Motif (facultatif)';
     $('c-reason').value = '';
@@ -953,6 +976,87 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
     if (d.reason) $('c-reason').focus();
   });
   $('c-cancel').addEventListener('click', function () { pending = null; reqPending = null; $('confirm').close(); });
+
+  // ------------------------------------------------------------ inscription par profil (ADR 0034)
+  // Profil choisi, pièce fournie, marques déclarées (simple indication : aucun rattachement), lettre d'agrément ;
+  // avant l'approbation : région, ville et profil complétés d'après la licence ; demande de la pièce manquante.
+  function loadSignup(org) {
+    return api('GET', '/supplier-signup?org=' + encodeURIComponent(org)).then(function (g) {
+      if (!$('d-signup') || $('sup-detail').dataset.org !== org) return;
+      state.signup = g;
+      var open = g.status !== 'validated';
+      var md = g.profile === 'Manufacturer' || g.profile === 'Distributor';
+      // 7A : bouton d'approbation correspondant à l'indication du fournisseur, signalé (le choix reste à l'administrateur).
+      var sug = g.spot_hint && $('sup-detail').querySelector('button[data-act="approve_' + g.spot_hint + '"]');
+      if (sug && !sug.dataset.hint) { sug.dataset.hint = '1'; sug.textContent += ' (indiqué par le fournisseur)'; }
+      // 6A : fabricants reconnus d'après les marques déclarées, rattachement en un clic ; distributeur sans rattachement signalé.
+      var links = g.links || [], matches = g.brand_matches || [];
+      var linkHtml = md ? '<div id="d-sg-links"><h3>Fabricants rattachés</h3>' +
+        (links.length ? '<p>' + links.map(function (l) { return esc(l.name) + ' <span class="muted">(' + (l.role === 'self' ? 'le fabricant lui-même' : 'distributeur agréé') + ')</span>'; }).join(', ') + '</p>'
+          : '<p class="muted">Aucun.</p>') +
+        (matches.length ? '<ul class="plain" id="d-sg-matches">' + matches.map(function (m) {
+          return '<li>' + esc(m.name) + ' <span class="muted">(' + esc((m.brands || []).join(', ')) + ')</span> <button class="btn btn-line" type="button" data-link="' + esc(m.id) + '">Rattacher</button></li>';
+        }).join('') + '</ul>' : '') +
+        (g.profile === 'Distributor' && !links.length ? '<p class="warn-t" id="d-sg-nolink">Sans rattachement à un fabricant, ce distributeur sera présenté « Fournisseur partenaire » aux acheteurs, jamais « agréé ».</p>' +
+          (open ? '<button class="btn btn-line" type="button" id="d-sg-spot">Reclasser en stock disponible</button>' : '') : '') + '</div>' : '';
+      var opt = function (v, l, cur) { return '<option value="' + esc(v) + '"' + (v === (cur || '') ? ' selected' : '') + '>' + esc(l) + '</option>'; };
+      var ask = (!g.has_license ? '<button class="btn btn-line" type="button" data-ask="licence">Demander la photo de la licence</button>' : '') +
+        (!g.has_code ? '<button class="btn btn-line" type="button" data-ask="number">Demander le numéro d\'immatriculation</button>' : '');
+      $('d-signup').innerHTML = '<h3>Inscription</h3><dl class="kv">' +
+        '<dt>Profil choisi</dt><dd id="d-sg-profile">' + esc(PROFILE[g.profile] || g.profile) + '</dd>' +
+        '<dt>Pièce fournie</dt><dd id="d-sg-piece">' + esc(PIECE[g.piece] || g.piece) + '</dd>' +
+        (g.profile === 'Spot' ? '<dt>Origine du stock (indiquée)</dt><dd id="d-sg-hint">' + esc({ broker: 'trading / broker', surplus: 'stock dormant d\'usine ou d\'EMS (surplus)' }[g.spot_hint] || 'non indiquée') + '</dd>' : '') +
+        (g.brands ? '<dt>Marques déclarées</dt><dd id="d-sg-brands">' + esc(g.brands) + ' <span class="muted">(déclaration du fournisseur : ne crée aucun rattachement)</span></dd>' : '') +
+        (g.profile === 'Distributor' || g.has_auth_letter ? '<dt>Lettre d\'agrément</dt><dd>' + (g.has_auth_letter ? 'déposée (lien dans la fiche WeChat « pending »)' : 'non déposée') + '</dd>' : '') +
+        // Logo (PNG de préférence) : lien signé d'une heure, usage interne, jamais montré aux acheteurs.
+        '<dt>Logo</dt><dd id="d-sg-logo">' + (g.logo_url ? '<a href="' + esc(g.logo_url) + '" target="_blank" rel="noopener noreferrer"><img class="sg-logo" src="' + esc(g.logo_url) +
+          '" alt="Logo de la société" width="64" height="64"></a> <span class="muted">' + esc((/\.(png|jpe?g|webp)(\?|$)/i.exec(g.logo_url) || [, '?'])[1].toUpperCase().replace('JPEG', 'JPG')) + '</span>'
+          : g.has_logo ? 'déposé (lien indisponible)' : '<span class="warn-t">non fourni</span>') + '</dd>' +
+        '<dt>Site web</dt><dd>' + esc(g.website || '—') + '</dd><dt>WeChat pro / compte de service</dt><dd>' + esc(g.wecom || '—') + '</dd>' +
+        '<dt>Encore à compléter</dt><dd id="d-sg-missing">' + ((g.missing || []).length ? '<span class="warn-t">' + esc(g.missing.map(function (k) { return MISS[k] || k; }).join(', ')) + '</span>' : 'rien : fiche complète') + '</dd>' +
+        '</dl>' +
+        ((g.contacts || []).length ? '<ul class="plain" id="d-sg-contacts">' + g.contacts.map(function (c) {
+          return '<li><strong>' + esc(c.name) + '</strong> · ' + esc(DUTY[c.duty] || c.duty || 'contact') + (c.role ? ' · ' + esc(c.role) : '') +
+            '<br><span class="muted">' + esc([c.phone, c.wechat ? 'WeChat ' + c.wechat : '', c.email].filter(Boolean).join(' · ') || 'aucune coordonnée') + '</span> ' +
+            '<span class="badge ' + (c.linked ? 'validated' : 'pending') + '">' + (c.linked ? 'relié au robot WeChat' : 'non relié : ne reçoit rien') + '</span></li>';
+        }).join('') + '</ul>' : '') + linkHtml +
+        (open ? '<form class="sg-f" id="d-sg-form"><div class="grid3">' +
+          '<label class="f">Région d\'immatriculation<select name="region">' + opt('', '—', g.region) + opt('CN', 'Chine continentale', g.region) + opt('HK', 'Hong Kong', g.region) + opt('OTHER', 'Autre', g.region) + '</select></label>' +
+          '<label class="f">Ville<input type="text" name="city" maxlength="60" value="' + esc(g.city || '') + '"></label>' +
+          '<label class="f">Profil<select name="profile">' + ['Manufacturer', 'Distributor', 'Spot', 'Broker', 'Surplus', 'Reseller'].map(function (v) { return opt(v, PROFILE[v], g.profile); }).join('') + '</select></label>' +
+          '</div><div class="actions"><button class="btn btn-line" type="submit">Enregistrer la fiche</button>' + ask + '</div><p class="muted" id="d-sg-out"></p></form>' : '');
+    }).catch(fail);
+  }
+  $('sup-detail').addEventListener('submit', function (ev) {
+    var f = ev.target.closest('form.sg-f'); if (!f) return;
+    ev.preventDefault();
+    var org = $('sup-detail').dataset.org;
+    api('POST', '/supplier-complete', { org: org, update: { region: f.region.value, city: f.city.value, profile: f.profile.value } })
+      .then(function () { show('Fiche de ' + org + ' complétée.', 'ok'); return Promise.all([loadSuppliers(), openSupplier(org)]); }).catch(fail);
+  });
+  $('sup-detail').addEventListener('click', function (ev) {
+    var org = $('sup-detail').dataset.org, g = state.signup;
+    var l = ev.target.closest('button[data-link]');
+    if (l && g) {
+      l.disabled = true;
+      api('POST', '/manufacturer/link', { id: l.getAttribute('data-link'), org: org, role: g.profile === 'Manufacturer' ? 'self' : 'authorized' })
+        .then(function () { show('Fournisseur ' + org + ' rattaché au fabricant.', 'ok'); return loadSignup(org); }).catch(fail).then(function () { l.disabled = false; });
+      return;
+    }
+    if (ev.target.closest('#d-sg-spot')) {
+      api('POST', '/supplier-complete', { org: org, update: { region: g.region, city: g.city, profile: 'Spot' } })
+        .then(function () { show('Fiche de ' + org + ' reclassée en stock disponible.', 'ok'); return Promise.all([loadSuppliers(), openSupplier(org)]); }).catch(fail);
+    }
+  });
+  $('sup-detail').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-ask]'); if (!b) return;
+    var org = $('sup-detail').dataset.org;
+    b.disabled = true;
+    api('POST', '/ask-doc', { org: org, kind: b.getAttribute('data-ask') }).then(function (r) {
+      $('d-sg-out').textContent = r.delivered ? 'Demande envoyée dans WeChat (' + r.delivered + ' contact(s)).'
+        : 'Demande non remise : aucun contact joignable dans WeChat (fenêtre de 48 h). Écrivez-lui directement.';
+    }).catch(fail).then(function () { b.disabled = false; });
+  });
   $('c-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     if (reqPending) return submitRequestDecision();
@@ -962,10 +1066,11 @@ details.hist ol{margin:4px 0 0;padding-left:18px;font-size:var(--text-xs);white-
       $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
       return;
     }
-    var path = { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
-    var label = { approve: 'approuvée', reject: 'refusée', pending: 'remise en attente' }[pending];
+    var spot = DECISION[pending].spot;
+    var path = spot ? '/approve' : { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
+    var label = spot ? 'approuvée comme ' + spot : { approve: 'approuvée', reject: 'refusée', pending: 'remise en attente' }[pending];
     $('c-ok').disabled = true;
-    api('POST', path, pending === 'approve' ? { org: org } : { org: org, reason: reason }).then(function () {
+    api('POST', path, spot ? { org: org, spot: spot } : pending === 'approve' ? { org: org } : { org: org, reason: reason }).then(function () {
       $('confirm').close(); pending = null;
       show('Société ' + org + ' ' + label + '.', 'ok');
       return Promise.all([loadSuppliers(), openSupplier(org)]);

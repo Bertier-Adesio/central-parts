@@ -41,7 +41,11 @@ export function createMock() {
       contacts: [{ label: '陳小姐', role: 'admin', openid: 'oFICTIF0108', bound_at: day(32, 7, 5), last_login_at: day(32, 7, 5) }],
       decisions: [] },
     { org_id: 'ORG-0112', name: 'Société hors Chine (fictif)', alias: 'P-202612345K', region: 'OTHER', code: '202612345K',
-      city: 'Singapore', country: null, profile: 'Reseller', currency: 'USD', lang: 'en', status: 'pending', rejected_reason: null,
+      city: 'Singapore', country: null, profile: 'Spot', currency: 'USD', lang: 'en', status: 'pending', rejected_reason: null,
+      website: 'https://exemple-fictif.sg', wecom: null, signupContacts: [
+        { id: 'CTC-1', name: 'Tan Wei (fictif)', duty: 'main', role: 'Director', phone: '+65 0000 0000', wechat: null, email: 'tan@exemple.test', linked: true },
+        { id: 'CTC-2', name: 'Lim (fictif)', duty: 'sales', role: null, phone: null, wechat: 'lim_fictif', email: null, linked: false }],
+      spot_hint: 'surplus', logo: true,
       requested_at: day(32, 10, 30), decided_at: null, has_license: false, registered_by: 'oFICTIF0112', contacts: [], decisions: [] },
     { org_id: 'ORG-0109', name: '上海样例贸易有限公司 (fictif)', alias: 'P-91310000MA1FL1MMXL', region: 'CN', code: '91310000MA1FL1MMXL',
       city: '上海', country: 'CN', profile: 'Reseller', currency: 'USD', lang: 'zh', status: 'rejected', rejected_reason: '营业执照不清晰',
@@ -171,6 +175,22 @@ export function createMock() {
   const tri = (x) => Object.fromEntries(Object.entries(x || {}).filter(([k, v]) => ['fr', 'en', 'zh'].includes(k) && String(v).trim()).map(([k, v]) => [k, String(v).trim()]));
   let contactSeq = 0;
   const find = (id) => orgs.find((o) => o.org_id === id);
+  // Inscription par profil (admin_supplier_signup, migration 20261111000044).
+  // Ce qui manque (app.signup_missing) et contacts reliés ou non au robot (app.contact_linked).
+  const missing = (o) => [!o.has_license && 'license', !o.code && 'number', !o.region && 'region', !o.city && 'city',
+    ['Manufacturer', 'Distributor'].includes(o.profile) && !o.brands && 'brands', !o.website && 'website', !o.wecom && 'wecom', !o.logo && 'logo',
+    !(o.signupContacts || []).some((c) => c.phone || c.wechat || c.email) && 'contact'].filter(Boolean);
+  const signup = (o) => ({ org_id: o.org_id, profile: o.profile, piece: o.has_license && o.code ? 'both' : o.has_license ? 'license' : o.code ? 'number' : 'none',
+    has_license: !!o.has_license, has_code: !!o.code, brands: o.brands || null, has_auth_letter: !!o.auth_letter, region: o.region, city: o.city, status: o.status,
+    website: o.website || null, wecom: o.wecom || null, missing: missing(o), contacts: o.signupContacts || [],
+    spot_pending: o.profile === 'Spot' && o.status !== 'validated', spot_hint: o.spot_hint || null,
+    // Logo : lien signé dans la fonction ; ici une image en ligne (data:, autorisée par la CSP), suffixe du format.
+    has_logo: !!o.logo, logo_url: o.logo ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==#logo.png' : null,
+    // Rattachements existants et fabricants reconnus d'après les marques déclarées (8A, 6A).
+    links: state.mfrs.flatMap((m) => m.links.filter((d) => d.org_id === o.org_id).map((d) => ({ id: m.id, name: m.name, role: d.role }))),
+    brand_matches: state.mfrs.filter((m) => !m.links.some((d) => d.org_id === o.org_id)
+      && m.brands.some((b) => String(o.brands || '').split(/\s*,\s*/).some((x) => x && x.toUpperCase() === b.toUpperCase())))
+      .map((m) => ({ id: m.id, name: m.name, brands: m.brands })) });
   const lines = (id) => lots.filter((l) => l.org_id === id && l.qty > 0).length;
   const decide = (o, action, reason) => {
     o.decisions.unshift({ action, from_status: o.status, reason: reason || null, at: new Date().toISOString(), by: ADMIN_EMAIL });
@@ -216,8 +236,12 @@ export function createMock() {
         for (const o of orgs) counts[o.status] = (counts[o.status] || 0) + 1;
         const rows = orgs.filter((o) => !s || o.status === s).sort((a, b) => b.requested_at.localeCompare(a.requested_at))
           .map((o) => ({ org_id: o.org_id, name: o.name, alias: o.alias, region: o.region, code: o.code, city: o.city, profile: o.profile,
-            currency: o.currency, status: o.status, requested_at: o.requested_at, decided_at: o.decided_at, lines: lines(o.org_id) }));
+            currency: o.currency, status: o.status, requested_at: o.requested_at, decided_at: o.decided_at, lines: lines(o.org_id), missing: missing(o) }));
         return [200, { counts, rows }];
+      }
+      if (path === '/supplier-signup') {
+        const o = find(query.get('org'));
+        return o ? [200, signup(o)] : [409, { error: 'not_allowed' }];
       }
       if (path === '/supplier') {
         const o = find(query.get('org'));
@@ -455,12 +479,29 @@ export function createMock() {
         return [200, profile(o)];
       }
       if (path === '/approve') {
+        // Stock disponible (ADR 0034) : broker ou surplus obligatoire.
+        if (o.status !== 'validated' && o.profile === 'Spot') {
+          if (!['broker', 'surplus'].includes(body.spot)) return [422, { error: 'spot_category_required' }];
+          o.profile = body.spot === 'broker' ? 'Broker' : 'Surplus';
+          o.decisions.unshift({ action: 'profile', from_status: o.status, reason: 'Spot → ' + o.profile, at: new Date().toISOString(), by: ADMIN_EMAIL });
+        }
         if (o.status !== 'validated') {
           if (!/^V-\d+$/.test(o.alias)) o.alias = 'V-' + (Math.max(...orgs.map((x) => +(/^V-(\d+)$/.exec(x.alias) || [0, 0])[1])) + 1);
-          decide(o, 'approved'); o.status = 'validated'; o.rejected_reason = null; o.decided_at = new Date().toISOString();
+          decide(o, 'approved', o.has_license && o.code ? null : o.has_license ? 'pièce unique : licence' : o.code ? 'pièce unique : numéro' : null); o.status = 'validated'; o.rejected_reason = null; o.decided_at = new Date().toISOString();
         }
         state.notified.push({ org: o.org_id, kind: 'approved' });
         return [200, { org_id: o.org_id, status: 'validated', alias: o.alias }];
+      }
+      if (path === '/supplier-complete') {
+        if (o.status === 'validated') return [409, { error: 'not_allowed' }];
+        const u = body.update || {};
+        if (u.profile && u.profile !== o.profile) o.decisions.unshift({ action: 'profile', from_status: o.status, reason: o.profile + ' → ' + u.profile, at: new Date().toISOString(), by: ADMIN_EMAIL });
+        Object.assign(o, { region: u.region || null, city: u.city || null, profile: u.profile || o.profile });
+        return [200, signup(o)];
+      }
+      if (path === '/ask-doc') {
+        state.notified.push({ org: o.org_id, kind: 'ask-' + (body.kind === 'number' ? 'number' : 'licence') });
+        return [200, { org_id: o.org_id, kind: body.kind, delivered: o.contacts.length }];
       }
       if (path === '/reject') {
         const why = String(body.reason || '').trim();

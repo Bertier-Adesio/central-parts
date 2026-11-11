@@ -6,9 +6,17 @@
 //   POST /depot/qr/poll     {scene}    → en attente, ou jeton de session une fois le QR code scanné
 //                                        (status « ok » : société connue ; « register » : compte à inscrire)
 //   GET  /depot/me          → société du compte (null s'il doit s'inscrire), et jeton de session à jour
-//   POST /depot/register    {name, region, code, city, profile, currency} → enregistre la société, en attente de validation
-//                           (region : CN, HK ou OTHER ; CN par défaut pour une page restée en cache)
+//   POST /depot/doc-url     {kind: licence|agrement|logo, file_name} → lien de dépôt signé pour une pièce déposée AVANT
+//                           l'inscription (dossier pending/<empreinte de l'openid>/, ADR 0034)
+//   POST /depot/register    {name, profile: Manufacturer|Distributor|Spot, currency, code?, region?, city?, license_path?,
+//                           brands?, auth_path?, website?, wecom?, contacts: [{family_name, given_name, role, phone, wechat,
+//                           email, duty}]} → enregistre la société, en attente de validation. Bloquent l'envoi : nom, profil,
+//                           photo de la licence OU numéro, nom du contact principal, devise ; le reste se complète plus tard
+//   POST /depot/signup      {name?, profile?, code?, region?, city?, brands?, website?, wecom?} → compléter sa fiche ; après
+//                           l'approbation, le nom, le profil et le numéro ne changent plus que par Central.Parts (ADR 0034)
 //   POST /depot/license-url {file_name}  → lien de dépôt signé pour la photo de la licence (营业执照)
+//   POST /depot/logo-url    {file_name}  → lien de dépôt signé pour le logo (PNG de préférence, JPG ou WebP, 1 Mo),
+//                           puis POST /depot/signup {logo_path} ; usage interne, jamais montré aux acheteurs
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?, currency}  → lien de dépôt signé vers le dossier de la société ;
 //                           currency (USD, CNH, EUR, HKD) : devise des prix si le fichier ne l'indique pas, obligatoire
@@ -38,7 +46,7 @@
 // Le scan est reçu par la fonction wechat-events (消息推送). Secrets de la fonction (jamais dans le dépôt) :
 //   WECHAT_APPID, WECHAT_SECRET (compte de service), DEPOT_SECRET (64 caractères aléatoires).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { licensePath, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
+import { LOGO_MAX_BYTES, licensePath, logoPath, pendingDocPath, pendingDocPrefix, randomScene, readSession, signSession, storagePath } from '../_shared/depot.js';
 import { notifyOperators, requestAnswerNote, supplierCard, wechatPost } from '../_shared/wechat.ts';
 import { closeRfq, deliverWebhooks } from '../_shared/rfq-dispatch.ts';
 import { sourcingOfferOperatorText } from '../_shared/robot-texts.js';
@@ -50,7 +58,7 @@ const ORIGINS = (Deno.env.get('DEPOT_ORIGINS') || 'https://central.parts').split
 const SECRET = Deno.env.get('DEPOT_SECRET') || '';
 const SITE = 'https://central.parts/depot/';
 // Erreurs de register_supplier (codes SQL) → codes affichés par la page.
-const REGISTER_ERRORS: Record<string, string> = { CP001: 'code_invalid', CP002: 'company_exists', CP003: 'already_bound', CP004: 'fields' };
+const REGISTER_ERRORS: Record<string, string> = { CP001: 'code_invalid', CP002: 'company_exists', CP003: 'already_bound', CP004: 'fields', CP008: 'verification' };
 
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin') || '';
@@ -105,18 +113,57 @@ Deno.serve(async (req) => {
       return json({ org: who, token: await signSession(SECRET, { org: who?.org_id || null, openid: session.openid }) });
     }
 
+    // Pièce déposée avant l'inscription : photo de la licence, ou lettre d'agrément d'un distributeur.
+    if (req.method === 'POST' && path.endsWith('/doc-url')) {
+      if (who) return json({ error: 'already_bound' }, 409);
+      const b = await body();
+      const key = pendingDocPath(await pendingDocPrefix(session.openid), String(b.kind || ''), b.file_name);
+      if (!key) return json({ error: 'format', detail: b.kind === 'logo' ? 'PNG, JPG ou WEBP' : 'JPG, PNG, HEIC, WEBP ou PDF' }, 422);
+      const { data, error } = await db.storage.from('supplier-docs').createSignedUploadUrl(key);
+      if (error) return json({ error: 'storage', detail: error.message }, 500);
+      return json({ signed_url: data.signedUrl, path: key, max_bytes: b.kind === 'logo' ? LOGO_MAX_BYTES : 10485760 });
+    }
+
     if (req.method === 'POST' && path.endsWith('/register')) {
       if (who) return json({ error: 'already_bound' }, 409);
       const b = await body();
+      const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
+      // Devise obligatoire, sans valeur par défaut ; photo OU numéro (contrôlé aussi en base, CP008).
+      if (!['USD', 'CNH', 'EUR', 'HKD'].includes(String(b.currency || '').toUpperCase())) return json({ error: 'fields', field: 'currency' }, 422);
+      if (!str(b.code) && !str(b.license_path)) return json({ error: 'verification' }, 422);
+      const contacts = Array.isArray(b.contacts) ? b.contacts.slice(0, 4) : [];
+      if (!contacts.length || !str(contacts[0]?.family_name) && !str(contacts[0]?.given_name)) return json({ error: 'fields', field: 'contact' }, 422);
       const { data, error } = await db.rpc('register_supplier', {
-        p_openid: session.openid, p_name: b.name, p_code: b.code, p_city: b.city, p_profile: b.profile, p_currency: b.currency || 'USD', p_region: b.region || 'CN',
+        p_openid: session.openid, p_name: b.name, p_code: str(b.code), p_city: str(b.city), p_profile: b.profile,
+        p_currency: String(b.currency).toUpperCase(), p_region: str(b.region), p_license_path: str(b.license_path),
+        p_brands: str(b.brands), p_auth_path: str(b.auth_path), p_website: str(b.website), p_wecom: str(b.wecom), p_contacts: contacts,
+        p_spot_hint: b.spot_hint === "broker" || b.spot_hint === "surplus" ? b.spot_hint : null, p_logo_path: str(b.logo_path),
       });
-      if (error) return json({ error: REGISTER_ERRORS[error.code] || 'database', detail: error.message }, error.code in REGISTER_ERRORS ? 422 : 500);
+      if (error) {
+        return json({ error: REGISTER_ERRORS[error.code] || 'database', field: error.details || null, detail: error.message },
+          error.code in REGISTER_ERRORS ? 422 : 500);
+      }
+      // Fiche pour les opérateurs dans WeChat : profil, pièce fournie, marques déclarées.
+      const { data: pending } = await db.rpc('pending_suppliers');
+      const s = (pending || []).find((p: Record<string, unknown>) => p.org_id === data.org_id);
+      if (s) await notifyOperators(db, await supplierCard(db, s)).catch(() => {});
       return json({ org: data, token: await signSession(SECRET, { org: data.org_id, openid: session.openid }) });
     }
 
     if (!who) return json({ error: 'not_bound' }, 403);
     const org: string = who.org_id;
+    // Informations de la société (licence, logo, fiche) : l'administrateur responsable de la fiche seulement ;
+    // la base applique la même règle (app.depot_org, 42501) pour la fiche, les contacts et la page du fabricant.
+    if (req.method === 'POST' && /\/(logo-url|license-url|license)$/.test(path) && !who.can_edit) return json({ error: 'forbidden' }, 403);
+
+    if (req.method === 'POST' && path.endsWith('/logo-url')) {
+      const { file_name } = await body();
+      const key = logoPath(org, file_name);
+      if (!key) return json({ error: 'logo_format', detail: 'PNG, JPG ou WEBP' }, 422);
+      const { data, error } = await db.storage.from('supplier-docs').createSignedUploadUrl(key);
+      if (error) return json({ error: 'storage', detail: error.message }, 500);
+      return json({ signed_url: data.signedUrl, path: key, max_bytes: LOGO_MAX_BYTES });
+    }
 
     if (req.method === 'POST' && path.endsWith('/license-url')) {
       const { file_name } = await body();
@@ -227,6 +274,19 @@ Deno.serve(async (req) => {
       })().catch(() => {});
       const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
       if (rt) rt.waitUntil(done); else await done;
+      return json(data);
+    }
+
+    // ---------------------------------------------------------------- compléter sa fiche (ADR 0034)
+    if (req.method === 'POST' && path.endsWith('/signup')) {
+      const b = await body();
+      const keep = ['name', 'profile', 'code', 'region', 'city', 'brands', 'website', 'wecom', 'logo_path'];
+      const p = Object.fromEntries(Object.entries(b).filter(([k, v]) => keep.includes(k) && (typeof v === 'string' || v === null)));
+      const { data, error } = await db.rpc('supplier_signup_save', { p_openid: session.openid, p });
+      if (error) {
+        const code = error.code === '42501' ? 'forbidden' : REGISTER_ERRORS[error.code] || 'database';
+        return json({ error: code }, error.code === '42501' ? 403 : 422);
+      }
       return json(data);
     }
 
