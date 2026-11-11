@@ -48,6 +48,7 @@ async function api(route) {
     // Mêmes règles que la base (register_supplier, ADR 0034) : photo OU numéro ; numéro contrôlé selon la région.
     if (!body.code && !body.license_path) return reply({ error: 'verification' }, 422);
     if (!body.contacts?.[0]?.family_name && !body.contacts?.[0]?.given_name) return reply({ error: 'fields', field: 'contact' }, 422);
+    if (!body.logo_path) return reply({ error: 'logo', field: 'logo' }, 422);
     if (body.code && !registrationNumberOk(body.region || 'CN', body.code)) return reply({ error: 'code_invalid' }, 422);
     const missing = [!body.license_path && 'license', !body.code && 'number', !body.region && 'region', !body.city && 'city',
       ['Manufacturer', 'Distributor'].includes(body.profile) && !body.brands && 'brands', !body.website && 'website', !body.wecom && 'wecom',
@@ -188,21 +189,26 @@ ok(await page.isVisible('text=注册公司'), 'formulaire d\'inscription en chin
 
 // 2. Inscription par profil (ADR 0034) : on demande tout, on ne bloque presque sur rien.
 ok((await page.$$eval('input[name=r-profile]', (r) => r.map((x) => x.value).join(','))) === 'Manufacturer,Distributor,Spot', '3 profils proposés');
-ok((await page.$$('#reg .req')).length === 5, 'cinq marques « 必填 » : nom, profil, pièce, contact principal, devise');
+ok((await page.$$('#reg .req')).length === 6, 'six marques « 必填 » : nom, profil, logo, pièce, contact principal, devise');
 ok((await page.textContent('#reg')).includes('资料越完整，审核越快'), 'ligne d\'encouragement sous le titre');
 ok(await page.isVisible('#r-city') && await page.isVisible('#r-web') && await page.isVisible('#r-wecom') && await page.isVisible('#r-region'), 'ville, site web, WeChat pro et région demandés');
 ok(!(await page.$$eval('input[name=r-currency]', (r) => r.some((x) => x.checked))), 'devise : aucune valeur présélectionnée');
 ok(await page.isHidden('.ct.extra[data-i="1"]') && await page.isVisible('#r-add'), 'contacts supplémentaires repliés derrière « + 添加联系人 »');
-ok((await page.textContent('#r-count')).startsWith('必填 0/5') && (await page.textContent('#r-count')).includes('还缺：公司全称'), 'compteur des champs obligatoires : 0/5 et ce qui manque');
+ok((await page.textContent('#r-count')).startsWith('必填 0/6') && (await page.textContent('#r-count')).includes('还缺：公司全称'), 'compteur des champs obligatoires : 0/6 et ce qui manque');
 ok(await page.isVisible('.ct[data-i="0"] [name=phone]') && await page.isHidden('.ct[data-i="0"] [name=email]'), 'contact principal : téléphone visible, poste, WeChat et e-mail repliés derrière « 更多 »');
 await page.click('#r-add'); await page.click('#r-add'); await page.click('#r-add');
 ok(await page.isVisible('.ct.extra[data-i="3"]') && await page.isHidden('#r-add'), '3 contacts supplémentaires au plus');
 await page.fill('#r-name', '深圳测试电子有限公司');
-ok((await page.textContent('#r-count')).startsWith('必填 1/5'), 'compteur mis à jour pendant la saisie');
+ok((await page.textContent('#r-count')).startsWith('必填 1/6'), 'compteur mis à jour pendant la saisie');
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('请选择公司类型') && await page.evaluate(() => document.activeElement.name === 'r-profile'), 'profil obligatoire, et il prend le focus');
 await page.check('input[name=r-profile][value=Distributor]');
 ok(await page.isVisible('#r-brands-d') && await page.isVisible('#r-auth') && await page.isHidden('#r-brands-m'), 'distributeur : marques et lettre d\'agrément');
+await page.click('#r-send');
+ok((await page.textContent('#msg')).includes('请上传公司标志（Logo）') && await page.evaluate(() => document.activeElement.id === 'r-logo') && !state.calls.includes('POST /register'),
+  'logo obligatoire : refusé dans la page, le champ prend le focus');
+ok((await page.textContent('#r-count')).includes('公司标志（Logo）'), 'compteur : le logo dans ce qui manque');
+await page.setInputFiles('#r-logo', { name: 'logo.png', mimeType: 'image/png', buffer: PNG_256 });
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('请上传营业执照照片，或填写注册号码（二选一）') && !state.calls.includes('POST /register'), 'marques facultatives ; ni photo ni numéro : refusé dans la page');
 await page.fill('#r-code', 'AB-12345');
@@ -264,7 +270,7 @@ await page.selectOption('.ct[data-i="1"] [name=duty]', 'sales');
 await page.fill('.ct[data-i="2"] [name=wechat]', 'logistique_fictif');
 await page.selectOption('.ct[data-i="2"] [name=duty]', 'logistics');
 await page.check('input[name=r-currency][value=CNH]');
-ok((await page.textContent('#r-count')) === '必填 5/5，可以提交', 'compteur : 5/5, prêt à envoyer');
+ok((await page.textContent('#r-count')) === '必填 6/6，可以提交', 'compteur : 6/6, prêt à envoyer');
 await page.setInputFiles('#r-auth', { name: 'shouquan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF') });
 await page.click('#r-send');
 await page.waitForSelector('#v-app:not([hidden])');
@@ -558,6 +564,7 @@ for (const width of [390, 1280]) {
   await p2.fill('#r-name', 'HK TEST COMPANY LIMITED');
   await p2.check('input[name=r-profile][value=Manufacturer]');
   await p2.fill('#r-brands-m', 'Marque HK');
+  await p2.setInputFiles('#r-logo', { name: 'logo.png', mimeType: 'image/png', buffer: PNG_256 });   // logo obligatoire
   await p2.fill('.ct[data-i="0"] [name=given_name]', 'Mary');
   await p2.check('input[name=r-currency][value=HKD]');
   await p2.selectOption('#r-region', 'CN');

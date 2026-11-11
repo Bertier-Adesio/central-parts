@@ -2,6 +2,7 @@
 // et des données fictives : formulaire d'inscription (Hong Kong), dépôt de la licence, chargement du stock et rapport.
 // À relancer quand l'espace fournisseur change.
 // Usage : (cd site && python3 -m http.server 8765) & node tools/capture-aide.mjs
+import zlib from 'node:zlib';
 import { mkdirSync } from 'node:fs';
 
 const pw = await import(process.env.PLAYWRIGHT || 'playwright');
@@ -17,6 +18,16 @@ const IMPORT = { id: 'IMP-1', file_name: '20261103-090000-stock-complet-devise-U
   duplicates: 0, missing_date_code: 0, withdrawn: 0, received_at: '2026-11-03T09:00:00Z',
   report: { rejected: [{ line: 14, code: 'qty_invalid', reason: 'Quantité invalide' }, { line: 377, code: 'breaks_price_order', reason: 'Prix des paliers en hausse' }] } };
 
+// PNG transparent de n × n pixels, en mémoire (aucun fichier image dans le dépôt pour cela).
+function logoPng(n) {
+  const table = Array.from({ length: 256 }, (_, k) => { let c = k; for (let i = 0; i < 8; i++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let x = 0xffffffff; for (const v of b) x = table[(x ^ v) & 0xff] ^ (x >>> 8); return (x ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]);
+    const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(n, 0); ihdr.writeUInt32BE(n, 4); ihdr[8] = 8; ihdr[9] = 6;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(Buffer.alloc(n * (1 + n * 4)))), chunk('IEND', Buffer.alloc(0))]);
+}
+
 async function run(lang) {
   const state = { org: null, uploaded: false };
   const browser = await chromium.launch();
@@ -28,7 +39,9 @@ async function run(lang) {
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } });
     if (path === '/qr/poll') return reply({ status: 'register', token: 'T0' });
     if (path === '/me') return reply({ org: state.org, token: 'T1' });
-    if (path === '/register') { state.org = { ...ORG }; return reply({ org: state.org, token: 'T2' }); }
+    // Logo (obligatoire) déposé avant l'inscription ; l'administrateur du compte peut ensuite déposer la licence.
+    if (path === '/doc-url') return reply({ signed_url: 'https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/v1/upload/sign/x', path: 'pending/' + 'c'.repeat(32) + '/logo-20261111-090000.png' });
+    if (path === '/register') { state.org = { ...ORG, can_edit: true }; return reply({ org: state.org, token: 'T2' }); }
     if (path === '/imports') return reply(state.uploaded ? [IMPORT] : []);
     if (path === '/quality') return reply(state.uploaded ? { lots: 1806, completeness: 0.62, rates: {} } : {});
     if (path === '/contacts') return reply({ members: [{ label: null, role: 'admin', me: true, bound_at: '2026-11-03T08:00:00Z' }], invites: [] });
@@ -36,6 +49,7 @@ async function run(lang) {
     if (path === '/rfqs') return reply({ demands: [], score: null });
     return reply({});
   });
+  await page.route('https://tuhbzziqyisdnqzfvtkh.supabase.co/storage/**', (r) => r.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' }));
   await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => r.abort());
   const shot = async (sel, name) => {
     await page.evaluate(() => document.activeElement && document.activeElement.blur());
@@ -57,6 +71,8 @@ async function run(lang) {
   await page.fill('.ct[data-i="0"] [name=family_name]', lang === 'zh' ? '陈' : 'Chan');
   await page.fill('.ct[data-i="0"] [name=given_name]', lang === 'zh' ? '小姐' : 'Mary');
   await page.check('input[name=r-currency][value=USD]');
+  // Logo obligatoire : PNG fictif de 256 × 256 (transparent), pour que le compteur affiche 6/6 sans avertissement.
+  await page.setInputFiles('#r-logo', { name: 'logo.png', mimeType: 'image/png', buffer: logoPng(256) });
   await shot('#reg', 'inscription');
 
   // 2. Société en attente : dépôt de la licence.

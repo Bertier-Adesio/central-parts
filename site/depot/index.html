@@ -192,7 +192,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
         </fieldset>
         <label><span data-t="fWeb">公司网站</span><input type="text" id="r-web" inputmode="url" maxlength="300" autocomplete="url"><span class="warn" data-w="web" hidden></span></label>
         <label><span data-t="fWecom">企业微信或公众号（名称或微信号）</span><input type="text" id="r-wecom" maxlength="100"></label>
-        <label class="file"><span data-t="fLogo">公司标志（Logo）</span><input type="file" id="r-logo" accept="image/png,image/jpeg,image/webp">
+        <label class="file"><span><span data-t="fLogo">公司标志（Logo）</span> <span class="req" data-t="req">必填</span></span><input type="file" id="r-logo" accept="image/png,image/jpeg,image/webp">
           <span class="hint" data-t="fLogoHint">格式：PNG（推荐，透明背景），也可 JPG 或 WebP。建议正方形，至少 200 × 200 像素，不超过 1 MB。仅供 Central.Parts 内部使用，不会向买家展示。</span>
           <span class="warn" id="r-logo-warn" hidden></span><img class="logo-prev" id="r-logo-prev" alt="" hidden></label>
       </fieldset>
@@ -390,8 +390,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       wLogoPng: '建议使用 PNG（透明背景）。不影响提交。', wLogoSmall: '图片较小（{w} × {h} 像素），建议至少 200 × 200 像素。不影响提交。',
       fSpotHint: '库存主要来自（选填，帮助审核）', spotBroker: '贸易 / 经纪', spotSurplus: '工厂或 EMS 呆滞库存',
       ctMore: '更多：职位、微信号、邮箱', ctInvHint: '提交后，每位同事会得到一个邀请链接（14 天有效），请转发给对方：对方用微信打开后，才能收到询价通知。',
-      reqCount: '必填 {n}/5', reqDone: '必填 5/5，可以提交', reqMissing: '还缺：{list}',
-      reqItems: { name: '公司全称', profile: '公司类型', verification: '营业执照照片或注册号码', contact: '主要联系人姓名', currency: '报价货币' },
+      reqCount: '必填 {n}/6', reqDone: '必填 6/6，可以提交', reqMissing: '还缺：{list}',
+      reqItems: { name: '公司全称', profile: '公司类型', logo: '公司标志（Logo）', verification: '营业执照照片或注册号码', contact: '主要联系人姓名', currency: '报价货币' },
       invOutTitle: '转发邀请链接', invOutLead: '请把各自的链接转发给以下同事（14 天有效）。对方用微信打开并扫码后，即可收到询价和订单通知。', invOutFail: '未能生成邀请链接，请稍后在「公司资料」中重试。',
       req: '必填', reqOne: '二选一 · 必填', regEnc: '资料越完整，审核越快。带“必填”的项目填好即可提交，其余可以稍后补充。',
       blkCompany: '公司', blkContacts: '联系人', fWeb: '公司网站', fWecom: '企业微信或公众号（名称或微信号）',
@@ -455,7 +455,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       valLive: '{live} 条报价在线，有效期至 {date}（有效期 {ttl} 天）。', valOld: '{n} 条报价已过期，不再向采购方展示。', valUpd: '本月已更新 {n} 天（北京时间，每天最多计一次），计入您的供应商评分。',
       reconfirmed: '已确认：{n} 条报价有效期至 {date}。',
       e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
-        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。', logo_format: '公司标志的格式不支持：请上传 PNG（推荐）、JPG 或 WebP，或删除该文件。', logo_size: '公司标志太大：不超过 1 MB。',
+        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。', logo: '请上传公司标志（Logo）：PNG 格式最佳，也可 JPG 或 WebP。', logo_format: '公司标志的格式不支持：请上传 PNG（推荐）、JPG 或 WebP，或删除该文件。', logo_size: '公司标志太大：不超过 1 MB。',
         code_invalid: '统一社会信用代码有误，请核对营业执照。', contact: '请填写主要联系人的姓名。', region: '填写注册号码时，请选择注册地区。', verification: '请上传营业执照照片，或填写注册号码（二选一）。', profile: '请选择公司类型。', brands: '请填写品牌。', name: '请填写公司全称。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
         already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
         expired: '二维码已过期，请刷新。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
@@ -475,8 +475,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       wLogoPng: 'PNG with a transparent background works best. You can still submit.', wLogoSmall: 'Small image ({w} × {h} pixels): at least 200 × 200 pixels is recommended. You can still submit.',
       fSpotHint: 'Where does most of your stock come from? (optional, helps the review)', spotBroker: 'Trading / brokering', spotSurplus: 'Factory or EMS excess stock',
       ctMore: 'More: job title, WeChat ID, email', ctInvHint: 'After you submit, each colleague gets an invitation link (valid 14 days) for you to forward: they receive request notifications once they open it in WeChat.',
-      reqCount: 'Required {n}/5', reqDone: 'Required 5/5, ready to submit', reqMissing: 'Missing: {list}',
-      reqItems: { name: 'company name', profile: 'company type', verification: 'licence photo or registration number', contact: 'main contact name', currency: 'quote currency' },
+      reqCount: 'Required {n}/6', reqDone: 'Required 6/6, ready to submit', reqMissing: 'Missing: {list}',
+      reqItems: { name: 'company name', profile: 'company type', logo: 'company logo', verification: 'licence photo or registration number', contact: 'main contact name', currency: 'quote currency' },
       invOutTitle: 'Forward the invitation links', invOutLead: 'Send each colleague their own link (valid 14 days). Once they open it in WeChat and scan, they receive request and order notifications.', invOutFail: 'The invitation link could not be created: try again later under "Company profile".',
       req: 'required', reqOne: 'one of the two · required', regEnc: 'The more you fill in, the faster the review. Only the fields marked "required" are needed to submit; the rest can be added later.',
       blkCompany: 'Company', blkContacts: 'Contacts', fWeb: 'Company website', fWecom: 'WeCom or Official Account (name or ID)',
@@ -540,7 +540,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       valLive: '{live} offers online, valid until {date} ({ttl}-day validity).', valOld: '{n} offers have expired and are no longer shown to buyers.', valUpd: 'Updated on {n} day(s) this month (China time, once a day at most): this counts towards your supplier rating.',
       reconfirmed: 'Confirmed: {n} offers valid until {date}.',
       e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
-        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.', logo_format: 'Logo format not accepted: upload a PNG (preferred), JPG or WebP, or remove the file.', logo_size: 'The logo is too large: 1 MB at most.',
+        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.', logo: 'Please upload your company logo: PNG works best, JPG or WebP are also accepted.', logo_format: 'Logo format not accepted: upload a PNG (preferred), JPG or WebP, or remove the file.', logo_size: 'The logo is too large: 1 MB at most.',
         code_invalid: 'The unified social credit code is not valid: please check the business licence.', contact: 'Please enter the main contact\'s name.', region: 'Please choose the region of registration for this number.', verification: 'Please upload your licence photo or enter your registration number.', profile: 'Please choose your company type.', brands: 'Please enter your brand(s).', name: 'Please enter the full company name.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
         already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
         expired: 'The QR code has expired, please refresh it.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
@@ -682,7 +682,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   // 3B : compteur des cinq champs obligatoires ; à l'erreur, le premier champ manquant prend le focus.
   function regState() {
     var c = readContacts()[0];
-    return { name: !!$('r-name').value.trim(), profile: !!regProfile(), verification: !!($('r-lic').files[0] || $('r-code').value.trim()),
+    return { name: !!$('r-name').value.trim(), profile: !!regProfile(), logo: !!$('r-logo').files[0], verification: !!($('r-lic').files[0] || $('r-code').value.trim()),
              contact: !!(c.family_name || c.given_name), currency: !!regCurrency() };
   }
   function renderCount() {
@@ -694,7 +694,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   $('reg').addEventListener('input', renderCount);
   $('reg').addEventListener('change', renderCount);
   renderCount();
-  var FOCUS = { logo_format: 'r-logo', logo_size: 'r-logo', name: 'r-name', profile: 'input[name=r-profile]', verification: 'r-lic', region: 'r-region', code_invalid: 'r-code', number_invalid: 'r-code',
+  var FOCUS = { logo: 'r-logo', logo_format: 'r-logo', logo_size: 'r-logo', name: 'r-name', profile: 'input[name=r-profile]', verification: 'r-lic', region: 'r-region', code_invalid: 'r-code', number_invalid: 'r-code',
                 contact: '.ct[data-i="0"] [name=family_name]', currency: 'input[name=r-currency]' };
   function regErr(code) {
     err(code);
@@ -767,7 +767,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     document.querySelectorAll('#reg .warn[data-w]').forEach(function (w) { checkWarn(w.parentNode.querySelector('input')); });
     if (!name) return regErr('name');
     if (!profile) return regErr('profile');
-    var logo = $('r-logo').files[0];   // champ facultatif ; un fichier choisi doit être une image acceptée (ordre du formulaire)
+    var logo = $('r-logo').files[0];   // obligatoire (décision de Bertier du 11 novembre) : PNG de préférence, JPG ou WebP
+    if (!logo) return regErr('logo');
     if (logoProblem(logo)) return regErr(logoProblem(logo));
     if (!lic && !code) return regErr('verification');
     if (code && !region) return regErr('region');
