@@ -220,6 +220,22 @@ do $$ begin
   perform tests.eq('profils existants inchangés', (select count(*) from public.organizations where profile = 'Spot' and kyb = 'validated')::int, 0);
 end $$;
 
+-- Seul l'administrateur (responsable de la fiche) modifie les informations de la société ; un membre invité les lit.
+do $$
+declare t text; d text := (select v from tests.vars where k = 'dist');
+begin
+  t := public.create_member_invite('oIP-DIST', 'Membre (fictif)');
+  perform public.redeem_depot_invite(t, 'oIP-MEMBRE');
+  perform tests.eq('administrateur : peut modifier ; membre invité : non',
+    (public.depot_identity('oIP-DIST')->>'can_edit') || ' ' || (public.depot_identity('oIP-MEMBRE')->>'role') || ' ' || (public.depot_identity('oIP-MEMBRE')->>'can_edit'),
+    'true member false');
+  perform tests.fails('membre : fiche (ville) refusée', $s$select public.supplier_signup_save('oIP-MEMBRE', '{"city": "X"}')$s$, '42501');
+  perform tests.fails('membre : logo refusé',
+    format($s$select public.supplier_signup_save('oIP-MEMBRE', '{"logo_path": "%s/logo-20261111-090000.png"}')$s$, d), '42501');
+  perform tests.eq('membre : rien n''a changé', (select city || ' ' || coalesce(company_logo_path, '-') from public.organizations where id = d), 'Shenzhen -');
+  delete from public.wechat_identities where openid = 'oIP-MEMBRE';
+end $$;
+
 -- Coordonnées des contacts : aucune vue acheteur, aucune réponse de l'API d'offres, aucun journal (5A).
 insert into public.lots (id, seller_id, mpn, manufacturer, qty, unit_price, currency) values
   ('LOT-IP2', (select v from tests.vars where k = 'dist'), 'IPCONTACT1', 'Marque A', 100, 1, 'USD');

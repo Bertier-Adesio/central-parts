@@ -152,6 +152,9 @@ Deno.serve(async (req) => {
 
     if (!who) return json({ error: 'not_bound' }, 403);
     const org: string = who.org_id;
+    // Informations de la société (licence, logo, fiche) : l'administrateur responsable de la fiche seulement ;
+    // la base applique la même règle (app.depot_org, 42501) pour la fiche, les contacts et la page du fabricant.
+    if (req.method === 'POST' && /\/(logo-url|license-url|license)$/.test(path) && !who.can_edit) return json({ error: 'forbidden' }, 403);
 
     if (req.method === 'POST' && path.endsWith('/logo-url')) {
       const { file_name } = await body();

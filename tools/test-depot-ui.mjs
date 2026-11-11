@@ -33,7 +33,7 @@ const png = (w, h) => {
 const PNG_256 = png(256, 256);
 const JPG_1PX = png(1, 1);   // contenu PNG présenté comme un JPEG : le navigateur le lit d'après son contenu
 const state = { org: null, contacts: { members: [{ label: null, role: 'admin', me: true, bound_at: '2026-10-31T10:00:00Z' }], invites: [] }, calls: [] };
-const ORG = { org_id: 'ORG-0107', name: '深圳测试电子有限公司', alias: 'P-91350100M000100Y43', lang: 'zh', status: 'pending', role: 'admin', has_license: false, rejected_reason: null };
+const ORG = { org_id: 'ORG-0107', name: '深圳测试电子有限公司', alias: 'P-91350100M000100Y43', lang: 'zh', status: 'pending', role: 'admin', can_edit: true, has_license: false, rejected_reason: null };
 
 async function api(route) {
   const req = route.request(), path = new URL(req.url()).pathname.replace('/functions/v1/depot', '');
@@ -338,6 +338,15 @@ ok((await page.textContent('#team-list')).includes('小王'), 'invitation en cou
 await toggleLang(page);
 ok((await page.textContent('h1')) === 'Supplier centre' && (await page.textContent('#org-alias')) === 'Under review', 'bascule en anglais');
 ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'pas de défilement horizontal à 390 px');
+
+// 7 ter. Membre invité : lit les informations de la société, seul l'administrateur les modifie.
+state.org = { ...ORG, role: 'member', can_edit: false, has_code: true, profile: 'Distributor',
+  signup: { missing: ['license', 'logo'], city: '深圳', region: 'CN', brands: null, website: null, wecom: null, has_logo: false } };
+await page.reload();
+await page.waitForSelector('#more-card:not([hidden])');
+ok(await page.isVisible('#more-member') && (await page.textContent('#more-member')).includes('administrator') && await page.isHidden('#more-open')
+  && await page.isHidden('#more-form') && await page.isHidden('#lic') && await page.isHidden('#team') && (await page.textContent('#more-missing')).includes('logo'),
+  'membre : ce qui manque affiché, sans bouton « 补充资料 » ni dépôt de licence ; seul l\'administrateur modifie');
 
 // 7 bis. Société validée : demande d'achat reçue, confirmée depuis la page.
 state.org = { ...ORG, status: 'validated', alias: 'V-9', has_license: true };

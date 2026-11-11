@@ -293,6 +293,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     <section class="card" id="more-card" hidden>
       <h2 data-t="moreTitle">补充资料</h2>
       <p class="muted" id="more-missing"></p>
+      <p class="msg info" id="more-member" hidden data-t="moreMember">公司资料只能由贵司管理员修改。如需修改，请联系管理员。</p>
       <button class="btn btn-line" type="button" id="more-open" data-t="moreBtn">补充资料</button>
       <form class="fields" id="more-form" hidden novalidate></form>
     </section>
@@ -398,6 +399,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       ctMain: '主要联系人（账号管理员）', ctExtra: '联系人', ctDuty: '角色', dSales: '销售 / 报价', dLog: '物流 / 发货', dFin: '财务', dOther: '其他',
       ctFamily: '姓', ctGiven: '名', ctJob: '职位', ctMobile: '手机', ctWx: '微信号', ctMail: '邮箱', ctAddBtn: '+ 添加联系人',
       wPhone: '号码格式看起来不对，请检查（不影响提交）。', wEmail: '邮箱格式看起来不对，请检查（不影响提交）。', wWeb: '网址格式看起来不对，请检查（不影响提交）。',
+      moreMember: '公司资料只能由贵司管理员修改。如需修改，请联系管理员。',
       moreTitle: '补充资料', moreBtn: '补充资料', moreSave: '保存', moreNone: '资料已完整，感谢！',
       moreList: '还可以补充：{list}。资料越完整，审核越快。', moreLocked: '审核通过后，公司名称、类型、营业执照和注册号码如需修改，请联系 Central.Parts。',
       miss: { license: '营业执照照片', number: '注册号码', region: '注册地区', city: '城市', brands: '品牌', website: '公司网站', wecom: '企业微信或公众号', logo: '公司标志（Logo，PNG 最佳）', contact: '联系人的手机、微信号或邮箱' },
@@ -482,6 +484,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       ctMain: 'Main contact (account admin)', ctExtra: 'Contact', ctDuty: 'Role', dSales: 'Sales / quotes', dLog: 'Logistics / shipping', dFin: 'Finance', dOther: 'Other',
       ctFamily: 'Family name', ctGiven: 'Given name', ctJob: 'Job title', ctMobile: 'Mobile phone', ctWx: 'WeChat ID', ctMail: 'Email', ctAddBtn: '+ Add a contact',
       wPhone: 'This number looks wrong, please check (you can still submit).', wEmail: 'This email looks wrong, please check (you can still submit).', wWeb: 'This website address looks wrong, please check (you can still submit).',
+      moreMember: 'Only your company\'s administrator can change the company information. Please ask them.',
       moreTitle: 'Complete my profile', moreBtn: 'Complete my profile', moreSave: 'Save', moreNone: 'Your profile is complete, thank you!',
       moreList: 'You can still add: {list}. The more complete your profile, the faster the review.', moreLocked: 'After approval, contact Central.Parts to change the company name, type, business licence or registration number.',
       miss: { license: 'business licence photo', number: 'registration number', region: 'region of registration', city: 'city', brands: 'brands', website: 'company website', wecom: 'WeCom or Official Account', logo: 'company logo (PNG preferred)', contact: 'a phone, WeChat ID or email for a contact' },
@@ -791,7 +794,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     if (!g) return;
     var miss = (g.missing || []).map(function (k) { return t().miss[k] || k; });
     $('more-missing').textContent = miss.length ? t().moreList.replace('{list}', miss.join('、')) : t().moreNone;
-    $('more-open').hidden = moreOpen;
+    var ed = org.can_edit === true;
+    $('more-member').hidden = ed;
+    if (!ed) moreOpen = false;
+    $('more-open').hidden = moreOpen || !ed;
     $('more-form').hidden = !moreOpen;
     if (!moreOpen) return;
     var f = function (id, label, v, extra) { return '<label><span>' + esc(label) + '</span><input type="text" id="' + id + '" value="' + esc(v || '') + '"' + (extra || '') + '></label>'; };
@@ -1034,7 +1040,8 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       st.textContent = org.has_license ? t().pending : org.has_code ? t().pendingNoLic : t().pendingLic;
     }
     if (org.status === 'rejected') { st.className = 'msg err'; st.textContent = t().rejectedMsg + (org.rejected_reason || ''); }
-    $('lic').hidden = !(org.status === 'pending' && !org.has_license);
+    // Informations de la société : l'administrateur (responsable de la fiche) seulement ; un membre les lit.
+    $('lic').hidden = !(org.status === 'pending' && !org.has_license && org.can_edit === true);
     renderMore();
     $('form').hidden = $('imports-card').hidden = org.status === 'rejected';
     $('team').hidden = org.role !== 'admin';

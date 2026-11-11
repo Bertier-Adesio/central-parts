@@ -289,6 +289,8 @@ begin
   if r.org_id is null then return null; end if;
   return (select jsonb_build_object('org_id', o.id, 'name', o.name, 'alias', o.alias, 'lang', o.lang,
                    'status', o.kyb, 'role', r.role, 'has_license', o.license_path is not null,
+                   -- Seul le responsable de la fiche (l'administrateur, app.org_editor) modifie les informations de la société.
+                   'can_edit', app.org_editor(o.id) is not distinct from p_openid,
                    'has_code', o.registration_number is not null, 'profile', o.profile,
                    'signup', jsonb_build_object('missing', to_jsonb(app.signup_missing(o.id)), 'city', o.city,
                      'region', o.registration_region, 'brands', o.declared_brands, 'website', o.website, 'wecom', o.wecom,
