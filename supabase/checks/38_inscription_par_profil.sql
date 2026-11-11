@@ -44,12 +44,20 @@ begin
   -- Stock disponible, photo seule : ni numéro, ni ville, ni région.
   -- Inscription minimale : nom, profil, une pièce, nom du contact principal, devise ; tout le reste vide.
   w := public.register_supplier('oIP-SPOT', ' Société spot (fictive) ', null, null, 'Spot', 'cnh', null, p || 'licence-20261111-090000.jpg',
-    null, null, null, null, '[{"family_name": "王", "given_name": ""}, {"family_name": "", "given_name": "", "phone": "", "email": ""}]');
+    null, null, null, null, '[{"family_name": "王", "given_name": ""}, {"family_name": "", "given_name": "", "phone": "", "email": ""}]', 'surplus');
   select * into o from public.organizations where id = w->>'org_id';
   insert into tests.vars values ('spot', o.id);
   perform tests.eq('photo seule : inscrite, profil Spot, sans numéro ni ville', o.profile || ' ' || o.currency || ' ' || coalesce(o.registration_number, '-') || ' '
     || coalesce(o.city, '-') || ' ' || coalesce(o.registration_region, '-') || ' ' || o.kyb || ' ' || (o.alias ~ '^P-[0-9A-F]{12}$')::text, 'Spot CNH - - - pending true');
   perform tests.eq('pièce fournie : licence', app.verification_piece(o), 'license');
+  perform tests.eq('stock disponible : origine indiquée par le fournisseur', o.spot_hint, 'surplus');
+  -- Marques : séparateurs chinois et occidentaux, doublons sans tenir compte de la casse (8A).
+  perform tests.eq('marques normalisées', app.norm_brands(' Marque A，marque a、 Marque B ; Marque C/ '), 'Marque A, Marque B, Marque C');
+  perform tests.eq('marques vides', app.norm_brands(' ，、 '), null::text);
+  -- Ville d'après le code de la division administrative du 统一社会信用代码 (2A).
+  perform tests.eq('ville d''après le numéro : Shenzhen, Fuzhou, Pékin ; inconnue : vide',
+    concat_ws(' ', app.city_from_code('91440300MA5F00002D'), app.city_from_code('91350100M000100Y43'), app.city_from_code('91110108MA00000000'),
+      coalesce(app.city_from_code('91999900MA00000000'), '-'), coalesce(app.city_from_code('12345678'), '-')), '深圳 福州 北京 - -');
   perform tests.eq('identité du dépôt : profil et pièce', (w->>'profile') || ' ' || (w->>'has_license') || ' ' || (w->>'has_code'), 'Spot true false');
   perform tests.eq('inscription minimale : un seul contact (ligne vide ignorée), principal, relié au robot',
     (select count(*) || ' ' || min(c.name) || ' ' || min(c.duty) || ' ' || bool_and(app.contact_linked(c))::text from public.seller_contacts c where c.org_id = o.id), '1 王 main true');
@@ -74,6 +82,7 @@ begin
     'Li Wei/main 陈小姐/sales logistique_fictif/logistics 赵/finance pas-un-email');
   perform tests.eq('contacts supplémentaires : non reliés au robot tant qu''ils n''ont pas accepté d''invitation',
     (select string_agg(app.contact_linked(c)::text, ' ' order by c.created_at, c.id) from public.seller_contacts c where c.org_id = o.id), 'true false false false');
+  perform tests.eq('ville déduite du numéro chinois quand elle est vide', o.city, '深圳');
   perform tests.eq('numéro seul : inscrite, marques et lettre gardées', app.verification_piece(o) || ' ' || o.declared_brands || ' ' || (o.auth_letter_path is not null)::text
     || ' ' || o.registration_region || ' ' || o.country, 'number Marque A, Marque B true CN CN');
 
@@ -113,10 +122,14 @@ begin
   select * into o from public.organizations where id = (select v from tests.vars where k = 'spot');
   perform tests.eq('Spot approuvé comme surplus : profil, catégorie, publiée', o.profile || ' ' || app.source_category(o.profile) || ' ' || app.is_verified(o.id)::text, 'Surplus surplus true');
   perform tests.eq('choix inscrit au journal', (select reason from public.supplier_decisions where org_id = o.id and action = 'profile'), 'Spot → Surplus');
+  perform tests.eq('approbation avec une seule pièce : inscrite au journal', (select reason from public.supplier_decisions where org_id = o.id and action = 'approved'),
+    'pièce unique : licence');
   perform tests.eq('message d''accueil : catégorie surplus', public.supplier_welcome(o.id)->>'category', 'surplus');
   -- Les autres profils : approbation sans sous-catégorie (ignorée si donnée).
   perform public.approve_supplier((select v from tests.vars where k = 'fab'), 'test', 'broker');
   perform tests.eq('fabricant : sous-catégorie ignorée, profil inchangé', (select profile from public.organizations where id = (select v from tests.vars where k = 'fab')), 'Manufacturer');
+  perform tests.eq('approbation avec les deux pièces : rien de signalé',
+    (select reason from public.supplier_decisions where org_id = (select v from tests.vars where k = 'fab') and action = 'approved'), null::text);
   -- Après l'approbation : le nom, le profil et le numéro ne changent plus seuls ; ville, site et WeChat pro, si.
   perform public.approve_supplier((select v from tests.vars where k = 'fab2'), 'test');
   perform public.supplier_signup_save('oIP-FAB2', '{"name": "Autre nom", "profile": "Spot", "code": "91110000MA0000002P", "city": "Shenzhen", "website": "exemple2.test"}');
@@ -158,14 +171,18 @@ begin
   perform tests.eq('fiche d''inscription : site, WeChat pro, contacts et liaison au robot, ce qui manque',
     (s->>'website') || ' ' || (s->>'wecom') || ' ' || jsonb_array_length(s->'contacts') || ' ' || (s->'contacts'->0->>'linked') || ' ' || (s->'contacts'->1->>'linked')
     || ' ' || (select string_agg(x, ',') from jsonb_array_elements_text(s->'missing') x),
-    'https://exemple-fictif.cn 示例公众号 4 true false license,city');
+    'https://exemple-fictif.cn 示例公众号 4 true false license');
   perform tests.eq('liste des fournisseurs : ce qui manque à chaque fiche',
     (select x->'missing' from jsonb_array_elements(public.admin_suppliers('pending')->'rows') x where x->>'org_id' = d), s->'missing');
+  perform tests.eq('fabricant reconnu d''après les marques déclarées', exists (select 1 from jsonb_array_elements(s->'brand_matches') x
+    where x->>'name' = 'Fabricant inscription (fictif)'), true);
   s := public.admin_supplier_complete(d, '{"city": "Shenzhen", "region": "CN"}');
   perform tests.eq('compléments : ville et région', (s->>'city') || ' ' || (s->>'region'), 'Shenzhen CN');
   -- Distributeur rattaché à un fabricant, puis reclassé en stock disponible : le rattachement disparaît.
   perform public.admin_manufacturer_link(m, d, 'authorized');
   perform tests.eq('distributeur rattaché', jsonb_typeof(public.admin_manufacturer(m)), 'object');
+  perform tests.eq('rattaché : plus proposé, rattachement listé', exists (select 1 from jsonb_array_elements(public.admin_supplier_signup(d)->'brand_matches') x
+    where x->>'name' = 'Fabricant inscription (fictif)')::text || ' ' || (public.admin_supplier_signup(d)->'links'->0->>'name'), 'false Fabricant inscription (fictif)');
   s := public.admin_supplier_complete(d, '{"profile": "Spot"}');
   perform tests.eq('reclassé en Spot', s->>'profile', 'Spot');
   perform tests.fails('Spot : rattachement à un fabricant refusé', format($s$select public.admin_manufacturer_link('%s', '%s', 'authorized')$s$, m, d), '22023');
@@ -187,8 +204,21 @@ do $$ begin
   perform tests.eq('profils existants inchangés', (select count(*) from public.organizations where profile = 'Spot' and kyb = 'validated')::int, 0);
 end $$;
 
+-- Coordonnées des contacts : aucune vue acheteur, aucune réponse de l'API d'offres, aucun journal (5A).
+insert into public.lots (id, seller_id, mpn, manufacturer, qty, unit_price, currency) values
+  ('LOT-IP2', (select v from tests.vars where k = 'dist'), 'IPCONTACT1', 'Marque A', 100, 1, 'USD');
+do $$
+declare blob text;
+begin
+  blob := concat_ws(' | ', public.public_search('10.9.9.1', 'IPCONTACT1')::text, public.partner_offers('10.9.9.1', 'IPCONTACT1')::text,
+    public.catalog_search('B1', '{"mpn": "IPCONTACT1"}')::text, public.catalog_offers('B1', 'IPCONTACT1')::text,
+    (select string_agg(text, ' ') from public.events));
+  perform tests.eq('vues acheteurs, API d''offres, journal : aucune coordonnée de contact',
+    blob ~ '(Li Wei|liwei_fictif|138 0000 0000|pas-un-email|sales@exemple\.test|logistique_fictif|陈小姐)', false);
+end $$;
+
 -- Nettoyage.
-delete from public.lots where id = 'LOT-IP1';
+delete from public.lots where id in ('LOT-IP1', 'LOT-IP2');
 delete from public.manufacturers where id = (select v from tests.vars where k = 'mfr');
 delete from public.wechat_identities where openid like 'oIP-%';
 drop schema tests cascade;

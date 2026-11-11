@@ -21,7 +21,38 @@
 alter table public.organizations
   add column if not exists declared_brands  text,   -- marques déclarées à l'inscription (fabricant, distributeur)
   add column if not exists auth_letter_path text,   -- lettre d'agrément du distributeur, compartiment privé supplier-docs
-  add column if not exists wecom            text;   -- 企业微信或公众号 : nom ou identifiant, interne (jamais publié)
+  add column if not exists wecom            text,   -- 企业微信或公众号 : nom ou identifiant, interne (jamais publié)
+  add column if not exists spot_hint        text check (spot_hint in ('broker', 'surplus'));  -- stock disponible : origine indiquée par le fournisseur
+
+-- Marques déclarées : séparateurs chinois et occidentaux, espaces, doublons (sans tenir compte de la casse) ; 20 au plus.
+create or replace function app.norm_brands(p text) returns text
+language sql immutable set search_path = '' as $$
+  select nullif(left(string_agg(b, ', ' order by n), 300), '') from (
+    select min(btrim(x)) as b, min(o) as n
+      from regexp_split_to_table(coalesce(p, ''), '\s*[,，、;；/|]+\s*') with ordinality t(x, o)
+     where btrim(x) <> '' group by upper(btrim(x)) order by min(o) limit 20) s
+$$;
+
+-- Ville d'après le 统一社会信用代码 : caractères 3 à 8 = code de la division administrative (GB/T 2260). Table des
+-- villes les plus fréquentes chez les fournisseurs ; une ville absente reste à compléter (administrateur, fournisseur).
+create table if not exists app.cn_city_codes (code text primary key, zh text not null, en text not null);
+insert into app.cn_city_codes (code, zh, en) values
+  ('11', '北京', 'Beijing'), ('12', '天津', 'Tianjin'), ('31', '上海', 'Shanghai'), ('50', '重庆', 'Chongqing'),
+  ('4401', '广州', 'Guangzhou'), ('4403', '深圳', 'Shenzhen'), ('4404', '珠海', 'Zhuhai'), ('4405', '汕头', 'Shantou'),
+  ('4406', '佛山', 'Foshan'), ('4407', '江门', 'Jiangmen'), ('4413', '惠州', 'Huizhou'), ('4419', '东莞', 'Dongguan'),
+  ('4420', '中山', 'Zhongshan'), ('3201', '南京', 'Nanjing'), ('3202', '无锡', 'Wuxi'), ('3204', '常州', 'Changzhou'),
+  ('3205', '苏州', 'Suzhou'), ('3301', '杭州', 'Hangzhou'), ('3302', '宁波', 'Ningbo'), ('3303', '温州', 'Wenzhou'),
+  ('3501', '福州', 'Fuzhou'), ('3502', '厦门', 'Xiamen'), ('3701', '济南', 'Jinan'), ('3702', '青岛', 'Qingdao'),
+  ('3401', '合肥', 'Hefei'), ('4101', '郑州', 'Zhengzhou'), ('4201', '武汉', 'Wuhan'), ('4301', '长沙', 'Changsha'),
+  ('5101', '成都', 'Chengdu'), ('6101', '西安', 'Xi''an'), ('2101', '沈阳', 'Shenyang'), ('2102', '大连', 'Dalian')
+on conflict (code) do update set zh = excluded.zh, en = excluded.en;
+revoke all on app.cn_city_codes from public, anon, authenticated;
+create or replace function app.city_from_code(p_code text) returns text
+language sql stable security definer set search_path = '' as $$
+  select coalesce((select zh from app.cn_city_codes where code = substr(p_code, 3, 4)),
+                  (select zh from app.cn_city_codes where code = substr(p_code, 3, 2)))
+   where p_code ~ '^[0-9A-HJ-NPQRTUWXY]{18}$'
+$$;
 
 -- Contacts : contact principal (administrateur du compte, son openid) et rôle des contacts supplémentaires.
 alter table public.seller_contacts
@@ -55,6 +86,7 @@ $$;
 -- (detail : name, profile, currency, region, contact, license, auth_letter), CP008 ni photo ni numéro.
 drop function if exists public.register_supplier(text, text, text, text, text, text, text);
 drop function if exists public.register_supplier(text, text, text, text, text, text, text, text, text, text);
+drop function if exists public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb);
 -- Ordre des paramètres d'origine gardé (appels positionnels existants) ; les nouveaux viennent à la fin.
 -- La devise reste « USD » par défaut au niveau SQL pour ces appels ; la fonction Edge depot l'exige (pas de défaut).
 -- Numéro sans région : règle chinoise, comme avant. p_contacts : [{family_name, given_name, role, phone, wechat,
@@ -63,7 +95,7 @@ drop function if exists public.register_supplier(text, text, text, text, text, t
 create or replace function public.register_supplier(p_openid text, p_name text, p_code text, p_city text,
   p_profile text, p_currency text default 'USD', p_region text default null, p_license_path text default null,
   p_brands text default null, p_auth_path text default null, p_website text default null, p_wecom text default null,
-  p_contacts jsonb default null)
+  p_contacts jsonb default null, p_spot_hint text default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_org text;
@@ -71,7 +103,7 @@ declare
   v_region text := nullif(upper(btrim(coalesce(p_region, ''))), '');
   v_code text := nullif(btrim(coalesce(p_code, '')), '');
   v_profile text := btrim(coalesce(p_profile, ''));
-  v_brands text := nullif(left(regexp_replace(btrim(coalesce(p_brands, '')), '\s+', ' ', 'g'), 300), '');
+  v_brands text := app.norm_brands(p_brands);
   v_cur text := upper(btrim(coalesce(p_currency, '')));
   v_contacts jsonb := '[]';
   c jsonb; v_i int := 0;
@@ -122,15 +154,16 @@ begin
   end if;
   insert into public.organizations (type, name, alias, city, country, currency, lang, profile, registration_number,
                                     registration_region, kyb, registered_by, license_path, declared_brands, auth_letter_path,
-                                    website, wecom)
+                                    website, wecom, spot_hint)
   values ('seller', btrim(p_name),
           'P-' || coalesce(v_code, upper(left(encode(extensions.digest(p_openid || clock_timestamp()::text, 'sha256'), 'hex'), 12))),
-          nullif(left(btrim(coalesce(p_city, '')), 60), ''),
+          coalesce(nullif(left(btrim(coalesce(p_city, '')), 60), ''), case when v_region = 'CN' then app.city_from_code(v_code) end),
           case v_region when 'CN' then 'CN' when 'HK' then 'HK' end,   -- autre pays ou inconnu : complété par l'opérateur
           v_cur, 'zh', v_profile, v_code, v_region, 'pending', p_openid, p_license_path,
           case when v_profile in ('Manufacturer', 'Distributor') then v_brands end,
           case when v_profile = 'Distributor' then p_auth_path end,
-          app.norm_website(p_website), nullif(left(btrim(coalesce(p_wecom, '')), 100), ''))
+          app.norm_website(p_website), nullif(left(btrim(coalesce(p_wecom, '')), 100), ''),
+          case when v_profile = 'Spot' and p_spot_hint in ('broker', 'surplus') then p_spot_hint end)
   returning id into v_org;
   insert into public.seller_contacts (org_id, name, role, email, phone, wechat, duty, openid)
   select v_org, left(coalesce(nullif(app.contact_name(x->>'family_name', x->>'given_name'), ''), nullif(btrim(coalesce(x->>'wechat', '')), ''),
@@ -207,9 +240,10 @@ begin
     registration_number = v_code,
     registration_region = v_region,
     country = case v_region when 'CN' then 'CN' when 'HK' then 'HK' else country end,
-    city = case when p ? 'city' then nullif(left(btrim(coalesce(p->>'city', '')), 60), '') else city end,
+    city = coalesce(case when p ? 'city' then nullif(left(btrim(coalesce(p->>'city', '')), 60), '') else city end,
+                    case when v_region = 'CN' then app.city_from_code(v_code) end),
     declared_brands = case when p ? 'brands' and app.source_category(v_profile) in ('manufacturer', 'distributor')
-                           then nullif(left(regexp_replace(btrim(coalesce(p->>'brands', '')), '\s+', ' ', 'g'), 300), '') else declared_brands end,
+                           then app.norm_brands(p->>'brands') else declared_brands end,
     website = case when p ? 'website' then app.norm_website(p->>'website') else website end,
     wecom = case when p ? 'wecom' then nullif(left(btrim(coalesce(p->>'wecom', '')), 100), '') else wecom end
    where id = o.id;
@@ -258,6 +292,10 @@ returns jsonb language sql stable security definer set search_path = '' as $$
            'region', o.registration_region,
            'city', o.city, 'profile', o.profile, 'license_path', o.license_path,
            'piece', app.verification_piece(o), 'brands', o.declared_brands, 'auth_letter_path', o.auth_letter_path,
+           'spot_hint', o.spot_hint,
+           'contacts_unlinked', (select count(*) from public.seller_contacts c where c.org_id = o.id
+              and not exists (select 1 from public.wechat_identities w where w.org_id = c.org_id and w.revoked_at is null
+                               and (w.openid = c.openid or (c.openid is null and btrim(coalesce(w.label, '')) <> '' and w.label = c.name)))),
            'lines', (select count(*) from public.lots l where l.seller_id = o.id and l.qty > 0),
            'registered_at', o.created_at) order by o.created_at), '[]'::jsonb)
     from public.organizations o where o.type = 'seller' and o.kyb = 'pending'
@@ -295,7 +333,10 @@ begin
   insert into public.subscriptions (org_id, plan, until)
   select p_org, 'Gratuit jusqu''à la première vente', current_date + 365
    where not exists (select 1 from public.subscriptions s where s.org_id = p_org and s.until >= current_date);
-  insert into public.supplier_decisions (org_id, action, from_status, decided_by) values (p_org, 'approved', o.kyb, p_by);
+  -- Une seule pièce fournie : inscrit au journal de la décision (ADR 0034, risque « contrôle plus faible »).
+  insert into public.supplier_decisions (org_id, action, from_status, reason, decided_by)
+  values (p_org, 'approved', o.kyb, case app.verification_piece(o) when 'license' then 'pièce unique : licence'
+                                                                 when 'number' then 'pièce unique : numéro' end, p_by);
   insert into public.events (actor, text, ref) values ('ops', 'Société validée (' || v_alias || ')' || coalesce(' par ' || p_by, ''), p_org);
   return v_alias;
 end $$;
@@ -354,7 +395,14 @@ begin
     'piece', app.verification_piece(o), 'has_license', o.license_path is not null, 'has_code', o.registration_number is not null,
     'brands', o.declared_brands, 'has_auth_letter', o.auth_letter_path is not null,
     'region', o.registration_region, 'city', o.city, 'status', o.kyb,
-    'website', o.website, 'wecom', o.wecom, 'missing', to_jsonb(app.signup_missing(o.id)),
+    'website', o.website, 'wecom', o.wecom, 'missing', to_jsonb(app.signup_missing(o.id)), 'spot_hint', o.spot_hint,
+    'links', coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name, 'role', d.role) order by m.name)
+        from public.manufacturer_distributors d join public.manufacturers m on m.id = d.manufacturer_id where d.org_id = o.id), '[]'),
+    'brand_matches', coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name, 'brands', to_jsonb(m.brands)) order by m.name)
+        from public.manufacturers m
+       where exists (select 1 from unnest(m.brands) b, regexp_split_to_table(coalesce(o.declared_brands, ''), '\s*,\s*') x
+                      where btrim(x) <> '' and upper(btrim(b)) = upper(btrim(x)))
+         and not exists (select 1 from public.manufacturer_distributors d where d.org_id = o.id and d.manufacturer_id = m.id)), '[]'),
     'contacts', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'duty', c.duty, 'role', c.role,
         'phone', c.phone, 'wechat', c.wechat, 'email', c.email, 'linked', app.contact_linked(c)) order by c.duty = 'main' desc, c.created_at)
         from public.seller_contacts c where c.org_id = o.id), '[]'),
@@ -424,10 +472,11 @@ end $$;
 
 -- ------------------------------------------------------------ droits
 revoke execute on function app.pending_doc_prefix(text), app.verification_piece(public.organizations), app.norm_website(text),
-  app.contact_name(text, text), app.signup_missing(text), app.contact_linked(public.seller_contacts) from public, anon, authenticated;
-revoke execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb),
+  app.contact_name(text, text), app.signup_missing(text), app.contact_linked(public.seller_contacts), app.norm_brands(text),
+  app.city_from_code(text) from public, anon, authenticated;
+revoke execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb, text),
   public.approve_supplier(text, text, text), public.supplier_welcome(text), public.supplier_signup_save(text, jsonb) from public, anon, authenticated;
-grant execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb),
+grant execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb, text),
   public.approve_supplier(text, text, text), public.supplier_welcome(text), public.supplier_signup_save(text, jsonb) to service_role;
 revoke execute on function public.admin_approve(text, text), public.admin_supplier_complete(text, jsonb),
   public.admin_supplier_signup(text) from public, anon;

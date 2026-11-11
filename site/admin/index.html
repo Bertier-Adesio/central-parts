@@ -905,7 +905,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var a = b.getAttribute('data-act'), d = DECISION[a];
     pending = a; reqPending = null;
     $('c-title').textContent = d.title + ' · ' + this.dataset.org;
-    $('c-text').textContent = this.dataset.name + ' — ' + d.text;
+    var one = /^approve/.test(a) && state.signup && state.signup.org_id === this.dataset.org && { license: 'licence', number: 'numéro' }[state.signup.piece];
+    $('c-text').textContent = this.dataset.name + ' — ' + d.text + (one ? ' Attention : une seule pièce fournie (' + one + ' seul). L\'approbation sera inscrite au journal'
+      + ' « pièce unique : ' + one + ' » ; la pièce manquante reste demandée au fournisseur dans « 补充资料 ».' : '');
     $('c-reason-l').hidden = !d.reason;
     $('c-reason-l').firstChild.textContent = d.reason === 'required' ? 'Motif du refus (obligatoire)' : 'Motif (facultatif)';
     $('c-reason').value = '';
@@ -925,13 +927,29 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   function loadSignup(org) {
     return api('GET', '/supplier-signup?org=' + encodeURIComponent(org)).then(function (g) {
       if (!$('d-signup') || $('sup-detail').dataset.org !== org) return;
+      state.signup = g;
       var open = g.status !== 'validated';
+      var md = g.profile === 'Manufacturer' || g.profile === 'Distributor';
+      // 7A : bouton d'approbation correspondant à l'indication du fournisseur, signalé (le choix reste à l'administrateur).
+      var sug = g.spot_hint && $('sup-detail').querySelector('button[data-act="approve_' + g.spot_hint + '"]');
+      if (sug && !sug.dataset.hint) { sug.dataset.hint = '1'; sug.textContent += ' (indiqué par le fournisseur)'; }
+      // 6A : fabricants reconnus d'après les marques déclarées, rattachement en un clic ; distributeur sans rattachement signalé.
+      var links = g.links || [], matches = g.brand_matches || [];
+      var linkHtml = md ? '<div id="d-sg-links"><h3>Fabricants rattachés</h3>' +
+        (links.length ? '<p>' + links.map(function (l) { return esc(l.name) + ' <span class="muted">(' + (l.role === 'self' ? 'le fabricant lui-même' : 'distributeur agréé') + ')</span>'; }).join(', ') + '</p>'
+          : '<p class="muted">Aucun.</p>') +
+        (matches.length ? '<ul class="plain" id="d-sg-matches">' + matches.map(function (m) {
+          return '<li>' + esc(m.name) + ' <span class="muted">(' + esc((m.brands || []).join(', ')) + ')</span> <button class="btn btn-line" type="button" data-link="' + esc(m.id) + '">Rattacher</button></li>';
+        }).join('') + '</ul>' : '') +
+        (g.profile === 'Distributor' && !links.length ? '<p class="warn-t" id="d-sg-nolink">Sans rattachement à un fabricant, ce distributeur sera présenté « Fournisseur partenaire » aux acheteurs, jamais « agréé ».</p>' +
+          (open ? '<button class="btn btn-line" type="button" id="d-sg-spot">Reclasser en stock disponible</button>' : '') : '') + '</div>' : '';
       var opt = function (v, l, cur) { return '<option value="' + esc(v) + '"' + (v === (cur || '') ? ' selected' : '') + '>' + esc(l) + '</option>'; };
       var ask = (!g.has_license ? '<button class="btn btn-line" type="button" data-ask="licence">Demander la photo de la licence</button>' : '') +
         (!g.has_code ? '<button class="btn btn-line" type="button" data-ask="number">Demander le numéro d\'immatriculation</button>' : '');
       $('d-signup').innerHTML = '<h3>Inscription</h3><dl class="kv">' +
         '<dt>Profil choisi</dt><dd id="d-sg-profile">' + esc(PROFILE[g.profile] || g.profile) + '</dd>' +
         '<dt>Pièce fournie</dt><dd id="d-sg-piece">' + esc(PIECE[g.piece] || g.piece) + '</dd>' +
+        (g.profile === 'Spot' ? '<dt>Origine du stock (indiquée)</dt><dd id="d-sg-hint">' + esc({ broker: 'trading / broker', surplus: 'stock dormant d\'usine ou d\'EMS (surplus)' }[g.spot_hint] || 'non indiquée') + '</dd>' : '') +
         (g.brands ? '<dt>Marques déclarées</dt><dd id="d-sg-brands">' + esc(g.brands) + ' <span class="muted">(déclaration du fournisseur : ne crée aucun rattachement)</span></dd>' : '') +
         (g.profile === 'Distributor' || g.has_auth_letter ? '<dt>Lettre d\'agrément</dt><dd>' + (g.has_auth_letter ? 'déposée (lien dans la fiche WeChat « pending »)' : 'non déposée') + '</dd>' : '') +
         '<dt>Site web</dt><dd>' + esc(g.website || '—') + '</dd><dt>WeChat pro / compte de service</dt><dd>' + esc(g.wecom || '—') + '</dd>' +
@@ -941,7 +959,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
           return '<li><strong>' + esc(c.name) + '</strong> · ' + esc(DUTY[c.duty] || c.duty || 'contact') + (c.role ? ' · ' + esc(c.role) : '') +
             '<br><span class="muted">' + esc([c.phone, c.wechat ? 'WeChat ' + c.wechat : '', c.email].filter(Boolean).join(' · ') || 'aucune coordonnée') + '</span> ' +
             '<span class="badge ' + (c.linked ? 'validated' : 'pending') + '">' + (c.linked ? 'relié au robot WeChat' : 'non relié : ne reçoit rien') + '</span></li>';
-        }).join('') + '</ul>' : '') +
+        }).join('') + '</ul>' : '') + linkHtml +
         (open ? '<form class="sg-f" id="d-sg-form"><div class="grid3">' +
           '<label class="f">Région d\'immatriculation<select name="region">' + opt('', '—', g.region) + opt('CN', 'Chine continentale', g.region) + opt('HK', 'Hong Kong', g.region) + opt('OTHER', 'Autre', g.region) + '</select></label>' +
           '<label class="f">Ville<input type="text" name="city" maxlength="60" value="' + esc(g.city || '') + '"></label>' +
@@ -955,6 +973,20 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     var org = $('sup-detail').dataset.org;
     api('POST', '/supplier-complete', { org: org, update: { region: f.region.value, city: f.city.value, profile: f.profile.value } })
       .then(function () { show('Fiche de ' + org + ' complétée.', 'ok'); return Promise.all([loadSuppliers(), openSupplier(org)]); }).catch(fail);
+  });
+  $('sup-detail').addEventListener('click', function (ev) {
+    var org = $('sup-detail').dataset.org, g = state.signup;
+    var l = ev.target.closest('button[data-link]');
+    if (l && g) {
+      l.disabled = true;
+      api('POST', '/manufacturer/link', { id: l.getAttribute('data-link'), org: org, role: g.profile === 'Manufacturer' ? 'self' : 'authorized' })
+        .then(function () { show('Fournisseur ' + org + ' rattaché au fabricant.', 'ok'); return loadSignup(org); }).catch(fail).then(function () { l.disabled = false; });
+      return;
+    }
+    if (ev.target.closest('#d-sg-spot')) {
+      api('POST', '/supplier-complete', { org: org, update: { region: g.region, city: g.city, profile: 'Spot' } })
+        .then(function () { show('Fiche de ' + org + ' reclassée en stock disponible.', 'ok'); return Promise.all([loadSuppliers(), openSupplier(org)]); }).catch(fail);
+    }
   });
   $('sup-detail').addEventListener('click', function (ev) {
     var b = ev.target.closest('button[data-ask]'); if (!b) return;

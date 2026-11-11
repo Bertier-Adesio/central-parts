@@ -135,6 +135,7 @@ Deno.serve(async (req) => {
         p_openid: session.openid, p_name: b.name, p_code: str(b.code), p_city: str(b.city), p_profile: b.profile,
         p_currency: String(b.currency).toUpperCase(), p_region: str(b.region), p_license_path: str(b.license_path),
         p_brands: str(b.brands), p_auth_path: str(b.auth_path), p_website: str(b.website), p_wecom: str(b.wecom), p_contacts: contacts,
+        p_spot_hint: b.spot_hint === "broker" || b.spot_hint === "surplus" ? b.spot_hint : null,
       });
       if (error) {
         return json({ error: REGISTER_ERRORS[error.code] || 'database', field: error.details || null, detail: error.message },

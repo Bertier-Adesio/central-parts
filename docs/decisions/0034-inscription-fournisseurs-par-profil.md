@@ -40,14 +40,16 @@ Des fournisseurs chinois abandonnent l'inscription sur `/depot/` : formulaire lo
 - **Message d'accueil par profil** (fabricant, distributeur, stock disponible), selon la catégorie et les rattachements au moment de l'approbation (`supplier_welcome`). Comme les autres messages du robot, il est envoyé en chinois puis en anglais. Il ne contient aucun lien : le fournisseur passe par le menu « 供应商 > 上传库存 ».
 - **Rien n'est publié avant l'approbation**, comme avant. Les durées de validité (14 jours pour un fabricant, 7 pour les autres) et les libellés montrés aux acheteurs ne changent pas.
 
-## Conséquences et risques
+## Conséquences et risques, et ce qui les réduit
 
-- Une seule pièce, c'est un contrôle plus faible à l'entrée. Il est compensé par l'approbation manuelle avant publication ; en cas de doute, l'administrateur demande la seconde pièce.
-- Ville et région laissées vides : l'administrateur les lit sur la licence. Sans photo, la région vient du numéro.
-- Formulaire plus long à l'écran : d'où les trois blocs, cinq marques « 必填 » seulement et les contacts supplémentaires repliés.
-- Contacts saisis mais non reliés au robot : ils ne reçoivent rien ; le back office et `/depot/` le montrent.
-- Coordonnées personnelles stockées : lues par la société et l'administrateur seulement (aucun droit pour un visiteur ni un compte acheteur, jamais dans l'API d'offres).
-- Un distributeur sans agrément peut choisir « distributeur agréé » : l'acheteur ne le voit « agréé » qu'après rattachement, et l'administrateur peut le reclasser en stock disponible.
-- Un surplus d'EMS ou d'OEM se déclare « stock disponible » comme un broker. La distinction repose sur l'administrateur ; une erreur donne le mauvais libellé (« Broker vérifié » ou « Surplus vérifié »).
-- Les marques sont du texte libre (fautes, variantes) : ce sont des indications, pas des données de référence.
+Choix de Bertier du 11 novembre (1A, 2A, 3B, 4A, 5A, 6A, 7A, 8A) :
+
+- **Une seule pièce**, contrôle plus faible à l'entrée. L'approbation reste possible, mais elle est inscrite au journal des décisions (« pièce unique : licence » ou « pièce unique : numéro »), la confirmation du back office et la fiche WeChat des opérateurs le signalent, et la pièce manquante reste demandée au fournisseur dans « 补充资料 ».
+- **Ville et région laissées vides.** Un 统一社会信用代码 valide donne la région (Chine continentale) et la ville : caractères 3 à 6, code de la division administrative, d'après une table d'une trentaine de villes (`app.cn_city_codes`, `app.city_from_code`). La page propose la ville sans écraser une saisie ; la base la complète quand elle est vide. Une ville absente de la table reste à compléter. Huit chiffres proposent Hong Kong.
+- **Formulaire plus long à l'écran.** Un compteur « 必填 n/5 » près du bouton dit ce qui manque ; à l'erreur, le premier champ manquant prend le focus ; le poste, le WeChat et l'e-mail du contact principal sont repliés derrière « 更多 » (lisible sans JavaScript).
+- **Contacts saisis mais non reliés au robot.** À l'envoi, chaque contact supplémentaire nommé reçoit un lien d'invitation (mécanisme existant, 14 jours), montré une fois au fournisseur pour qu'il le transfère. Le back office, `/depot/` et la fiche WeChat des opérateurs montrent qui n'est pas relié.
+- **Coordonnées personnelles stockées** : lues par la société et l'administrateur seulement. Un contrôle de la base vérifie qu'aucun nom, téléphone, e-mail ou WeChat de contact ne sort dans la recherche publique, les offres des fournisseurs partenaires, l'API d'offres ni le journal des événements.
+- **« Distributeur agréé » choisissable sans agrément.** Le back office propose les fabricants connus dont les marques correspondent aux marques déclarées (bouton « Rattacher ») ; sans rattachement, il avertit que le distributeur sera présenté « Fournisseur partenaire », jamais « agréé », et propose « Reclasser en stock disponible » en un clic (journalisé).
+- **Broker ou surplus distingués par l'administrateur.** Une question facultative du bloc « 现货 / 库存 » (« 库存主要来自：贸易 / 经纪 · 工厂或 EMS 呆滞库存 ») est gardée comme indication (`spot_hint`) et signale le bouton correspondant ; le choix final reste à l'administrateur.
+- **Marques en texte libre.** Elles sont normalisées à l'enregistrement (séparateurs 、，；/ et virgules, espaces, doublons sans tenir compte de la casse, 20 au plus : `app.norm_brands`) et comparées aux marques des fabricants connus (rapprochement ci-dessus). Elles restent une indication, pas une donnée de référence.
 - Les textes chinois sont des brouillons : relecture native à faire.
