@@ -46,11 +46,14 @@ async function run(lang) {
   await page.goto(BASE + '/depot/?login=dl_' + 'a'.repeat(32));
   await page.waitForSelector('#v-register:not([hidden])');
   await page.fill('#r-name', 'EXAMPLE ELECTRONICS LIMITED');
+  // Formulaire par profil (ADR 0034) : fabricant, sa marque, le numéro (l'un des deux suffit), la devise.
+  // En-tête partagé collant : rendu statique pour qu'il n'apparaisse pas au milieu des captures d'éléments.
+  await page.addStyleTag({ content: '.site-hdr{position:static!important}' });
+  await page.check('input[name=r-profile][value=Manufacturer]');
+  await page.fill('#r-brands-m', 'HKTC');
   await page.selectOption('#r-region', 'HK');
   await page.fill('#r-code', '12345678');
-  await page.fill('#r-city', lang === 'zh' ? '香港' : 'Hong Kong');
-  await page.selectOption('#r-profile', 'Manufacturer');
-  await page.selectOption('#r-currency', 'USD');
+  await page.check('input[name=r-currency][value=USD]');
   await shot('#reg', 'inscription');
 
   // 2. Société en attente : dépôt de la licence.

@@ -121,7 +121,7 @@ export function operatorHelpText() {
   return [
     'Commands:',
     'pending: companies awaiting review',
-    'approve ORG-0123',
+    'approve ORG-0123 (spot stock: approve ORG-0123 broker, or approve ORG-0123 surplus)',
     'reject ORG-0123 reason',
     'link: your login link to the supplier centre',
     'requests: open purchase requests (latest 10)',
@@ -243,17 +243,64 @@ export function operatorErrorText(subject, message) {
 
 // Accueil d'un fournisseur approuvé : dit dès le départ que les offres se reconfirment (ADR 0025), et comment, en un
 // geste. Durées par défaut de app.settings (7 jours, 14 pour un fabricant) : à mettre à jour ici si elles changent.
-export function approvedNotice(alias) {
-  return `您的公司已通过 Central.Parts 审核（编号 ${alias}），欢迎加入！\n` +
-    '您的报价将向欧洲采购商展示。为保证库存真实，每条报价在最后一次更新后展示 7 天（制造商 14 天），到期后自动隐藏。\n' +
-    '· 库存没有变化：回复「确认库存」，或在供应商中心点「库存无变化，一键确认」，所有报价立即续期。\n' +
-    '· 库存有变化：在供应商中心上传新的库存表。\n' +
-    '建议至少每周确认一次；库存变化快（如贸易商）可以每天上传或确认。报价越新越准确，更新频率也将计入您的供应商评分。供应商中心：https://central.parts/depot/\n\n' +
-    `Your company has been approved by Central.Parts (${alias}). Welcome!\n` +
-    'Your offers will be shown to European buyers. To keep stock accurate, each offer stays visible for 7 days after its last update (14 days for manufacturers), then is hidden automatically.\n' +
-    '· Stock unchanged: reply 确认库存 (or "confirm stock"), or tap "库存无变化，一键确认" in the supplier centre: all your offers are renewed at once.\n' +
-    '· Stock changed: upload a new stock file in the supplier centre.\n' +
-    'Confirm at least once a week. If your stock moves fast (brokers, traders), you can upload or confirm every day. The fresher your offers, the more accurate they are for buyers, and how often you update will also count towards your supplier rating. Supplier centre: https://central.parts/depot/';
+// Message d'accueil après l'approbation, un texte par profil (ADR 0034, note de Bertier du 11 novembre 2026), chinois
+// puis anglais comme les autres messages du robot. info : { category: manufacturer | distributor | broker | surplus,
+// links: noms des fabricants rattachés }, renvoyé par supplier_welcome. Aucun lien de connexion : le fournisseur passe
+// par le menu « 供应商 > 上传库存 ». Libellés montrés aux acheteurs : ceux du site (/offres/, /recherche/).
+// Textes chinois : brouillons, relecture native à faire.
+export function approvedNotice(info) {
+  const i = typeof info === 'string' ? { category: 'broker', links: [] } : (info || {});
+  const links = (i.links || []).join(', ');
+  const upload = ['· 上传库存：点击菜单“供应商 > 上传库存”。', '- To upload stock: menu 供应商 > 上传库存.'];
+  if (i.category === 'manufacturer') {
+    return [
+      '【Central.Parts】贵司已通过审核，身份：原厂。',
+      '· 报价有效期 14 天。到期前回复“确认库存”即可延期。',
+      links ? `· 买家看到的身份：“原厂直供”（${links}）。` : '· 买家看到的身份：品牌核实后显示为“原厂直供”。',
+      upload[0], '· 更新越及时，评分越高。', '',
+      '[Central.Parts] Your company is approved as a manufacturer.',
+      '- Offers stay valid for 14 days. Reply 确认库存 before they expire to extend them.',
+      links ? `- Buyers see you as "Manufacturer direct" (${links}).` : '- Buyers see you as "Manufacturer direct" once your brand is verified.',
+      upload[1], '- The more often you update, the better your rating.',
+    ].join('\n');
+  }
+  if (i.category === 'distributor') {
+    return [
+      '【Central.Parts】贵司已通过审核，身份：分销商。',
+      '· 报价有效期 7 天。到期前回复“确认库存”即可延期。',
+      links ? `· 买家看到的身份：“授权代理商”（${links}）。` : '· 买家看到的身份：目前显示为“合作供应商”；授权核实后显示为“授权代理商”。',
+      upload[0], '· 更新越及时，评分越高。', '',
+      '[Central.Parts] Your company is approved as a distributor.',
+      '- Offers stay valid for 7 days. Reply 确认库存 before they expire to extend them.',
+      links ? `- Buyers see you as "Authorized distributor" (${links}).` : '- Buyers currently see you as "Partner Supplier", and as "Authorized distributor" once your authorisation is verified.',
+      upload[1], '- The more often you update, the better your rating.',
+    ].join('\n');
+  }
+  const surplus = i.category === 'surplus';
+  return [
+    '【Central.Parts】贵司已通过审核，身份：现货 / 库存。',
+    '· 报价有效期 7 天。到期前回复“确认库存”即可延期。',
+    `· 买家看到的身份：“${surplus ? '经审核呆滞库存' : '经审核贸易商'}”，不公开贵司名称。`,
+    '· 您会收到买家的付费寻货请求，请在 48 小时内回复；回复“无货”也算。未回复会影响评分。',
+    upload[0], '',
+    '[Central.Parts] Your company is approved for spot stock.',
+    '- Offers stay valid for 7 days. Reply 确认库存 before they expire to extend them.',
+    `- Buyers see you as "${surplus ? 'Verified surplus' : 'Verified broker'}"; your company name is not shown.`,
+    '- You will receive paid search requests from buyers. Please answer within 48 hours; "no stock" counts as an answer. No answer lowers your rating.',
+    upload[1],
+  ].join('\n');
+}
+
+// Pièce manquante, demandée par l'administrateur (bouton du back office) : licence ou numéro d'immatriculation.
+export function missingDocText(kind) {
+  return kind === 'number'
+    ? '【Central.Parts】为完成审核，请在微信内回复贵司的注册号码（统一社会信用代码或香港商业登记号码）。\nTo finish the review, please reply here with your company registration number.'
+    : '【Central.Parts】为完成审核，请在微信内回复一张营业执照照片。\nTo finish the review, please reply here with a photo of your business licence.';
+}
+
+// Robot : « approve ORG-… » seul sur un stock disponible (profil Spot).
+export function spotApproveHint(org) {
+  return `${org} is spot stock: reply approve ${org} broker or approve ${org} surplus.`;
 }
 
 // Refus : ligne anglaise ajoutée ; le motif, écrit une fois par l'opérateur, n'est pas répété.

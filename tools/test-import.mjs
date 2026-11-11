@@ -267,20 +267,26 @@ ok(both(R.supplierHelpText()) && R.supplierHelpText().includes('https://central.
 }
 ok(Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32))) < 2048 && Buffer.byteLength(R.welcomeText('dl_' + 'a'.repeat(32), true)) < 2048, 'accueil : sous 2 048 octets');
 ok(R.receivedText() === '已收到您的消息，我们会尽快回复。\nMessage received, we will reply shortly.', 'fournisseur, inchangé : accusé de réception');
+// Message d'accueil par profil (ADR 0034) : chinois puis anglais, validité, 确认库存, menu, jamais de lien de connexion.
 {
-  const t = R.approvedNotice('CP-S-0042');
-  ok(t.startsWith('您的公司已通过 Central.Parts 审核（编号 CP-S-0042）') && t.includes('Your company has been approved by Central.Parts (CP-S-0042)'), 'fournisseur : avis de validation, chinois puis anglais, avec le numéro');
-  ok(t.includes('7 天（制造商 14 天）') && t.includes('7 days after its last update (14 days for manufacturers)'), 'avis de validation : durée de validité des offres (ADR 0025)');
-  ok(R.isReconfirmRequest('确认库存') && R.isReconfirmRequest('confirm stock') && t.includes('回复「确认库存」') && t.includes('reply 确认库存'), 'avis de validation : la reconfirmation en un geste, mot reconnu par le robot');
-  ok(t.includes('https://central.parts/depot/') && !/escrow|IC ?Superman/i.test(t), 'avis de validation : lien du centre fournisseur, aucun mot interdit');
-  ok(t.includes('可以每天上传或确认') && t.includes('you can upload or confirm every day'), 'avis de validation : mise à jour quotidienne possible pour un stock qui bouge vite (brokers)');
-  ok(t.includes('也将计入您的供应商评分') && t.includes('will also count towards your supplier rating'), 'avis de validation : la fréquence de mise à jour comptera dans la note (au futur)');
+  const m = R.approvedNotice({ category: 'manufacturer', links: [] }), m2 = R.approvedNotice({ category: 'manufacturer', links: ['Marque F'] });
+  const d = R.approvedNotice({ category: 'distributor', links: [] }), d2 = R.approvedNotice({ category: 'distributor', links: ['Fabricant X'] });
+  const b = R.approvedNotice({ category: 'broker' }), su = R.approvedNotice({ category: 'surplus' });
+  ok(m.startsWith('【Central.Parts】贵司已通过审核，身份：原厂。') && m.includes('报价有效期 14 天') && m.includes('Offers stay valid for 14 days') && both(m), 'accueil fabricant : 14 jours, chinois puis anglais');
+  ok(m.includes('品牌核实后显示为“原厂直供”') && m2.includes('“原厂直供”（Marque F）') && m2.includes('"Manufacturer direct" (Marque F)'), 'accueil fabricant : libellé selon le rattachement');
+  ok(d.includes('身份：分销商') && d.includes('报价有效期 7 天') && d.includes('“合作供应商”') && d2.includes('“授权代理商”（Fabricant X）'), 'accueil distributeur : 7 jours, libellé selon le rattachement');
+  ok(b.includes('身份：现货 / 库存') && b.includes('“经审核贸易商”') && su.includes('“经审核呆滞库存”') && su.includes('"Verified surplus"') && b.includes('48 小时内回复'),
+    'accueil stock disponible : broker ou surplus, anonymat, 48 h');
+  ok([m, d, b].every((t) => t.includes('“确认库存”') && t.includes('供应商 > 上传库存') && R.isReconfirmRequest('确认库存')), 'accueil : reconfirmation 确认库存 et menu 供应商 > 上传库存');
+  ok([m, m2, d, d2, b, su].every((t) => !/https?:\/\/|login=|escrow|IC ?Superman/i.test(t)), 'accueil : aucun lien (connexion par le menu), aucun mot interdit');
+  ok(R.missingDocText('licence').includes('营业执照照片') && R.missingDocText('number').includes('统一社会信用代码') && R.spotApproveHint('ORG-0101').includes('approve ORG-0101 broker'),
+    'pièce manquante et réponse du robot pour un stock disponible');
 }
 ok(R.rejectedNotice('licence illisible').startsWith('您的公司未通过 Central.Parts 审核：licence illisible\n如有疑问，请直接回复此消息。\n') && both(R.rejectedNotice('x')), 'fournisseur, bilingue : avis de refus (chinois d\'origine, puis anglais)');
 ok(R.rejectedNotice('').startsWith('您的公司未通过 Central.Parts 审核。\n') && !R.rejectedNotice('').includes('reason above'), 'fournisseur : refus sans motif');
 ok(R.operatorReplyText('Please send your stock list.') === 'Central.Parts 回复 · Reply from Central.Parts:\nPlease send your stock list.', 'fournisseur, bilingue : réponse d\'un opérateur (en-tête chinois et anglais, texte tel quel)');
 const adm = src('admin/index.ts');
-ok(/const APPROVED = approvedNotice;/.test(adm) && /const REJECTED = rejectedNotice;/.test(adm), 'back office : mêmes avis au fournisseur que le robot (robot-texts.js)');
+ok(/const APPROVED = approvedNotice;/.test(adm) && /const REJECTED = rejectedNotice;/.test(adm) && /supplier_welcome/.test(adm) && /supplier_welcome/.test(src('wechat-events/index.ts')), 'back office : mêmes avis au fournisseur que le robot (robot-texts.js, supplier_welcome)');
 
 // Menu anglais des opérateurs (supabase/wechat/menu-operators.json, étiquette « operators ») ; menu.json inchangé.
 const opMenu = JSON.parse(readFileSync(new URL('../supabase/wechat/menu-operators.json', import.meta.url), 'utf8'));

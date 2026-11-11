@@ -49,18 +49,26 @@ export async function notifyOperators(db: SupabaseClient, content: string) {
 }
 
 // Fiche d'une société en attente, pour les opérateurs (en anglais) : lien vers la licence valable 7 jours.
+// Fiche d'une société en attente, pour les opérateurs (anglais) : profil, pièce fournie (photo, numéro, les deux),
+// marques déclarées et lettre d'agrément (ADR 0034). Liens signés valables 7 jours, jamais montrés aux acheteurs.
+const PROFILE_EN: Record<string, string> = { Manufacturer: 'manufacturer', Distributor: 'distributor', Spot: 'spot stock (broker or surplus: to choose)',
+  Reseller: 'reseller', Broker: 'broker' };
 export async function supplierCard(db: SupabaseClient, s: Record<string, unknown>): Promise<string> {
-  let license = 'Business licence: not uploaded';
-  if (s.license_path) {
-    const { data } = await db.storage.from('supplier-docs').createSignedUrl(String(s.license_path), 7 * 24 * 3600);
-    if (data?.signedUrl) license = 'Business licence: ' + data.signedUrl;
-  }
+  const link = async (path: unknown, label: string, missing: string) => {
+    if (!path) return missing;
+    const { data } = await db.storage.from('supplier-docs').createSignedUrl(String(path), 7 * 24 * 3600);
+    return data?.signedUrl ? `${label}: ${data.signedUrl}` : missing;
+  };
+  const spot = s.profile === 'Spot';
   return [
     `[Pending review] ${s.org_id} · ${s.name}`,
-    registrationLine(s),
-    `${s.city} · ${s.profile}${s.lines ? ` · ${s.lines} stock lines` : ''}`,
-    license,
-    `Reply "approve ${s.org_id}" or "reject ${s.org_id} reason"`,
+    s.code ? registrationLine(s) : 'Registration no.: not given',
+    [s.city || 'city not given', PROFILE_EN[String(s.profile)] || s.profile, s.lines ? `${s.lines} stock lines` : ''].filter(Boolean).join(' · '),
+    ...(s.brands ? [`Declared brands: ${s.brands}`] : []),
+    await link(s.license_path, 'Business licence', 'Business licence: not uploaded'),
+    ...(s.auth_letter_path ? [await link(s.auth_letter_path, 'Authorisation letter', 'Authorisation letter: unavailable')] : []),
+    spot ? `Reply "approve ${s.org_id} broker", "approve ${s.org_id} surplus" or "reject ${s.org_id} reason"`
+      : `Reply "approve ${s.org_id}" or "reject ${s.org_id} reason"`,
   ].join('\n');
 }
 

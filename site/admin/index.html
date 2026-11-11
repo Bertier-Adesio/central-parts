@@ -107,6 +107,8 @@ dialog::backdrop{background:var(--bg-inverse);opacity:.5}
 .desc{display:inline-block;max-width:36ch;overflow-wrap:anywhere}
 td.p1k{white-space:nowrap}
 a.ext{font-size:var(--text-xs);color:var(--fg-2)}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:820px){.grid3{grid-template-columns:minmax(0,1fr)}}
 [hidden]{display:none!important}
 @media (max-width:820px){
   .split{grid-template-columns:minmax(0,1fr)}
@@ -275,11 +277,15 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   var STATUS = { pending: 'En attente', validated: 'Approuvée', rejected: 'Refusée', none: 'Non soumise' };
   var REGION = { CN: 'Chine continentale', HK: 'Hong Kong', OTHER: 'Autre' };
   var CODE_LABEL = { CN: 'Credit code (Mainland China)', HK: 'Registration no. (Hong Kong)', OTHER: 'Registration no.' };
-  var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker' };
+  var PROFILE = { Manufacturer: 'Fabricant', Distributor: 'Distributeur', Reseller: 'Revendeur', Broker: 'Broker', Surplus: 'Surplus',
+    Spot: 'Stock disponible (broker ou surplus à préciser)' };
+  // Inscription par profil (ADR 0034) : pièce fournie à l'inscription.
+  var PIECE = { both: 'photo de la licence et numéro', license: 'photo de la licence seule', number: 'numéro seul', none: 'aucune (inscrite avant le 11 novembre 2026)' };
   var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
   var ACTION = { approved: 'Approuvée', rejected: 'Refusée', pending: 'Remise en attente' };
   var ERR = {
     reason_required: 'Le motif du refus est obligatoire.',
+    spot_category_required: 'Stock disponible : choisir broker ou surplus pour approuver.',
     already_pending: 'Cette société est déjà en attente.',
     not_allowed: 'Action impossible dans l\'état actuel de la société (une société approuvée doit d\'abord être remise en attente).',
     email: 'Adresse e-mail invalide.',
@@ -475,7 +481,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       var openids = (o.contacts || []).map(function (c) { return esc(c.openid); }).join('<br>') || esc(o.registered_by || '—');
       var st = o.stock || {}, imp = o.last_import;
       var acts = '';
-      if (o.status !== 'validated') acts += '<button class="btn btn-ok" type="button" data-act="approve">Approuver</button>';
+      // Stock disponible : broker ou surplus à choisir pour approuver (ADR 0034).
+      if (o.status !== 'validated' && o.profile === 'Spot') acts += '<button class="btn btn-ok" type="button" data-act="approve_broker">Approuver comme broker</button>' +
+        '<button class="btn btn-ok" type="button" data-act="approve_surplus">Approuver comme surplus</button>';
+      else if (o.status !== 'validated') acts += '<button class="btn btn-ok" type="button" data-act="approve">Approuver</button>';
       if (o.status === 'pending' || o.status === 'none') acts += '<button class="btn btn-danger" type="button" data-act="reject">Refuser</button>';
       if (o.status === 'validated' || o.status === 'rejected') acts += '<button class="btn btn-line" type="button" data-act="pending">Remettre en attente</button>';
       $('sup-detail').innerHTML =
@@ -497,6 +506,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (imp && curText(imp) ? '<dt>Devise du dernier import</dt><dd id="d-cur">' + esc(curText(imp)) + '</dd>' : '') +
         '<dt>Mises à jour</dt><dd id="d-upd">' + esc(updText(o.updates)) + '</dd>' +
         '</dl>' +
+        '<div id="d-signup"></div>' +
         '<div class="actions" id="d-actions">' + acts + '</div>' +
         (o.status === 'validated' ? '<h3>Dépôt du fournisseur</h3><p class="muted">Charger un fichier de stock pour lui, voir ses imports, reconfirmer ses offres. ' +
           'Lien personnel à votre nom, valable 8 heures, inscrit au journal ; les fichiers sont chargés au nom du fournisseur, mais ne comptent pas dans sa note de mise à jour.</p>' +
@@ -509,6 +519,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
             (d.reason ? '<br><span class="muted">Motif : ' + esc(d.reason) + '</span>' : '') + '</li>';
         }).join('') + '</ol>' : '<p class="muted" id="d-log">Aucune décision enregistrée.</p>');
       $('sup-detail').dataset.org = o.org_id;
+      loadSignup(o.org_id);
       api('GET', '/supplier-addresses?org=' + encodeURIComponent(o.org_id)).then(function (list) {
         if (!$('d-addr')) return;
         $('d-addr').classList.toggle('muted', !list.length);
@@ -860,6 +871,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   var DECISION = {
     approve: { title: 'Approuver la société', ok: 'Approuver', cls: 'btn-ok', reason: false,
       text: 'La société sera approuvée et ses offres pourront être publiées. Le fournisseur reçoit le même message WeChat qu\'avec la commande du robot.' },
+    approve_broker: { title: 'Approuver comme broker', ok: 'Approuver comme broker', cls: 'btn-ok', reason: false, spot: 'broker',
+      text: 'Stock disponible approuvé comme broker : présenté « Broker vérifié », jamais « agréé » ni « direct ». Le fournisseur reçoit le message d\'accueil du stock disponible.' },
+    approve_surplus: { title: 'Approuver comme surplus', ok: 'Approuver comme surplus', cls: 'btn-ok', reason: false, spot: 'surplus',
+      text: 'Stock disponible approuvé comme surplus : présenté « Surplus vérifié », jamais « agréé » ni « direct ». Le fournisseur reçoit le message d\'accueil du stock disponible.' },
     reject: { title: 'Refuser la société', ok: 'Refuser', cls: 'btn-danger', reason: 'required',
       text: 'La société sera refusée. Le motif est obligatoire ; il est transmis au fournisseur dans WeChat, comme avec la commande du robot.' },
     pending: { title: 'Remettre en attente', ok: 'Remettre en attente', cls: 'btn-main', reason: 'optional',
@@ -898,6 +913,46 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     if (d.reason) $('c-reason').focus();
   });
   $('c-cancel').addEventListener('click', function () { pending = null; reqPending = null; $('confirm').close(); });
+
+  // ------------------------------------------------------------ inscription par profil (ADR 0034)
+  // Profil choisi, pièce fournie, marques déclarées (simple indication : aucun rattachement), lettre d'agrément ;
+  // avant l'approbation : région, ville et profil complétés d'après la licence ; demande de la pièce manquante.
+  function loadSignup(org) {
+    return api('GET', '/supplier-signup?org=' + encodeURIComponent(org)).then(function (g) {
+      if (!$('d-signup') || $('sup-detail').dataset.org !== org) return;
+      var open = g.status !== 'validated';
+      var opt = function (v, l, cur) { return '<option value="' + esc(v) + '"' + (v === (cur || '') ? ' selected' : '') + '>' + esc(l) + '</option>'; };
+      var ask = (!g.has_license ? '<button class="btn btn-line" type="button" data-ask="licence">Demander la photo de la licence</button>' : '') +
+        (!g.has_code ? '<button class="btn btn-line" type="button" data-ask="number">Demander le numéro d\'immatriculation</button>' : '');
+      $('d-signup').innerHTML = '<h3>Inscription</h3><dl class="kv">' +
+        '<dt>Profil choisi</dt><dd id="d-sg-profile">' + esc(PROFILE[g.profile] || g.profile) + '</dd>' +
+        '<dt>Pièce fournie</dt><dd id="d-sg-piece">' + esc(PIECE[g.piece] || g.piece) + '</dd>' +
+        (g.brands ? '<dt>Marques déclarées</dt><dd id="d-sg-brands">' + esc(g.brands) + ' <span class="muted">(déclaration du fournisseur : ne crée aucun rattachement)</span></dd>' : '') +
+        (g.profile === 'Distributor' || g.has_auth_letter ? '<dt>Lettre d\'agrément</dt><dd>' + (g.has_auth_letter ? 'déposée (lien dans la fiche WeChat « pending »)' : 'non déposée') + '</dd>' : '') +
+        '</dl>' +
+        (open ? '<form class="sg-f" id="d-sg-form"><div class="grid3">' +
+          '<label class="f">Région d\'immatriculation<select name="region">' + opt('', '—', g.region) + opt('CN', 'Chine continentale', g.region) + opt('HK', 'Hong Kong', g.region) + opt('OTHER', 'Autre', g.region) + '</select></label>' +
+          '<label class="f">Ville<input type="text" name="city" maxlength="60" value="' + esc(g.city || '') + '"></label>' +
+          '<label class="f">Profil<select name="profile">' + ['Manufacturer', 'Distributor', 'Spot', 'Broker', 'Surplus', 'Reseller'].map(function (v) { return opt(v, PROFILE[v], g.profile); }).join('') + '</select></label>' +
+          '</div><div class="actions"><button class="btn btn-line" type="submit">Enregistrer la fiche</button>' + ask + '</div><p class="muted" id="d-sg-out"></p></form>' : '');
+    }).catch(fail);
+  }
+  $('sup-detail').addEventListener('submit', function (ev) {
+    var f = ev.target.closest('form.sg-f'); if (!f) return;
+    ev.preventDefault();
+    var org = $('sup-detail').dataset.org;
+    api('POST', '/supplier-complete', { org: org, update: { region: f.region.value, city: f.city.value, profile: f.profile.value } })
+      .then(function () { show('Fiche de ' + org + ' complétée.', 'ok'); return Promise.all([loadSuppliers(), openSupplier(org)]); }).catch(fail);
+  });
+  $('sup-detail').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-ask]'); if (!b) return;
+    var org = $('sup-detail').dataset.org;
+    b.disabled = true;
+    api('POST', '/ask-doc', { org: org, kind: b.getAttribute('data-ask') }).then(function (r) {
+      $('d-sg-out').textContent = r.delivered ? 'Demande envoyée dans WeChat (' + r.delivered + ' contact(s)).'
+        : 'Demande non remise : aucun contact joignable dans WeChat (fenêtre de 48 h). Écrivez-lui directement.';
+    }).catch(fail).then(function () { b.disabled = false; });
+  });
   $('c-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     if (reqPending) return submitRequestDecision();
@@ -907,10 +962,11 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       $('c-err').textContent = ERR.reason_required; $('c-err').hidden = false; $('c-reason').focus();
       return;
     }
-    var path = { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
-    var label = { approve: 'approuvée', reject: 'refusée', pending: 'remise en attente' }[pending];
+    var spot = DECISION[pending].spot;
+    var path = spot ? '/approve' : { approve: '/approve', reject: '/reject', pending: '/pending' }[pending];
+    var label = spot ? 'approuvée comme ' + spot : { approve: 'approuvée', reject: 'refusée', pending: 'remise en attente' }[pending];
     $('c-ok').disabled = true;
-    api('POST', path, pending === 'approve' ? { org: org } : { org: org, reason: reason }).then(function () {
+    api('POST', path, spot ? { org: org, spot: spot } : pending === 'approve' ? { org: org } : { org: org, reason: reason }).then(function () {
       $('confirm').close(); pending = null;
       show('Société ' + org + ' ' + label + '.', 'ok');
       return Promise.all([loadSuppliers(), openSupplier(org)]);

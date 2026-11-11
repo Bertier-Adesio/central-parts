@@ -463,6 +463,34 @@ const addr = norm(await page.textContent('#d-addr'));
 ok(addr.includes('par défaut') && addr.includes('Futian, bâtiment 1, 518000 Shenzhen, CN') && addr.includes('Entrepôt Hong Kong (fictif)') && addr.includes('10 lot(s)'),
   'fiche vendeur : adresses d\'expédition, la principale signalée');
 
+// 9 quater. Inscription par profil (ADR 0034) : stock disponible, pièce fournie, compléments, pièce manquante, approbation.
+await page.click('#tab-sup');
+await page.click('#filters button[data-s=pending]');
+await page.waitForSelector('#sup-list button[data-org="ORG-0112"]');
+await page.click('#sup-list button[data-org="ORG-0112"]');
+await page.waitForFunction(() => document.getElementById('sup-detail').dataset.org === 'ORG-0112' && /Stock disponible/.test((document.getElementById('d-sg-profile') || {}).textContent || ''));
+ok(norm(await page.textContent('#d-sg-profile')) === 'Stock disponible (broker ou surplus à préciser)' && norm(await page.textContent('#d-sg-piece')) === 'numéro seul',
+  'inscription : profil choisi et pièce fournie');
+ok(await page.$('#d-actions button[data-act="approve_broker"]') && await page.$('#d-actions button[data-act="approve_surplus"]') && !(await page.$('#d-actions button[data-act="approve"]')),
+  'stock disponible : approbation seulement comme broker ou surplus');
+ok(await page.$('button[data-ask="licence"]') && !(await page.$('button[data-ask="number"]')), 'pièce manquante : seule la photo de la licence est demandable');
+await page.click('button[data-ask="licence"]');
+await page.waitForFunction(() => /Demande (envoyée|non remise)/.test(document.getElementById('d-sg-out').textContent));
+ok(mock.state.notified.some((x) => x.org === 'ORG-0112' && x.kind === 'ask-licence'), 'pièce manquante demandée dans WeChat, sur clic seulement');
+await page.selectOption('#d-sg-form select[name=region]', 'OTHER');
+await page.fill('#d-sg-form input[name=city]', 'Singapour (fictif)');
+await page.click('#d-sg-form button[type=submit]');
+await page.waitForFunction(() => /ORG-0112 complétée/.test(document.getElementById('msg').textContent));
+ok(mock.state.orgs.find((o) => o.org_id === 'ORG-0112').city === 'Singapour (fictif)', 'fiche complétée par l\'administrateur (ville, région)');
+await page.waitForSelector('#d-actions button[data-act="approve_surplus"]');
+await page.click('#d-actions button[data-act="approve_surplus"]');
+await page.waitForSelector('#confirm[open]');
+ok(norm(await page.textContent('#c-text')).includes('Surplus vérifié'), 'confirmation : libellé montré aux acheteurs');
+await page.click('#c-ok');
+await page.waitForFunction(() => /approuvée comme surplus/.test(document.getElementById('msg').textContent));
+const o112 = mock.state.orgs.find((o) => o.org_id === 'ORG-0112');
+ok(o112.status === 'validated' && o112.profile === 'Surplus' && o112.decisions.some((d) => d.action === 'profile'), 'approuvée comme surplus : profil fixé et journalisé');
+
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
 await page.close();
 

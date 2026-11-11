@@ -53,6 +53,19 @@ details{font-size:var(--text-sm);margin:6px 0 0}
 form.fields label{display:block;font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 12px}
 form.fields input[type=text],form.fields select,.row input[type=text]{display:block;width:100%;box-sizing:border-box;min-height:var(--control-h-lg);margin:4px 0 0;padding:0 12px;border:1px solid var(--border-2);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--fg-1);font:inherit}
 form.fields .hint{display:block;font-weight:normal;color:var(--fg-3);margin:2px 0 0}
+fieldset.opts{border:0;margin:0 0 16px;padding:0;min-width:0}
+fieldset.opts legend{font-size:var(--text-sm);font-weight:var(--weight-medium);margin:0 0 6px;padding:0}
+label.opt{display:flex!important;gap:10px;align-items:flex-start;border:1px solid var(--border-2);border-radius:var(--radius-sm);padding:10px 12px;margin:0 0 8px!important;cursor:pointer;background:var(--bg-surface)}
+label.opt:has(input:checked){border-color:var(--accent)}
+label.opt input{margin:4px 0 0;flex:none}
+label.opt strong{display:block}
+.cur-opts{display:flex;flex-wrap:wrap;gap:8px}
+.cur-opts legend{width:100%}
+label.pill{display:inline-flex!important;align-items:center;gap:6px;min-height:var(--control-h-lg);padding:0 14px;border:1px solid var(--border-2);border-radius:var(--radius-pill);margin:0!important;cursor:pointer;background:var(--bg-surface)}
+label.pill:has(input:checked){border-color:var(--accent);color:var(--accent)}
+form.fields p.hint{font-size:var(--text-sm);margin:0}
+p.or{text-align:center;color:var(--fg-3);margin:4px 0 8px;font-size:var(--text-sm)}
+#r-region{margin:4px 0 8px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row input[type=text]{flex:1;min-width:0;margin:0}
 .link{font-family:var(--font-mono);font-size:var(--text-sm);overflow-wrap:anywhere;background:var(--bg-sunken);padding:8px;border-radius:var(--radius-sm);margin:8px 0}
@@ -137,29 +150,40 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
 
   <!-- Inscription de la société -->
   <section id="v-register" hidden>
-    <form class="card fields" id="reg">
+    <!-- Inscription par profil (ADR 0034) : nom, profil, champ propre au profil, vérification (photo OU numéro),
+         devise sans valeur par défaut. Sans JavaScript, les blocs propres aux profils restent tous visibles. -->
+    <form class="card fields" id="reg" novalidate>
       <h2 data-t="regTitle">注册公司</h2>
-      <p class="muted" data-t="regLead">注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。</p>
+      <p class="muted" data-t="regLead">注册后即可上传库存。Central.Parts 审核通过后，您的库存才会展示给客户。</p>
       <label><span data-t="fName">公司全称（与营业执照一致）</span><input type="text" id="r-name" required maxlength="120" autocomplete="organization"></label>
-      <label><span data-t="fRegion">注册国家/地区</span>
-        <select id="r-region" required>
-          <option value="" data-t="choose">请选择</option>
-          <option value="CN" data-t="rCN">中国大陆</option>
-          <option value="HK" data-t="rHK">香港</option>
-          <option value="OTHER" data-t="rOther">其他</option>
-        </select></label>
-      <label><span id="r-code-label">统一社会信用代码</span><input type="text" id="r-code" required maxlength="18" autocapitalize="characters" spellcheck="false"><span class="hint" id="r-code-hint">18 位，见营业执照。</span></label>
-      <label><span data-t="fCity">城市</span><input type="text" id="r-city" required maxlength="60"></label>
-      <label><span data-t="fProfile">公司类型</span>
-        <select id="r-profile" required>
-          <option value="" data-t="choose">请选择</option>
-          <option value="Manufacturer" data-t="pManufacturer">原厂</option>
-          <option value="Distributor" data-t="pDistributor">分销商</option>
-          <option value="Reseller" data-t="pReseller">贸易商</option>
-          <option value="Broker" data-t="pBroker">现货经纪商（Broker）</option>
-        </select></label>
-      <label><span data-t="fCurrency">报价货币</span>
-        <select id="r-currency"><option value="USD">USD</option><option value="CNH">CNH（人民币）</option><option value="EUR">EUR</option><option value="HKD">HKD</option></select></label>
+      <fieldset class="opts" id="r-profiles"><legend data-t="fProfile">公司类型</legend>
+        <label class="opt"><input type="radio" name="r-profile" value="Manufacturer"><span><strong data-t="pManufacturer">原厂</strong><span class="hint" data-t="hManufacturer"></span></span></label>
+        <label class="opt"><input type="radio" name="r-profile" value="Distributor"><span><strong data-t="pDistributor">授权分销商</strong><span class="hint" data-t="hDistributor"></span></span></label>
+        <label class="opt"><input type="radio" name="r-profile" value="Spot"><span><strong data-t="pSpot">现货 / 库存</strong><span class="hint" data-t="hSpot"></span></span></label>
+      </fieldset>
+      <div class="prof" data-for="Manufacturer"><label><span data-t="fBrandsM">您的品牌（可填多个，用逗号分隔）</span><input type="text" id="r-brands-m" maxlength="300"></label></div>
+      <div class="prof" data-for="Distributor">
+        <label><span data-t="fBrandsD">您获得授权的品牌（可填多个，用逗号分隔）</span><input type="text" id="r-brands-d" maxlength="300"></label>
+        <label class="file"><span data-t="fAuth">授权书照片（选填，可加快核实）</span><input type="file" id="r-auth" accept="image/*,.pdf"></label>
+      </div>
+      <fieldset class="opts" id="r-verif"><legend data-t="verifTitle">公司核实（二选一）</legend>
+        <label class="file"><span data-t="verifLic">上传营业执照照片</span><input type="file" id="r-lic" accept="image/*,.pdf"></label>
+        <p class="or" data-t="or">或</p>
+        <label><span data-t="verifCode">填写统一社会信用代码（香港公司填商业登记号码）</span>
+          <select id="r-region" aria-label="注册国家/地区 · Country or region">
+            <option value="CN" data-t="rCN">中国大陆</option>
+            <option value="HK" data-t="rHK">香港</option>
+            <option value="OTHER" data-t="rOther">其他</option>
+          </select>
+          <input type="text" id="r-code" maxlength="18" autocapitalize="characters" spellcheck="false" aria-label="注册号码 · Registration number"><span class="hint" id="r-code-hint">18 位，见营业执照。</span></label>
+        <p class="hint" data-t="verifHint">仅用于核实公司，不会向买家公开。审核通过前，任何报价都不会发布。</p>
+      </fieldset>
+      <fieldset class="opts cur-opts"><legend data-t="fCurrency">报价货币</legend>
+        <label class="pill"><input type="radio" name="r-currency" value="USD"><span>USD</span></label>
+        <label class="pill"><input type="radio" name="r-currency" value="CNH"><span data-t="curCNH">CNH（人民币）</span></label>
+        <label class="pill"><input type="radio" name="r-currency" value="EUR"><span>EUR</span></label>
+        <label class="pill"><input type="radio" name="r-currency" value="HKD"><span>HKD</span></label>
+      </fieldset>
       <button class="btn btn-main" type="submit" id="r-send" data-t="regSend">提交注册</button>
     </form>
     <div class="card">
@@ -267,11 +291,20 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       tpl: '推荐格式：每行一个料号，含品牌、型号、数量和价格阶梯。原厂和授权分销商请尽量填写：制造商全称、产品描述、规格书链接、封装、生命周期、ECCN 和 HS 海关编码。这些字段为选填，但资料越完整，报价越容易被采购方采用，今后也将计入供应商评分。',
       tplMaker: '原厂模板（中文表头，CSV）', tplLink: '国际模板（英文表头，CSV）', tplMore: 'Excel 模板与产品目录',
       helpLink: '使用帮助：如何登录、注册公司和上传库存',
-      regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核营业执照后，您的库存才会展示给客户。',
+      regTitle: '注册公司', regLead: '注册后即可上传库存。Central.Parts 审核通过后，您的库存才会展示给客户。',
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
       fCode: '统一社会信用代码', fCodeHint: '18 位，见营业执照。', fCodeOther: '公司注册号码',
       hintHK: '请填写香港商业登记证或公司注册证书上的号码。', hintOther: '请填写贵公司注册证明文件上的号码。', fCity: '城市', fProfile: '公司类型',
-      choose: '请选择', pManufacturer: '原厂', pDistributor: '分销商', pReseller: '贸易商', pBroker: '现货经纪商（Broker）',
+      pDistributor: '授权分销商', pSpot: '现货 / 库存',
+      hManufacturer: '报价有效期 14 天。品牌经我们核实后，向买家显示为“原厂直供”，并可开通品牌页面。',
+      hDistributor: '报价有效期 7 天。授权经我们核实后，向买家显示为“授权代理商”；核实之前显示为“合作供应商”。',
+      hSpot: '报价有效期 7 天。向买家显示为“经审核贸易商”或“经审核呆滞库存”，不公开贵司名称。您会收到买家的付费寻货请求，须在 48 小时内回复，回复“无货”也算。',
+      fBrandsM: '您的品牌（可填多个，用逗号分隔）', fBrandsD: '您获得授权的品牌（可填多个，用逗号分隔）', fAuth: '授权书照片（选填，可加快核实）',
+      verifTitle: '公司核实（二选一）', verifLic: '上传营业执照照片', or: '或', verifCode: '填写统一社会信用代码（香港公司填商业登记号码）',
+      verifHint: '仅用于核实公司，不会向买家公开。审核通过前，任何报价都不会发布。', curCNH: 'CNH（人民币）',
+      regDone: '已收到。审核结果会通过微信通知您。现在可以先上传库存，审核通过后才会发布。',
+      pendingNoLic: '审核中：Central.Parts 将核对您的公司，结果会通过微信通知您。上传营业执照照片可加快审核（选填）。',
+      choose: '请选择', pManufacturer: '原厂',
       fCurrency: '报价货币', regSend: '提交注册', handTitle: '不是公司负责人？',
       handLead: '把此页面转发给负责人：负责人用微信扫码登录后注册公司，再在「同事」中邀请您。', copy: '复制链接', copied: '已复制。',
       licTitle: '上传营业执照', licLead: '拍照或选择文件：JPG、PNG、PDF，最大 10 MB。仅用于审核，不会公开。', licPick: '选择营业执照照片',
@@ -315,7 +348,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       reconfirmed: '已确认：{n} 条报价有效期至 {date}。',
       e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
         session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
-        code_invalid: '统一社会信用代码有误，请核对营业执照。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
+        code_invalid: '统一社会信用代码有误，请核对营业执照。', verification: '请上传营业执照照片，或填写注册号码（二选一）。', profile: '请选择公司类型。', brands: '请填写品牌。', name: '请填写公司全称。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
         already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
         expired: '二维码已过期，请刷新。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
     en: { title: 'Supplier centre', lead: 'Register your company and upload your CSV or Excel stock list; we turn it into your stock on Central.Parts.',
@@ -325,11 +358,20 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       tpl: 'Recommended format: one part per line, with manufacturer, part number, quantity and price breaks. Manufacturers and authorized distributors, please also fill in as far as possible: full manufacturer name, description, datasheet link, case, lifecycle, ECCN and HTS code. These fields are optional, but the more complete your data, the more likely buyers are to choose your offers; they will also count towards your supplier rating later.',
       tplMaker: 'Manufacturer template (Chinese headers, CSV)', tplLink: 'International template (English headers, CSV)', tplMore: 'Excel templates and product catalogue',
       helpLink: 'Help: how to log in, register your company and upload your stock',
-      regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has checked your business licence.',
+      regTitle: 'Register your company', regLead: 'Once registered, you can upload your stock. It is shown to buyers after Central.Parts has approved your company.',
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
       fCode: 'Unified social credit code', fCodeHint: '18 characters, on the business licence.', fCodeOther: 'Company registration number',
       hintHK: 'Enter the number shown on your Hong Kong business registration or incorporation certificate.', hintOther: 'Enter the number shown on your company registration document.', fCity: 'City', fProfile: 'Company type',
-      choose: 'Choose', pManufacturer: 'Manufacturer', pDistributor: 'Distributor', pReseller: 'Reseller', pBroker: 'Broker',
+      pDistributor: 'Authorised distributor', pSpot: 'Spot stock (trader, broker, surplus)',
+      hManufacturer: 'Offers stay valid for 14 days. Once we have verified your brand, buyers see you as "Manufacturer direct" and you can have a brand page.',
+      hDistributor: 'Offers stay valid for 7 days. Once we have verified your authorisation, buyers see you as "Authorized distributor"; until then, as "Partner Supplier".',
+      hSpot: 'Offers stay valid for 7 days. Buyers see you as "Verified broker" or "Verified surplus"; your company name is not shown. You will receive paid search requests from buyers and must answer within 48 hours; "no stock" counts as an answer.',
+      fBrandsM: 'Your brand(s), separated by commas', fBrandsD: 'Brands you are authorised for, separated by commas', fAuth: 'Authorisation letter photo (optional, speeds up the check)',
+      verifTitle: 'Company check (one of the two)', verifLic: 'Upload a photo of your business licence', or: 'or', verifCode: 'Enter your registration number (Hong Kong: business registration number)',
+      verifHint: 'Used only to check your company; never shown to buyers. Nothing is published before approval.', curCNH: 'CNH (RMB)',
+      regDone: 'Received. We will tell you the result in WeChat. You can upload your stock now; it is published only after approval.',
+      pendingNoLic: 'Under review: Central.Parts is checking your company and will tell you the result in WeChat. Uploading a photo of your business licence speeds up the review (optional).',
+      choose: 'Choose', pManufacturer: 'Manufacturer', 
       fCurrency: 'Quote currency', regSend: 'Register', handTitle: 'Not the person in charge?',
       handLead: 'Send this page to the person in charge: they log in with WeChat, register the company, then invite you under "Colleagues".', copy: 'Copy the link', copied: 'Copied.',
       licTitle: 'Upload the business licence', licLead: 'Take a photo or choose a file: JPG, PNG or PDF, up to 10 MB. Used only for the review, never published.', licPick: 'Choose the business licence photo',
@@ -373,7 +415,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       reconfirmed: 'Confirmed: {n} offers valid until {date}.',
       e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
         session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
-        code_invalid: 'The unified social credit code is not valid: please check the business licence.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
+        code_invalid: 'The unified social credit code is not valid: please check the business licence.', verification: 'Please upload your licence photo or enter your registration number.', profile: 'Please choose your company type.', brands: 'Please enter your brand(s).', name: 'Please enter the full company name.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
         already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
         expired: 'The QR code has expired, please refresh it.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
   };
@@ -468,15 +510,38 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   }
 
   // ---------------------------------------------------------------- inscription
+  // Inscription par profil (ADR 0034). Pièces déposées d'abord (dossier du compte, avant toute société), puis la société.
+  function regProfile() { var r = document.querySelector('input[name=r-profile]:checked'); return r ? r.value : ''; }
+  function regCurrency() { var r = document.querySelector('input[name=r-currency]:checked'); return r ? r.value : ''; }
+  function renderProfile() {
+    var p = regProfile();
+    document.querySelectorAll('#reg .prof').forEach(function (d) { d.hidden = d.getAttribute('data-for') !== p; });
+  }
+  document.querySelectorAll('input[name=r-profile]').forEach(function (r) { r.addEventListener('change', renderProfile); });
+  renderProfile();
+  function docName(f, kind) { return /\.(jpe?g|png|heic|webp|pdf)$/i.test(f.name) ? f.name : kind + '.' + ((f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg')); }
+  function sendDoc(kind, f) {
+    if (!f) return Promise.resolve(null);
+    return api('POST', '/doc-url', { kind: kind, file_name: docName(f, kind) }).then(function (u) { return putFile(u.signed_url, f).then(function () { return u.path; }); });
+  }
   $('reg').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var region = $('r-region').value;
-    if (!region) return err('fields');
-    var code = regNumber(region, $('r-code').value);
-    if (!regNumberOk(region, code)) return err(region === 'CN' ? 'code_invalid' : 'number_invalid');
-    $('r-send').disabled = true;
-    api('POST', '/register', { name: $('r-name').value, region: region, code: code, city: $('r-city').value, profile: $('r-profile').value, currency: $('r-currency').value })
-      .then(function (d) { setToken(d.token); say('', ''); enterApp(d.org); }, err)
+    var name = $('r-name').value.trim(), profile = regProfile(), currency = regCurrency();
+    var brands = profile === 'Manufacturer' ? $('r-brands-m').value.trim() : profile === 'Distributor' ? $('r-brands-d').value.trim() : '';
+    var lic = $('r-lic').files[0], auth = profile === 'Distributor' ? $('r-auth').files[0] : null;
+    var region = $('r-region').value, code = regNumber(region, $('r-code').value);
+    if (!name) return err('name');
+    if (!profile) return err('profile');
+    if ((profile === 'Manufacturer' || profile === 'Distributor') && !brands) return err('brands');
+    if (!lic && !code) return err('verification');
+    if (code && !regNumberOk(region, code)) return err(region === 'CN' ? 'code_invalid' : 'number_invalid');
+    if (!currency) return err('currency');
+    if ((lic && lic.size > 10485760) || (auth && auth.size > 10485760)) return err('size');
+    $('r-send').disabled = true; say('info', t().uploading);
+    Promise.all([sendDoc('licence', lic), sendDoc('agrement', auth)]).then(function (paths) {
+      return api('POST', '/register', { name: name, profile: profile, currency: currency, code: code || null, region: code ? region : null,
+        license_path: paths[0], auth_path: paths[1], brands: brands || null });
+    }).then(function (d) { setToken(d.token); enterApp(d.org); say('ok', t().regDone); }, err)
       .then(function () { $('r-send').disabled = false; });
   });
   // Numéro selon le pays / région : mêmes règles que le serveur (app.registration_number_ok), pour signaler une faute
@@ -489,7 +554,6 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   // Libellé, aide et longueur du champ numéro selon le pays / région choisi.
   function renderRegion() {
     var r = $('r-region').value;
-    $('r-code-label').textContent = r === 'HK' || r === 'OTHER' ? t().fCodeOther : t().fCode;
     $('r-code-hint').textContent = r === 'HK' ? t().hintHK : r === 'OTHER' ? t().hintOther : t().fCodeHint;
     $('r-code').maxLength = r === 'HK' || r === 'OTHER' ? 30 : 18;
   }
@@ -682,7 +746,10 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     $('org-alias').textContent = org.status === 'validated' ? org.alias : org.status === 'pending' ? t().statusPending : '';
     var st = $('status');
     st.hidden = org.status === 'validated';
-    if (org.status === 'pending') { st.className = 'msg ' + (org.has_license ? 'info' : 'err'); st.textContent = org.has_license ? t().pending : t().pendingLic; }
+    if (org.status === 'pending') {
+      st.className = 'msg ' + (org.has_license || org.has_code ? 'info' : 'err');
+      st.textContent = org.has_license ? t().pending : org.has_code ? t().pendingNoLic : t().pendingLic;
+    }
     if (org.status === 'rejected') { st.className = 'msg err'; st.textContent = t().rejectedMsg + (org.rejected_reason || ''); }
     $('lic').hidden = !(org.status === 'pending' && !org.has_license);
     $('form').hidden = $('imports-card').hidden = org.status === 'rejected';
