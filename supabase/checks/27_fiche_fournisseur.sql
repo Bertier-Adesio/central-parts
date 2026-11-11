@@ -59,7 +59,10 @@ begin
     'address_id', a, 'languages', jsonb_build_array('en', 'zh'), 'for_rfq', true, 'for_po', true));
   perform tests.eq('contact : ajouté, e-mail en minuscules, préféré pour RFQ et commandes',
     (r->'contacts'->0->>'email') || ' ' || (r->'contacts'->0->>'for_rfq') || ' ' || (r->'contacts'->0->>'for_po'), 'ventes@distributeur.example true true');
-  perform tests.fails('contact : e-mail invalide refusé', $s$select public.admin_seller_contact_save('FB1', '{"name": "X", "email": "pas-un-email"}')$s$, '22023');
+  -- Depuis l'ADR 0034, un e-mail mal formé est signalé par la page (avertissement) mais n'empêche pas l'enregistrement.
+  perform tests.eq('contact : e-mail mal formé accepté (avertissement dans la page)',
+    (select count(*) from jsonb_array_elements(public.admin_seller_contact_save('FB1', '{"name": "X", "email": "pas-un-email"}')->'contacts') c where c->>'email' = 'pas-un-email')::int, 1);
+  perform public.admin_seller_contact_delete('FB1', (select c->>'id' from jsonb_array_elements(public.admin_supplier_profile('FB1')->'contacts') c where c->>'email' = 'pas-un-email'));
   perform tests.fails('contact : nom obligatoire', $s$select public.admin_seller_contact_save('FB1', '{"name": " "}')$s$, '22023');
   perform tests.fails('contact : adresse d''un autre fournisseur refusée',
     format($s$select public.admin_seller_contact_save('FB2', '{"name": "X", "address_id": "%s"}')$s$, a), '22023');

@@ -53,6 +53,9 @@ async function run(lang) {
   await page.fill('#r-brands-m', 'HKTC');
   await page.selectOption('#r-region', 'HK');
   await page.fill('#r-code', '12345678');
+  await page.fill('#r-city', lang === 'zh' ? '香港' : 'Hong Kong');
+  await page.fill('.ct[data-i="0"] [name=family_name]', lang === 'zh' ? '陈' : 'Chan');
+  await page.fill('.ct[data-i="0"] [name=given_name]', lang === 'zh' ? '小姐' : 'Mary');
   await page.check('input[name=r-currency][value=USD]');
   await shot('#reg', 'inscription');
 

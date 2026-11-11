@@ -8,9 +8,12 @@
 //   GET  /depot/me          → société du compte (null s'il doit s'inscrire), et jeton de session à jour
 //   POST /depot/doc-url     {kind: licence|agrement, file_name} → lien de dépôt signé pour une pièce déposée AVANT
 //                           l'inscription (dossier pending/<empreinte de l'openid>/, ADR 0034)
-//   POST /depot/register    {name, profile: Manufacturer|Distributor|Spot, currency, code?, region?, license_path?,
-//                           brands?, auth_path?} → enregistre la société, en attente de validation ; photo de la licence
-//                           OU numéro (l'un des deux suffit) ; devise obligatoire ; marques pour fabricant et distributeur
+//   POST /depot/register    {name, profile: Manufacturer|Distributor|Spot, currency, code?, region?, city?, license_path?,
+//                           brands?, auth_path?, website?, wecom?, contacts: [{family_name, given_name, role, phone, wechat,
+//                           email, duty}]} → enregistre la société, en attente de validation. Bloquent l'envoi : nom, profil,
+//                           photo de la licence OU numéro, nom du contact principal, devise ; le reste se complète plus tard
+//   POST /depot/signup      {name?, profile?, code?, region?, city?, brands?, website?, wecom?} → compléter sa fiche ; après
+//                           l'approbation, le nom, le profil et le numéro ne changent plus que par Central.Parts (ADR 0034)
 //   POST /depot/license-url {file_name}  → lien de dépôt signé pour la photo de la licence (营业执照)
 //   POST /depot/license     {path}       → enregistre la licence et prévient les opérateurs dans WeChat
 //   POST /depot/upload-url  {file_name, complete?, currency}  → lien de dépôt signé vers le dossier de la société ;
@@ -126,10 +129,12 @@ Deno.serve(async (req) => {
       // Devise obligatoire, sans valeur par défaut ; photo OU numéro (contrôlé aussi en base, CP008).
       if (!['USD', 'CNH', 'EUR', 'HKD'].includes(String(b.currency || '').toUpperCase())) return json({ error: 'fields', field: 'currency' }, 422);
       if (!str(b.code) && !str(b.license_path)) return json({ error: 'verification' }, 422);
+      const contacts = Array.isArray(b.contacts) ? b.contacts.slice(0, 4) : [];
+      if (!contacts.length || !str(contacts[0]?.family_name) && !str(contacts[0]?.given_name)) return json({ error: 'fields', field: 'contact' }, 422);
       const { data, error } = await db.rpc('register_supplier', {
         p_openid: session.openid, p_name: b.name, p_code: str(b.code), p_city: str(b.city), p_profile: b.profile,
         p_currency: String(b.currency).toUpperCase(), p_region: str(b.region), p_license_path: str(b.license_path),
-        p_brands: str(b.brands), p_auth_path: str(b.auth_path),
+        p_brands: str(b.brands), p_auth_path: str(b.auth_path), p_website: str(b.website), p_wecom: str(b.wecom), p_contacts: contacts,
       });
       if (error) {
         return json({ error: REGISTER_ERRORS[error.code] || 'database', field: error.details || null, detail: error.message },
@@ -254,6 +259,19 @@ Deno.serve(async (req) => {
       })().catch(() => {});
       const rt = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
       if (rt) rt.waitUntil(done); else await done;
+      return json(data);
+    }
+
+    // ---------------------------------------------------------------- compléter sa fiche (ADR 0034)
+    if (req.method === 'POST' && path.endsWith('/signup')) {
+      const b = await body();
+      const keep = ['name', 'profile', 'code', 'region', 'city', 'brands', 'website', 'wecom'];
+      const p = Object.fromEntries(Object.entries(b).filter(([k, v]) => keep.includes(k) && (typeof v === 'string' || v === null)));
+      const { data, error } = await db.rpc('supplier_signup_save', { p_openid: session.openid, p });
+      if (error) {
+        const code = error.code === '42501' ? 'forbidden' : REGISTER_ERRORS[error.code] || 'database';
+        return json({ error: code }, error.code === '42501' ? 403 : 422);
+      }
       return json(data);
     }
 

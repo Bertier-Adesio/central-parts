@@ -10,6 +10,8 @@ Des fournisseurs chinois abandonnent l'inscription sur `/depot/` : formulaire lo
 
 ## Décision
 
+**Principe** (note mise à jour du 11 novembre) : on **demande** tout, on ne **bloque** presque sur rien. Seuls cinq champs bloquent l'envoi, marqués « 必填 » : nom de la société, profil, une pièce (photo ou numéro), nom du contact principal, devise. Tout le reste se complète plus tard, par le fournisseur depuis `/depot/` ou par l'administrateur.
+
 - **Trois profils à l'inscription** :
   - 原厂 Fabricant (`Manufacturer`) ;
   - 授权分销商 Distributeur agréé (`Distributor`) ;
@@ -21,9 +23,13 @@ Des fournisseurs chinois abandonnent l'inscription sur `/depot/` : formulaire lo
   - La photo peut être déposée avant l'inscription, dans un dossier propre au compte (`pending/<empreinte de l'openid>/`, compartiment privé `supplier-docs`).
   - Le contrôle du numéro selon la région ne change pas.
   - La région n'est demandée qu'avec un numéro.
-- **Ville retirée du formulaire** : l'administrateur la complète d'après la licence, avec la région et, au besoin, le profil (`admin_supplier_complete`, changement de profil inscrit au journal).
+- **Formulaire en trois blocs** : société (nom, profil, champ propre au profil, site web, WeChat professionnel ou compte de service), vérification (photo de la licence, numéro, région, ville), contacts (contact principal, puis jusqu'à 3 contacts supplémentaires derrière « + 添加联系人 »). La région n'est exigée qu'avec un numéro ; la ville jamais.
+- **Contacts** : la table existante `seller_contacts` est étendue (`duty` : principal, ventes, logistique, finance, autre ; `openid` du contact principal). Une ligne vide est ignorée. Un téléphone, un e-mail ou un site web mal formé affiche un avertissement, jamais un refus : la contrainte de format de l'e-mail est retirée. Un site saisi sans « https:// » est complété.
+- **Contact relié ou non au robot** : seul le contact principal (son WeChat a servi à s'inscrire) est relié d'office. Un contact supplémentaire ne reçoit rien tant qu'il n'a pas ouvert une invitation du mécanisme existant (`/depot/invite`, lien de 14 jours) ; `/depot/` propose ce lien à côté de chaque contact non relié, et le back office montre qui est relié.
+- **Compléter sa fiche** : après l'envoi, `/depot/` liste ce qui manque et permet de compléter tout de suite ou plus tard (`supplier_signup_save`). Après l'approbation, le nom, le profil, la licence et le numéro ne changent plus que par l'administrateur ; la ville, le site, le WeChat professionnel, les marques et les contacts restent modifiables.
+- **Administrateur** : la région, la ville et le profil se complètent ou se corrigent avant l'approbation (`admin_supplier_complete`, changement de profil inscrit au journal). La fiche montre ce qui manque, et la liste des fournisseurs en attente indique « fiche complète » ou « fiche incomplète » ; une fiche incomplète reste approuvable dès qu'une pièce est fournie.
 - **Devise obligatoire, sans valeur présélectionnée.**
-- **Question propre au profil** :
+- **Question propre au profil**, jamais bloquante :
   - fabricant : ses marques ;
   - distributeur : ses marques, et sa lettre d'agrément en option (stockée comme la licence) ;
   - stock disponible : aucune question, seulement l'information sur l'anonymat et la réponse sous 48 heures.
@@ -37,7 +43,10 @@ Des fournisseurs chinois abandonnent l'inscription sur `/depot/` : formulaire lo
 ## Conséquences et risques
 
 - Une seule pièce, c'est un contrôle plus faible à l'entrée. Il est compensé par l'approbation manuelle avant publication ; en cas de doute, l'administrateur demande la seconde pièce.
-- Ville et région non saisies : plus de travail pour l'administrateur, qui les lit sur la licence. Sans photo, la région vient du numéro.
+- Ville et région laissées vides : l'administrateur les lit sur la licence. Sans photo, la région vient du numéro.
+- Formulaire plus long à l'écran : d'où les trois blocs, cinq marques « 必填 » seulement et les contacts supplémentaires repliés.
+- Contacts saisis mais non reliés au robot : ils ne reçoivent rien ; le back office et `/depot/` le montrent.
+- Coordonnées personnelles stockées : lues par la société et l'administrateur seulement (aucun droit pour un visiteur ni un compte acheteur, jamais dans l'API d'offres).
 - Un distributeur sans agrément peut choisir « distributeur agréé » : l'acheteur ne le voit « agréé » qu'après rattachement, et l'administrateur peut le reclasser en stock disponible.
 - Un surplus d'EMS ou d'OEM se déclare « stock disponible » comme un broker. La distinction repose sur l'administrateur ; une erreur donne le mauvais libellé (« Broker vérifié » ou « Surplus vérifié »).
 - Les marques sont du texte libre (fautes, variantes) : ce sont des indications, pas des données de référence.

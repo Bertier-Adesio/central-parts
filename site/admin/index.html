@@ -281,6 +281,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     Spot: 'Stock disponible (broker ou surplus à préciser)' };
   // Inscription par profil (ADR 0034) : pièce fournie à l'inscription.
   var PIECE = { both: 'photo de la licence et numéro', license: 'photo de la licence seule', number: 'numéro seul', none: 'aucune (inscrite avant le 11 novembre 2026)' };
+  var MISS = { license: 'photo de la licence', number: 'numéro', region: 'région', city: 'ville', brands: 'marques', website: 'site web',
+    wecom: 'WeChat pro ou compte de service', contact: 'coordonnées d\'un contact' };
+  var DUTY = { main: 'contact principal', sales: 'ventes / devis', logistics: 'logistique / expédition', finance: 'finance', other: 'autre' };
   var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
   var ACTION = { approved: 'Approuvée', rejected: 'Refusée', pending: 'Remise en attente' };
   var ERR = {
@@ -457,7 +460,9 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
       $('sup-list').innerHTML = rows.length ? rows.map(function (o) {
         return '<li><button type="button" data-org="' + esc(o.org_id) + '"' + (o.org_id === state.org ? ' aria-current="true"' : '') + '>' +
           '<span class="r1"><strong>' + esc(o.name) + '</strong><span class="badge ' + esc(o.status) + '">' + esc(STATUS[o.status] || o.status) + '</span></span>' +
-          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) + '</span>' +
+          '<span class="r2 r-meta">' + esc(o.org_id) + ' · ' + esc(REGION[o.region] || o.region) + ' · ' + esc(o.city || '—') + ' · demande du ' + esc(dt(o.requested_at)) +
+            (o.status === 'pending' && o.missing ? ' · <span class="' + (o.missing.length ? 'warn-t' : '') + '" data-complete="' + (o.missing.length ? 'no' : 'yes') + '">' +
+              (o.missing.length ? 'fiche incomplète' : 'fiche complète') + '</span>' : '') + '</span>' +
           '</button></li>';
       }).join('') : '<li class="empty">Aucune société dans cette liste.</li>';
     }).catch(fail);
@@ -929,7 +934,14 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         '<dt>Pièce fournie</dt><dd id="d-sg-piece">' + esc(PIECE[g.piece] || g.piece) + '</dd>' +
         (g.brands ? '<dt>Marques déclarées</dt><dd id="d-sg-brands">' + esc(g.brands) + ' <span class="muted">(déclaration du fournisseur : ne crée aucun rattachement)</span></dd>' : '') +
         (g.profile === 'Distributor' || g.has_auth_letter ? '<dt>Lettre d\'agrément</dt><dd>' + (g.has_auth_letter ? 'déposée (lien dans la fiche WeChat « pending »)' : 'non déposée') + '</dd>' : '') +
+        '<dt>Site web</dt><dd>' + esc(g.website || '—') + '</dd><dt>WeChat pro / compte de service</dt><dd>' + esc(g.wecom || '—') + '</dd>' +
+        '<dt>Encore à compléter</dt><dd id="d-sg-missing">' + ((g.missing || []).length ? '<span class="warn-t">' + esc(g.missing.map(function (k) { return MISS[k] || k; }).join(', ')) + '</span>' : 'rien : fiche complète') + '</dd>' +
         '</dl>' +
+        ((g.contacts || []).length ? '<ul class="plain" id="d-sg-contacts">' + g.contacts.map(function (c) {
+          return '<li><strong>' + esc(c.name) + '</strong> · ' + esc(DUTY[c.duty] || c.duty || 'contact') + (c.role ? ' · ' + esc(c.role) : '') +
+            '<br><span class="muted">' + esc([c.phone, c.wechat ? 'WeChat ' + c.wechat : '', c.email].filter(Boolean).join(' · ') || 'aucune coordonnée') + '</span> ' +
+            '<span class="badge ' + (c.linked ? 'validated' : 'pending') + '">' + (c.linked ? 'relié au robot WeChat' : 'non relié : ne reçoit rien') + '</span></li>';
+        }).join('') + '</ul>' : '') +
         (open ? '<form class="sg-f" id="d-sg-form"><div class="grid3">' +
           '<label class="f">Région d\'immatriculation<select name="region">' + opt('', '—', g.region) + opt('CN', 'Chine continentale', g.region) + opt('HK', 'Hong Kong', g.region) + opt('OTHER', 'Autre', g.region) + '</select></label>' +
           '<label class="f">Ville<input type="text" name="city" maxlength="60" value="' + esc(g.city || '') + '"></label>' +

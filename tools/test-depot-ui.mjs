@@ -34,9 +34,25 @@ async function api(route) {
   if (path === '/register') {
     // Mêmes règles que la base (register_supplier, ADR 0034) : photo OU numéro ; numéro contrôlé selon la région.
     if (!body.code && !body.license_path) return reply({ error: 'verification' }, 422);
+    if (!body.contacts?.[0]?.family_name && !body.contacts?.[0]?.given_name) return reply({ error: 'fields', field: 'contact' }, 422);
     if (body.code && !registrationNumberOk(body.region || 'CN', body.code)) return reply({ error: 'code_invalid' }, 422);
-    state.org = { ...ORG, has_license: !!body.license_path, has_code: !!body.code, profile: body.profile }; state.registered = body;
+    const missing = [!body.license_path && 'license', !body.code && 'number', !body.region && 'region', !body.city && 'city',
+      ['Manufacturer', 'Distributor'].includes(body.profile) && !body.brands && 'brands', !body.website && 'website', !body.wecom && 'wecom',
+      !body.contacts.some((c) => c.phone || c.wechat || c.email) && 'contact'].filter(Boolean);
+    state.org = { ...ORG, has_license: !!body.license_path, has_code: !!body.code, profile: body.profile,
+      signup: { missing, city: body.city, region: body.region, brands: body.brands, website: body.website, wecom: body.wecom } };
+    state.registered = body;
     return reply({ org: state.org, token: 'T2' });
+  }
+  // Compléter sa fiche (supplier_signup_save) : après l'approbation, nom et numéro ignorés.
+  if (path === '/signup') {
+    state.signupSaved = body;
+    const g = state.org.signup;
+    if (body.city) g.city = body.city;
+    if (body.website) g.website = body.website;
+    if (body.wecom) g.wecom = body.wecom;
+    g.missing = g.missing.filter((k) => !(k === 'city' && body.city) && !(k === 'website' && body.website) && !(k === 'wecom' && body.wecom));
+    return reply(state.org);
   }
   // Pièces déposées avant l'inscription (dossier du compte).
   if (path === '/doc-url') {
@@ -149,26 +165,33 @@ await page.waitForSelector('#v-register:not([hidden])');
 ok(new URL(page.url()).search === '', 'lien personnel retiré de l\'adresse après connexion');
 ok(await page.isVisible('text=注册公司'), 'formulaire d\'inscription en chinois');
 
-// 2. Inscription par profil (ADR 0034) : 3 profils, champ propre au profil, photo OU numéro, devise sans défaut.
-ok((await page.$$('input[name=r-profile]')).length === 3 && (await page.$$eval('input[name=r-profile]', (r) => r.map((x) => x.value).join(','))) === 'Manufacturer,Distributor,Spot',
-  '3 profils proposés : fabricant, distributeur agréé, stock disponible');
-ok(await page.isHidden('#r-city') === true && !(await page.$('#r-city')), 'ville retirée du formulaire');
+// 2. Inscription par profil (ADR 0034) : on demande tout, on ne bloque presque sur rien.
+ok((await page.$$eval('input[name=r-profile]', (r) => r.map((x) => x.value).join(','))) === 'Manufacturer,Distributor,Spot', '3 profils proposés');
+ok((await page.$$('#reg .req')).length === 5, 'cinq marques « 必填 » : nom, profil, pièce, contact principal, devise');
+ok((await page.textContent('#reg')).includes('资料越完整，审核越快'), 'ligne d\'encouragement sous le titre');
+ok(await page.isVisible('#r-city') && await page.isVisible('#r-web') && await page.isVisible('#r-wecom') && await page.isVisible('#r-region'), 'ville, site web, WeChat pro et région demandés');
 ok(!(await page.$$eval('input[name=r-currency]', (r) => r.some((x) => x.checked))), 'devise : aucune valeur présélectionnée');
-ok(await page.isHidden('.prof[data-for=Manufacturer]') && await page.isHidden('.prof[data-for=Distributor]'), 'sans profil choisi : aucun champ propre');
+ok(await page.isHidden('.ct.extra[data-i="1"]') && await page.isVisible('#r-add'), 'contacts supplémentaires repliés derrière « + 添加联系人 »');
+await page.click('#r-add'); await page.click('#r-add'); await page.click('#r-add');
+ok(await page.isVisible('.ct.extra[data-i="3"]') && await page.isHidden('#r-add'), '3 contacts supplémentaires au plus');
 await page.fill('#r-name', '深圳测试电子有限公司');
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('请选择公司类型'), 'profil obligatoire');
 await page.check('input[name=r-profile][value=Distributor]');
 ok(await page.isVisible('#r-brands-d') && await page.isVisible('#r-auth') && await page.isHidden('#r-brands-m'), 'distributeur : marques et lettre d\'agrément');
 await page.click('#r-send');
-ok((await page.textContent('#msg')).includes('请填写品牌'), 'distributeur : marques obligatoires');
-await page.fill('#r-brands-d', 'Marque A, Marque B');
+ok((await page.textContent('#msg')).includes('请上传营业执照照片，或填写注册号码（二选一）') && !state.calls.includes('POST /register'), 'marques facultatives ; ni photo ni numéro : refusé dans la page');
+await page.fill('#r-code', '91350100M000100Y43');
 await page.click('#r-send');
-ok((await page.textContent('#msg')).includes('请上传营业执照照片，或填写注册号码（二选一）') && !state.calls.includes('POST /register'), 'ni photo ni numéro : refusé dans la page');
+ok((await page.textContent('#msg')).includes('请选择注册地区'), 'numéro sans région : région demandée');
+await page.selectOption('#r-region', 'CN');
 await page.fill('#r-code', '91350100M000100Y44');
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('统一社会信用代码有误') && !state.calls.includes('POST /register'), 'numéro invalide signalé tout de suite, sans appel au serveur');
 await page.fill('#r-code', '91350100m000100y43');
+await page.click('#r-send');
+ok((await page.textContent('#msg')).includes('请填写主要联系人的姓名'), 'nom du contact principal obligatoire');
+await page.fill('.ct[data-i="0"] [name=family_name]', '王');
 await page.click('#r-send');
 ok((await page.textContent('#msg')).includes('请选择报价币种') && !state.calls.includes('POST /register'), 'devise obligatoire');
 for (const p of ['Manufacturer', 'Spot']) {
@@ -177,18 +200,42 @@ for (const p of ['Manufacturer', 'Spot']) {
     : await page.isVisible('#r-brands-m') && await page.isHidden('#r-brands-d'), 'profil ' + p + ' : son champ seulement');
 }
 await page.check('input[name=r-profile][value=Distributor]');
+// Formats douteux : avertissement, jamais bloquant.
+await page.fill('.ct[data-i="0"] [name=email]', 'pas-un-email');
+await page.fill('#r-web', 'pas un site');
+await page.fill('.ct[data-i="1"] [name=phone]', 'abc');
+await page.click('#r-name');
+ok(await page.isVisible('[data-w=email]') && await page.isVisible('[data-w=web]') && (await page.textContent('[data-w=email]')).includes('不影响提交'), 'formats douteux : avertissements');
 
-// 3. Inscription avec le numéro seul et la lettre d'agrément : la société est en attente.
+// 3. Inscription complète : numéro, ville, site, WeChat pro, lettre d'agrément, 3 contacts (dont une ligne vide).
+await page.fill('#r-web', 'exemple-fictif.cn');
+await page.fill('#r-wecom', '示例公众号');
+await page.fill('#r-city', '深圳');
+await page.fill('#r-brands-d', 'Marque A, Marque B');
+await page.fill('.ct[data-i="0"] [name=given_name]', '伟');
+await page.fill('.ct[data-i="1"] [name=family_name]', '陈');
+await page.selectOption('.ct[data-i="1"] [name=duty]', 'sales');
+await page.fill('.ct[data-i="2"] [name=wechat]', 'logistique_fictif');
+await page.selectOption('.ct[data-i="2"] [name=duty]', 'logistics');
 await page.check('input[name=r-currency][value=CNH]');
 await page.setInputFiles('#r-auth', { name: 'shouquan.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF') });
 await page.click('#r-send');
 await page.waitForSelector('#v-app:not([hidden])');
-ok(state.registered.code === '91350100M000100Y43' && state.registered.region === 'CN' && state.registered.currency === 'CNH' && state.registered.profile === 'Distributor'
-  && state.registered.brands === 'Marque A, Marque B' && /agrement-/.test(state.registered.auth_path) && !state.registered.license_path,
-  'inscription envoyée : numéro seul, devise, profil, marques, lettre d\'agrément');
+const R = state.registered;
+ok(R.code === '91350100M000100Y43' && R.region === 'CN' && R.city === '深圳' && R.currency === 'CNH' && R.profile === 'Distributor'
+  && R.brands === 'Marque A, Marque B' && /agrement-/.test(R.auth_path) && !R.license_path && R.website === 'exemple-fictif.cn' && R.wecom === '示例公众号',
+  'inscription envoyée malgré les avertissements : numéro, région, ville, site, WeChat pro, marques, lettre');
+ok(R.contacts.length === 4 && R.contacts[0].family_name === '王' && R.contacts[0].email === 'pas-un-email' && R.contacts[1].duty === 'sales'
+  && R.contacts[2].wechat === 'logistique_fictif' && !R.contacts[3].family_name, 'contacts envoyés (la ligne vide est ignorée par le serveur)');
 ok((await page.textContent('#msg')).includes('已收到。审核结果会通过微信通知您') && (await page.textContent('#org-alias')) === '审核中', 'après l\'envoi : message de réception, statut « 审核中 »');
-ok(await page.isVisible('#lic') && (await page.getAttribute('#status', 'class')).includes('info') && (await page.textContent('#status')).includes('选填'),
-  'numéro seul : photo de la licence proposée, facultative');
+ok(await page.isVisible('#more-card') && (await page.textContent('#more-missing')).includes('还可以补充：营业执照照片'), 'après l\'envoi : ce qui manque encore');
+ok(await page.isVisible('#lic') && (await page.getAttribute('#status', 'class')).includes('info'), 'numéro seul : photo de la licence proposée, sans erreur');
+// Compléter sa fiche tout de suite.
+await page.click('#more-open');
+await page.fill('#m-city', '东莞');
+await page.click('#more-form [type=submit]');
+await page.waitForFunction(() => document.getElementById('more-form').hidden);
+ok(state.signupSaved.city === '东莞' && state.signupSaved.name === '深圳测试电子有限公司', 'fiche complétée après l\'envoi (avant l\'approbation : nom modifiable)');
 
 // 4. Licence (photo de téléphone sans extension) : le statut passe à « en cours d'examen ».
 await page.setInputFiles('#lic-file', { name: 'image', mimeType: 'image/jpeg', buffer: Buffer.from('jpg') });
@@ -407,6 +454,21 @@ ok(state.answer.ref === 'PR-0001' && state.answer.ok === true && (await page.tex
   ok(await page.isHidden('#src-card'), 'volontaires : carte masquée pour un fabricant ou un distributeur');
 }
 
+// 7 quinquies. Contacts saisis à l'inscription : relié ou non au robot ; invitation d'un contact non relié (ADR 0034).
+{
+  state.company = { org_id: 'ORG-0107', name: ORG.name, can_edit: true, founded_year: null, website: null, about: {}, hq_city: null, staff: null,
+    certifications: [], languages: [], payment_methods: [], payment_terms: null, min_order_usd: null, manufacturers: [],
+    contacts: [{ id: 'CTC-1', name: '王伟', duty: 'main', linked: true, languages: [] }, { id: 'CTC-2', name: '陈小姐', duty: 'sales', linked: false, languages: [] }] };
+  await page.reload();
+  await page.waitForSelector('#co-card:not([hidden]) [data-co=cinvite]');
+  const t = await page.textContent('#ct-list');
+  ok(t.includes('已关联微信') && t.includes('未关联微信：收不到询单和通知') && (await page.$$('[data-co=cinvite]')).length === 1, 'contacts : relié ou non au robot, invitation seulement pour un contact non relié');
+  await page.click('[data-co=cinvite]');
+  await page.waitForSelector('[data-inv-out]:not([hidden])');
+  ok(state.contacts.invites.some((i) => i.label === '陈小姐') && (await page.textContent('[data-inv-out]:not([hidden])')).includes('?invite='), 'invitation créée au nom du contact, lien à transmettre');
+  state.company = null;
+}
+
 // 8. Société refusée : motif affiché, dépôt masqué.
 state.org = { ...ORG, status: 'rejected', has_license: true, rejected_reason: '营业执照不清晰' };
 await page.reload();
@@ -432,6 +494,7 @@ for (const width of [390, 1280]) {
   await p2.fill('#r-name', 'HK TEST COMPANY LIMITED');
   await p2.check('input[name=r-profile][value=Manufacturer]');
   await p2.fill('#r-brands-m', 'Marque HK');
+  await p2.fill('.ct[data-i="0"] [name=given_name]', 'Mary');
   await p2.check('input[name=r-currency][value=HKD]');
   await p2.selectOption('#r-region', 'CN');
   await p2.fill('#r-code', '123456789012345');
@@ -440,7 +503,7 @@ for (const width of [390, 1280]) {
   await p2.selectOption('#r-region', 'HK');
   ok((await p2.textContent('#r-code-hint')).includes('香港商业登记证') && await p2.getAttribute('#r-code', 'maxlength') === '30', width + ' px : Hong Kong : aide et longueur adaptées');
   await toggleLang(p2);
-  ok((await p2.textContent('#r-code-hint')).includes('Hong Kong business registration') && (await p2.textContent('#r-verif legend')) === 'Company check (one of the two)'
+  ok((await p2.textContent('#r-code-hint')).includes('Hong Kong business registration') && (await p2.textContent('#r-verif legend')).includes('Company check')
     && (await p2.textContent('label.opt:has(input[value=Spot]) strong')) === 'Spot stock (trader, broker, surplus)', width + ' px : textes en anglais');
   await p2.fill('#r-code', '12');
   await p2.click('#r-send');
@@ -455,11 +518,13 @@ for (const width of [390, 1280]) {
     // Photo seule, sans numéro : stock disponible, la photo part d'abord dans le dossier du compte.
     await p2.check('input[name=r-profile][value=Spot]');
     await p2.fill('#r-code', '');
+    await p2.selectOption('#r-region', '');
     await p2.setInputFiles('#r-lic', { name: 'image', mimeType: 'image/jpeg', buffer: Buffer.from('jpg') });
     await p2.click('#r-send');
     await p2.waitForSelector('#v-app:not([hidden])');
-    ok(state.registered.profile === 'Spot' && /^pending\/c{32}\/licence-/.test(state.registered.license_path) && !state.registered.code && !state.registered.region && !state.registered.brands,
-      width + ' px : photo seule, stock disponible : inscription envoyée sans numéro ni région');
+    ok(state.registered.profile === 'Spot' && /^pending\/c{32}\/licence-/.test(state.registered.license_path) && !state.registered.code && !state.registered.region && !state.registered.brands
+      && !state.registered.city && !state.registered.website,
+      width + ' px : inscription minimale (nom, profil, photo, contact, devise) : aucun autre champ, aucune erreur');
     ok(await p2.isHidden('#lic') && /审核中|Under review/.test(await p2.textContent('#status')), width + ' px : photo déjà fournie, plus de demande de licence');
   }
   await p2.close();

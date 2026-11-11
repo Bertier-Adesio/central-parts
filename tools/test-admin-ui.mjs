@@ -474,6 +474,12 @@ ok(norm(await page.textContent('#d-sg-profile')) === 'Stock disponible (broker o
 ok(await page.$('#d-actions button[data-act="approve_broker"]') && await page.$('#d-actions button[data-act="approve_surplus"]') && !(await page.$('#d-actions button[data-act="approve"]')),
   'stock disponible : approbation seulement comme broker ou surplus');
 ok(await page.$('button[data-ask="licence"]') && !(await page.$('button[data-ask="number"]')), 'pièce manquante : seule la photo de la licence est demandable');
+const sg = norm(await page.textContent('#d-signup'));
+ok(sg.includes('https://exemple-fictif.sg') && norm(await page.textContent('#d-sg-missing')).includes('photo de la licence, WeChat pro ou compte de service'),
+  'inscription : site web, ce qui manque encore');
+ok(norm(await page.textContent('#d-sg-contacts')).includes('Tan Wei (fictif) · contact principal') && norm(await page.textContent('#d-sg-contacts')).includes('relié au robot WeChat')
+  && norm(await page.textContent('#d-sg-contacts')).includes('non relié : ne reçoit rien'), 'contacts : rôle, coordonnées, relié ou non au robot');
+ok(norm(await page.textContent('#sup-list button[data-org="ORG-0112"]')).includes('fiche incomplète'), 'liste : fiche incomplète signalée');
 await page.click('button[data-ask="licence"]');
 await page.waitForFunction(() => /Demande (envoyée|non remise)/.test(document.getElementById('d-sg-out').textContent));
 ok(mock.state.notified.some((x) => x.org === 'ORG-0112' && x.kind === 'ask-licence'), 'pièce manquante demandée dans WeChat, sur clic seulement');

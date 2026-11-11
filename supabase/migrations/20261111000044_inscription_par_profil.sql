@@ -7,15 +7,36 @@
 --     Opportunity, 7 jours). L'administrateur la remplace à l'approbation par Broker ou Surplus (obligatoire).
 --   - Vérification : photo de la licence OU numéro d'immatriculation, l'un des deux suffit. La photo peut être
 --     déposée avant l'inscription, dans un dossier « pending/<empreinte de l'openid>/ » du compartiment privé.
+--   - Principe (note mise à jour du 11 novembre) : on DEMANDE tout, on ne BLOQUE presque sur rien. Bloquent l'envoi :
+--     nom de la société, profil, une pièce (photo ou numéro), nom du contact principal, devise. Le reste se complète
+--     plus tard, par le fournisseur (supplier_signup_save) ou par l'administrateur (admin_supplier_complete).
 --   - Fabricant et distributeur déclarent leurs marques (texte libre, indication pour l'administrateur : ne crée
 --     aucun rattachement ni libellé) ; le distributeur peut joindre sa lettre d'agrément.
---   - Ville et région facultatives : l'administrateur les complète avant d'approuver (admin_supplier_complete).
---   - Devise des prix obligatoire, sans valeur par défaut.
+--   - Site web, compte WeChat professionnel ou compte de service, contact principal et jusqu'à 3 contacts
+--     supplémentaires (table seller_contacts existante, étendue). Données personnelles : lues par la société et
+--     l'administrateur seulement, jamais par un acheteur ni par l'API d'offres.
+--   - Ville et région demandées, jamais exigées (la région seulement avec un numéro).
 
 -- ------------------------------------------------------------ colonnes
 alter table public.organizations
   add column if not exists declared_brands  text,   -- marques déclarées à l'inscription (fabricant, distributeur)
-  add column if not exists auth_letter_path text;   -- lettre d'agrément du distributeur, compartiment privé supplier-docs
+  add column if not exists auth_letter_path text,   -- lettre d'agrément du distributeur, compartiment privé supplier-docs
+  add column if not exists wecom            text;   -- 企业微信或公众号 : nom ou identifiant, interne (jamais publié)
+
+-- Contacts : contact principal (administrateur du compte, son openid) et rôle des contacts supplémentaires.
+alter table public.seller_contacts
+  add column if not exists duty   text check (duty in ('main', 'sales', 'logistics', 'finance', 'other')),
+  add column if not exists openid text;             -- compte WeChat du contact principal, s'il s'est inscrit lui-même
+-- Un e-mail mal formé n'empêche plus d'enregistrer un contact : la page avertit, la base n'exige plus de format.
+alter table public.seller_contacts drop constraint if exists seller_contacts_email_check;
+
+-- Adresse de site web sans « https:// » : complétée.
+create or replace function app.norm_website(p text) returns text
+language sql immutable set search_path = '' as $$
+  select case when nullif(btrim(coalesce(p, '')), '') is null then null
+              when btrim(p) ~* '^https?://' then left(btrim(p), 300)
+              else left('https://' || btrim(p), 300) end
+$$;
 
 -- Journal des décisions : changement de profil par l'administrateur.
 alter table public.supplier_decisions drop constraint if exists supplier_decisions_action_check;
@@ -31,14 +52,18 @@ $$;
 
 -- ------------------------------------------------------------ inscription
 -- Erreurs : CP001 numéro invalide, CP002 société déjà enregistrée, CP003 compte déjà rattaché, CP004 champ manquant
--- (detail : name, profile, currency, region, brands, license, auth_letter), CP008 ni photo ni numéro.
+-- (detail : name, profile, currency, region, contact, license, auth_letter), CP008 ni photo ni numéro.
 drop function if exists public.register_supplier(text, text, text, text, text, text, text);
+drop function if exists public.register_supplier(text, text, text, text, text, text, text, text, text, text);
 -- Ordre des paramètres d'origine gardé (appels positionnels existants) ; les nouveaux viennent à la fin.
 -- La devise reste « USD » par défaut au niveau SQL pour ces appels ; la fonction Edge depot l'exige (pas de défaut).
--- Numéro sans région : règle chinoise, comme avant.
+-- Numéro sans région : règle chinoise, comme avant. p_contacts : [{family_name, given_name, role, phone, wechat,
+-- email, duty}], le premier étant le contact principal (nom ou prénom exigé) ; une ligne entièrement vide est ignorée ;
+-- 4 contacts au plus. Sans p_contacts (page restée en cache), aucun contact n'est exigé.
 create or replace function public.register_supplier(p_openid text, p_name text, p_code text, p_city text,
   p_profile text, p_currency text default 'USD', p_region text default null, p_license_path text default null,
-  p_brands text default null, p_auth_path text default null)
+  p_brands text default null, p_auth_path text default null, p_website text default null, p_wecom text default null,
+  p_contacts jsonb default null)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_org text;
@@ -48,6 +73,8 @@ declare
   v_profile text := btrim(coalesce(p_profile, ''));
   v_brands text := nullif(left(regexp_replace(btrim(coalesce(p_brands, '')), '\s+', ' ', 'g'), 300), '');
   v_cur text := upper(btrim(coalesce(p_currency, '')));
+  v_contacts jsonb := '[]';
+  c jsonb; v_i int := 0;
 begin
   if exists (select 1 from public.wechat_identities where openid = p_openid and revoked_at is null) then
     raise exception 'Compte déjà rattaché à une société' using errcode = 'CP003';
@@ -58,16 +85,13 @@ begin
     raise exception 'Profil invalide' using errcode = 'CP004', detail = 'profile';
   end if;
   if v_cur not in ('USD', 'CNH', 'EUR', 'HKD') then raise exception 'Devise manquante' using errcode = 'CP004', detail = 'currency'; end if;
-  if v_profile in ('Manufacturer', 'Distributor') and v_brands is null then
-    raise exception 'Marques manquantes' using errcode = 'CP004', detail = 'brands';
-  end if;
   if p_license_path is not null and (left(p_license_path, length(v_prefix)) <> v_prefix or p_license_path !~ '/licence-[0-9-]+\.(jpg|png|heic|webp|pdf)$') then
     raise exception 'Chemin de licence invalide' using errcode = 'CP004', detail = 'license';
   end if;
   if p_auth_path is not null and (left(p_auth_path, length(v_prefix)) <> v_prefix or p_auth_path !~ '/agrement-[0-9-]+\.(jpg|png|heic|webp|pdf)$') then
     raise exception 'Chemin de lettre d''agrément invalide' using errcode = 'CP004', detail = 'auth_letter';
   end if;
-  -- Numéro : la région sert à contrôler sa longueur (mêmes règles qu'avant) ; sans numéro, la région est facultative.
+  -- Numéro : la région sert à contrôler sa longueur (mêmes règles qu'avant). Sans numéro, une région inconnue est ignorée.
   if v_code is not null then
     v_region := case when p_region is null then 'CN' else upper(btrim(p_region)) end;
     if v_region not in ('CN', 'HK', 'OTHER') then
@@ -84,22 +108,122 @@ begin
   if v_code is null and p_license_path is null then
     raise exception 'Photo de la licence ou numéro d''immatriculation requis' using errcode = 'CP008';
   end if;
+  -- Contacts : lignes entièrement vides ignorées ; le premier (contact principal) doit avoir un nom ou un prénom.
+  if jsonb_typeof(p_contacts) = 'array' then
+    for c in select * from jsonb_array_elements(p_contacts) loop
+      v_i := v_i + 1;
+      if v_i > 4 then exit; end if;
+      if v_i > 1 and btrim(concat(c->>'family_name', c->>'given_name', c->>'role', c->>'phone', c->>'wechat', c->>'email')) = '' then continue; end if;
+      v_contacts := v_contacts || jsonb_build_array(c || jsonb_build_object('main', v_i = 1));
+    end loop;
+    if v_i = 0 or btrim(concat(p_contacts->0->>'family_name', p_contacts->0->>'given_name')) = '' then
+      raise exception 'Nom du contact principal manquant' using errcode = 'CP004', detail = 'contact';
+    end if;
+  end if;
   insert into public.organizations (type, name, alias, city, country, currency, lang, profile, registration_number,
-                                    registration_region, kyb, registered_by, license_path, declared_brands, auth_letter_path)
+                                    registration_region, kyb, registered_by, license_path, declared_brands, auth_letter_path,
+                                    website, wecom)
   values ('seller', btrim(p_name),
           'P-' || coalesce(v_code, upper(left(encode(extensions.digest(p_openid || clock_timestamp()::text, 'sha256'), 'hex'), 12))),
-          nullif(btrim(coalesce(p_city, '')), ''),
+          nullif(left(btrim(coalesce(p_city, '')), 60), ''),
           case v_region when 'CN' then 'CN' when 'HK' then 'HK' end,   -- autre pays ou inconnu : complété par l'opérateur
           v_cur, 'zh', v_profile, v_code, v_region, 'pending', p_openid, p_license_path,
           case when v_profile in ('Manufacturer', 'Distributor') then v_brands end,
-          case when v_profile = 'Distributor' then p_auth_path end)
+          case when v_profile = 'Distributor' then p_auth_path end,
+          app.norm_website(p_website), nullif(left(btrim(coalesce(p_wecom, '')), 100), ''))
   returning id into v_org;
-  insert into public.wechat_identities (openid, org_id, role) values (p_openid, v_org, 'admin')
+  insert into public.seller_contacts (org_id, name, role, email, phone, wechat, duty, openid)
+  select v_org, left(coalesce(nullif(app.contact_name(x->>'family_name', x->>'given_name'), ''), nullif(btrim(coalesce(x->>'wechat', '')), ''),
+                              nullif(btrim(coalesce(x->>'phone', '')), ''), btrim(coalesce(x->>'email', ''))), 120),
+         nullif(left(btrim(coalesce(x->>'role', '')), 80), ''),
+         nullif(left(lower(btrim(coalesce(x->>'email', ''))), 200), ''), nullif(left(btrim(coalesce(x->>'phone', '')), 40), ''),
+         nullif(left(btrim(coalesce(x->>'wechat', '')), 60), ''),
+         case when (x->>'main')::boolean then 'main' when x->>'duty' in ('sales', 'logistics', 'finance', 'other') then x->>'duty' else 'other' end,
+         case when (x->>'main')::boolean then p_openid end
+    from jsonb_array_elements(v_contacts) x
+   where btrim(concat(app.contact_name(x->>'family_name', x->>'given_name'), x->>'wechat', x->>'phone', x->>'email')) <> '';
+  insert into public.wechat_identities (openid, org_id, role, label) values (p_openid, v_org, 'admin',
+    nullif(left(app.contact_name(p_contacts->0->>'family_name', p_contacts->0->>'given_name'), 40), ''))
   on conflict (openid) do update set org_id = excluded.org_id, role = 'admin', revoked_at = null, bound_at = now();
   insert into public.events (actor, text, ref) values ('depot', 'Société enregistrée par le fournisseur (' || v_profile || ', '
     || case when v_code is not null and p_license_path is not null then 'licence et numéro'
             when v_code is not null then 'numéro' else 'licence' end || '), en attente de validation', v_org);
   return public.depot_identity(p_openid);
+end $$;
+
+-- Nom d'un contact : nom de famille puis prénom ; collés en chinois (王 + 伟 = 王伟), séparés par une espace sinon.
+create or replace function app.contact_name(p_family text, p_given text) returns text
+language sql immutable set search_path = '' as $$
+  select case when btrim(coalesce(p_family, '')) ~ '[\u3400-\u9fff]' or btrim(coalesce(p_given, '')) ~ '[\u3400-\u9fff]'
+              then btrim(coalesce(p_family, '')) || btrim(coalesce(p_given, ''))
+              else btrim(concat_ws(' ', nullif(btrim(coalesce(p_family, '')), ''), nullif(btrim(coalesce(p_given, '')), ''))) end
+$$;
+
+-- Ce qui manque encore à la fiche : licence, numéro, région, ville, marques (fabricant, distributeur), site web,
+-- WeChat professionnel, coordonnées du contact principal (téléphone, WeChat ou e-mail). Liste vide : fiche complète.
+create or replace function app.signup_missing(p_org text) returns text[]
+language sql stable security definer set search_path = '' as $$
+  select array_remove(array[
+    case when o.license_path is null then 'license' end,
+    case when o.registration_number is null then 'number' end,
+    case when o.registration_region is null then 'region' end,
+    case when o.city is null then 'city' end,
+    case when app.source_category(o.profile) in ('manufacturer', 'distributor') and o.declared_brands is null
+              and not exists (select 1 from public.manufacturer_distributors d where d.org_id = o.id) then 'brands' end,
+    case when o.website is null then 'website' end,
+    case when o.wecom is null then 'wecom' end,
+    case when not exists (select 1 from public.seller_contacts c where c.org_id = o.id
+                           and coalesce(c.phone, c.wechat, c.email) is not null) then 'contact' end], null)
+    from public.organizations o where o.id = p_org
+$$;
+
+-- Compléter sa fiche depuis /depot/, avant comme après l'approbation (responsable de la fiche). Après l'approbation,
+-- le nom, le profil, la licence et le numéro ne changent plus que par l'administrateur (champs ignorés). p : { name?,
+-- profile?, code?, region?, city?, brands?, website?, wecom?, license_path? }. Erreurs : celles du numéro (CP001,
+-- CP002), 42501 hors responsable.
+create or replace function public.supplier_signup_save(p_openid text, p jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v_org text := app.depot_org(p_openid, true); o public.organizations; v_code text; v_region text; v_profile text;
+  v_open boolean;
+begin
+  select * into o from public.organizations where id = v_org for update;
+  v_open := o.kyb <> 'validated';
+  if jsonb_typeof(p) <> 'object' then raise exception 'Fiche invalide' using errcode = '22023'; end if;
+  v_region := case when p ? 'region' then nullif(upper(btrim(coalesce(p->>'region', ''))), '') else o.registration_region end;
+  if v_region is not null and v_region not in ('CN', 'HK', 'OTHER') then v_region := o.registration_region; end if;
+  v_code := o.registration_number;
+  if v_open and p ? 'code' and nullif(btrim(coalesce(p->>'code', '')), '') is not null then
+    v_region := coalesce(v_region, 'CN');
+    v_code := case when v_region = 'CN' then upper(btrim(p->>'code')) else upper(regexp_replace(btrim(p->>'code'), '\s+', ' ', 'g')) end;
+    if not app.registration_number_ok(v_region, v_code) then raise exception 'Numéro invalide : %', v_code using errcode = 'CP001'; end if;
+    if exists (select 1 from public.organizations where upper(registration_number) = v_code and id <> o.id) then
+      raise exception 'Société déjà enregistrée' using errcode = 'CP002';
+    end if;
+  end if;
+  v_profile := case when v_open and p->>'profile' in ('Manufacturer', 'Distributor', 'Spot') then p->>'profile' else o.profile end;
+  update public.organizations set
+    name = case when v_open and nullif(btrim(coalesce(p->>'name', '')), '') is not null then left(btrim(p->>'name'), 120) else name end,
+    profile = v_profile,
+    registration_number = v_code,
+    registration_region = v_region,
+    country = case v_region when 'CN' then 'CN' when 'HK' then 'HK' else country end,
+    city = case when p ? 'city' then nullif(left(btrim(coalesce(p->>'city', '')), 60), '') else city end,
+    declared_brands = case when p ? 'brands' and app.source_category(v_profile) in ('manufacturer', 'distributor')
+                           then nullif(left(regexp_replace(btrim(coalesce(p->>'brands', '')), '\s+', ' ', 'g'), 300), '') else declared_brands end,
+    website = case when p ? 'website' then app.norm_website(p->>'website') else website end,
+    wecom = case when p ? 'wecom' then nullif(left(btrim(coalesce(p->>'wecom', '')), 100), '') else wecom end
+   where id = o.id;
+  insert into public.events (actor, text, ref) values ('depot', 'Fiche complétée par le fournisseur', o.id);
+  return public.depot_identity(p_openid);
+end $$;
+
+-- Licence déposée après l'inscription : avant l'approbation seulement (ensuite, par l'administrateur). Copie de
+-- 20261031000007 avec cette règle.
+create or replace function public.set_supplier_license(p_org text, p_path text)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if p_path is null or split_part(p_path, '/', 1) <> p_org then raise exception 'Chemin invalide'; end if;
+  update public.organizations set license_path = p_path where id = p_org and type = 'seller' and kyb <> 'validated';
 end $$;
 
 -- Copie de 20261031000007, avec le numéro (pièce fournie) et le profil.
@@ -114,6 +238,8 @@ begin
   return (select jsonb_build_object('org_id', o.id, 'name', o.name, 'alias', o.alias, 'lang', o.lang,
                    'status', o.kyb, 'role', r.role, 'has_license', o.license_path is not null,
                    'has_code', o.registration_number is not null, 'profile', o.profile,
+                   'signup', jsonb_build_object('missing', to_jsonb(app.signup_missing(o.id)), 'city', o.city,
+                     'region', o.registration_region, 'brands', o.declared_brands, 'website', o.website, 'wecom', o.wecom),
                    'rejected_reason', o.rejected_reason)
             from public.organizations o where o.id = r.org_id);
 end $$;
@@ -228,7 +354,37 @@ begin
     'piece', app.verification_piece(o), 'has_license', o.license_path is not null, 'has_code', o.registration_number is not null,
     'brands', o.declared_brands, 'has_auth_letter', o.auth_letter_path is not null,
     'region', o.registration_region, 'city', o.city, 'status', o.kyb,
+    'website', o.website, 'wecom', o.wecom, 'missing', to_jsonb(app.signup_missing(o.id)),
+    'contacts', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'duty', c.duty, 'role', c.role,
+        'phone', c.phone, 'wechat', c.wechat, 'email', c.email, 'linked', app.contact_linked(c)) order by c.duty = 'main' desc, c.created_at)
+        from public.seller_contacts c where c.org_id = o.id), '[]'),
     'spot_pending', o.profile = 'Spot' and o.kyb <> 'validated');
+end $$;
+
+-- Contact relié au robot WeChat : son compte est lié à la société (contact principal : openid de l'inscription ;
+-- autre contact : invitation acceptée sous son nom, wechat_identities.label). Sinon il ne reçoit rien.
+create or replace function app.contact_linked(c public.seller_contacts) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.wechat_identities w where w.org_id = c.org_id and w.revoked_at is null
+                  and (w.openid = c.openid or (c.openid is null and btrim(coalesce(w.label, '')) <> '' and w.label = c.name)))
+$$;
+
+-- Liste des fournisseurs du back office : copie de 20261102000014, avec ce qui manque à la fiche (« complète »).
+create or replace function public.admin_suppliers(p_status text default null)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+begin
+  perform app.require_admin();
+  return jsonb_build_object(
+    'counts', (select jsonb_object_agg(k, n) from (select kyb as k, count(*) as n from public.organizations
+                where type = 'seller' group by kyb) c),
+    'rows', (select coalesce(jsonb_agg(jsonb_build_object(
+        'org_id', o.id, 'name', o.name, 'alias', o.alias, 'region', app.region_of(o), 'code', o.registration_number,
+        'city', o.city, 'profile', o.profile, 'currency', o.currency, 'status', o.kyb,
+        'requested_at', o.created_at, 'decided_at', o.kyb_decided_at, 'missing', to_jsonb(app.signup_missing(o.id)),
+        'lines', (select count(*) from public.lots l where l.seller_id = o.id and l.qty > 0))
+        order by o.created_at desc, o.id desc), '[]'::jsonb)
+      from public.organizations o
+     where o.type = 'seller' and (p_status is null or o.kyb = p_status)));
 end $$;
 
 -- Message d'accueil : catégorie et rattachements au moment de l'approbation (fonctions Edge, clé de service).
@@ -240,12 +396,39 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     from public.organizations o where o.id = p_org
 $$;
 
+-- Copie de 20261106000035 : fiche de la société dans /depot/, avec le WeChat professionnel et, pour chaque contact,
+-- son rôle et s'il est relié au robot (pour lui transmettre une invitation sinon).
+create or replace function public.supplier_company(p_openid text)
+returns jsonb language plpgsql stable security definer set search_path = '' as $$
+declare v_org text := app.depot_org(p_openid, false); o public.organizations;
+begin
+  select * into o from public.organizations where id = v_org;
+  return jsonb_build_object('org_id', o.id, 'name', o.name,
+    'can_edit', app.org_editor(o.id) = p_openid,
+    'founded_year', o.founded_year, 'website', o.website, 'wecom', o.wecom, 'about', o.about, 'hq_city', o.hq_city, 'staff', o.staff,
+    'certifications', to_jsonb(o.certifications), 'languages', to_jsonb(o.languages),
+    'payment_methods', to_jsonb(o.payment_methods), 'payment_terms', o.payment_terms, 'min_order_usd', o.min_order_usd,
+    'contacts', coalesce((select jsonb_agg(jsonb_build_object('id', c.id, 'name', c.name, 'role', c.role, 'email', c.email,
+        'phone', c.phone, 'wechat', c.wechat, 'languages', to_jsonb(c.languages), 'for_rfq', c.for_rfq, 'for_po', c.for_po,
+        'duty', c.duty, 'linked', app.contact_linked(c))
+        order by c.duty = 'main' desc, c.created_at) from public.seller_contacts c where c.org_id = o.id), '[]'),
+    'manufacturers', coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name, 'brands', to_jsonb(m.brands),
+        'role', d.role, 'consent_at', d.consent_at, 'public_page', m.public_page, 'logo_path', m.logo_path,
+        'about', m.about, 'positioning', m.positioning, 'founded_year', m.founded_year, 'hq_city', m.hq_city,
+        'production_site', m.production_site, 'area_m2', m.area_m2, 'staff', m.staff, 'annual_units', m.annual_units,
+        'certifications', to_jsonb(m.certifications), 'languages', to_jsonb(m.languages),
+        'pending', exists (select 1 from public.manufacturer_proposals r where r.manufacturer_id = m.id and r.org_id = o.id and r.status = 'pending'))
+        order by m.name)
+        from public.manufacturer_distributors d join public.manufacturers m on m.id = d.manufacturer_id where d.org_id = o.id), '[]'));
+end $$;
+
 -- ------------------------------------------------------------ droits
-revoke execute on function app.pending_doc_prefix(text), app.verification_piece(public.organizations) from public, anon, authenticated;
-revoke execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text),
-  public.approve_supplier(text, text, text), public.supplier_welcome(text) from public, anon, authenticated;
-grant execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text),
-  public.approve_supplier(text, text, text), public.supplier_welcome(text) to service_role;
+revoke execute on function app.pending_doc_prefix(text), app.verification_piece(public.organizations), app.norm_website(text),
+  app.contact_name(text, text), app.signup_missing(text), app.contact_linked(public.seller_contacts) from public, anon, authenticated;
+revoke execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb),
+  public.approve_supplier(text, text, text), public.supplier_welcome(text), public.supplier_signup_save(text, jsonb) from public, anon, authenticated;
+grant execute on function public.register_supplier(text, text, text, text, text, text, text, text, text, text, text, text, jsonb),
+  public.approve_supplier(text, text, text), public.supplier_welcome(text), public.supplier_signup_save(text, jsonb) to service_role;
 revoke execute on function public.admin_approve(text, text), public.admin_supplier_complete(text, jsonb),
   public.admin_supplier_signup(text) from public, anon;
 grant execute on function public.admin_approve(text, text), public.admin_supplier_complete(text, jsonb),

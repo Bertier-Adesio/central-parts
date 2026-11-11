@@ -40,6 +40,9 @@ export function createMock() {
       decisions: [] },
     { org_id: 'ORG-0112', name: 'Société hors Chine (fictif)', alias: 'P-202612345K', region: 'OTHER', code: '202612345K',
       city: 'Singapore', country: null, profile: 'Spot', currency: 'USD', lang: 'en', status: 'pending', rejected_reason: null,
+      website: 'https://exemple-fictif.sg', wecom: null, signupContacts: [
+        { id: 'CTC-1', name: 'Tan Wei (fictif)', duty: 'main', role: 'Director', phone: '+65 0000 0000', wechat: null, email: 'tan@exemple.test', linked: true },
+        { id: 'CTC-2', name: 'Lim (fictif)', duty: 'sales', role: null, phone: null, wechat: 'lim_fictif', email: null, linked: false }],
       requested_at: day(32, 10, 30), decided_at: null, has_license: false, registered_by: 'oFICTIF0112', contacts: [], decisions: [] },
     { org_id: 'ORG-0109', name: '上海样例贸易有限公司 (fictif)', alias: 'P-91310000MA1FL1MMXL', region: 'CN', code: '91310000MA1FL1MMXL',
       city: '上海', country: 'CN', profile: 'Reseller', currency: 'USD', lang: 'zh', status: 'rejected', rejected_reason: '营业执照不清晰',
@@ -155,8 +158,13 @@ export function createMock() {
   let contactSeq = 0;
   const find = (id) => orgs.find((o) => o.org_id === id);
   // Inscription par profil (admin_supplier_signup, migration 20261111000044).
+  // Ce qui manque (app.signup_missing) et contacts reliés ou non au robot (app.contact_linked).
+  const missing = (o) => [!o.has_license && 'license', !o.code && 'number', !o.region && 'region', !o.city && 'city',
+    ['Manufacturer', 'Distributor'].includes(o.profile) && !o.brands && 'brands', !o.website && 'website', !o.wecom && 'wecom',
+    !(o.signupContacts || []).some((c) => c.phone || c.wechat || c.email) && 'contact'].filter(Boolean);
   const signup = (o) => ({ org_id: o.org_id, profile: o.profile, piece: o.has_license && o.code ? 'both' : o.has_license ? 'license' : o.code ? 'number' : 'none',
     has_license: !!o.has_license, has_code: !!o.code, brands: o.brands || null, has_auth_letter: !!o.auth_letter, region: o.region, city: o.city, status: o.status,
+    website: o.website || null, wecom: o.wecom || null, missing: missing(o), contacts: o.signupContacts || [],
     spot_pending: o.profile === 'Spot' && o.status !== 'validated' });
   const lines = (id) => lots.filter((l) => l.org_id === id && l.qty > 0).length;
   const decide = (o, action, reason) => {
@@ -189,7 +197,7 @@ export function createMock() {
         for (const o of orgs) counts[o.status] = (counts[o.status] || 0) + 1;
         const rows = orgs.filter((o) => !s || o.status === s).sort((a, b) => b.requested_at.localeCompare(a.requested_at))
           .map((o) => ({ org_id: o.org_id, name: o.name, alias: o.alias, region: o.region, code: o.code, city: o.city, profile: o.profile,
-            currency: o.currency, status: o.status, requested_at: o.requested_at, decided_at: o.decided_at, lines: lines(o.org_id) }));
+            currency: o.currency, status: o.status, requested_at: o.requested_at, decided_at: o.decided_at, lines: lines(o.org_id), missing: missing(o) }));
         return [200, { counts, rows }];
       }
       if (path === '/supplier-signup') {
