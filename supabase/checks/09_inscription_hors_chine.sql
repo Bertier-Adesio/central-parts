@@ -40,7 +40,7 @@ do $$
 declare who jsonb;
 begin
   -- Hong Kong : numéro de 15 caractères, avec espaces et minuscules normalisés.
-  who := public.register_supplier('oHK1', 'Société HK (fictive)', ' 1234 5678  90123 ', 'Hong Kong', 'Manufacturer', 'HKD', 'HK');
+  who := public.register_supplier('oHK1', 'Société HK (fictive)', ' 1234 5678  90123 ', 'Hong Kong', 'Manufacturer', 'HKD', 'HK', null, 'Marque fictive');
   perform tests.eq('Hong Kong : inscription en attente', who->>'status', 'pending');
   perform tests.eq('Hong Kong : région, pays, devise et numéro normalisé',
     (select registration_region || ' ' || country || ' ' || currency || ' ' || registration_number from public.organizations where id = who->>'org_id'),
@@ -49,7 +49,7 @@ begin
     (select e->>'region' from jsonb_array_elements(public.pending_suppliers()) e where e->>'org_id' = who->>'org_id'), 'HK');
 
   -- Autre pays : pays laissé vide, complété par l'opérateur.
-  who := public.register_supplier('oAUTRE9', 'Société étrangère (fictive)', 'hrb-2026/77', 'Singapore', 'Distributor', 'USD', 'OTHER');
+  who := public.register_supplier('oAUTRE9', 'Société étrangère (fictive)', 'hrb-2026/77', 'Singapore', 'Distributor', 'USD', 'OTHER', null, 'Marque fictive');
   perform tests.eq('autre pays : région OTHER, pays à compléter',
     (select registration_region || ' ' || coalesce(country, '(vide)') || ' ' || registration_number from public.organizations where id = who->>'org_id'),
     'OTHER (vide) HRB-2026/77');
@@ -60,7 +60,7 @@ begin
   perform tests.eq('Chine : 18 caractères acceptés, pays CN', (select registration_region || ' ' || country from public.organizations where id = who->>'org_id'), 'CN CN');
 
   -- Champs obligatoires.
-  perform tests.fails('numéro vide refusé', $s$select public.register_supplier('oVIDE', 'Société', '', 'Hong Kong', 'Broker', 'USD', 'HK')$s$, 'CP001');
+  perform tests.fails('numéro vide et sans photo : refusé (l''un des deux requis)', $s$select public.register_supplier('oVIDE', 'Société', '', 'Hong Kong', 'Broker', 'USD', 'HK')$s$, 'CP008');
   perform tests.fails('pays / région vide refusé', $s$select public.register_supplier('oVIDE', 'Société', '12345678', 'Hong Kong', 'Broker', 'USD', '')$s$, 'CP004');
   perform tests.fails('pays / région inconnu refusé', $s$select public.register_supplier('oVIDE', 'Société', '12345678', 'Paris', 'Broker', 'USD', 'FR')$s$, 'CP004');
   perform tests.fails('même numéro de Hong Kong une seconde fois', $s$select public.register_supplier('oHK2', 'Copie', '1234 5678 90123', 'Hong Kong', 'Broker', 'USD', 'HK')$s$, 'CP002');

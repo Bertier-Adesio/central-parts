@@ -463,6 +463,75 @@ const addr = norm(await page.textContent('#d-addr'));
 ok(addr.includes('par défaut') && addr.includes('Futian, bâtiment 1, 518000 Shenzhen, CN') && addr.includes('Entrepôt Hong Kong (fictif)') && addr.includes('10 lot(s)'),
   'fiche vendeur : adresses d\'expédition, la principale signalée');
 
+// 9 quater. Inscription par profil (ADR 0034) : stock disponible, pièce fournie, compléments, pièce manquante, approbation.
+await page.click('#tab-sup');
+await page.click('#filters button[data-s=pending]');
+await page.waitForSelector('#sup-list button[data-org="ORG-0112"]');
+await page.click('#sup-list button[data-org="ORG-0112"]');
+await page.waitForFunction(() => document.getElementById('sup-detail').dataset.org === 'ORG-0112' && /Stock disponible/.test((document.getElementById('d-sg-profile') || {}).textContent || ''));
+ok(norm(await page.textContent('#d-sg-profile')) === 'Stock disponible (broker ou surplus à préciser)' && norm(await page.textContent('#d-sg-piece')) === 'numéro seul',
+  'inscription : profil choisi et pièce fournie');
+ok(await page.$('#d-actions button[data-act="approve_broker"]') && await page.$('#d-actions button[data-act="approve_surplus"]') && !(await page.$('#d-actions button[data-act="approve"]')),
+  'stock disponible : approbation seulement comme broker ou surplus');
+ok(await page.$('button[data-ask="licence"]') && !(await page.$('button[data-ask="number"]')), 'pièce manquante : seule la photo de la licence est demandable');
+await page.waitForFunction(() => /indiqué par le fournisseur/.test(document.querySelector('#d-actions button[data-act="approve_surplus"]').textContent));
+ok(norm(await page.textContent('#d-sg-hint')).includes('surplus') && !/indiqué/.test(await page.textContent('#d-actions button[data-act="approve_broker"]')),
+  'stock disponible : origine indiquée par le fournisseur, bouton correspondant signalé, choix laissé à l\'administrateur');
+const sg = norm(await page.textContent('#d-signup'));
+ok(sg.includes('https://exemple-fictif.sg') && norm(await page.textContent('#d-sg-missing')).includes('photo de la licence, WeChat pro ou compte de service'),
+  'inscription : site web, ce qui manque encore');
+ok(await page.isVisible('#d-sg-logo img.sg-logo') && norm(await page.textContent('#d-sg-logo')).trim() === 'PNG', 'inscription : logo affiché, avec son format');
+ok(norm(await page.textContent('#d-sg-contacts')).includes('Tan Wei (fictif) · contact principal') && norm(await page.textContent('#d-sg-contacts')).includes('relié au robot WeChat')
+  && norm(await page.textContent('#d-sg-contacts')).includes('non relié : ne reçoit rien'), 'contacts : rôle, coordonnées, relié ou non au robot');
+ok(norm(await page.textContent('#sup-list button[data-org="ORG-0112"]')).includes('fiche incomplète'), 'liste : fiche incomplète signalée');
+await page.click('button[data-ask="licence"]');
+await page.waitForFunction(() => /Demande (envoyée|non remise)/.test(document.getElementById('d-sg-out').textContent));
+ok(mock.state.notified.some((x) => x.org === 'ORG-0112' && x.kind === 'ask-licence'), 'pièce manquante demandée dans WeChat, sur clic seulement');
+await page.selectOption('#d-sg-form select[name=region]', 'OTHER');
+await page.fill('#d-sg-form input[name=city]', 'Singapour (fictif)');
+await page.click('#d-sg-form button[type=submit]');
+await page.waitForFunction(() => /ORG-0112 complétée/.test(document.getElementById('msg').textContent));
+ok(mock.state.orgs.find((o) => o.org_id === 'ORG-0112').city === 'Singapour (fictif)', 'fiche complétée par l\'administrateur (ville, région)');
+await page.waitForSelector('#d-actions button[data-act="approve_surplus"]');
+await page.click('#d-actions button[data-act="approve_surplus"]');
+await page.waitForSelector('#confirm[open]');
+ok(norm(await page.textContent('#c-text')).includes('Surplus vérifié'), 'confirmation : libellé montré aux acheteurs');
+ok(norm(await page.textContent('#c-text')).includes('une seule pièce fournie (numéro seul)') && norm(await page.textContent('#c-text')).includes('« pièce unique : numéro »'),
+  'confirmation : approbation avec une seule pièce signalée');
+await page.click('#c-ok');
+await page.waitForFunction(() => /approuvée comme surplus/.test(document.getElementById('msg').textContent));
+const o112 = mock.state.orgs.find((o) => o.org_id === 'ORG-0112');
+ok(o112.status === 'validated' && o112.profile === 'Surplus' && o112.decisions.some((d) => d.action === 'profile'), 'approuvée comme surplus : profil fixé et journalisé');
+ok(o112.decisions.some((d) => d.action === 'approved' && d.reason === 'pièce unique : numéro'), 'journal : « pièce unique : numéro »');
+
+// 9 quinquies. Distributeur : fabricants reconnus d'après les marques déclarées (6A, 8A), rattachement ou reclassement.
+mock.state.mfrs.push({ id: 'MFR-0091', name: 'Fabricant marques (fictif)', brands: ['Marque A'], about: {}, positioning: {}, certifications: [], languages: [], links: [] });
+mock.state.orgs.push({ org_id: 'ORG-0113', name: 'Distributeur marques (fictif)', alias: 'P-91440300MA5F00002D', region: 'CN', code: '91440300MA5F00002D',
+  city: '深圳', country: 'CN', profile: 'Distributor', currency: 'USD', lang: 'zh', status: 'pending', rejected_reason: null, brands: 'Marque A, Marque Z',
+  requested_at: new Date().toISOString(), decided_at: null, has_license: false, registered_by: 'oFICTIF0113', contacts: [], decisions: [] });
+mock.state.orgs.push({ org_id: 'ORG-0114', name: 'Distributeur sans marque connue (fictif)', alias: 'P-91110000MA0000004X', region: 'CN', code: '91110000MA0000004X',
+  city: '北京', country: 'CN', profile: 'Distributor', currency: 'USD', lang: 'zh', status: 'pending', rejected_reason: null, brands: 'Marque Z',
+  requested_at: new Date().toISOString(), decided_at: null, has_license: true, registered_by: 'oFICTIF0114', contacts: [], decisions: [] });
+await page.click('#filters button[data-s=pending]');
+await page.waitForSelector('#sup-list button[data-org="ORG-0113"]');
+await page.click('#sup-list button[data-org="ORG-0113"]');
+await page.waitForSelector('#d-sg-matches button[data-link="MFR-0091"]');
+ok(norm(await page.textContent('#d-sg-matches')).includes('Fabricant marques (fictif) (Marque A)') && await page.isVisible('#d-sg-nolink'),
+  'distributeur : fabricant reconnu d\'après ses marques, « Fournisseur partenaire » tant qu\'il n\'est pas rattaché');
+await page.click('#d-sg-matches button[data-link="MFR-0091"]');
+await page.waitForFunction(() => !document.getElementById('d-sg-matches') && /Fabricant marques/.test(document.getElementById('d-sg-links').textContent));
+ok(mock.state.mfrs[mock.state.mfrs.length - 1].links.some((d) => d.org_id === 'ORG-0113' && d.role === 'authorized') && !(await page.$('#d-sg-nolink')),
+  'rattachement en un clic (distributeur agréé), avertissement retiré');
+await page.click('#sup-list button[data-org="ORG-0114"]');
+await page.waitForSelector('#d-sg-spot');
+ok(!(await page.$('#d-sg-matches')) && await page.isVisible('#d-sg-nolink'), 'aucune marque reconnue : rien à rattacher, avertissement');
+ok(norm(await page.textContent('#d-sg-logo')) === 'non fourni' && norm(await page.textContent('#d-sg-missing')).includes('logo'), 'sans logo : « non fourni », dans ce qui manque');
+await page.click('#d-sg-spot');
+await page.waitForFunction(() => /reclassée en stock disponible/.test(document.getElementById('msg').textContent));
+const o114 = mock.state.orgs.find((o) => o.org_id === 'ORG-0114');
+ok(o114.profile === 'Spot' && o114.city === '北京' && o114.decisions.some((d) => d.action === 'profile' && d.reason === 'Distributor → Spot'),
+  'reclassé en stock disponible en un clic, journalisé, ville gardée');
+
 ok(errors.length === 0, 'aucune erreur console ni requête externe (1280 px) : ' + errors.join(' | '));
 await page.close();
 

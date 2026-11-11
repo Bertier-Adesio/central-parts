@@ -39,7 +39,7 @@ import {
 } from '../_shared/robot-texts.js';
 import { parseOperatorRfq, parseSupplierRfq } from '../_shared/rfq.js';
 import { closeRfq, deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
-import { sourcingAnswerErrorText, sourcingDeclineOkText, sourcingOfferOperatorText, sourcingQuoteOkText } from '../_shared/robot-texts.js';
+import { sourcingAnswerErrorText, sourcingDeclineOkText, sourcingOfferOperatorText, sourcingQuoteOkText, spotApproveHint } from '../_shared/robot-texts.js';
 
 // Textes du robot : _shared/robot-texts.js. Opérateur : anglais seul ; fournisseur ou inconnu : chinois et anglais.
 const SITE = 'https://central.parts/depot/';
@@ -107,13 +107,17 @@ async function operatorCommand(db: SupabaseClient, openid: string, text: string)
   const t = text.trim();
   const rfq = await operatorRfqCommand(db, openid, t);
   if (rfq !== null) return rfq;
-  let m = /^(通过|ok|approve)\s+(ORG-\d+)\s*$/i.exec(t);
+  // approve ORG-… [broker|surplus] : la sous-catégorie est obligatoire pour un stock disponible (profil Spot, ADR 0034).
+  let m = /^(通过|ok|approve)\s+(ORG-\d+)(?:\s+(broker|surplus))?\s*$/i.exec(t);
   if (m) {
     const org = m[2].toUpperCase();
-    const { data: alias, error } = await db.rpc('approve_supplier', { p_org: org, p_by: openid });
-    if (error) return operatorErrorText(org, error.message);
-    later(tellAdmins(db, org, approvedNotice(alias)));
-    return `Approved ${org} → ${alias}`;
+    const { data: alias, error } = await db.rpc('approve_supplier', { p_org: org, p_by: openid, p_spot: m[3] ? m[3].toLowerCase() : null });
+    if (error) return error.code === 'CP007' ? spotApproveHint(org) : operatorErrorText(org, error.message);
+    later((async () => {
+      const { data: info } = await db.rpc('supplier_welcome', { p_org: org });
+      await tellAdmins(db, org, approvedNotice(info || {}));
+    })());
+    return `Approved ${org} → ${alias}${m[3] ? ' (' + m[3].toLowerCase() + ')' : ''}`;
   }
   m = /^(拒绝|reject)\s+(ORG-\d+)\s*(.*)$/is.exec(t);
   if (m) {

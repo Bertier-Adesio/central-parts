@@ -42,10 +42,10 @@ begin
   -- Inscription.
   perform tests.fails('inscription : numéro invalide', $s$select public.register_supplier('oNOUVEAU', 'Société A', '91350100M000100Y44', 'Shenzhen', 'Broker')$s$, 'CP001');
   perform tests.fails('inscription : profil inconnu', $s$select public.register_supplier('oNOUVEAU', 'Société A', '91350100M000100Y43', 'Shenzhen', 'Autre')$s$, 'CP004');
-  who := public.register_supplier('oNOUVEAU', ' Société A ', '91350100m000100y43', 'Shenzhen', 'Manufacturer', 'cnh');
+  who := public.register_supplier('oNOUVEAU', ' Société A ', '91350100m000100y43', 'Shenzhen', 'Manufacturer', 'cnh', null, null, 'Marque fictive');
   insert into tests.vars values ('org', who->>'org_id');
   perform tests.eq('inscription : en attente, administrateur, sans licence',
-    who - 'org_id' - 'alias' - 'lang' - 'rejected_reason', '{"name": "Société A", "status": "pending", "role": "admin", "has_license": false}'::jsonb);
+    who - 'org_id' - 'alias' - 'lang' - 'rejected_reason' - 'has_code' - 'profile' - 'signup' - 'can_edit', '{"name": "Société A", "status": "pending", "role": "admin", "has_license": false}'::jsonb);
   perform tests.eq('inscription : société chinoise, devise CNH, numéro en majuscules',
     (select country || ' ' || currency || ' ' || registration_number from public.organizations where id = who->>'org_id'), 'CN CNH 91350100M000100Y43');
   perform tests.eq('inscription : pas vérifiée, donc rien de publié', app.is_verified(who->>'org_id'), false);

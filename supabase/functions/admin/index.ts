@@ -8,7 +8,12 @@
 //   GET  /admin/me                          → administrateur connecté
 //   GET  /admin/suppliers?status=pending    → fournisseurs (pending, validated, rejected ; vide : tous) et compteurs
 //   GET  /admin/supplier?org=ORG-0107       → fiche, contacts, stock, journal des décisions
-//   POST /admin/approve   {org}             → approuve (même fonction que « approve ORG-… » du robot)
+//   POST /admin/approve   {org, spot?}      → approuve (même fonction que « approve ORG-… [broker|surplus] » du robot) ;
+//                                             spot : broker ou surplus, obligatoire pour un stock disponible (ADR 0034)
+//   GET  /admin/supplier-signup?org=        → inscription : profil, pièce fournie, marques déclarées, lettre d'agrément,
+//                                             logo (lien signé d'une heure, compartiment privé)
+//   POST /admin/supplier-complete {org, update: {region?, city?, profile?}} → complète ou corrige avant l'approbation
+//   POST /admin/ask-doc   {org, kind}       → demande la pièce manquante dans WeChat (kind : licence ou number)
 //   POST /admin/reject    {org, reason}     → refuse, motif obligatoire (même fonction que « reject ORG-… motif »)
 //   POST /admin/pending   {org, reason?}    → remet en attente (aucun message au fournisseur)
 //   POST /admin/depot-link {org}            → lien vers le dépôt d'un fournisseur approuvé, au nom de l'administrateur,
@@ -50,7 +55,7 @@
 // Secrets et variables (jamais dans le dépôt) : SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (fournis
 // par Supabase), WECHAT_APPID et WECHAT_SECRET (déjà définis pour le robot), ADMIN_ORIGINS et ADMIN_SITE (facultatifs).
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { approvedNotice, rejectedNotice } from '../_shared/robot-texts.js';
+import { approvedNotice, missingDocText, rejectedNotice } from '../_shared/robot-texts.js';
 import { notifySupplierOfRequest, sendText } from '../_shared/wechat.ts';
 import { deliverWebhooks, dispatchRfq } from '../_shared/rfq-dispatch.ts';
 import { openSourcing } from '../_shared/sourcing-dispatch.ts';
@@ -65,6 +70,7 @@ const ERRORS: Record<string, [string, number]> = {
   '42501': ['forbidden', 403],
   CP005: ['reason_required', 422],
   CP006: ['already_pending', 409],
+  CP007: ['spot_category_required', 422], // stock disponible : broker ou surplus à choisir (ADR 0034)
   CP409: ['already_decided', 409], // RFQ déjà validée ou refusée
   '22023': ['invalid', 422],       // RFQ : société hors appariement (only)
   P0002: ['not_allowed', 409],     // société inconnue, ou refus d'une société déjà approuvée
@@ -82,10 +88,17 @@ const later = (p: Promise<unknown>) => {
   if (rt) rt.waitUntil(p.catch(() => {})); else p.catch(() => {});
 };
 
-async function tellSupplier(org: string, text: string) {
+// Renvoie le nombre de contacts joints (0 : hors de la fenêtre de 48 h de WeChat, ou aucun contact).
+async function tellSupplier(org: string, text: string): Promise<number> {
   const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
   const { data } = await svc.rpc('org_admins', { p_org: org });
-  await Promise.all(((data || []) as string[]).map((o) => sendText(svc, o, text)));
+  return (await Promise.all(((data || []) as string[]).map((o) => sendText(svc, o, text)))).filter(Boolean).length;
+}
+// Message d'accueil selon le profil et les rattachements au moment de l'approbation (ADR 0034).
+async function welcome(org: string): Promise<string> {
+  const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+  const { data } = await svc.rpc('supplier_welcome', { p_org: org });
+  return APPROVED(data || {});
 }
 
 Deno.serve(async (req) => {
@@ -150,6 +163,18 @@ Deno.serve(async (req) => {
         return send('admin_suppliers', { p_status: status });
       }
       if (path === '/supplier') return send('admin_supplier', { p_org: q('org') });
+      if (path === '/supplier-signup') {
+        const r = await call('admin_supplier_signup', { p_org: q('org') });
+        if (r.res) return r.res;
+        // Logo : lien signé d'une heure (compartiment privé supplier-docs), le chemin ne quitte pas la fonction.
+        const { logo_path, ...g } = r.data || {};
+        let logo_url: string | null = null;
+        if (logo_path) {
+          const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+          logo_url = (await svc.storage.from('supplier-docs').createSignedUrl(String(logo_path), 3600)).data?.signedUrl || null;
+        }
+        return json({ ...g, has_logo: !!logo_path, logo_url });
+      }
       if (path === '/stock') return send('admin_stock_summary');
       if (path === '/rfq') return send('admin_rfq_list', { p_status: url.searchParams.has('status') ? q('status') : 'pending_validation' });
       if (path === '/requests') {
@@ -271,10 +296,20 @@ Deno.serve(async (req) => {
       if (path === '/supplier-contact') return send('admin_seller_contact_save', { p_org: org, p: b.contact || {} });
       if (path === '/supplier-contact/delete') return send('admin_seller_contact_delete', { p_org: org, p_id: String(b.id || '') });
       if (path === '/approve') {
-        const r = await call('admin_approve', { p_org: org });
+        const spot = ['broker', 'surplus'].includes(String(b.spot || '')) ? String(b.spot) : null;
+        const r = await call('admin_approve', { p_org: org, p_spot: spot });
         if (r.res) return r.res;
-        later(tellSupplier(org, APPROVED(r.data.alias)));
+        later(welcome(org).then((t) => tellSupplier(org, t)));
         return json(r.data);
+      }
+      if (path === '/supplier-complete') return send('admin_supplier_complete', { p_org: org, p: b.update || {} });
+      // Pièce manquante : rien ne part sans ce clic ; l'échec (fenêtre de 48 h) est rendu à la page.
+      if (path === '/ask-doc') {
+        const kind = b.kind === 'number' ? 'number' : 'licence';
+        const r = await call('admin_supplier_signup', { p_org: org });
+        if (r.res) return r.res;
+        const delivered = await tellSupplier(org, missingDocText(kind));
+        return json({ org_id: org, kind, delivered });
       }
       if (path === '/reject') {
         const why = typeof reason === 'string' ? reason.trim() : '';

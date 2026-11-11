@@ -31,7 +31,7 @@ declare inv text := (select v from tests.vars where k = 'inv');
 begin
   perform tests.eq('openid inconnu : pas de société', public.depot_identity('oFOURNISSEUR'), null::jsonb);
   perform tests.eq('invitation utilisée : société S2', public.redeem_depot_invite(inv, 'oFOURNISSEUR', 'uFOURNISSEUR'), 'S2');
-  perform tests.eq('connexion suivante : société et pseudonyme', public.depot_identity('oFOURNISSEUR') - 'name' - 'lang' - 'status' - 'role' - 'has_license' - 'rejected_reason', '{"org_id": "S2", "alias": "V-2"}'::jsonb);
+  perform tests.eq('connexion suivante : société et pseudonyme', public.depot_identity('oFOURNISSEUR') - 'name' - 'lang' - 'status' - 'role' - 'has_license' - 'rejected_reason' - 'has_code' - 'profile' - 'signup' - 'can_edit', '{"org_id": "S2", "alias": "V-2"}'::jsonb);
   perform tests.eq('même openid peut réutiliser son lien', public.redeem_depot_invite(inv, 'oFOURNISSEUR'), 'S2');
   begin perform public.redeem_depot_invite(inv, 'oAUTRE'); raise exception 'ÉCHEC invitation réutilisée par un autre';
   exception when no_data_found then raise notice 'ok  invitation à usage unique'; end;
