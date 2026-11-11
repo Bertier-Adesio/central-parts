@@ -39,17 +39,24 @@ begin
     $s$select public.register_supplier('oIP-X', 'Société X (fictive)', null, null, 'Spot', 'USD', null, 'ORG-0101/licence-20261111-090000.jpg')$s$, 'CP004');
   perform tests.fails('photo déposée par un autre compte : refusée',
     format($s$select public.register_supplier('oIP-X', 'Société X (fictive)', null, null, 'Spot', 'USD', null, '%slicence-20261111-090000.jpg')$s$, app.pending_doc_prefix('oIP-AUTRE')), 'CP004');
+  perform tests.fails('logo : déposé par un autre compte, refusé',
+    format($s$select public.register_supplier('oIP-X', 'Société X (fictive)', '91350100M000100Y43', null, 'Spot', 'USD', 'CN', null, null, null, null, null, null, null, '%slogo-20261111-090000.png')$s$,
+      app.pending_doc_prefix('oIP-AUTRE')), 'CP004');
   perform tests.fails('devise inconnue : refusée', $s$select public.register_supplier('oIP-X', 'Société X (fictive)', '91350100M000100Y43', null, 'Spot', 'XYZ', 'CN')$s$, 'CP004');
 
   -- Stock disponible, photo seule : ni numéro, ni ville, ni région.
   -- Inscription minimale : nom, profil, une pièce, nom du contact principal, devise ; tout le reste vide.
   w := public.register_supplier('oIP-SPOT', ' Société spot (fictive) ', null, null, 'Spot', 'cnh', null, p || 'licence-20261111-090000.jpg',
-    null, null, null, null, '[{"family_name": "王", "given_name": ""}, {"family_name": "", "given_name": "", "phone": "", "email": ""}]', 'surplus');
+    null, null, null, null, '[{"family_name": "王", "given_name": ""}, {"family_name": "", "given_name": "", "phone": "", "email": ""}]', 'surplus',
+    p || 'logo-20261111-090000.png');
   select * into o from public.organizations where id = w->>'org_id';
   insert into tests.vars values ('spot', o.id);
   perform tests.eq('photo seule : inscrite, profil Spot, sans numéro ni ville', o.profile || ' ' || o.currency || ' ' || coalesce(o.registration_number, '-') || ' '
     || coalesce(o.city, '-') || ' ' || coalesce(o.registration_region, '-') || ' ' || o.kyb || ' ' || (o.alias ~ '^P-[0-9A-F]{12}$')::text, 'Spot CNH - - - pending true');
   perform tests.eq('pièce fournie : licence', app.verification_piece(o), 'license');
+  perform tests.eq('logo déposé à l''inscription (PNG)', o.company_logo_path = p || 'logo-20261111-090000.png' and not 'logo' = any(app.signup_missing(o.id)), true);
+  perform tests.eq('logo : chemin de la fiche WeChat des opérateurs', (select x->>'logo_path' from jsonb_array_elements(public.pending_suppliers()) x where x->>'org_id' = o.id),
+    p || 'logo-20261111-090000.png');
   perform tests.eq('stock disponible : origine indiquée par le fournisseur', o.spot_hint, 'surplus');
   -- Marques : séparateurs chinois et occidentaux, doublons sans tenir compte de la casse (8A).
   perform tests.eq('marques normalisées', app.norm_brands(' Marque A，marque a、 Marque B ; Marque C/ '), 'Marque A, Marque B, Marque C');
@@ -94,7 +101,7 @@ begin
     app.pending_doc_prefix('oIP-FAB2') || 'licence-20261111-090000.jpg');
   insert into tests.vars values ('fab2', w->>'org_id');
   perform tests.eq('fabricant sans marque : accepté, signalé comme manquant', array_to_string(app.signup_missing(w->>'org_id'), ','),
-    'number,region,city,brands,website,wecom,contact');
+    'number,region,city,brands,website,wecom,logo,contact');
   perform tests.eq('photo et numéro : les deux', (select app.verification_piece(x) from public.organizations x where x.id = (select v from tests.vars where k = 'fab')), 'both');
   perform tests.eq('commande pending : profil, pièce, marques',
     (select string_agg((x->>'profile') || '/' || (x->>'piece') || '/' || coalesce(x->>'brands', '-'), ' ' order by x->>'name' collate "C")
@@ -108,6 +115,15 @@ begin
   perform tests.eq('avant l''approbation : tout se complète, y compris le nom et le numéro',
     o.name || ' ' || o.registration_number || ' ' || o.city || ' ' || o.declared_brands || ' ' || o.website, 'Fabricant 2 renommé (fictif) 91440300MA5F00004K Dongguan Marque G http://exemple.test');
   perform tests.fails('numéro invalide refusé', $s$select public.supplier_signup_save('oIP-FAB2', '{"code": "123"}')$s$, 'CP001');
+  -- Logo (PNG de préférence, JPG ou WebP) : dossier de la société seulement, jamais un autre format ni un autre dossier.
+  perform tests.fails('logo : autre dossier refusé', format($s$select public.supplier_signup_save('oIP-FAB2', '{"logo_path": "ORG-0001/logo-20261111-090000.png"}')$s$), 'CP004');
+  perform tests.fails('logo : PDF refusé', format($s$select public.supplier_signup_save('oIP-FAB2', '{"logo_path": "%s/logo-20261111-090000.pdf"}')$s$, o.id), 'CP004');
+  perform public.supplier_signup_save('oIP-FAB2', jsonb_build_object('logo_path', o.id || '/logo-20261111-090000.png'));
+  perform tests.eq('logo ajouté depuis la fiche : plus dans « ce qui manque », visible par la page',
+    (select company_logo_path from public.organizations where id = o.id) || ' ' || ('logo' = any(app.signup_missing(o.id)))::text || ' '
+    || (public.depot_identity('oIP-FAB2')->'signup'->>'has_logo'), o.id || '/logo-20261111-090000.png false true');
+  perform public.supplier_signup_save('oIP-FAB2', '{"city": "Dongguan"}');
+  perform tests.eq('logo gardé quand la fiche est complétée sans lui', (select company_logo_path is not null from public.organizations where id = o.id), true);
   perform tests.fails('autre compte : refusé', $s$select public.supplier_signup_save('oIP-INCONNU', '{"city": "X"}')$s$, '42501');
 
   -- Rien n'est publié avant l'approbation.
@@ -171,7 +187,7 @@ begin
   perform tests.eq('fiche d''inscription : site, WeChat pro, contacts et liaison au robot, ce qui manque',
     (s->>'website') || ' ' || (s->>'wecom') || ' ' || jsonb_array_length(s->'contacts') || ' ' || (s->'contacts'->0->>'linked') || ' ' || (s->'contacts'->1->>'linked')
     || ' ' || (select string_agg(x, ',') from jsonb_array_elements_text(s->'missing') x),
-    'https://exemple-fictif.cn 示例公众号 4 true false license');
+    'https://exemple-fictif.cn 示例公众号 4 true false license,logo');
   perform tests.eq('liste des fournisseurs : ce qui manque à chaque fiche',
     (select x->'missing' from jsonb_array_elements(public.admin_suppliers('pending')->'rows') x where x->>'org_id' = d), s->'missing');
   perform tests.eq('fabricant reconnu d''après les marques déclarées', exists (select 1 from jsonb_array_elements(s->'brand_matches') x

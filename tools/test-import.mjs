@@ -5,7 +5,7 @@
 import { cleanUrl, decode, leadDays, mapRows, parseCSV, price, tierCell } from '../supabase/functions/import-stock/parse.js';
 import { readFileSync } from 'node:fs';
 import * as P from '../supabase/functions/import-stock/parse.js';
-import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
+import { creditCodeOk, registrationNumberOk, registrationLine, normalizeRegistrationNumber, licensePath, logoPath, pendingDocPath, parseWechatXml, randomScene, readSession, replyText, sceneOf, signSession, storagePath, wechatSignatureOk } from '../supabase/functions/_shared/depot.js';
 import { createHash } from 'node:crypto';
 import { DEPOT_MENU_KEY, depotLinkText, isDepotMenuClick } from '../supabase/functions/_shared/depot.js';
 import * as R from '../supabase/functions/_shared/robot-texts.js';
@@ -189,6 +189,11 @@ ok(registrationLine({ region: 'OTHER', code: 'HRB-2026/77' }) === 'Registration 
 ok(registrationLine({ region: null, code: '91350100M000100Y43' }) === 'Credit code (Mainland China): 91350100M000100Y43' && registrationLine({}) === 'Credit code (Mainland China): —', 'message WeChat : société inscrite avant la migration, numéro absent');
 ok(licensePath('ORG-0105', '营业执照.JPEG', d) === 'ORG-0105/licence-20261030-142501.jpg' && licensePath('ORG-0105', 'a.pdf', d).endsWith('.pdf'), 'licence : chemin horodaté dans le dossier de la société');
 ok(licensePath('ORG-0105', 'a.exe', d) === null, 'licence : format refusé');
+ok(logoPath('ORG-0105', 'Logo.PNG', d) === 'ORG-0105/logo-20261030-142501.png' && logoPath('ORG-0105', 'l.jpeg', d).endsWith('.jpg') && logoPath('ORG-0105', 'l.webp', d).endsWith('.webp'),
+  'logo : PNG de préférence, JPG et WebP acceptés, chemin horodaté dans le dossier de la société');
+ok(logoPath('ORG-0105', 'logo.pdf', d) === null && logoPath('ORG-0105', 'logo.svg', d) === null && logoPath('ORG-0105', 'logo.heic', d) === null, 'logo : PDF, SVG, HEIC refusés');
+ok(pendingDocPath('pending/abc/', 'logo', 'logo.png', d) === 'pending/abc/logo-20261030-142501.png' && pendingDocPath('pending/abc/', 'logo', 'logo.pdf', d) === null
+  && pendingDocPath('pending/abc/', 'licence', 'l.pdf', d) !== null, 'logo avant l\'inscription : même dossier que la licence, sans PDF');
 ok(JSON.stringify(await readSession(secret, await signSession(secret, { org: null, openid: 'oNEW' }, 3600, now), now)) === '{"org":null,"openid":"oNEW"}', 'jeton : compte sans société, pour l\'inscription');
 
 // Bouton « 供应商 › 上传库存 » du menu WeChat : lien de connexion personnel.

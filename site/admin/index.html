@@ -123,6 +123,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
   table.lots td{display:block;border:0;padding:2px 0;text-align:left}
   table.lots td[data-l]::before{content:attr(data-l) " : ";color:var(--fg-3)}
 }
+.sg-logo{width:64px;height:64px;object-fit:contain;border:1px solid var(--border-1);border-radius:var(--radius-sm);background:var(--bg-sunken);vertical-align:middle}
 </style>
 </head>
 <body>
@@ -281,7 +282,7 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
     Spot: 'Stock disponible (broker ou surplus à préciser)' };
   // Inscription par profil (ADR 0034) : pièce fournie à l'inscription.
   var PIECE = { both: 'photo de la licence et numéro', license: 'photo de la licence seule', number: 'numéro seul', none: 'aucune (inscrite avant le 11 novembre 2026)' };
-  var MISS = { license: 'photo de la licence', number: 'numéro', region: 'région', city: 'ville', brands: 'marques', website: 'site web',
+  var MISS = { license: 'photo de la licence', number: 'numéro', region: 'région', city: 'ville', brands: 'marques', website: 'site web', logo: 'logo',
     wecom: 'WeChat pro ou compte de service', contact: 'coordonnées d\'un contact' };
   var DUTY = { main: 'contact principal', sales: 'ventes / devis', logistics: 'logistique / expédition', finance: 'finance', other: 'autre' };
   var SOURCE = { file: 'Fichier', api: 'API', manual: 'Saisie', sftp: 'SFTP', pull: 'Connecteur' };
@@ -952,6 +953,10 @@ a.ext{font-size:var(--text-xs);color:var(--fg-2)}
         (g.profile === 'Spot' ? '<dt>Origine du stock (indiquée)</dt><dd id="d-sg-hint">' + esc({ broker: 'trading / broker', surplus: 'stock dormant d\'usine ou d\'EMS (surplus)' }[g.spot_hint] || 'non indiquée') + '</dd>' : '') +
         (g.brands ? '<dt>Marques déclarées</dt><dd id="d-sg-brands">' + esc(g.brands) + ' <span class="muted">(déclaration du fournisseur : ne crée aucun rattachement)</span></dd>' : '') +
         (g.profile === 'Distributor' || g.has_auth_letter ? '<dt>Lettre d\'agrément</dt><dd>' + (g.has_auth_letter ? 'déposée (lien dans la fiche WeChat « pending »)' : 'non déposée') + '</dd>' : '') +
+        // Logo (PNG de préférence) : lien signé d'une heure, usage interne, jamais montré aux acheteurs.
+        '<dt>Logo</dt><dd id="d-sg-logo">' + (g.logo_url ? '<a href="' + esc(g.logo_url) + '" target="_blank" rel="noopener noreferrer"><img class="sg-logo" src="' + esc(g.logo_url) +
+          '" alt="Logo de la société" width="64" height="64"></a> <span class="muted">' + esc((/\.(png|jpe?g|webp)(\?|$)/i.exec(g.logo_url) || [, '?'])[1].toUpperCase().replace('JPEG', 'JPG')) + '</span>'
+          : g.has_logo ? 'déposé (lien indisponible)' : '<span class="warn-t">non fourni</span>') + '</dd>' +
         '<dt>Site web</dt><dd>' + esc(g.website || '—') + '</dd><dt>WeChat pro / compte de service</dt><dd>' + esc(g.wecom || '—') + '</dd>' +
         '<dt>Encore à compléter</dt><dd id="d-sg-missing">' + ((g.missing || []).length ? '<span class="warn-t">' + esc(g.missing.map(function (k) { return MISS[k] || k; }).join(', ')) + '</span>' : 'rien : fiche complète') + '</dd>' +
         '</dl>' +

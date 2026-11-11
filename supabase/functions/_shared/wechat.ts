@@ -67,6 +67,7 @@ export async function supplierCard(db: SupabaseClient, s: Record<string, unknown
     ...(s.brands ? [`Declared brands: ${s.brands}`] : []),
     await link(s.license_path, 'Business licence', 'Business licence: not uploaded'),
     ...(s.auth_letter_path ? [await link(s.auth_letter_path, 'Authorisation letter', 'Authorisation letter: unavailable')] : []),
+    await link(s.logo_path, 'Logo', 'Logo: not uploaded'),
     // ADR 0034 : une seule pièce (inscrite au journal à l'approbation), origine indiquée du stock, contacts non reliés.
     ...(s.piece === 'license' || s.piece === 'number' ? [`Single piece only (${s.piece === 'license' ? 'licence' : 'number'}): logged at approval`] : []),
     ...(spot && s.spot_hint ? [`Supplier says: mostly ${s.spot_hint === 'surplus' ? 'factory / EMS excess (surplus)' : 'trading / broker'}`] : []),

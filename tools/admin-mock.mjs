@@ -43,7 +43,7 @@ export function createMock() {
       website: 'https://exemple-fictif.sg', wecom: null, signupContacts: [
         { id: 'CTC-1', name: 'Tan Wei (fictif)', duty: 'main', role: 'Director', phone: '+65 0000 0000', wechat: null, email: 'tan@exemple.test', linked: true },
         { id: 'CTC-2', name: 'Lim (fictif)', duty: 'sales', role: null, phone: null, wechat: 'lim_fictif', email: null, linked: false }],
-      spot_hint: 'surplus',
+      spot_hint: 'surplus', logo: true,
       requested_at: day(32, 10, 30), decided_at: null, has_license: false, registered_by: 'oFICTIF0112', contacts: [], decisions: [] },
     { org_id: 'ORG-0109', name: '上海样例贸易有限公司 (fictif)', alias: 'P-91310000MA1FL1MMXL', region: 'CN', code: '91310000MA1FL1MMXL',
       city: '上海', country: 'CN', profile: 'Reseller', currency: 'USD', lang: 'zh', status: 'rejected', rejected_reason: '营业执照不清晰',
@@ -161,12 +161,14 @@ export function createMock() {
   // Inscription par profil (admin_supplier_signup, migration 20261111000044).
   // Ce qui manque (app.signup_missing) et contacts reliés ou non au robot (app.contact_linked).
   const missing = (o) => [!o.has_license && 'license', !o.code && 'number', !o.region && 'region', !o.city && 'city',
-    ['Manufacturer', 'Distributor'].includes(o.profile) && !o.brands && 'brands', !o.website && 'website', !o.wecom && 'wecom',
+    ['Manufacturer', 'Distributor'].includes(o.profile) && !o.brands && 'brands', !o.website && 'website', !o.wecom && 'wecom', !o.logo && 'logo',
     !(o.signupContacts || []).some((c) => c.phone || c.wechat || c.email) && 'contact'].filter(Boolean);
   const signup = (o) => ({ org_id: o.org_id, profile: o.profile, piece: o.has_license && o.code ? 'both' : o.has_license ? 'license' : o.code ? 'number' : 'none',
     has_license: !!o.has_license, has_code: !!o.code, brands: o.brands || null, has_auth_letter: !!o.auth_letter, region: o.region, city: o.city, status: o.status,
     website: o.website || null, wecom: o.wecom || null, missing: missing(o), contacts: o.signupContacts || [],
     spot_pending: o.profile === 'Spot' && o.status !== 'validated', spot_hint: o.spot_hint || null,
+    // Logo : lien signé dans la fonction ; ici une image en ligne (data:, autorisée par la CSP), suffixe du format.
+    has_logo: !!o.logo, logo_url: o.logo ? 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==#logo.png' : null,
     // Rattachements existants et fabricants reconnus d'après les marques déclarées (8A, 6A).
     links: state.mfrs.flatMap((m) => m.links.filter((d) => d.org_id === o.org_id).map((d) => ({ id: m.id, name: m.name, role: d.role }))),
     brand_matches: state.mfrs.filter((m) => !m.links.some((d) => d.org_id === o.org_id)

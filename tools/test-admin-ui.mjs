@@ -480,6 +480,7 @@ ok(norm(await page.textContent('#d-sg-hint')).includes('surplus') && !/indiqué/
 const sg = norm(await page.textContent('#d-signup'));
 ok(sg.includes('https://exemple-fictif.sg') && norm(await page.textContent('#d-sg-missing')).includes('photo de la licence, WeChat pro ou compte de service'),
   'inscription : site web, ce qui manque encore');
+ok(await page.isVisible('#d-sg-logo img.sg-logo') && norm(await page.textContent('#d-sg-logo')).trim() === 'PNG', 'inscription : logo affiché, avec son format');
 ok(norm(await page.textContent('#d-sg-contacts')).includes('Tan Wei (fictif) · contact principal') && norm(await page.textContent('#d-sg-contacts')).includes('relié au robot WeChat')
   && norm(await page.textContent('#d-sg-contacts')).includes('non relié : ne reçoit rien'), 'contacts : rôle, coordonnées, relié ou non au robot');
 ok(norm(await page.textContent('#sup-list button[data-org="ORG-0112"]')).includes('fiche incomplète'), 'liste : fiche incomplète signalée');
@@ -524,6 +525,7 @@ ok(mock.state.mfrs[mock.state.mfrs.length - 1].links.some((d) => d.org_id === 'O
 await page.click('#sup-list button[data-org="ORG-0114"]');
 await page.waitForSelector('#d-sg-spot');
 ok(!(await page.$('#d-sg-matches')) && await page.isVisible('#d-sg-nolink'), 'aucune marque reconnue : rien à rattacher, avertissement');
+ok(norm(await page.textContent('#d-sg-logo')) === 'non fourni' && norm(await page.textContent('#d-sg-missing')).includes('logo'), 'sans logo : « non fourni », dans ce qui manque');
 await page.click('#d-sg-spot');
 await page.waitForFunction(() => /reclassée en stock disponible/.test(document.getElementById('msg').textContent));
 const o114 = mock.state.orgs.find((o) => o.org_id === 'ORG-0114');

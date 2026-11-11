@@ -76,6 +76,7 @@ form.fields input[type=tel],form.fields input[type=email]{display:block;width:10
 .warn{display:block;font-weight:normal;font-size:var(--text-xs);color:var(--status-warning);margin:2px 0 0}
 #r-add{margin:0 0 12px}
 details.ct-more{margin:0 0 8px}
+.logo-prev{display:block;width:64px;height:64px;object-fit:contain;border:1px solid var(--border-1);border-radius:var(--radius-sm);background:var(--bg-sunken);margin:6px 0 0}
 details.ct-more>summary{cursor:pointer;color:var(--accent);font-size:var(--text-sm);margin:0 0 8px}
 #r-count{margin:0 0 8px;font-size:var(--text-sm)}
 #r-count.done{color:var(--status-success)}
@@ -191,6 +192,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
         </fieldset>
         <label><span data-t="fWeb">公司网站</span><input type="text" id="r-web" inputmode="url" maxlength="300" autocomplete="url"><span class="warn" data-w="web" hidden></span></label>
         <label><span data-t="fWecom">企业微信或公众号（名称或微信号）</span><input type="text" id="r-wecom" maxlength="100"></label>
+        <label class="file"><span data-t="fLogo">公司标志（Logo）</span><input type="file" id="r-logo" accept="image/png,image/jpeg,image/webp">
+          <span class="hint" data-t="fLogoHint">格式：PNG（推荐，透明背景），也可 JPG 或 WebP。建议正方形，至少 200 × 200 像素，不超过 1 MB。仅供 Central.Parts 内部使用，不会向买家展示。</span>
+          <span class="warn" id="r-logo-warn" hidden></span><img class="logo-prev" id="r-logo-prev" alt="" hidden></label>
       </fieldset>
       <fieldset class="blk" id="r-verif"><legend><span data-t="verifTitle">公司核实</span> <span class="req" data-t="reqOne">二选一 · 必填</span></legend>
         <label class="file"><span data-t="verifLic">营业执照照片</span><input type="file" id="r-lic" accept="image/*,.pdf"></label>
@@ -380,6 +384,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       fName: '公司全称（与营业执照一致）', fRegion: '注册国家/地区', rCN: '中国大陆', rHK: '香港', rOther: '其他',
       fCode: '统一社会信用代码', fCodeHint: '18 位，见营业执照。', fCodeOther: '公司注册号码',
       hintHK: '请填写香港商业登记证或公司注册证书上的号码。', hintOther: '请填写贵公司注册证明文件上的号码。', fCity: '城市', fProfile: '公司类型',
+      fLogo: '公司标志（Logo）', fLogoHint: '格式：PNG（推荐，透明背景），也可 JPG 或 WebP。建议正方形，至少 200 × 200 像素，不超过 1 MB。仅供 Central.Parts 内部使用，不会向买家展示。',
+      fLogoNew: '更换公司标志（Logo）', logoHas: '已上传公司标志。',
+      wLogoPng: '建议使用 PNG（透明背景）。不影响提交。', wLogoSmall: '图片较小（{w} × {h} 像素），建议至少 200 × 200 像素。不影响提交。',
       fSpotHint: '库存主要来自（选填，帮助审核）', spotBroker: '贸易 / 经纪', spotSurplus: '工厂或 EMS 呆滞库存',
       ctMore: '更多：职位、微信号、邮箱', ctInvHint: '提交后，每位同事会得到一个邀请链接（14 天有效），请转发给对方：对方用微信打开后，才能收到询价通知。',
       reqCount: '必填 {n}/5', reqDone: '必填 5/5，可以提交', reqMissing: '还缺：{list}',
@@ -393,7 +400,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       wPhone: '号码格式看起来不对，请检查（不影响提交）。', wEmail: '邮箱格式看起来不对，请检查（不影响提交）。', wWeb: '网址格式看起来不对，请检查（不影响提交）。',
       moreTitle: '补充资料', moreBtn: '补充资料', moreSave: '保存', moreNone: '资料已完整，感谢！',
       moreList: '还可以补充：{list}。资料越完整，审核越快。', moreLocked: '审核通过后，公司名称、类型、营业执照和注册号码如需修改，请联系 Central.Parts。',
-      miss: { license: '营业执照照片', number: '注册号码', region: '注册地区', city: '城市', brands: '品牌', website: '公司网站', wecom: '企业微信或公众号', contact: '联系人的手机、微信号或邮箱' },
+      miss: { license: '营业执照照片', number: '注册号码', region: '注册地区', city: '城市', brands: '品牌', website: '公司网站', wecom: '企业微信或公众号', logo: '公司标志（Logo，PNG 最佳）', contact: '联系人的手机、微信号或邮箱' },
       pDistributor: '授权分销商', pSpot: '现货 / 库存',
       hManufacturer: '报价有效期 14 天。品牌经我们核实后，向买家显示为“原厂直供”，并可开通品牌页面。',
       hDistributor: '报价有效期 7 天。授权经我们核实后，向买家显示为“授权代理商”；核实之前显示为“合作供应商”。',
@@ -446,7 +453,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       valLive: '{live} 条报价在线，有效期至 {date}（有效期 {ttl} 天）。', valOld: '{n} 条报价已过期，不再向采购方展示。', valUpd: '本月已更新 {n} 天（北京时间，每天最多计一次），计入您的供应商评分。',
       reconfirmed: '已确认：{n} 条报价有效期至 {date}。',
       e: { no_stock: '您目前没有在售库存，请先上传库存表。', currency: '请选择报价币种。', invite_invalid: '邀请链接无效、已过期或已被其他账号使用。请联系邀请您的同事。',
-        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。',
+        session_expired: '登录已过期，请重新登录。', wechat_refused: '微信授权失败，请重试。', format: '文件格式不支持。', size: '文件太大。', logo_format: '公司标志的格式不支持：请上传 PNG（推荐）、JPG 或 WebP，或删除该文件。', logo_size: '公司标志太大：不超过 1 MB。',
         code_invalid: '统一社会信用代码有误，请核对营业执照。', contact: '请填写主要联系人的姓名。', region: '填写注册号码时，请选择注册地区。', verification: '请上传营业执照照片，或填写注册号码（二选一）。', profile: '请选择公司类型。', brands: '请填写品牌。', name: '请填写公司全称。', number_invalid: '注册号码格式有误：5 至 30 个字符，可包含字母、数字、短横线、空格和斜杠。', company_exists: '该公司已注册。请联系贵公司的管理员，在「同事」中邀请您。',
         already_bound: '此微信账号已绑定公司，请刷新页面。', fields: '请填写所有字段。', rejected: '您的公司未通过审核，无法上传。',
         expired: '二维码已过期，请刷新。', network: '网络错误，请稍后重试。', other: '出错了，请稍后重试或联系 Central.Parts。' } },
@@ -461,6 +468,9 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       fName: 'Full company name (as on the business licence)', fRegion: 'Country / region of registration', rCN: 'Mainland China', rHK: 'Hong Kong', rOther: 'Other',
       fCode: 'Unified social credit code', fCodeHint: '18 characters, on the business licence.', fCodeOther: 'Company registration number',
       hintHK: 'Enter the number shown on your Hong Kong business registration or incorporation certificate.', hintOther: 'Enter the number shown on your company registration document.', fCity: 'City', fProfile: 'Company type',
+      fLogo: 'Company logo', fLogoHint: 'Format: PNG (preferred, transparent background), or JPG or WebP. Square if possible, at least 200 × 200 pixels, 1 MB at most. For Central.Parts only, never shown to buyers.',
+      fLogoNew: 'Replace the company logo', logoHas: 'Company logo uploaded.',
+      wLogoPng: 'PNG with a transparent background works best. You can still submit.', wLogoSmall: 'Small image ({w} × {h} pixels): at least 200 × 200 pixels is recommended. You can still submit.',
       fSpotHint: 'Where does most of your stock come from? (optional, helps the review)', spotBroker: 'Trading / brokering', spotSurplus: 'Factory or EMS excess stock',
       ctMore: 'More: job title, WeChat ID, email', ctInvHint: 'After you submit, each colleague gets an invitation link (valid 14 days) for you to forward: they receive request notifications once they open it in WeChat.',
       reqCount: 'Required {n}/5', reqDone: 'Required 5/5, ready to submit', reqMissing: 'Missing: {list}',
@@ -474,7 +484,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       wPhone: 'This number looks wrong, please check (you can still submit).', wEmail: 'This email looks wrong, please check (you can still submit).', wWeb: 'This website address looks wrong, please check (you can still submit).',
       moreTitle: 'Complete my profile', moreBtn: 'Complete my profile', moreSave: 'Save', moreNone: 'Your profile is complete, thank you!',
       moreList: 'You can still add: {list}. The more complete your profile, the faster the review.', moreLocked: 'After approval, contact Central.Parts to change the company name, type, business licence or registration number.',
-      miss: { license: 'business licence photo', number: 'registration number', region: 'region of registration', city: 'city', brands: 'brands', website: 'company website', wecom: 'WeCom or Official Account', contact: 'a phone, WeChat ID or email for a contact' },
+      miss: { license: 'business licence photo', number: 'registration number', region: 'region of registration', city: 'city', brands: 'brands', website: 'company website', wecom: 'WeCom or Official Account', logo: 'company logo (PNG preferred)', contact: 'a phone, WeChat ID or email for a contact' },
       pDistributor: 'Authorised distributor', pSpot: 'Spot stock (trader, broker, surplus)',
       hManufacturer: 'Offers stay valid for 14 days. Once we have verified your brand, buyers see you as "Manufacturer direct" and you can have a brand page.',
       hDistributor: 'Offers stay valid for 7 days. Once we have verified your authorisation, buyers see you as "Authorized distributor"; until then, as "Partner Supplier".',
@@ -527,7 +537,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       valLive: '{live} offers online, valid until {date} ({ttl}-day validity).', valOld: '{n} offers have expired and are no longer shown to buyers.', valUpd: 'Updated on {n} day(s) this month (China time, once a day at most): this counts towards your supplier rating.',
       reconfirmed: 'Confirmed: {n} offers valid until {date}.',
       e: { no_stock: 'You have no stock online: upload a stock file first.', currency: 'Please choose the price currency.', invite_invalid: 'The invitation link is invalid, expired or already used by another account. Please ask the colleague who invited you.',
-        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.',
+        session_expired: 'Your session has expired, please log in again.', wechat_refused: 'WeChat authorization failed, please try again.', format: 'File format not accepted.', size: 'The file is too large.', logo_format: 'Logo format not accepted: upload a PNG (preferred), JPG or WebP, or remove the file.', logo_size: 'The logo is too large: 1 MB at most.',
         code_invalid: 'The unified social credit code is not valid: please check the business licence.', contact: 'Please enter the main contact\'s name.', region: 'Please choose the region of registration for this number.', verification: 'Please upload your licence photo or enter your registration number.', profile: 'Please choose your company type.', brands: 'Please enter your brand(s).', name: 'Please enter the full company name.', number_invalid: 'Invalid registration number: 5 to 30 characters, with letters, digits, hyphens, spaces and slashes.', company_exists: 'This company is already registered. Ask its administrator to invite you under "Colleagues".',
         already_bound: 'This WeChat account is already linked to a company: please reload the page.', fields: 'Please fill in every field.', rejected: 'Your company was not approved: upload is not possible.',
         expired: 'The QR code has expired, please refresh it.', network: 'Network error, please try again later.', other: 'Something went wrong. Please try again or contact Central.Parts.' } }
@@ -662,7 +672,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     var kind = span.getAttribute('data-w'), ok = WARN[kind](input.value.trim());
     span.hidden = ok; span.textContent = ok ? '' : t()[{ phone: 'wPhone', email: 'wEmail', web: 'wWeb' }[kind]];
   }
-  document.querySelectorAll('#reg .warn').forEach(function (w) {
+  document.querySelectorAll('#reg .warn[data-w]').forEach(function (w) {
     var input = w.parentNode.querySelector('input');
     input.addEventListener('blur', function () { checkWarn(input); });
   });
@@ -681,7 +691,7 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
   $('reg').addEventListener('input', renderCount);
   $('reg').addEventListener('change', renderCount);
   renderCount();
-  var FOCUS = { name: 'r-name', profile: 'input[name=r-profile]', verification: 'r-lic', region: 'r-region', code_invalid: 'r-code', number_invalid: 'r-code',
+  var FOCUS = { logo_format: 'r-logo', logo_size: 'r-logo', name: 'r-name', profile: 'input[name=r-profile]', verification: 'r-lic', region: 'r-region', code_invalid: 'r-code', number_invalid: 'r-code',
                 contact: '.ct[data-i="0"] [name=family_name]', currency: 'input[name=r-currency]' };
   function regErr(code) {
     err(code);
@@ -703,6 +713,32 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       if (city) $('r-city').value = city;
     }
   });
+  // Logo : PNG de préférence ; JPG et WebP acceptés avec un conseil ; autre format ou plus de 1 Mo : à corriger.
+  var LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'], LOGO_MAX = 1048576;
+  function logoProblem(f) {
+    if (!f) return null;
+    if (LOGO_TYPES.indexOf(f.type) < 0 && !/\.(png|jpe?g|webp)$/i.test(f.name)) return 'logo_format';
+    return f.size > LOGO_MAX ? 'logo_size' : null;
+  }
+  function checkLogo(input, warn, prev) {
+    var f = input.files[0], bad = logoProblem(f);
+    warn.hidden = true; warn.textContent = ''; prev.hidden = true;
+    if (!f) return;
+    if (bad) { warn.hidden = false; warn.textContent = t().e[bad]; return; }
+    if (f.type !== 'image/png' && !/\.png$/i.test(f.name)) { warn.hidden = false; warn.textContent = t().wLogoPng; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      prev.onload = function () {
+        if (prev.naturalWidth < 200 || prev.naturalHeight < 200) {
+          warn.hidden = false; warn.textContent = (warn.textContent ? warn.textContent + ' ' : '') + t().wLogoSmall.replace('{w}', prev.naturalWidth).replace('{h}', prev.naturalHeight);
+        }
+      };
+      prev.src = rd.result; prev.hidden = false;   // data: (CSP) : aperçu local, rien n'est envoyé avant « 提交 »
+    };
+    rd.readAsDataURL(f);
+  }
+  $('r-logo').addEventListener('change', function () { checkLogo($('r-logo'), $('r-logo-warn'), $('r-logo-prev')); });
+  function logoExt(f) { return /\.(png|jpe?g|webp)$/i.test(f.name) ? f.name : 'logo.' + ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[f.type] || 'png'); }
   // 4A : un lien d'invitation par contact supplémentaire nommé, à transférer (mécanisme /invite existant, 14 jours).
   function sendInvites(contacts) {
     var names = contacts.slice(1).map(function (c) { return (c.family_name + c.given_name).trim(); }).filter(Boolean);
@@ -725,9 +761,11 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     var lic = $('r-lic').files[0], auth = profile === 'Distributor' ? $('r-auth').files[0] : null;
     var region = $('r-region').value, code = regNumber(region || 'CN', $('r-code').value);
     var contacts = readContacts();
-    document.querySelectorAll('#reg .warn').forEach(function (w) { checkWarn(w.parentNode.querySelector('input')); });
+    document.querySelectorAll('#reg .warn[data-w]').forEach(function (w) { checkWarn(w.parentNode.querySelector('input')); });
     if (!name) return regErr('name');
     if (!profile) return regErr('profile');
+    var logo = $('r-logo').files[0];   // champ facultatif ; un fichier choisi doit être une image acceptée (ordre du formulaire)
+    if (logoProblem(logo)) return regErr(logoProblem(logo));
     if (!lic && !code) return regErr('verification');
     if (code && !region) return regErr('region');
     if (code && !regNumberOk(region, code)) return regErr(region === 'CN' ? 'code_invalid' : 'number_invalid');
@@ -736,10 +774,11 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
     var hint = profile === 'Spot' ? document.querySelector('input[name=r-spot-hint]:checked') : null;
     if ((lic && lic.size > 10485760) || (auth && auth.size > 10485760)) return err('size');
     $('r-send').disabled = true; say('info', t().uploading);
-    Promise.all([sendDoc('licence', lic), sendDoc('agrement', auth)]).then(function (paths) {
+    Promise.all([sendDoc('licence', lic), sendDoc('agrement', auth), logo ? api('POST', '/doc-url', { kind: 'logo', file_name: logoExt(logo) })
+      .then(function (u) { return putFile(u.signed_url, logo).then(function () { return u.path; }); }) : null]).then(function (paths) {
       return api('POST', '/register', { name: name, profile: profile, currency: currency, code: code || null, region: region || null,
         city: $('r-city').value.trim() || null, license_path: paths[0], auth_path: paths[1], brands: brands || null,
-        website: $('r-web').value.trim() || null, wecom: $('r-wecom').value.trim() || null, contacts: contacts, spot_hint: hint ? hint.value : null });
+        website: $('r-web').value.trim() || null, wecom: $('r-wecom').value.trim() || null, contacts: contacts, spot_hint: hint ? hint.value : null, logo_path: paths[2] });
     }).then(function (d) { setToken(d.token); enterApp(d.org); say('ok', t().regDone); sendInvites(contacts); }, err)
       .then(function () { $('r-send').disabled = false; });
   });
@@ -762,10 +801,13 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       f('m-city', t().fCity, g.city) +
       (org.profile === 'Manufacturer' || org.profile === 'Distributor' ? f('m-brands', org.profile === 'Manufacturer' ? t().fBrandsM : t().fBrandsD, g.brands) : '') +
       f('m-web', t().fWeb, g.website, ' inputmode="url"') + f('m-wecom', t().fWecom, g.wecom) +
+      '<label class="file"><span>' + esc(g.has_logo ? t().fLogoNew : t().fLogo) + '</span><input type="file" id="m-logo" accept="image/png,image/jpeg,image/webp">' +
+        '<span class="hint">' + esc((g.has_logo ? t().logoHas + ' ' : '') + t().fLogoHint) + '</span><span class="warn" id="m-logo-warn" hidden></span><img class="logo-prev" id="m-logo-prev" alt="" hidden></label>' +
       (open ? '' : '<p class="muted">' + esc(t().moreLocked) + '</p>') +
       '<button class="btn btn-main" type="submit">' + esc(t().moreSave) + '</button>';
   }
   $('more-open').addEventListener('click', function () { moreOpen = true; renderMore(); });
+  $('more-form').addEventListener('change', function (ev) { if (ev.target.id === 'm-logo') checkLogo($('m-logo'), $('m-logo-warn'), $('m-logo-prev')); });
   $('more-form').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var val = function (id) { var x = $(id); return x ? x.value.trim() : undefined; };
@@ -777,7 +819,11 @@ h2{font-size:var(--text-lg);margin:0 0 8px}
       p.code = regNumber(p.region, val('m-code'));
       if (!regNumberOk(p.region, p.code)) return err(p.region === 'CN' ? 'code_invalid' : 'number_invalid');
     }
-    api('POST', '/signup', p).then(function (o) { org = Object.assign(org, o); moreOpen = false; renderOrg(); say('ok', ct().saved); }, err);
+    var logo = $('m-logo') && $('m-logo').files[0];
+    if (logoProblem(logo)) { err(logoProblem(logo)); $('m-logo').focus(); return; }
+    (logo ? api('POST', '/logo-url', { file_name: logoExt(logo) }).then(function (u) { return putFile(u.signed_url, logo).then(function () { p.logo_path = u.path; }); }) : Promise.resolve())
+      .then(function () { return api('POST', '/signup', p); })
+      .then(function (o) { org = Object.assign(org, o); moreOpen = false; renderOrg(); say('ok', ct().saved); }, err);
   });
   // Numéro selon le pays / région : mêmes règles que le serveur (app.registration_number_ok), pour signaler une faute
   // de frappe tout de suite. Chine continentale : 统一社会信用代码 ; Hong Kong et autre pays : 5 à 30 caractères.

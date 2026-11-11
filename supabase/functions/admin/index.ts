@@ -10,7 +10,8 @@
 //   GET  /admin/supplier?org=ORG-0107       → fiche, contacts, stock, journal des décisions
 //   POST /admin/approve   {org, spot?}      → approuve (même fonction que « approve ORG-… [broker|surplus] » du robot) ;
 //                                             spot : broker ou surplus, obligatoire pour un stock disponible (ADR 0034)
-//   GET  /admin/supplier-signup?org=        → inscription : profil, pièce fournie, marques déclarées, lettre d'agrément
+//   GET  /admin/supplier-signup?org=        → inscription : profil, pièce fournie, marques déclarées, lettre d'agrément,
+//                                             logo (lien signé d'une heure, compartiment privé)
 //   POST /admin/supplier-complete {org, update: {region?, city?, profile?}} → complète ou corrige avant l'approbation
 //   POST /admin/ask-doc   {org, kind}       → demande la pièce manquante dans WeChat (kind : licence ou number)
 //   POST /admin/reject    {org, reason}     → refuse, motif obligatoire (même fonction que « reject ORG-… motif »)
@@ -162,7 +163,18 @@ Deno.serve(async (req) => {
         return send('admin_suppliers', { p_status: status });
       }
       if (path === '/supplier') return send('admin_supplier', { p_org: q('org') });
-      if (path === '/supplier-signup') return send('admin_supplier_signup', { p_org: q('org') });
+      if (path === '/supplier-signup') {
+        const r = await call('admin_supplier_signup', { p_org: q('org') });
+        if (r.res) return r.res;
+        // Logo : lien signé d'une heure (compartiment privé supplier-docs), le chemin ne quitte pas la fonction.
+        const { logo_path, ...g } = r.data || {};
+        let logo_url: string | null = null;
+        if (logo_path) {
+          const svc = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+          logo_url = (await svc.storage.from('supplier-docs').createSignedUrl(String(logo_path), 3600)).data?.signedUrl || null;
+        }
+        return json({ ...g, has_logo: !!logo_path, logo_url });
+      }
       if (path === '/stock') return send('admin_stock_summary');
       if (path === '/rfq') return send('admin_rfq_list', { p_status: url.searchParams.has('status') ? q('status') : 'pending_validation' });
       if (path === '/requests') {

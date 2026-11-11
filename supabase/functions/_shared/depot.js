@@ -149,15 +149,24 @@ export async function pendingDocPrefix(openid) {
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(openid || '')));
   return 'pending/' + [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 32) + '/';
 }
-// kind : « licence » (photo de la licence) ou « agrement » (lettre d'agrément d'un distributeur). Null si refusé.
+// kind : « licence » (photo de la licence), « agrement » (lettre d'agrément d'un distributeur) ou « logo » (PNG de
+// préférence, JPG ou WebP : pas de PDF ni de HEIC, illisibles comme image dans le back office). Null si refusé.
 export function pendingDocPath(prefix, kind, fileName, now = new Date()) {
-  const m = /\.(jpe?g|png|heic|webp|pdf)$/i.exec(String(fileName || ''));
-  if (!m || !['licence', 'agrement'].includes(kind)) return null;
+  const m = (kind === 'logo' ? /\.(jpe?g|png|webp)$/i : /\.(jpe?g|png|heic|webp|pdf)$/i).exec(String(fileName || ''));
+  if (!m || !['licence', 'agrement', 'logo'].includes(kind)) return null;
   const ts = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
   return `${prefix}${kind}-${ts}.${m[1].toLowerCase().replace('jpeg', 'jpg')}`;
 }
 
 // Chemin de la photo de la licence : <société>/licence-<horodatage>.<ext> ; null si le format n'est pas accepté.
+// Logo déposé après l'inscription, dans le dossier de la société : PNG de préférence, JPG ou WebP, 1 Mo au plus.
+export const LOGO_MAX_BYTES = 1048576;
+export function logoPath(org, fileName, now = new Date()) {
+  const m = /\.(jpe?g|png|webp)$/i.exec(String(fileName || ''));
+  if (!m) return null;
+  const ts = now.toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+  return `${org}/logo-${ts}.${m[1].toLowerCase().replace('jpeg', 'jpg')}`;
+}
 export function licensePath(org, fileName, now = new Date()) {
   const m = /\.(jpe?g|png|heic|webp|pdf)$/i.exec(String(fileName || ''));
   if (!m) return null;
