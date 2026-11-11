@@ -31,7 +31,7 @@ alter table public.organizations
 create or replace function app.norm_brands(p text) returns text
 language sql immutable set search_path = '' as $$
   select nullif(left(string_agg(b, ', ' order by n), 300), '') from (
-    select min(btrim(x)) as b, min(o) as n
+    select (array_agg(btrim(x) order by o))[1] as b, min(o) as n   -- première écriture saisie, quelle que soit la collation
       from regexp_split_to_table(coalesce(p, ''), '\s*[,，、;；/|]+\s*') with ordinality t(x, o)
      where btrim(x) <> '' group by upper(btrim(x)) order by min(o) limit 20) s
 $$;
