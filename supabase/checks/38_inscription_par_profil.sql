@@ -88,7 +88,7 @@ begin
     'number,region,city,brands,website,wecom,contact');
   perform tests.eq('photo et numéro : les deux', (select app.verification_piece(x) from public.organizations x where x.id = (select v from tests.vars where k = 'fab')), 'both');
   perform tests.eq('commande pending : profil, pièce, marques',
-    (select string_agg((x->>'profile') || '/' || (x->>'piece') || '/' || coalesce(x->>'brands', '-'), ' ' order by x->>'name')
+    (select string_agg((x->>'profile') || '/' || (x->>'piece') || '/' || coalesce(x->>'brands', '-'), ' ' order by x->>'name' collate "C")
        from jsonb_array_elements(public.pending_suppliers()) x where x->>'org_id' in (select v from tests.vars)),
     'Distributor/number/Marque A, Marque B Manufacturer/both/Marque F Manufacturer/license/- Spot/license/-');
 
