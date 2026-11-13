@@ -17,7 +17,7 @@ const SCAN = {
     en: 'Logged in to Central.Parts stock upload: go back to the upload page.',
   },
   not_bound: {
-    both: '已登录。请返回网页，注册您的公司。\nLogged in: go back to the web page to register your company.',
+    both: '已登录。在电脑上：返回网页，注册您的公司。只用手机：点击下面的链接，直接在微信里填写。\nLogged in. On a computer: go back to the web page to register your company. Phone only: tap the link below and fill in the form in WeChat.',
     en: 'Logged in: go back to the web page to register your company.',
   },
   invite_invalid: {
@@ -36,7 +36,7 @@ export function scanReply(status, operator = false) {
 
 // Ligne ajoutée à la réponse au scan : sur téléphone, un lien personnel ramène à la page, déjà connecté.
 export function phoneBackLine(url, operator = false) {
-  return (operator ? '\n\nOn a phone, tap to go back:\n' : '\n\n手机上请点此返回 · On a phone, tap to go back:\n') + url;
+  return (operator ? '\n\nOn a phone, tap to go back:\n' : '\n\n在手机上继续，请点此 · On a phone, tap to continue:\n') + url;
 }
 
 // Bouton « 供应商 › 上传库存 » du menu : lien de connexion personnel au centre fournisseurs.

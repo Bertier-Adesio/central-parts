@@ -244,12 +244,12 @@ ok(/if \(await isOperator\(db, msg\.FromUserName\)\) return reply\(await operato
 // Fournisseur ou inconnu : textes d'avant, au caractère près (copiés de la version précédente de wechat-events).
 const OLD = {
   ok: '已登录 Central.Parts 库存上传，请返回上传页面。\nLogged in to Central.Parts stock upload: go back to the upload page.',
-  not_bound: '已登录。请返回网页，注册您的公司。\nLogged in: go back to the web page to register your company.',
+  not_bound: '已登录。在电脑上：返回网页，注册您的公司。只用手机：点击下面的链接，直接在微信里填写。\nLogged in. On a computer: go back to the web page to register your company. Phone only: tap the link below and fill in the form in WeChat.',
   invite_invalid: '邀请链接无效、已过期或已被其他账号使用，请联系 Central.Parts。\nThe invitation link is invalid, expired or already used: please contact Central.Parts.',
   expired: '二维码已过期，请在上传页面刷新二维码。\nThis QR code has expired: refresh it on the upload page.',
 };
 for (const st of Object.keys(OLD)) ok(R.scanReply(st) === OLD[st] && R.scanReply(st, false) === OLD[st], 'fournisseur, inchangé : scan du QR code (' + st + ')');
-ok(R.phoneBackLine(fakeUrl) === '\n\n手机上请点此返回 · On a phone, tap to go back:\n' + fakeUrl, 'fournisseur, inchangé : lien de retour sur téléphone');
+ok(R.phoneBackLine(fakeUrl) === '\n\n在手机上继续，请点此 · On a phone, tap to continue:\n' + fakeUrl, 'fournisseur : lien pour continuer sur le téléphone');
 const both = (t) => HAN.test(t) && /[A-Za-z]{4,} [A-Za-z]{2,}/.test(t);
 ok(both(R.depotLinkText(fakeUrl)) && R.depotLinkText(fakeUrl).startsWith('点此登录 Central.Parts 供应商中心'), 'fournisseur, bilingue : lien de connexion au centre fournisseurs');
 ok(R.linkErrorText() === '暂时无法生成登录链接，请稍后再试。\nThe login link could not be created, please try again later.', 'fournisseur, inchangé : erreur de création du lien');
