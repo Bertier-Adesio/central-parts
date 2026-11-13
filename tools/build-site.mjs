@@ -14,8 +14,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design/landing.dc.html');
 const OUT = join(ROOT, 'site');
 const ORIGIN = 'https://central.parts';
-// Seule exception externe : le formulaire partenaire Tencent Docs (accessible depuis la Chine).
-const TENCENT_FORM = 'https://docs.qq.com/form/page/';
 const CONTACT_EMAIL = 'contact@central.parts';
 // Fonctions Edge (recherche et offres du héros) : même projet que les autres pages, autorisé par la CSP (ADR 0031).
 const SUPABASE = 'https://tuhbzziqyisdnqzfvtkh.supabase.co';
@@ -25,20 +23,20 @@ const LANGS = {
     path: '/', htmlLang: 'fr', hreflang: 'fr', ogLocale: 'fr_FR', ogImage: 'social-preview-fr.png',
     headline: 'Fabricants chinois vers l’Europe',
     seoTitle: 'Composants électroniques chinois pour l’Europe — Central.Parts',
-    description: 'Les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Supply Network Operator. electronica 2026, hall B4, stand 251/12.',
+    description: 'Les fabricants chinois de composants électroniques, connectés aux acheteurs EMS et OEM européens. Supply Network Operator.',
     mailSubject: 'Demande de contact', mailProfile: 'Profil', mailOptIn: 'Espace client : informer et recontacter', mailYes: 'oui', mailNo: 'non',
   },
   en: {
     path: '/en/', htmlLang: 'en', hreflang: 'en', ogLocale: 'en_GB', ogImage: 'social-preview-en.png',
     headline: 'Chinese component makers to European buyers',
     seoTitle: 'Chinese electronic components for Europe — Central.Parts',
-    description: 'Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Supply Network Operator. electronica 2026, Hall B4, Booth 251/12.',
+    description: 'Chinese electronic component manufacturers, connected to European EMS and OEM buyers. Supply Network Operator.',
     mailSubject: 'Contact request', mailProfile: 'Profile', mailOptIn: 'Customer area: notify and contact', mailYes: 'yes', mailNo: 'no',
   },
   zh: {
     path: '/zh/', htmlLang: 'zh-Hans', hreflang: 'zh-Hans', ogLocale: 'zh_CN', ogImage: 'social-preview-zh.png',
-    headline: '中国元器件制造商，直连欧洲采购方',
-    description: 'Central.Parts 供应网络运营商：连接中国电子元器件制造商与欧洲 EMS、OEM 采购方。深圳、巴黎、丹佛。electronica 2026，B4 馆 251/12 展位。',
+    headline: '中国元器件供应商，直连欧洲采购方',
+    description: 'Central.Parts 供应网络运营商：连接中国电子元器件原厂、分销商和现货供应商与欧洲 EMS、OEM 采购方。深圳、巴黎、丹佛。',
     mailSubject: '联系请求', mailProfile: '身份', mailOptIn: '客户平台：通知并联系', mailYes: '是', mailNo: '否',
   },
 };
@@ -82,9 +80,6 @@ function rewrite(from, to, count = 1) {
 // Sélecteur de langue : liens /, /en/, /zh/.
 rewrite('<button sc-camel-on-click="{{ l.pick }}" style="{{ l.style }}">{{ l.label }}</button>',
   '<a href="{{ l.href }}" hreflang="{{ l.hreflang }}" lang="{{ l.hreflang }}" aria-current="{{ l.current }}" style="display: inline-flex; align-items: center; text-decoration: none; {{ l.style }}">{{ l.label }}</a>');
-
-// CTA distributeur : ouvre le formulaire sur l'onglet Distributeur.
-rewrite('<a href="#contact" sc-camel-on-click="{{ toDist }}" style=', '<a href="#contact" data-pick-tab="dist" style=');
 
 // Contact : mailto en attendant un endpoint ; onglets Acheteur / Distributeur.
 rewrite('<form sc-camel-on-submit="{{ onSend }}" style=', `<form id="contact-form" action="mailto:${CONTACT_EMAIL}" method="post" enctype="text/plain" style=`);
@@ -262,7 +257,7 @@ function page(lang) {
   }
 
   // Accès depuis la Chine : aucun domaine tiers (Google, LinkedIn, CDN…), seulement central.parts.
-  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN) && !u.startsWith(TENCENT_FORM));
+  const ext = [...html.matchAll(/(?:src|href|action)="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !u.startsWith(ORIGIN));
   if (ext.length) throw new Error(`Ressource externe dans la page ${lang} : ${ext.join(', ')}`);
 
   // Titre de page : l'accroche d'abord, la marque ensuite (si un moteur tronque,

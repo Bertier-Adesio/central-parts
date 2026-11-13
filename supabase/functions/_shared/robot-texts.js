@@ -81,9 +81,7 @@ export function welcomeText(scene, operator = false) {
     `2. 使用帮助与模板：${HELP}`,
     '3. 了解我们：https://central.parts/zh/',
     '',
-    'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。',
-    '',
-    `Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: ${HELP}. Meet us at electronica 2026, Hall B4, Booth 251/12.`,
+    `Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: ${HELP}.`,
   ].join('\n');
 }
 

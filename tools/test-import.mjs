@@ -256,8 +256,7 @@ ok(R.linkErrorText() === '暂时无法生成登录链接，请稍后再试。\nT
 const oldWelcome = (scene) => ['感谢关注 Central.Parts！', '我们为中国原厂、分销商和贸易商拓展欧洲客户：欧洲 EMS、OEM 和设计公司直接查询您的现货。', '',
   `1. 注册公司、上传库存（15 分钟内有效，过期请发送任意消息获取新链接）：https://central.parts/depot/?login=${scene}`,
   '2. 使用帮助与模板：https://central.parts/depot/aide/', '3. 了解我们：https://central.parts/zh/', '',
-  'electronica 2026 · 慕尼黑 · 11月10–13日 · B4 馆 251/12 展位，欢迎来访。', '',
-  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: https://central.parts/depot/aide/. Meet us at electronica 2026, Hall B4, Booth 251/12.'].join('\n');
+  'Thank you for following Central.Parts. Link 1 registers your company and uploads your stock (valid 15 minutes). Help and templates: https://central.parts/depot/aide/.'].join('\n');
 ok(R.welcomeText('dl_xxxxxxxx') === oldWelcome('dl_xxxxxxxx'), 'fournisseur : accueil avec lien et guide d\'utilisation');
 ok(R.welcomeText('') === oldWelcome('').replace(/\?login=\S*/, ''), 'fournisseur : accueil sans lien');
 // Aide aux fournisseurs : mot-clé, texte bilingue avec le lien du guide, menu et modèles publiés.
