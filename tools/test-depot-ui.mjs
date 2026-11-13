@@ -167,16 +167,16 @@ await page.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) =
 {
   await page.goto(BASE + '/depot/');
   await page.waitForSelector('#v-login:not([hidden])');
-  ok(await page.isHidden('#menu-hint'), 'ordinateur : pas d\'indication du menu');
+  ok((await page.textContent('#ways')).includes('用电脑') && (await page.textContent('#ways')).includes('只用手机'), 'ordinateur : les deux façons de s\'inscrire (ordinateur ou téléphone seul)');
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, locale: 'zh-CN' });
   phone.on('pageerror', (e) => errors.push(String(e)));
   await phone.route(FN + '/**', api);
   await phone.route(/^(?!http:\/\/localhost|https:\/\/tuhbzziqyisdnqzfvtkh)/, (r) => { errors.push('requête externe : ' + r.request().url()); return r.abort(); });
   await phone.goto(BASE + '/depot/');
   await phone.waitForSelector('#v-login:not([hidden])');
-  ok(await phone.isVisible('#menu-hint') && (await phone.textContent('#menu-hint')).includes('「供应商」→「上传库存」'), 'téléphone : indication du menu « 供应商 › 上传库存 »');
+  ok(await phone.isVisible('#ways') && (await phone.textContent('#ways')).includes('「供应商」→「上传库存」'), 'téléphone : inscription dans WeChat par le menu « 供应商 › 上传库存 »');
   await toggleLang(phone);
-  ok((await phone.textContent('#menu-hint')).includes('to receive your login link'), 'téléphone : indication en anglais');
+  ok((await phone.textContent('#ways')).includes('fill in the form directly in WeChat'), 'téléphone : indication en anglais');
   ok(await phone.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'téléphone : pas de défilement horizontal');
   await phone.close();
 }

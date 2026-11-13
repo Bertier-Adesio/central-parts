@@ -107,7 +107,9 @@ for (const width of [1280, 390]) {
 // 中文 : page des fabricants, héros inchangé (pas de recherche, deux boutons).
 {
   const { page, ctx, errors } = await open('/zh/');
-  ok(!(await page.$('#hero-search')) && (await page.$$('#top a[data-pick-tab]')).length === 2, '中文 : héros des fabricants, sans recherche');
+  ok(!(await page.$('#hero-search')) && (await page.$$('#top a[data-pick-tab]')).length === 1 && (await page.$$('#top a[href="/depot/?lang=zh"]')).length >= 1,
+    '中文 : héros des fournisseurs, sans recherche ; inscription directe sur /depot/');
+  ok(!(await page.content()).includes('docs.qq.com') && (await page.$$('a[href="/depot/?lang=zh"]')).length === 3, '中文 : plus de formulaire Tencent Docs, trois liens vers /depot/');
   ok(errors.length === 0, '中文 : aucune erreur ' + errors.join(' | '));
   await ctx.close();
 }
